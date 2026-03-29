@@ -1,0 +1,1174 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  X, ChevronLeft, ChevronRight, Image as ImageIcon, Camera, 
+  MapPin, Search, RefreshCw, Plus, Ticket, Star, Hotel, Car,
+  Box, DollarSign, CheckCircle2, Trash2, Calendar, Clock,
+  Users, Shield, Info, Eye, Save, Globe, Map as MapIcon,
+  Utensils, Music, Heart, AlertCircle
+} from 'lucide-react';
+import { Button, Badge, Input, VerifiedBadge } from '../UI';
+import { Festival, HotelAccommodation, TransportOption, RoomType } from '../../types';
+import { motion, AnimatePresence } from 'motion/react';
+import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
+
+const MapPickerModal = dynamic(() => import('../MapPickerModal'), { 
+  ssr: false 
+});
+
+import apiClient from '../../lib/apiClient';
+
+// import { useAuth } from '../../context/AuthContext';
+// import apiClient from '../../lib/apiClient';
+
+const STEPS = [
+  { id: 1, name: 'Core Information', icon: Info },
+  { id: 2, name: 'Schedule', icon: Calendar },
+  { id: 3, name: 'Hotels', icon: Hotel },
+  { id: 4, name: 'Transportation', icon: Car },
+  { id: 5, name: 'Services', icon: Utensils },
+  { id: 6, name: 'Policies', icon: Shield },
+  { id: 7, name: 'Pricing', icon: DollarSign },
+  { id: 8, name: 'Review & Publish', icon: Eye },
+];
+
+export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onCancel }) => {
+  const router = useRouter();
+  const [step, setStep] = useState(1);
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    core: { 
+      name: '', 
+      slug: '', 
+      startDate: '', 
+      endDate: '', 
+      locationName: '', 
+      address: '', 
+      shortDescription: '', 
+      fullDescription: '', 
+      coverImage: 'https://picsum.photos/seed/ethio-cover/1920/1080', 
+      gallery: [] as string[],
+      coordinates: { lat: 9.0333, lng: 38.7500 }
+    },
+    schedule: [{ day: 1, title: '', activities: '', performers: [] as string[] }],
+    hotels: [] as any[],
+    transportation: [] as any[],
+    services: { 
+      foodPackages: [] as string[], 
+      culturalServices: [] as string[],
+      specialAssistance: [] as string[],
+      extras: [] as string[]
+    },
+    policies: { 
+      cancellation: '', 
+      terms: '', 
+      safety: '', 
+      ageRestriction: '' 
+    },
+    pricing: { 
+      basePrice: 0, 
+      vipPrice: 0, 
+      currency: 'USD', 
+      earlyBird: 0, 
+      groupDiscount: 0 
+    }
+  });
+
+  // Auto-generate slug
+  useEffect(() => {
+    const slug = formData.core.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+    setFormData(prev => ({ ...prev, core: { ...prev.core, slug } }));
+  }, [formData.core.name]);
+
+  const nextStep = () => setStep(s => Math.min(s + 1, 8));
+  const prevStep = () => setStep(s => Math.max(s - 1, 1));
+
+  const handleFileUpload = async (file: File, isCoverImage: boolean = false) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        if (isCoverImage) {
+          setFormData(prev => ({ ...prev, core: { ...prev.core, coverImage: data.url } }));
+        } else {
+          setFormData(prev => ({ ...prev, core: { ...prev.core, gallery: [...prev.core.gallery, data.url] } }));
+        }
+      } else {
+        alert(`Upload failed: ${data.message}`);
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('An error occurred during file upload.');
+    }
+  };
+
+  const handlePublish = async () => {
+    const requiredFields = {
+      name: formData.core.name,
+      shortDescription: formData.core.shortDescription,
+      fullDescription: formData.core.fullDescription,
+      startDate: formData.core.startDate,
+      endDate: formData.core.endDate,
+      locationName: formData.core.locationName,
+    };
+
+    const missingFields = Object.entries(requiredFields)
+      .filter(([_, value]) => !value)
+      .map(([key]) => key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())); // Prettify the key for display
+
+    if (missingFields.length > 0) {
+      alert(`Please fill out all required fields:\n- ${missingFields.join('\n- ' )}`);
+      return;
+    }
+
+    try {
+      const response = await apiClient.post('/api/organizer/festivals', {
+        name: formData.core.name,
+        shortDescription: formData.core.shortDescription,
+        fullDescription: formData.core.fullDescription,
+        startDate: formData.core.startDate,
+        endDate: formData.core.endDate,
+        location: {
+          name: formData.core.locationName,
+          address: formData.core.address,
+          coordinates: formData.core.coordinates,
+        },
+        coverImage: formData.core.coverImage,
+        gallery: formData.core.gallery,
+        schedule: formData.schedule,
+        hotels: formData.hotels,
+        transportation: formData.transportation,
+        services: formData.services,
+        policies: formData.policies,
+        pricing: formData.pricing,
+      });
+
+      if (response.success) {
+        alert('Festival Published Successfully!');
+        router.push('/dashboard/organizer/overview');
+      } else {
+        alert(`Failed to publish festival: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('Error publishing festival:', error);
+      alert('An error occurred while publishing the festival.');
+    }
+  };
+
+  const renderStepIndicator = () => (
+    <div className="flex items-center justify-between mb-12 overflow-x-auto pb-4 scrollbar-hide">
+      {STEPS.map((s, i) => (
+        <React.Fragment key={s.id}>
+          <div 
+            className={`flex flex-col items-center min-w-[100px] cursor-pointer transition-all ${step >= s.id ? 'text-primary' : 'text-gray-300'}`}
+            onClick={() => setStep(s.id)}
+          >
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 border-2 transition-all ${
+              step === s.id ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 
+              step > s.id ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white border-gray-100'
+            }`}>
+              {step > s.id ? <CheckCircle2 className="w-5 h-5" /> : <s.icon className="w-5 h-5" />}
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-center">{s.name}</span>
+          </div>
+          {i < STEPS.length - 1 && (
+            <div className={`h-[2px] flex-1 min-w-[20px] mx-2 ${step > s.id ? 'bg-emerald-500' : 'bg-gray-100'}`} />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="max-w-[1400px] mx-auto pb-20">
+      <MapPickerModal 
+        isOpen={isMapModalOpen}
+        onClose={() => setIsMapModalOpen(false)}
+        initialPosition={formData.core.coordinates}
+        onLocationSelect={(coords) => {
+          setFormData(prev => ({ ...prev, core: { ...prev.core, coordinates: coords }}));
+        }}
+      />
+      <header className="flex justify-between items-center mb-12">
+        <div className="flex items-center gap-6">
+          <button onClick={onCancel} className="p-3 bg-white border border-gray-100 rounded-2xl text-gray-400 hover:text-red-500 transition-colors">
+            <X className="w-6 h-6" />
+          </button>
+          <div>
+            <h2 className="text-3xl font-serif font-bold text-primary">Create New Festival</h2>
+            <p className="text-gray-400 text-sm">Share Ethiopia's vibrant heritage with the world.</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <Button variant="outline" leftIcon={Save}>Save Draft</Button>
+          <Button onClick={handlePublish} disabled={step !== 8}>Publish Festival</Button>
+        </div>
+      </header>
+
+      {renderStepIndicator()}
+
+      <div className="bg-white p-12 rounded-[48px] border border-gray-100 shadow-xl min-h-[600px] flex flex-col">
+        <div className="flex-1">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              {/* Step 1: Core Information */}
+              {step === 1 && (
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-16">
+                  <div className="lg:col-span-3 space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Input 
+                        label="Festival Name *" 
+                        placeholder="e.g. Timket 2025"
+                        value={formData.core.name} 
+                        onChange={e => setFormData({...formData, core: {...formData.core, name: e.target.value}})} 
+                      />
+                      <Input 
+                        label="Slug" 
+                        value={formData.core.slug} 
+                        readOnly
+                        className="bg-gray-50"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Input 
+                        label="Start Date *" 
+                        type="date" 
+                        value={formData.core.startDate} 
+                        onChange={e => setFormData({...formData, core: {...formData.core, startDate: e.target.value}})} 
+                      />
+                      <Input 
+                        label="End Date *" 
+                        type="date" 
+                        value={formData.core.endDate} 
+                        onChange={e => setFormData({...formData, core: {...formData.core, endDate: e.target.value}})} 
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Input 
+                        label="Location Name *" 
+                        placeholder="e.g. Gondar, Ethiopia"
+                        value={formData.core.locationName} 
+                        onChange={e => setFormData({...formData, core: {...formData.core, locationName: e.target.value}})} 
+                      />
+                      <Input 
+                        label="Address" 
+                        placeholder="e.g. Fasil Ghebbi"
+                        value={formData.core.address} 
+                        onChange={e => setFormData({...formData, core: {...formData.core, address: e.target.value}})} 
+                      />
+                    </div>
+                    <div 
+                      onClick={() => setIsMapModalOpen(true)}
+                      className="bg-ethio-bg h-48 rounded-3xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center text-gray-400 space-y-2 group hover:border-secondary transition-colors cursor-pointer relative overflow-hidden"
+                    >
+                      <div className="absolute inset-0 opacity-20">
+                        <img src="https://picsum.photos/seed/map/800/400" className="w-full h-full object-cover" alt="" />
+                      </div>
+                      <div className="relative z-10 flex flex-col items-center">
+                        <MapPin className="w-8 h-8 group-hover:text-secondary transition-colors" />
+                        <span className="text-xs font-bold uppercase tracking-widest">Click to open Map Picker</span>
+                        <p className="text-[10px]">Lat: {formData.core.coordinates.lat.toFixed(4)}, Lng: {formData.core.coordinates.lng.toFixed(4)}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Short Description *</label>
+                      <textarea 
+                        className="w-full h-24 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
+                        placeholder="Brief summary for listing cards..."
+                        value={formData.core.shortDescription} 
+                        onChange={e => setFormData({...formData, core: {...formData.core, shortDescription: e.target.value}})} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Full Description *</label>
+                      <textarea 
+                        className="w-full h-48 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
+                        placeholder="Detailed story and information..."
+                        value={formData.core.fullDescription} 
+                        onChange={e => setFormData({...formData, core: {...formData.core, fullDescription: e.target.value}})} 
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="p-8 border-2 border-dashed border-gray-100 rounded-[32px] text-center hover:border-primary/20 transition-colors cursor-pointer">
+                        <input type="file" className="hidden" id="cover-image-upload" onChange={e => e.target.files && handleFileUpload(e.target.files[0], true)} />
+                        <label htmlFor="cover-image-upload" className="cursor-pointer">
+                          <Camera className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                          <p className="text-xs font-bold text-gray-400">Upload Cover Image</p>
+                        </label>
+                      </div>
+                      <div className="p-8 border-2 border-dashed border-gray-100 rounded-[32px] text-center hover:border-primary/20 transition-colors cursor-pointer">
+                        <input type="file" className="hidden" id="gallery-upload" multiple onChange={e => e.target.files && Array.from(e.target.files).forEach(file => handleFileUpload(file))} />
+                        <label htmlFor="gallery-upload" className="cursor-pointer">
+                          <ImageIcon className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                          <p className="text-xs font-bold text-gray-400">Upload Gallery Photos</p>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="lg:col-span-2">
+                    <div className="sticky top-8">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-4 block">Live Preview</label>
+                      <div className="bg-white rounded-[40px] overflow-hidden shadow-2xl border border-gray-100 group">
+                        <div className="relative h-64 overflow-hidden">
+                          <img src={formData.core.coverImage} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="" />
+                          <div className="absolute top-6 left-6"><Badge variant="info" className="backdrop-blur-md bg-white/80">Live Event</Badge></div>
+                        </div>
+                        <div className="p-8 space-y-4">
+                          <h4 className="text-2xl font-serif font-bold text-primary">{formData.core.name || 'Festival Title'}</h4>
+                          <div className="flex items-center text-gray-400 text-xs gap-4">
+                            <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {formData.core.startDate || 'Date'}</span>
+                            <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {formData.core.locationName || 'Location'}</span>
+                          </div>
+                          <p className="text-gray-500 text-sm line-clamp-2">{formData.core.shortDescription || 'Your festival description will appear here...'}</p>
+                          <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
+                            <span className="text-primary font-bold">From ${formData.pricing.basePrice}</span>
+                            <Button size="sm">View Details</Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Schedule */}
+              {step === 2 && (
+                <div className="space-y-8">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-2xl font-serif font-bold text-primary">Daily Schedule</h3>
+                    <Button 
+                      variant="outline" 
+                      leftIcon={Plus}
+                      onClick={() => setFormData({
+                        ...formData, 
+                        schedule: [...formData.schedule, { day: formData.schedule.length + 1, title: '', activities: '', performers: [] }]
+                      })}
+                    >
+                      Add Day
+                    </Button>
+                  </div>
+                  <div className="space-y-6">
+                    {formData.schedule.map((day, idx) => (
+                      <div key={idx} className="bg-ethio-bg/50 p-8 rounded-[32px] border border-gray-100 relative group">
+                        <button 
+                          className="absolute top-6 right-6 p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                          onClick={() => setFormData({
+                            ...formData,
+                            schedule: formData.schedule.filter((_, i) => i !== idx)
+                          })}
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                          <div className="md:col-span-1">
+                            <div className="w-16 h-16 bg-primary text-white rounded-2xl flex flex-col items-center justify-center mb-4">
+                              <span className="text-[10px] uppercase font-bold opacity-60 tracking-widest">Day</span>
+                              <span className="text-2xl font-serif font-bold">{day.day}</span>
+                            </div>
+                          </div>
+                          <div className="md:col-span-3 space-y-6">
+                            <Input 
+                              label="Day Title" 
+                              placeholder="e.g. Ketera (The Eve)"
+                              value={day.title}
+                              onChange={e => {
+                                const newSchedule = [...formData.schedule];
+                                newSchedule[idx].title = e.target.value;
+                                setFormData({ ...formData, schedule: newSchedule });
+                              }}
+                            />
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Activities & Highlights</label>
+                              <textarea 
+                                className="w-full h-32 p-4 bg-white border border-gray-100 rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
+                                placeholder="What happens on this day?"
+                                value={day.activities}
+                                onChange={e => {
+                                  const newSchedule = [...formData.schedule];
+                                  newSchedule[idx].activities = e.target.value;
+                                  setFormData({ ...formData, schedule: newSchedule });
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-4">
+                              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Performers & Groups</label>
+                              <div className="flex flex-wrap gap-2">
+                                {day.performers.map((p, pIdx) => (
+                                  <Badge key={pIdx} variant="info" className="pl-3 pr-1 py-1 flex items-center gap-2">
+                                    {p}
+                                    <button onClick={() => {
+                                      const newSchedule = [...formData.schedule];
+                                      newSchedule[idx].performers = newSchedule[idx].performers.filter((_, i) => i !== pIdx);
+                                      setFormData({ ...formData, schedule: newSchedule });
+                                    }}><X className="w-3 h-3" /></button>
+                                  </Badge>
+                                ))}
+                                <button 
+                                  className="text-xs font-bold text-primary flex items-center gap-1 hover:underline"
+                                  onClick={() => {
+                                    const name = prompt('Enter performer name:');
+                                    if (name) {
+                                      const newSchedule = [...formData.schedule];
+                                      newSchedule[idx].performers.push(name);
+                                      setFormData({ ...formData, schedule: newSchedule });
+                                    }
+                                  }}
+                                >
+                                  <Plus className="w-3 h-3" /> Add Performer
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Hotels */}
+              {step === 3 && (
+                <div className="space-y-8">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-2xl font-serif font-bold text-primary">Accommodation Partners</h3>
+                    <Button 
+                      variant="outline" 
+                      leftIcon={Plus}
+                      onClick={() => setFormData({
+                        ...formData,
+                        hotels: [...formData.hotels, { 
+                          id: Date.now(), name: '', image: '', starRating: 5, address: '', description: '', 
+                          policies: '', facilities: [], roomTypes: [] 
+                        }]
+                      })}
+                    >
+                      Add Hotel
+                    </Button>
+                  </div>
+                  <div className="space-y-12">
+                    {formData.hotels.map((hotel, hIdx) => (
+                      <div key={hotel.id} className="bg-white border border-gray-100 rounded-[40px] p-10 shadow-sm space-y-8">
+                        <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-6">
+                              <div className="relative group">
+                                <div className="w-20 h-20 bg-ethio-bg rounded-3xl flex items-center justify-center text-gray-300 overflow-hidden">
+                                  {hotel.image ? <img src={hotel.image} className="w-full h-full object-cover" alt="" /> : <Hotel className="w-8 h-8" />}
+                                </div>
+                                <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-3xl">
+                                  <Camera className="w-6 h-6 text-white" />
+                                  <input type="file" className="hidden" onChange={() => alert('File upload simulated. Please use the Image URL field for now.')} />
+                                </label>
+                              </div>
+                              <div>
+                                <h4 className="text-xl font-serif font-bold text-primary">{hotel.name || 'New Hotel Partner'}</h4>
+                                <p className="text-gray-400 text-xs">Configure rooms and details for this partner.</p>
+                              </div>
+                            </div>
+                          <button 
+                            className="p-2 text-gray-300 hover:text-red-500"
+                            onClick={() => setFormData({
+                              ...formData,
+                              hotels: formData.hotels.filter((_, i) => i !== hIdx)
+                            })}
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <Input 
+                            label="Hotel Name" 
+                            value={hotel.name}
+                            onChange={e => {
+                              const newHotels = [...formData.hotels];
+                              newHotels[hIdx].name = e.target.value;
+                              setFormData({ ...formData, hotels: newHotels });
+                            }}
+                          />
+                          <Input 
+                            label="Star Rating" 
+                            type="number" 
+                            min="1" max="5"
+                            value={hotel.starRating}
+                            onChange={e => {
+                              const newHotels = [...formData.hotels];
+                              newHotels[hIdx].starRating = parseInt(e.target.value);
+                              setFormData({ ...formData, hotels: newHotels });
+                            }}
+                          />
+                          <Input 
+                            label="Address" 
+                            value={hotel.address}
+                            onChange={e => {
+                              const newHotels = [...formData.hotels];
+                              newHotels[hIdx].address = e.target.value;
+                              setFormData({ ...formData, hotels: newHotels });
+                            }}
+                          />
+                          <Input 
+                            label="Image URL" 
+                            value={hotel.image}
+                            onChange={e => {
+                              const newHotels = [...formData.hotels];
+                              newHotels[hIdx].image = e.target.value;
+                              setFormData({ ...formData, hotels: newHotels });
+                            }}
+                          />
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center">
+                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Room Types</label>
+                            <button 
+                              className="text-xs font-bold text-primary flex items-center gap-1"
+                              onClick={() => {
+                                const newHotels = [...formData.hotels];
+                                newHotels[hIdx].roomTypes.push({
+                                  id: Date.now(), name: '', description: '', capacity: 2, pricePerNight: 100, availabilityCount: 5, image: ''
+                                });
+                                setFormData({ ...formData, hotels: newHotels });
+                              }}
+                            >
+                              <Plus className="w-3 h-3" /> Add Room Type
+                            </button>
+                          </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            {hotel.roomTypes.map((room: any, rIdx: number) => (
+                              <div key={room.id} className="bg-ethio-bg/50 p-6 rounded-3xl border border-gray-50 relative group">
+                                <button 
+                                  className="absolute top-4 right-4 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                  onClick={() => {
+                                    const newHotels = [...formData.hotels];
+                                    newHotels[hIdx].roomTypes = newHotels[hIdx].roomTypes.filter((_: any, i: number) => i !== rIdx);
+                                    setFormData({ ...formData, hotels: newHotels });
+                                  }}
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                                <div className="space-y-4">
+                                  <div className="flex gap-4 items-start">
+                                    <div className="relative group flex-shrink-0">
+                                      <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-gray-300 border border-gray-100 overflow-hidden">
+                                        {room.image ? <img src={room.image} className="w-full h-full object-cover" alt="" /> : <ImageIcon className="w-6 h-6" />}
+                                      </div>
+                                      <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-2xl">
+                                        <Camera className="w-4 h-4 text-white" />
+                                        <input type="file" className="hidden" onChange={() => alert('File upload simulated. Please use the Image URL field for now.')} />
+                                      </label>
+                                    </div>
+                                    <div className="flex-1 space-y-2">
+                                      <Input 
+                                        label="Room Name" 
+                                        className="bg-white"
+                                        value={room.name}
+                                        onChange={e => {
+                                          const newHotels = [...formData.hotels];
+                                          newHotels[hIdx].roomTypes[rIdx].name = e.target.value;
+                                          setFormData({ ...formData, hotels: newHotels });
+                                        }}
+                                      />
+                                      <Input 
+                                        label="Room Image URL" 
+                                        className="bg-white"
+                                        placeholder="https://..."
+                                        value={room.image || ''}
+                                        onChange={e => {
+                                          const newHotels = [...formData.hotels];
+                                          newHotels[hIdx].roomTypes[rIdx].image = e.target.value;
+                                          setFormData({ ...formData, hotels: newHotels });
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <Input 
+                                      label="Bed Type" 
+                                      placeholder="e.g. King Size"
+                                      className="bg-white"
+                                      value={room.bedType || ''}
+                                      onChange={e => {
+                                        const newHotels = [...formData.hotels];
+                                        newHotels[hIdx].roomTypes[rIdx].bedType = e.target.value;
+                                        setFormData({ ...formData, hotels: newHotels });
+                                      }}
+                                    />
+                                    <Input 
+                                      label="Capacity" 
+                                      type="number"
+                                      className="bg-white"
+                                      value={room.capacity}
+                                      onChange={e => {
+                                        const newHotels = [...formData.hotels];
+                                        newHotels[hIdx].roomTypes[rIdx].capacity = parseInt(e.target.value);
+                                        setFormData({ ...formData, hotels: newHotels });
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <Input 
+                                      label="Price/Night" 
+                                      type="number" 
+                                      className="bg-white"
+                                      value={room.pricePerNight}
+                                      onChange={e => {
+                                        const newHotels = [...formData.hotels];
+                                        newHotels[hIdx].roomTypes[rIdx].pricePerNight = parseInt(e.target.value);
+                                        setFormData({ ...formData, hotels: newHotels });
+                                      }}
+                                    />
+                                    <Input 
+                                      label="Availability" 
+                                      type="number" 
+                                      className="bg-white"
+                                      value={room.availabilityCount}
+                                      onChange={e => {
+                                        const newHotels = [...formData.hotels];
+                                        newHotels[hIdx].roomTypes[rIdx].availabilityCount = parseInt(e.target.value);
+                                        setFormData({ ...formData, hotels: newHotels });
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 4: Transportation */}
+              {step === 4 && (
+                <div className="space-y-8">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-2xl font-serif font-bold text-primary">Transportation Options</h3>
+                    <Button 
+                      variant="outline" 
+                      leftIcon={Plus}
+                      onClick={() => setFormData({
+                        ...formData,
+                        transportation: [...formData.transportation, { 
+                          id: Date.now(), type: 'Private Car', capacity: 4, price: 50, availability: 5, description: '', image: '', pickupLocations: '' 
+                        }]
+                      })}
+                    >
+                      Add Vehicle
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {formData.transportation.map((car, idx) => (
+                      <div key={car.id} className="bg-white border border-gray-100 rounded-[40px] p-8 shadow-sm relative group">
+                        <button 
+                          className="absolute top-6 right-6 p-2 text-gray-300 hover:text-red-500"
+                          onClick={() => setFormData({
+                            ...formData,
+                            transportation: formData.transportation.filter((_, i) => i !== idx)
+                          })}
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                        <div className="flex gap-6 mb-8">
+                          <div className="relative group">
+                            <div className="w-24 h-24 bg-ethio-bg rounded-3xl flex items-center justify-center text-gray-300 overflow-hidden">
+                              {car.image ? <img src={car.image} className="w-full h-full object-cover" alt="" /> : <Car className="w-10 h-10" />}
+                            </div>
+                            <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-3xl">
+                              <Camera className="w-6 h-6 text-white" />
+                              <input type="file" className="hidden" onChange={() => alert('File upload simulated. Please use the Image URL field for now.')} />
+                            </label>
+                          </div>
+                          <div className="flex-1 space-y-4">
+                            <select 
+                              className="w-full bg-ethio-bg border-none rounded-xl py-3 px-4 text-sm font-bold text-primary"
+                              value={car.type}
+                              onChange={e => {
+                                const newTrans = [...formData.transportation];
+                                newTrans[idx].type = e.target.value;
+                                setFormData({ ...formData, transportation: newTrans });
+                              }}
+                            >
+                              <option>Private Car</option>
+                              <option>VIP SUV</option>
+                              <option>Minibus</option>
+                              <option>Luxury Coach</option>
+                              <option>Helicopter Transfer</option>
+                            </select>
+                            <Input 
+                              label="Image URL" 
+                              value={car.image}
+                              onChange={e => {
+                                const newTrans = [...formData.transportation];
+                                newTrans[idx].image = e.target.value;
+                                setFormData({ ...formData, transportation: newTrans });
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
+                          <Input 
+                            label="Capacity" 
+                            type="number"
+                            value={car.capacity}
+                            onChange={e => {
+                              const newTrans = [...formData.transportation];
+                              newTrans[idx].capacity = parseInt(e.target.value);
+                              setFormData({ ...formData, transportation: newTrans });
+                            }}
+                          />
+                          <Input 
+                            label="Price" 
+                            type="number"
+                            value={car.price}
+                            onChange={e => {
+                              const newTrans = [...formData.transportation];
+                              newTrans[idx].price = parseInt(e.target.value);
+                              setFormData({ ...formData, transportation: newTrans });
+                            }}
+                          />
+                          <Input 
+                            label="Available" 
+                            type="number"
+                            value={car.availability}
+                            onChange={e => {
+                              const newTrans = [...formData.transportation];
+                              newTrans[idx].availability = parseInt(e.target.value);
+                              setFormData({ ...formData, transportation: newTrans });
+                            }}
+                          />
+                        </div>
+                        <div className="mt-4">
+                          <Input 
+                            label="Pick-up Locations" 
+                            placeholder="e.g. Bole Airport, Hilton Hotel, Meskel Square"
+                            value={car.pickupLocations || ''}
+                            onChange={e => {
+                              const newTrans = [...formData.transportation];
+                              newTrans[idx].pickupLocations = e.target.value;
+                              setFormData({ ...formData, transportation: newTrans });
+                            }}
+                          />
+                        </div>
+                        <div className="mt-4">
+                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Description</label>
+                          <textarea 
+                            className="w-full h-24 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
+                            placeholder="Vehicle description, e.g. includes water, air-conditioning..."
+                            value={car.description}
+                            onChange={e => {
+                              const newTrans = [...formData.transportation];
+                              newTrans[idx].description = e.target.value;
+                              setFormData({ ...formData, transportation: newTrans });
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 5: Services */}
+              {step === 5 && (
+                <div className="space-y-12">
+                  <h3 className="text-2xl font-serif font-bold text-primary">Event Services & Add-ons</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    {[
+                      { key: 'foodPackages', label: 'Food & Drink Packages', icon: Utensils },
+                      { key: 'culturalServices', label: 'Cultural Services', icon: Music },
+                      { key: 'specialAssistance', label: 'Special Assistance', icon: Heart },
+                      { key: 'extras', label: 'Extras & Souvenirs', icon: Box }
+                    ].map(section => (
+                      <div key={section.key} className="space-y-6">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-primary/5 text-primary rounded-lg"><section.icon className="w-5 h-5" /></div>
+                          <h4 className="font-bold text-primary">{section.label}</h4>
+                        </div>
+                        <div className="space-y-3">
+                          {(formData.services as any)[section.key].map((item: string, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between p-4 bg-ethio-bg rounded-2xl group">
+                              <span className="text-sm font-medium text-gray-600">{item}</span>
+                              <button 
+                                className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                onClick={() => {
+                                  const newServices = { ...formData.services };
+                                  (newServices as any)[section.key] = (newServices as any)[section.key].filter((_: any, i: number) => i !== idx);
+                                  setFormData({ ...formData, services: newServices });
+                                }}
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                          <button 
+                            className="w-full p-4 border-2 border-dashed border-gray-100 rounded-2xl text-xs font-bold text-gray-400 hover:border-primary/20 hover:text-primary transition-all flex items-center justify-center gap-2"
+                            onClick={() => {
+                              const val = prompt(`Add ${section.label}:`);
+                              if (val) {
+                                const newServices = { ...formData.services };
+                                (newServices as any)[section.key].push(val);
+                                setFormData({ ...formData, services: newServices });
+                              }
+                            }}
+                          >
+                            <Plus className="w-4 h-4" /> Add Service
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 6: Policies */}
+              {step === 6 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                  <div className="space-y-8">
+                    <h3 className="text-2xl font-serif font-bold text-primary">Legal & Policies</h3>
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Cancellation Policy</label>
+                        <textarea 
+                          className="w-full h-32 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
+                          placeholder="e.g. Full refund up to 30 days before..."
+                          value={formData.policies.cancellation}
+                          onChange={e => setFormData({...formData, policies: {...formData.policies, cancellation: e.target.value}})}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Booking Terms</label>
+                        <textarea 
+                          className="w-full h-32 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
+                          placeholder="General terms and conditions..."
+                          value={formData.policies.terms}
+                          onChange={e => setFormData({...formData, policies: {...formData.policies, terms: e.target.value}})}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-8 pt-16">
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Safety Rules</label>
+                        <textarea 
+                          className="w-full h-32 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
+                          placeholder="On-site safety guidelines..."
+                          value={formData.policies.safety}
+                          onChange={e => setFormData({...formData, policies: {...formData.policies, safety: e.target.value}})}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Age Restriction</label>
+                        <textarea 
+                          className="w-full h-32 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
+                          placeholder="e.g. All ages welcome, children under 5 free..."
+                          value={formData.policies.ageRestriction}
+                          onChange={e => setFormData({...formData, policies: {...formData.policies, ageRestriction: e.target.value}})}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 7: Pricing */}
+              {step === 7 && (
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-16">
+                  <div className="lg:col-span-3 space-y-8">
+                    <h3 className="text-2xl font-serif font-bold text-primary">Ticket Pricing</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Input 
+                        label="Base Ticket Price" 
+                        type="number"
+                        value={formData.pricing.basePrice}
+                        onChange={e => setFormData({...formData, pricing: {...formData.pricing, basePrice: parseInt(e.target.value)}})}
+                      />
+                      <Input 
+                        label="VIP Ticket Price" 
+                        type="number"
+                        value={formData.pricing.vipPrice}
+                        onChange={e => setFormData({...formData, pricing: {...formData.pricing, vipPrice: parseInt(e.target.value)}})}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <select 
+                        className="w-full bg-ethio-bg border-none rounded-2xl py-4 px-4 text-sm font-bold text-primary"
+                        value={formData.pricing.currency}
+                        onChange={e => setFormData({...formData, pricing: {...formData.pricing, currency: e.target.value}})}
+                      >
+                        <option>USD</option>
+                        <option>ETB</option>
+                        <option>EUR</option>
+                        <option>GBP</option>
+                      </select>
+                      <Input 
+                        label="Early Bird Discount (%)" 
+                        type="number"
+                        value={formData.pricing.earlyBird}
+                        onChange={e => setFormData({...formData, pricing: {...formData.pricing, earlyBird: parseInt(e.target.value)}})}
+                      />
+                      <Input 
+                        label="Group Discount (%)" 
+                        type="number"
+                        value={formData.pricing.groupDiscount}
+                        onChange={e => setFormData({...formData, pricing: {...formData.pricing, groupDiscount: parseInt(e.target.value)}})}
+                      />
+                    </div>
+                    <div className="bg-emerald-50 p-8 rounded-[32px] border border-emerald-100 flex items-start gap-4">
+                      <Info className="w-5 h-5 text-emerald-600 mt-1" />
+                      <div>
+                        <h4 className="font-bold text-emerald-900 text-sm mb-1">Pricing Strategy Tip</h4>
+                        <p className="text-emerald-700 text-xs leading-relaxed">Early bird discounts typically increase conversion by 25% in the first week of listing.</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="lg:col-span-2">
+                    <div className="sticky top-8">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-4 block">Price Breakdown Preview</label>
+                      <div className="bg-ethio-dark text-white p-10 rounded-[40px] shadow-2xl space-y-8">
+                        <div className="space-y-2">
+                          <p className="text-gray-400 text-xs uppercase tracking-widest font-bold">Base Ticket</p>
+                          <p className="text-4xl font-serif font-bold">{formData.pricing.currency} {formData.pricing.basePrice}</p>
+                        </div>
+                        <div className="space-y-4 pt-8 border-t border-white/10">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">Early Bird Price</span>
+                            <span className="text-emerald-400 font-bold">-{formData.pricing.earlyBird}%</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">Group Rate (5+)</span>
+                            <span className="text-emerald-400 font-bold">-{formData.pricing.groupDiscount}%</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">VIP Experience</span>
+                            <span className="font-bold">+{formData.pricing.currency} {formData.pricing.vipPrice - formData.pricing.basePrice}</span>
+                          </div>
+                        </div>
+                        <div className="pt-8 border-t border-white/10">
+                          <Button className="w-full bg-secondary hover:bg-secondary/90 text-white border-none h-14 rounded-2xl">Preview Checkout</Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 8: Review & Publish */}
+              {step === 8 && (
+                <div className="space-y-16">
+                  <div className="text-center max-w-2xl mx-auto space-y-4">
+                    <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <CheckCircle2 className="w-10 h-10" />
+                    </div>
+                    <h3 className="text-4xl font-serif font-bold text-primary">Ready to Launch?</h3>
+                    <p className="text-gray-500">Review your festival details below. Once published, it will be visible to thousands of travelers worldwide.</p>
+                  </div>
+
+                  <div className="space-y-12 border-t border-gray-100 pt-16">
+                    {/* Hero Preview */}
+                    <div className="relative h-[500px] rounded-[60px] overflow-hidden shadow-2xl">
+                      <img src={formData.core.coverImage} className="w-full h-full object-cover" alt="" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                      <div className="absolute bottom-16 left-16 right-16 flex justify-between items-end">
+                        <div className="space-y-4">
+                          <Badge className="bg-secondary text-white border-none">Verified Festival</Badge>
+                          <h1 className="text-6xl font-serif font-bold text-white">{formData.core.name}</h1>
+                          <div className="flex items-center text-white/80 gap-8">
+                            <span className="flex items-center gap-2"><Calendar className="w-5 h-5" /> {formData.core.startDate} - {formData.core.endDate}</span>
+                            <span className="flex items-center gap-2"><MapPin className="w-5 h-5" /> {formData.core.locationName}</span>
+                          </div>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-xl p-8 rounded-[32px] border border-white/20 text-white">
+                          <p className="text-xs uppercase font-bold opacity-60 mb-1">Starting from</p>
+                          <p className="text-4xl font-serif font-bold">{formData.pricing.currency} {formData.pricing.basePrice}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Content Preview Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                      <div className="lg:col-span-2 space-y-12">
+                        <section className="space-y-6">
+                          <h4 className="text-2xl font-serif font-bold text-primary">About the Festival</h4>
+                          <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">{formData.core.fullDescription}</p>
+                        </section>
+
+                        <section className="space-y-6">
+                          <h4 className="text-2xl font-serif font-bold text-primary">Accommodation Partners</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {formData.hotels.map(hotel => (
+                              <div key={hotel.id} className="bg-white border border-gray-100 rounded-[32px] overflow-hidden shadow-sm">
+                                <img src={hotel.image} className="w-full h-48 object-cover" alt="" />
+                                <div className="p-6">
+                                  <h5 className="font-bold text-primary">{hotel.name}</h5>
+                                  <div className="flex text-secondary mb-2">
+                                    {[...Array(hotel.starRating)].map((_, i) => <Star key={i} className="w-3 h-3 fill-current" />)}
+                                  </div>
+                                  <p className="text-xs text-gray-500">{hotel.address}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      </div>
+
+                      <div className="space-y-8">
+                        <div className="bg-ethio-bg p-8 rounded-[40px] space-y-6">
+                          <h4 className="font-bold text-primary">Quick Summary</h4>
+                          <div className="space-y-4">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-500">Days</span>
+                              <span className="font-bold">{formData.schedule.length}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-500">Hotels</span>
+                              <span className="font-bold">{formData.hotels.length}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-500">Transport</span>
+                              <span className="font-bold">{formData.transportation.length}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <Button size="lg" className="w-full h-16 rounded-2xl" onClick={handlePublish}>Publish Now</Button>
+                        <Button variant="outline" size="lg" className="w-full h-16 rounded-2xl" onClick={() => {
+                          alert('Saved as draft!');
+                          onCancel();
+                        }}>Save as Draft</Button>
+                        <Button variant="ghost" size="lg" className="w-full h-16 rounded-2xl" onClick={() => setStep(1)}>Edit Details</Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        <div className="mt-16 pt-10 border-t border-gray-50 flex justify-between items-center">
+          <Button 
+            variant="ghost" 
+            leftIcon={ChevronLeft} 
+            onClick={prevStep} 
+            disabled={step === 1}
+            className="px-8"
+          >
+            Previous Step
+          </Button>
+          <div className="flex items-center gap-4">
+            <p className="text-[10px] font-black uppercase text-gray-300 tracking-[0.2em]">Step {step} of 8</p>
+            <Button 
+              onClick={step === 8 ? handlePublish : nextStep}
+              rightIcon={step === 8 ? CheckCircle2 : ChevronRight}
+              className="px-12 h-14 rounded-2xl shadow-xl shadow-primary/10"
+            >
+              {step === 8 ? 'Confirm & Publish' : 'Continue to Next Step'}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Map Picker Modal */}
+      <AnimatePresence>
+        {isMapModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMapModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative bg-white w-full max-w-4xl rounded-[48px] overflow-hidden shadow-2xl flex flex-col"
+            >
+              <div className="p-8 border-b border-gray-100 flex justify-between items-center">
+                <div>
+                  <h3 className="text-2xl font-serif font-bold text-primary">Select Exact Location</h3>
+                  <p className="text-xs text-gray-400">Click on the map to set the festival coordinates</p>
+                </div>
+                <button onClick={() => setIsMapModalOpen(false)} className="p-3 bg-gray-100 rounded-2xl hover:bg-gray-200 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="relative h-[500px] bg-gray-100 cursor-crosshair group" onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                // Simple simulation of coordinate mapping
+                const lat = 9.0333 + (0.5 - y / rect.height) * 0.1;
+                const lng = 38.7500 + (x / rect.width - 0.5) * 0.1;
+                setFormData({
+                  ...formData,
+                  core: {
+                    ...formData.core,
+                    coordinates: { lat, lng },
+                    address: `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`
+                  }
+                });
+              }}>
+                <img src="https://picsum.photos/seed/ethiopia-map/1200/800" className="w-full h-full object-cover opacity-80" alt="Map" />
+                <div className="absolute inset-0 bg-primary/5 pointer-events-none" />
+                
+                {/* Simulated Pin */}
+                <motion.div 
+                  layoutId="map-pin"
+                  className="absolute pointer-events-none"
+                  style={{ 
+                    left: `${((formData.core.coordinates.lng - 38.7500) / 0.1 + 0.5) * 100}%`,
+                    top: `${(0.5 - (formData.core.coordinates.lat - 9.0333) / 0.1) * 100}%`
+                  }}
+                >
+                  <div className="relative -translate-x-1/2 -translate-y-full">
+                    <MapPin className="w-10 h-10 text-secondary fill-secondary/20 drop-shadow-lg animate-bounce" />
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-1 bg-black/20 rounded-full blur-[2px]" />
+                  </div>
+                </motion.div>
+
+                <div className="absolute bottom-6 left-6 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-white/20">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <MapIcon className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Current Selection</p>
+                      <p className="text-xs font-bold text-primary">
+                        {formData.core.coordinates.lat.toFixed(6)}, {formData.core.coordinates.lng.toFixed(6)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-8 bg-gray-50 flex justify-end gap-4">
+                <Button variant="outline" onClick={() => setIsMapModalOpen(false)}>Cancel</Button>
+                <Button onClick={() => setIsMapModalOpen(false)}>Confirm Location</Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};

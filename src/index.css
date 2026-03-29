@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0f4c3a;
+  --color-secondary: #c89b2c;
+  --color-accent: #c65d3b;
+  --color-ethio-bg: #f9f7f3;
+  --color-ethio-light: #f1efea;
+  --color-ethio-dark: #0d1f1a;
+
+  --font-serif: "Playfair Display", serif;
+  --font-sans: "Inter", sans-serif;
+}
+
+/* Dark Mode Global Overrides */
+html.dark body {
+  background-color: #0a1411 !important;
+  color: #f9fafb !important;
+}
+
+html.dark .bg-white {
+  background-color: #111827 !important;
+}
+html.dark .hover\:bg-white:hover {
+  background-color: #111827 !important;
+}
+html.dark .bg-gray-50 {
+  background-color: #1f2937 !important;
+}
+html.dark .hover\:bg-gray-50:hover {
+  background-color: #1f2937 !important;
+}
+html.dark .bg-gray-100 {
+  background-color: #374151 !important;
+}
+html.dark .hover\:bg-gray-100:hover {
+  background-color: #374151 !important;
+}
+html.dark .bg-gray-200 {
+  background-color: #4b5563 !important;
+}
+html.dark .bg-ethio-bg {
+  background-color: #0a1411 !important;
+}
+html.dark .hover\:bg-ethio-bg:hover {
+  background-color: #0a1411 !important;
+}
+html.dark .bg-ethio-light {
+  background-color: #11221d !important;
+}
+html.dark .bg-ethio-dark {
+  background-color: #1a2f28 !important;
+}
+
+html.dark .text-gray-900 {
+  color: #f9fafb !important;
+}
+html.dark .text-gray-800 {
+  color: #f3f4f6 !important;
+}
+html.dark .text-gray-700 {
+  color: #e5e7eb !important;
+}
+html.dark .text-gray-600 {
+  color: #d1d5db !important;
+}
+html.dark .text-gray-500 {
+  color: #9ca3af !important;
+}
+html.dark .text-gray-400 {
+  color: #6b7280 !important;
+}
+html.dark .text-gray-300 {
+  color: #4b5563 !important;
+}
+
+html.dark .border-gray-100 {
+  border-color: #374151 !important;
+}
+html.dark .border-gray-200 {
+  border-color: #4b5563 !important;
+}
+html.dark .border-gray-300 {
+  border-color: #6b7280 !important;
+}
+
+html.dark .divide-gray-50 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1f2937 !important;
+}
+html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #374151 !important;
+}
+
+/* Adjust primary color for better contrast in dark mode */
+html.dark .text-primary {
+  color: #4ade80 !important;
+}
+html.dark .hover\:text-primary:hover {
+  color: #4ade80 !important;
+}
+html.dark .bg-primary {
+  background-color: #1a7a5d !important;
+}
+html.dark .hover\:bg-primary:hover {
+  background-color: #1a7a5d !important;
+}
+html.dark .border-primary {
+  border-color: #1a7a5d !important;
+}
+html.dark .ring-primary {
+  --tw-ring-color: #1a7a5d !important;
+}
