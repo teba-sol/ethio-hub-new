@@ -1,37 +1,45 @@
 import { NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
+import { jwtVerify } from 'jose';
 import { connectDB } from '@/lib/mongodb';
 import Product from '@/models/artisan/product.model';
 import User from '@/models/User';
+import { cookies } from 'next/headers';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
-async function getAuthenticatedUser(req: Request) {
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader) {
+async function getAuthenticatedUser() {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('sessionToken')?.value;
+    
+    if (!token) {
+      return null;
+    }
+    
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(JWT_SECRET));
+    const user = await User.findById((payload as any).userId).select('-password');
+    return user;
+  } catch (error) {
+    console.error('JWT verification failed:', error);
     return null;
   }
-  
-  const token = authHeader.split(' ')[1];
-  const decoded: any = jwt.verify(token, JWT_SECRET);
-  const user = await User.findById(decoded.userId).select('-password');
-  return user;
 }
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
     
-    const user = await getAuthenticatedUser(req);
+    const user = await getAuthenticatedUser();
     if (!user || user.role !== 'artisan') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const product = await Product.findOne({
-      _id: params.id,
+      _id: id,
       artisanId: user._id,
     });
 
@@ -54,18 +62,19 @@ export async function GET(
 
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
     
-    const user = await getAuthenticatedUser(req);
+    const user = await getAuthenticatedUser();
     if (!user || user.role !== 'artisan') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const product = await Product.findOne({
-      _id: params.id,
+      _id: id,
       artisanId: user._id,
     });
 
@@ -99,29 +108,29 @@ export async function PUT(
       status,
     } = body;
 
-    if (name) product.name = name;
-    if (images) product.images = images;
-    if (description) product.description = description;
+    if (name !== undefined) product.name = name;
+    if (images !== undefined) product.images = images;
+    if (description !== undefined) product.description = description;
     if (material !== undefined) product.material = material;
     if (handmadeBy !== undefined) product.handmadeBy = handmadeBy;
     if (region !== undefined) product.region = region;
     if (careInstructions !== undefined) product.careInstructions = careInstructions;
-    if (price) product.price = Number(price);
+    if (price !== undefined) product.price = Number(price);
     if (discountPrice !== undefined) product.discountPrice = discountPrice ? Number(discountPrice) : undefined;
-    if (stock) product.stock = Number(stock);
+    if (stock !== undefined) product.stock = Number(stock);
     if (sku !== undefined) product.sku = sku;
-    if (category) product.category = category;
+    if (category !== undefined) product.category = category;
     if (subcategory !== undefined) product.subcategory = subcategory;
-    if (tags) {
+    if (tags !== undefined) {
       product.tags = typeof tags === 'string' 
         ? tags.split(',').map((t: string) => t.trim()) 
         : tags;
     }
     if (weight !== undefined) product.weight = weight;
-    if (deliveryTime) product.deliveryTime = deliveryTime;
-    if (shippingFee) product.shippingFee = shippingFee;
-    if (status) {
-      product.status = status === 'Publish' ? 'Published' : 'Draft';
+    if (deliveryTime !== undefined) product.deliveryTime = deliveryTime;
+    if (shippingFee !== undefined) product.shippingFee = shippingFee;
+    if (status !== undefined) {
+      product.status = status === 'Publish' ? 'Published' : status;
     }
 
     await product.save();
@@ -141,18 +150,19 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
     
-    const user = await getAuthenticatedUser(req);
+    const user = await getAuthenticatedUser();
     if (!user || user.role !== 'artisan') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const product = await Product.findOneAndDelete({
-      _id: params.id,
+      _id: id,
       artisanId: user._id,
     });
 
