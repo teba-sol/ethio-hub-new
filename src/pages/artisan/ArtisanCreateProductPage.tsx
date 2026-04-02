@@ -52,19 +52,67 @@ export const ArtisanCreateProductPage: React.FC = () => {
     setPreviewImages(newPreviews);
   };
 
-  const handleSubmit = (status: 'Draft' | 'Publish') => {
-    // Validate required fields
-    if (!formData.name || previewImages.length === 0 || !formData.description || !formData.price || !formData.stock || !formData.category || !formData.deliveryTime || !formData.shippingFee) {
-      alert('Please fill in all required fields marked with *');
-      return;
-    }
+   const handleSubmit = async (status: 'Draft' | 'Publish') => {
+     // Validate required fields
+     if (!formData.name || previewImages.length === 0 || !formData.description || !formData.price || !formData.stock || !formData.category || !formData.deliveryTime || !formData.shippingFee) {
+       alert('Please fill in all required fields marked with *');
+       return;
+     }
 
-    console.log('Submitting product:', { ...formData, status, images: previewImages });
-    // API call would go here
-    
-    alert(`Artifact ${status === 'Publish' ? 'Published' : 'Saved as Draft'} Successfully!`);
-    router.push('/dashboard/artisan/products');
-  };
+     try {
+       const token = localStorage.getItem('token');
+       console.log('Token retrieved:', token ? 'Present' : 'Missing');
+       if (!token) {
+         alert('Authentication required. Please log in again.');
+         router.push('/login');
+         return;
+       }
+
+       const productData = {
+         name: formData.name,
+         description: formData.description,
+         price: parseFloat(formData.price),
+         images: previewImages,
+         category: formData.category,
+         stock: parseInt(formData.stock),
+         material: formData.material || undefined,
+         handmadeBy: formData.handmadeBy || undefined,
+         region: formData.region || undefined,
+         careInstructions: formData.careInstructions || undefined,
+         discountPrice: formData.discountPrice ? parseFloat(formData.discountPrice) : undefined,
+         sku: formData.sku || undefined,
+         subcategory: formData.subcategory || undefined,
+         tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : undefined,
+         weight: formData.weight || undefined,
+         deliveryTime: formData.deliveryTime,
+         shippingFee: formData.shippingFee === 'Free Shipping' ? 'Free Shipping' : formData.shippingFee,
+         status: status === 'Publish' ? 'Published' : 'Draft'
+       };
+
+       console.log('Sending product data:', productData);
+
+       const response = await fetch('/api/artisan/products', {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+           'Authorization': `Bearer ${token}`
+         },
+         body: JSON.stringify(productData)
+       });
+
+       const result = await response.json();
+
+       if (!response.ok) {
+         throw new Error(result.message || 'Failed to save product');
+       }
+
+       alert(`Artifact ${status === 'Publish' ? 'Published' : 'Saved as Draft'} Successfully!`);
+       router.push('/dashboard/artisan/products');
+     } catch (error: any) {
+       console.error('Error submitting product:', error);
+       alert(error.message || 'An error occurred while saving the product');
+     }
+   };
 
   return (
     <div className="max-w-5xl mx-auto pb-20 animate-in fade-in duration-500">
@@ -187,16 +235,16 @@ export const ArtisanCreateProductPage: React.FC = () => {
                 onChange={e => setFormData({...formData, discountPrice: e.target.value})}
               />
             </div>
-            {formData.price && formData.discountPrice && (
-              <div className="p-4 bg-gray-50 rounded-xl flex items-center gap-4">
-                <span className="text-xs font-bold text-gray-500 uppercase">Preview:</span>
-                <span className="text-gray-400 line-through text-sm">ETB {formData.price}</span>
-                <span className="text-emerald-600 font-bold text-lg">ETB {formData.discountPrice}</span>
-                <Badge variant="success" size="sm">
-                  {Math.round(((Number(formData.price) - Number(formData.discountPrice)) / Number(formData.price)) * 100)}% OFF
-                </Badge>
-              </div>
-            )}
+             {formData.price && formData.discountPrice && (
+               <div className="p-4 bg-gray-50 rounded-xl flex items-center gap-4">
+                 <span className="text-xs font-bold text-gray-500 uppercase">Preview:</span>
+                 <span className="text-gray-400 line-through text-sm">ETB {formData.price}</span>
+                 <span className="text-emerald-600 font-bold text-lg">ETB {formData.discountPrice}</span>
+                 <Badge variant="success">
+                   {Math.round(((Number(formData.price) - Number(formData.discountPrice)) / Number(formData.price)) * 100)}% OFF
+                 </Badge>
+               </div>
+             )}
           </section>
 
           {/* 3. Inventory Section */}
