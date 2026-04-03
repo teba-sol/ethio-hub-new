@@ -29,7 +29,7 @@ export const LoginPage: React.FC = () => {
         } else if (userRole === 'artisan' && res.user.artisanStatus !== 'Approved') {
           router.push('/artisan/waiting');
         } else {
-          router.push(userRole === 'admin' ? '/dashboard/admin' : 
+          router.push(userRole === 'admin' ? '/dashboard/admin/overview' : 
                       userRole === 'organizer' ? '/dashboard/organizer/overview' : 
                       userRole === 'artisan' ? '/dashboard/artisan/overview' : '/');
         }

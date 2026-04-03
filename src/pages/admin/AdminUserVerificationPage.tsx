@@ -170,7 +170,7 @@ export const AdminUserVerificationPage: React.FC = () => {
   const StatusBadge = ({ status }: { status: VerificationStatus }) => {
     switch (status) {
       case 'approved': return <Badge variant="success">Approved</Badge>;
-      case 'rejected': return <Badge variant="danger">Rejected</Badge>;
+      case 'rejected': return <Badge variant="error">Rejected</Badge>;
       case 'submitted': return <Badge variant="warning">Pending</Badge>;
       case 'under_review': return <Badge variant="info">Under Review</Badge>;
       default: return <Badge variant="secondary">{status}</Badge>;
@@ -214,7 +214,7 @@ export const AdminUserVerificationPage: React.FC = () => {
             <div className="p-3 rounded-xl bg-red-50 text-red-600">
               <XCircle className="w-6 h-6" />
             </div>
-            <Badge variant="danger">Action Needed</Badge>
+            <Badge variant="error">Action Needed</Badge>
           </div>
           <h3 className="text-2xl font-bold text-gray-800">5</h3>
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Rejected Requests</p>
