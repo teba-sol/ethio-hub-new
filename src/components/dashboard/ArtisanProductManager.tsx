@@ -105,7 +105,6 @@ export const ArtisanProductManager: React.FC = () => {
   const router = useRouter();
   const navigate = (to: string) => router.push(to);
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [manageId, setManageId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -123,7 +122,6 @@ export const ArtisanProductManager: React.FC = () => {
 
   const fetchProducts = async () => {
     try {
-      setLoading(true);
       const response = await fetch('/api/artisan/products');
       if (response.ok) {
         const data = await response.json();
@@ -131,8 +129,6 @@ export const ArtisanProductManager: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching products:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -331,14 +327,6 @@ export const ArtisanProductManager: React.FC = () => {
     return <Badge variant="success">Published</Badge>;
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading products...</div>
-      </div>
-    );
-  }
-
   if (manageId) {
     const product = products.find(p => p._id === manageId);
     if (!product) return <div>Product not found</div>;
@@ -359,11 +347,8 @@ export const ArtisanProductManager: React.FC = () => {
             </div>
           </div>
           <div className="flex gap-3">
-            {product.status === 'Draft' && (
-              <Button onClick={() => handlePublish(product._id)} variant="primary" className="bg-emerald-600 hover:bg-emerald-700">Publish Product</Button>
-            )}
+            <Button leftIcon={Edit3} onClick={() => navigate(`/dashboard/artisan/products/edit/${product._id}`)}>Edit Product</Button>
             <Button variant="outline" leftIcon={Eye} onClick={() => window.open(`/product/${product._id}`, '_blank')}>View Public</Button>
-            <Button leftIcon={Save} onClick={() => alert("Changes saved successfully.")}>Save Changes</Button>
           </div>
         </header>
 

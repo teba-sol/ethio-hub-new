@@ -26,12 +26,14 @@ const UserSchema = new mongoose.Schema(
 
     artisanStatus: {
       type: String,
-      enum: ["Not Submitted", "Pending", "Under Review", "Approved", "Rejected", "Modification Requested"]
+      enum: ["Not Submitted", "Pending", "Under Review", "Approved", "Rejected", "Modification Requested"],
+      default: "Not Submitted"
     },
 
     organizerStatus: {
       type: String,
-      enum: ["Not Submitted", "Pending", "Under Review", "Approved", "Rejected", "Modification Requested"]
+      enum: ["Not Submitted", "Pending", "Under Review", "Approved", "Rejected", "Modification Requested"],
+      default: "Not Submitted"
     },
 
     // Organizer Profile Fields

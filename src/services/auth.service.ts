@@ -35,8 +35,8 @@ export const login = async (credentials: { email: string; password: string }) =>
       email: user.email, 
       role: user.role, 
       name: user.name,
-      artisanStatus: user.artisanStatus,
-      organizerStatus: user.organizerStatus,
+      artisanStatus: user.artisanStatus || 'Not Submitted',
+      organizerStatus: user.organizerStatus || 'Not Submitted',
       organizerProfile: user.organizerProfile || null,
     } 
   };
@@ -84,8 +84,8 @@ export const register = async (userData: { email: string; password: string; name
       email: newUser.email, 
       role: newUser.role, 
       name: newUser.name,
-      artisanStatus: newUser.artisanStatus,
-      organizerStatus: newUser.organizerStatus,
+      artisanStatus: newUser.artisanStatus || 'Not Submitted',
+      organizerStatus: newUser.organizerStatus || 'Not Submitted',
     } 
   };
 };
