@@ -36,6 +36,10 @@ const UserSchema = new mongoose.Schema(
       default: "Not Submitted"
     },
 
+    rejectionReason: {
+      type: String,
+    },
+
     // Organizer Profile Fields
     organizerProfile: {
       companyName: { type: String },

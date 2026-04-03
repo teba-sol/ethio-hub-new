@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, CalendarCheck, PackageCheck, 
   AlertCircle, CheckCircle2, Clock, Filter,
@@ -10,8 +10,31 @@ import { AdminProductsPage } from './AdminProductsPage';
 
 type TabType = 'users' | 'events' | 'products';
 
+interface VerificationStats {
+  pending: number;
+  underReview: number;
+  approved: number;
+  rejected: number;
+}
+
 export const AdminVerificationModerationPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('users');
+  const [stats, setStats] = useState<VerificationStats>({ pending: 0, underReview: 0, approved: 0, rejected: 0 });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch('/api/admin/verification/stats');
+        const data = await res.json();
+        if (data.success) {
+          setStats(data.stats);
+        }
+      } catch (error) {
+        console.error('Failed to fetch stats:', error);
+      }
+    };
+    fetchStats();
+  }, []);
 
   const tabs = [
     { id: 'users', name: 'User Verifications', icon: ShieldCheck, color: 'text-blue-500', bg: 'bg-blue-50' },
@@ -53,7 +76,7 @@ export const AdminVerificationModerationPage: React.FC = () => {
           </div>
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pending Users</p>
-            <p className="text-2xl font-bold text-gray-800">12</p>
+            <p className="text-2xl font-bold text-gray-800">{stats.pending}</p>
           </div>
           <div className="ml-auto">
             <Badge variant="warning">Action Required</Badge>
