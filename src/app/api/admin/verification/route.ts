@@ -4,6 +4,8 @@ import User from '@/models/User';
 import ArtisanProfile from '@/models/artisan/artisanProfile.model';
 import { jwtVerify } from 'jose';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const db = await connectDB();
@@ -24,7 +26,6 @@ export async function GET(request: NextRequest) {
 
     const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'ethio-hub-secret-key-2025');
     const { payload } = await jwtVerify(token, secret);
-    const adminId = payload.userId as string;
     const adminRole = payload.role as string;
 
     if (adminRole !== 'admin') {
@@ -65,14 +66,15 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const users = await User.find(query)
-      .select('-password')
-      .sort({ createdAt: -1 })
-      .lean();
+    // Fetch users and profiles in parallel for speed
+    const [users, profiles] = await Promise.all([
+      User.find(query)
+        .select('-password')
+        .sort({ createdAt: -1 })
+        .lean(),
+      ArtisanProfile.find({}).lean(),
+    ]);
 
-    const userIds = users.map((u: any) => u._id);
-
-    const profiles = await ArtisanProfile.find({ userId: { $in: userIds } }).lean();
     const profileMap = new Map();
     profiles.forEach((p: any) => {
       profileMap.set(p.userId.toString(), p);

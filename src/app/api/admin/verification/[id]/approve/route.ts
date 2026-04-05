@@ -4,6 +4,8 @@ import User from '@/models/User';
 import VerificationRecord from '@/models/admin/verificationRecord.model';
 import { jwtVerify } from 'jose';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -39,39 +41,44 @@ export async function POST(
 
     const { id } = await params;
 
-    const user = await User.findById(id);
-    if (!user) {
+    // Single update - no need to fetch first
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { artisanStatus: 'Approved' },
+      { new: true, select: 'name email artisanStatus role' }
+    );
+
+    if (!updatedUser) {
       return new NextResponse(
         JSON.stringify({ success: false, message: 'User not found' }),
         { status: 404, headers: { 'content-type': 'application/json' } }
       );
     }
 
-    if (user.role !== 'artisan') {
+    if (updatedUser.role !== 'artisan') {
       return new NextResponse(
         JSON.stringify({ success: false, message: 'User is not an artisan' }),
         { status: 400, headers: { 'content-type': 'application/json' } }
       );
     }
 
-    await User.findByIdAndUpdate(id, { artisanStatus: 'Approved' });
-
-    await VerificationRecord.create({
+    // Fire-and-forget: log verification record without blocking response
+    VerificationRecord.create({
       userId: id,
       userRole: 'artisan',
       action: 'approved',
       adminId,
       reviewedAt: new Date(),
-    });
+    }).catch(err => console.error('Failed to create verification record:', err));
 
     return new NextResponse(
       JSON.stringify({
         success: true,
         message: 'Artisan approved successfully',
         user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
+          id: updatedUser._id,
+          name: updatedUser.name,
+          email: updatedUser.email,
           artisanStatus: 'Approved',
         },
       }),

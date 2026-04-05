@@ -66,9 +66,11 @@ export const AdminUserVerificationPage: React.FC = () => {
   const [stats, setStats] = useState<VerificationStats>({ pending: 0, underReview: 0, approved: 0, rejected: 0 });
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchRequests = useCallback(async () => {
-    setLoading(true);
+  const fetchRequests = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
     try {
       const params = new URLSearchParams();
       if (filterStatus !== 'All') params.set('status', filterStatus);
@@ -82,6 +84,7 @@ export const AdminUserVerificationPage: React.FC = () => {
       console.error('Failed to fetch requests:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [filterStatus]);
 
@@ -103,18 +106,26 @@ export const AdminUserVerificationPage: React.FC = () => {
   }, [fetchRequests, fetchStats]);
 
   const handleApprove = async (id: string) => {
+    // Optimistic UI update
+    const previousRequests = [...requests];
+    setRequests(prev => prev.map(req => 
+      req.id === id ? { ...req, status: 'approved' as VerificationStatus } : req
+    ));
+    
     setActionLoading(id);
     try {
       const res = await fetch(`/api/admin/verification/${id}/approve`, { method: 'POST' });
       const data = await res.json();
       if (data.success) {
-        setSelectedRequest(null);
-        fetchRequests();
+        setSelectedRequest(prev => prev?.id === id ? { ...prev, status: 'approved' as VerificationStatus } : prev);
+        fetchRequests(true);
         fetchStats();
       } else {
+        setRequests(previousRequests); // Rollback on failure
         alert(data.message || 'Failed to approve');
       }
     } catch (error) {
+      setRequests(previousRequests); // Rollback on error
       console.error('Failed to approve:', error);
       alert('Failed to approve artisan');
     } finally {
@@ -124,6 +135,13 @@ export const AdminUserVerificationPage: React.FC = () => {
 
   const handleReject = async (id: string) => {
     if (!rejectionReason.trim()) return;
+    
+    // Optimistic UI update
+    const previousRequests = [...requests];
+    setRequests(prev => prev.map(req => 
+      req.id === id ? { ...req, status: 'rejected' as VerificationStatus, rejectionReason: rejectionReason.trim() } : req
+    ));
+    
     setActionLoading(id);
     try {
       const res = await fetch(`/api/admin/verification/${id}/reject`, {
@@ -133,15 +151,18 @@ export const AdminUserVerificationPage: React.FC = () => {
       });
       const data = await res.json();
       if (data.success) {
+        setSelectedRequest(prev => prev?.id === id ? { ...prev, status: 'rejected' as VerificationStatus, rejectionReason: rejectionReason.trim() } : prev);
         setShowRejectionModal(false);
         setSelectedRequest(null);
         setRejectionReason('');
-        fetchRequests();
+        fetchRequests(true);
         fetchStats();
       } else {
+        setRequests(previousRequests); // Rollback on failure
         alert(data.message || 'Failed to reject');
       }
     } catch (error) {
+      setRequests(previousRequests); // Rollback on error
       console.error('Failed to reject:', error);
       alert('Failed to reject artisan');
     } finally {

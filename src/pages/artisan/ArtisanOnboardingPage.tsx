@@ -204,7 +204,7 @@ export const ArtisanOnboardingPage: React.FC = () => {
         if (response.ok) {
           updateUser({ artisanStatus: 'Pending' as ArtisanStatus });
           alert('Application submitted successfully!');
-          router.push('/dashboard/artisan/overview');
+          router.push('/artisan/waiting');
         } else {
           alert(data.message || 'Failed to submit application');
         }

@@ -3,6 +3,8 @@ import { connectDB } from '@/lib/mongodb';
 import User from '@/models/User';
 import { jwtVerify } from 'jose';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const db = await connectDB();
@@ -32,19 +34,30 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const pending = await User.countDocuments({ role: 'artisan', artisanStatus: 'Pending' });
-    const underReview = await User.countDocuments({ role: 'artisan', artisanStatus: 'Under Review' });
-    const approved = await User.countDocuments({ role: 'artisan', artisanStatus: 'Approved' });
-    const rejected = await User.countDocuments({ role: 'artisan', artisanStatus: 'Rejected' });
+    // Single aggregation query instead of 4 separate countDocuments calls
+    const [result] = await User.aggregate([
+      { $match: { role: 'artisan' } },
+      {
+        $group: {
+          _id: '$artisanStatus',
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const statsMap: Record<string, number> = {};
+    if (result) {
+      statsMap[result._id] = result.count;
+    }
 
     return new NextResponse(
       JSON.stringify({
         success: true,
         stats: {
-          pending,
-          underReview,
-          approved,
-          rejected,
+          pending: statsMap['Pending'] || 0,
+          underReview: statsMap['Under Review'] || 0,
+          approved: statsMap['Approved'] || 0,
+          rejected: statsMap['Rejected'] || 0,
         },
       }),
       { status: 200, headers: { 'content-type': 'application/json' } }

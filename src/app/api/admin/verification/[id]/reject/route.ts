@@ -4,6 +4,8 @@ import User from '@/models/User';
 import VerificationRecord from '@/models/admin/verificationRecord.model';
 import { jwtVerify } from 'jose';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -48,45 +50,49 @@ export async function POST(
       );
     }
 
-    const user = await User.findById(id);
-    if (!user) {
+    const trimmedReason = reason.trim();
+
+    // Single update - no need to fetch first
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { artisanStatus: 'Rejected', rejectionReason: trimmedReason },
+      { new: true, select: 'name email artisanStatus role rejectionReason' }
+    );
+
+    if (!updatedUser) {
       return new NextResponse(
         JSON.stringify({ success: false, message: 'User not found' }),
         { status: 404, headers: { 'content-type': 'application/json' } }
       );
     }
 
-    if (user.role !== 'artisan') {
+    if (updatedUser.role !== 'artisan') {
       return new NextResponse(
         JSON.stringify({ success: false, message: 'User is not an artisan' }),
         { status: 400, headers: { 'content-type': 'application/json' } }
       );
     }
 
-    await User.findByIdAndUpdate(id, {
-      artisanStatus: 'Rejected',
-      rejectionReason: reason.trim(),
-    });
-
-    await VerificationRecord.create({
+    // Fire-and-forget: log verification record without blocking response
+    VerificationRecord.create({
       userId: id,
       userRole: 'artisan',
       action: 'rejected',
       adminId,
-      reason: reason.trim(),
+      reason: trimmedReason,
       reviewedAt: new Date(),
-    });
+    }).catch(err => console.error('Failed to create verification record:', err));
 
     return new NextResponse(
       JSON.stringify({
         success: true,
         message: 'Artisan rejected successfully',
         user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
+          id: updatedUser._id,
+          name: updatedUser.name,
+          email: updatedUser.email,
           artisanStatus: 'Rejected',
-          rejectionReason: reason.trim(),
+          rejectionReason: trimmedReason,
         },
       }),
       { status: 200, headers: { 'content-type': 'application/json' } }
