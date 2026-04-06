@@ -453,7 +453,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                         ...formData,
                         hotels: [...formData.hotels, { 
                           id: Date.now(), name: '', image: '', starRating: 5, address: '', description: '', 
-                          policies: '', facilities: [], roomTypes: [] 
+                          fullDescription: '', policies: '', checkInTime: '15:00', checkOutTime: '12:00', facilities: [], rooms: [], gallery: [] 
                         }]
                       })}
                     >
@@ -471,7 +471,22 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                 </div>
                                 <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-3xl">
                                   <Camera className="w-6 h-6 text-white" />
-                                  <input type="file" className="hidden" onChange={() => alert('File upload simulated. Please use the Image URL field for now.')} />
+                                  <input type="file" className="hidden" accept="image/*" onChange={e => {
+                                    if (e.target.files?.[0]) {
+                                      const file = e.target.files[0];
+                                      const uploadData = new FormData();
+                                      uploadData.append('file', file);
+                                      fetch('/api/upload', { method: 'POST', body: uploadData })
+                                        .then(res => res.json())
+                                        .then(data => {
+                                          if (data.success) {
+                                            const newHotels = [...formData.hotels];
+                                            newHotels[hIdx].image = data.url;
+                                            setFormData({ ...formData, hotels: newHotels });
+                                          }
+                                        });
+                                    }
+                                  }} />
                                 </label>
                               </div>
                               <div>
@@ -490,7 +505,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                           </button>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <Input 
                             label="Hotel Name" 
                             value={hotel.name}
@@ -520,15 +535,120 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                               setFormData({ ...formData, hotels: newHotels });
                             }}
                           />
-                          <Input 
-                            label="Image URL" 
-                            value={hotel.image}
-                            onChange={e => {
-                              const newHotels = [...formData.hotels];
-                              newHotels[hIdx].image = e.target.value;
-                              setFormData({ ...formData, hotels: newHotels });
-                            }}
-                          />
+                          <div className="grid grid-cols-2 gap-4">
+                            <Input 
+                              label="Check-in Time" 
+                              type="time"
+                              value={hotel.checkInTime || '15:00'}
+                              onChange={e => {
+                                const newHotels = [...formData.hotels];
+                                newHotels[hIdx].checkInTime = e.target.value;
+                                setFormData({ ...formData, hotels: newHotels });
+                              }}
+                            />
+                            <Input 
+                              label="Check-out Time" 
+                              type="time"
+                              value={hotel.checkOutTime || '12:00'}
+                              onChange={e => {
+                                const newHotels = [...formData.hotels];
+                                newHotels[hIdx].checkOutTime = e.target.value;
+                                setFormData({ ...formData, hotels: newHotels });
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Full Description</label>
+                            <textarea 
+                              className="w-full h-24 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
+                              placeholder="Describe the hotel, amenities, and what makes it special..."
+                              value={hotel.fullDescription || ''}
+                              onChange={e => {
+                                const newHotels = [...formData.hotels];
+                                newHotels[hIdx].fullDescription = e.target.value;
+                                setFormData({ ...formData, hotels: newHotels });
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Facilities</label>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {['Free WiFi', 'Swimming Pool', 'Gym', 'Spa & Sauna', 'Restaurant', 'Airport Shuttle', 'Free Parking', 'Room Service'].map(facility => (
+                              <label key={facility} className={`flex items-center gap-2 p-3 rounded-xl cursor-pointer transition-all ${(hotel.facilities || []).includes(facility) ? 'bg-primary/10 text-primary border border-primary' : 'bg-ethio-bg text-gray-500 border border-transparent hover:bg-gray-100'}`}>
+                                <input 
+                                  type="checkbox" 
+                                  className="hidden"
+                                  checked={(hotel.facilities || []).includes(facility)}
+                                  onChange={e => {
+                                    const newHotels = [...formData.hotels];
+                                    const facilities = newHotels[hIdx].facilities || [];
+                                    if (e.target.checked) {
+                                      newHotels[hIdx].facilities = [...facilities, facility];
+                                    } else {
+                                      newHotels[hIdx].facilities = facilities.filter((f: string) => f !== facility);
+                                    }
+                                    setFormData({ ...formData, hotels: newHotels });
+                                  }}
+                                />
+                                <span className="text-xs font-semibold">{facility}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center">
+                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Hotel Gallery (Pool, Gym, Restaurant, etc.)</label>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {(hotel.gallery || []).map((img: string, gIdx: number) => (
+                              <div key={gIdx} className="relative h-24 rounded-2xl overflow-hidden group">
+                                <img src={img} alt="" className="w-full h-full object-cover" />
+                                <button 
+                                  className="absolute top-1 right-1 p-1 bg-black/50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all"
+                                  onClick={() => {
+                                    const newHotels = [...formData.hotels];
+                                    newHotels[hIdx].gallery = newHotels[hIdx].gallery.filter((_: string, i: number) => i !== gIdx);
+                                    setFormData({ ...formData, hotels: newHotels });
+                                  }}
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                            <label className="h-24 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all">
+                              <Camera className="w-6 h-6 text-gray-400" />
+                              <span className="text-[10px] text-gray-400 mt-1">Add Photo</span>
+                              <input 
+                                type="file" 
+                                className="hidden" 
+                                accept="image/*" 
+                                multiple
+                                onChange={e => {
+                                  if (e.target.files) {
+                                    Array.from(e.target.files).forEach(file => {
+                                      const uploadData = new FormData();
+                                      uploadData.append('file', file);
+                                      fetch('/api/upload', { method: 'POST', body: uploadData })
+                                        .then(res => res.json())
+                                        .then(data => {
+                                          if (data.success) {
+                                            const newHotels = [...formData.hotels];
+                                            newHotels[hIdx].gallery = [...(newHotels[hIdx].gallery || []), data.url];
+                                            setFormData({ ...formData, hotels: newHotels });
+                                          }
+                                        });
+                                    });
+                                  }
+                                }} 
+                              />
+                            </label>
+                          </div>
                         </div>
 
                         <div className="space-y-4">
@@ -538,8 +658,8 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                               className="text-xs font-bold text-primary flex items-center gap-1"
                               onClick={() => {
                                 const newHotels = [...formData.hotels];
-                                newHotels[hIdx].roomTypes.push({
-                                  id: Date.now(), name: '', description: '', capacity: 2, pricePerNight: 100, availabilityCount: 5, image: ''
+                                newHotels[hIdx].rooms.push({
+                                  id: Date.now(), name: '', description: '', capacity: 2, pricePerNight: 100, availability: 5, image: '', sqm: 30, amenities: [], bedType: ''
                                 });
                                 setFormData({ ...formData, hotels: newHotels });
                               }}
@@ -548,13 +668,13 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                             </button>
                           </div>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                            {hotel.roomTypes.map((room: any, rIdx: number) => (
+                            {hotel.rooms.map((room: any, rIdx: number) => (
                               <div key={room.id} className="bg-ethio-bg/50 p-6 rounded-3xl border border-gray-50 relative group">
                                 <button 
                                   className="absolute top-4 right-4 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
                                   onClick={() => {
                                     const newHotels = [...formData.hotels];
-                                    newHotels[hIdx].roomTypes = newHotels[hIdx].roomTypes.filter((_: any, i: number) => i !== rIdx);
+                                    newHotels[hIdx].rooms = newHotels[hIdx].rooms.filter((_: any, i: number) => i !== rIdx);
                                     setFormData({ ...formData, hotels: newHotels });
                                   }}
                                 >
@@ -568,7 +688,22 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                       </div>
                                       <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-2xl">
                                         <Camera className="w-4 h-4 text-white" />
-                                        <input type="file" className="hidden" onChange={() => alert('File upload simulated. Please use the Image URL field for now.')} />
+                                        <input type="file" className="hidden" accept="image/*" onChange={e => {
+                                          if (e.target.files?.[0]) {
+                                            const file = e.target.files[0];
+                                            const uploadData = new FormData();
+                                            uploadData.append('file', file);
+                                            fetch('/api/upload', { method: 'POST', body: uploadData })
+                                              .then(res => res.json())
+                                              .then(data => {
+                                                if (data.success) {
+                                                  const newHotels = [...formData.hotels];
+                                                  newHotels[hIdx].rooms[rIdx].image = data.url;
+                                                  setFormData({ ...formData, hotels: newHotels });
+                                                }
+                                              });
+                                          }
+                                        }} />
                                       </label>
                                     </div>
                                     <div className="flex-1 space-y-2">
@@ -578,7 +713,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                         value={room.name}
                                         onChange={e => {
                                           const newHotels = [...formData.hotels];
-                                          newHotels[hIdx].roomTypes[rIdx].name = e.target.value;
+                                          newHotels[hIdx].rooms[rIdx].name = e.target.value;
                                           setFormData({ ...formData, hotels: newHotels });
                                         }}
                                       />
@@ -589,7 +724,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                         value={room.image || ''}
                                         onChange={e => {
                                           const newHotels = [...formData.hotels];
-                                          newHotels[hIdx].roomTypes[rIdx].image = e.target.value;
+                                          newHotels[hIdx].rooms[rIdx].image = e.target.value;
                                           setFormData({ ...formData, hotels: newHotels });
                                         }}
                                       />
@@ -603,7 +738,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                       value={room.bedType || ''}
                                       onChange={e => {
                                         const newHotels = [...formData.hotels];
-                                        newHotels[hIdx].roomTypes[rIdx].bedType = e.target.value;
+                                        newHotels[hIdx].rooms[rIdx].bedType = e.target.value;
                                         setFormData({ ...formData, hotels: newHotels });
                                       }}
                                     />
@@ -614,7 +749,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                       value={room.capacity}
                                       onChange={e => {
                                         const newHotels = [...formData.hotels];
-                                        newHotels[hIdx].roomTypes[rIdx].capacity = parseInt(e.target.value);
+                                        newHotels[hIdx].rooms[rIdx].capacity = parseInt(e.target.value);
                                         setFormData({ ...formData, hotels: newHotels });
                                       }}
                                     />
@@ -627,21 +762,60 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                       value={room.pricePerNight}
                                       onChange={e => {
                                         const newHotels = [...formData.hotels];
-                                        newHotels[hIdx].roomTypes[rIdx].pricePerNight = parseInt(e.target.value);
+                                        newHotels[hIdx].rooms[rIdx].pricePerNight = parseInt(e.target.value);
                                         setFormData({ ...formData, hotels: newHotels });
                                       }}
                                     />
                                     <Input 
-                                      label="Availability" 
+                                      label="Size (sqm)" 
                                       type="number" 
                                       className="bg-white"
-                                      value={room.availabilityCount}
+                                      placeholder="e.g. 35"
+                                      value={room.sqm || ''}
                                       onChange={e => {
                                         const newHotels = [...formData.hotels];
-                                        newHotels[hIdx].roomTypes[rIdx].availabilityCount = parseInt(e.target.value);
+                                        newHotels[hIdx].rooms[rIdx].sqm = parseInt(e.target.value);
                                         setFormData({ ...formData, hotels: newHotels });
                                       }}
                                     />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Room Description</label>
+                                    <textarea 
+                                      className="w-full h-16 p-3 bg-white border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-primary/10" 
+                                      placeholder="Describe the room..."
+                                      value={room.description || ''}
+                                      onChange={e => {
+                                        const newHotels = [...formData.hotels];
+                                        newHotels[hIdx].rooms[rIdx].description = e.target.value;
+                                        setFormData({ ...formData, hotels: newHotels });
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Room Amenities</label>
+                                    <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                                      {['Free WiFi', 'Balcony', 'Air Conditioning', 'Mini Bar', 'TV', 'Safe'].map(amenity => (
+                                        <label key={amenity} className={`flex items-center gap-1.5 p-2 rounded-lg cursor-pointer transition-all text-xs ${(room.amenities || []).includes(amenity) ? 'bg-primary/10 text-primary border border-primary' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'}`}>
+                                          <input 
+                                            type="checkbox" 
+                                            className="hidden"
+                                            checked={(room.amenities || []).includes(amenity)}
+                                            onChange={e => {
+                                              const newHotels = [...formData.hotels];
+                                              const amenities = newHotels[hIdx].rooms[rIdx].amenities || [];
+                                              if (e.target.checked) {
+                                                newHotels[hIdx].rooms[rIdx].amenities = [...amenities, amenity];
+                                              } else {
+                                                newHotels[hIdx].rooms[rIdx].amenities = amenities.filter((a: string) => a !== amenity);
+                                              }
+                                              setFormData({ ...formData, hotels: newHotels });
+                                            }}
+                                          />
+                                          <span className="font-semibold">{amenity}</span>
+                                        </label>
+                                      ))}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -691,7 +865,22 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                             </div>
                             <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-3xl">
                               <Camera className="w-6 h-6 text-white" />
-                              <input type="file" className="hidden" onChange={() => alert('File upload simulated. Please use the Image URL field for now.')} />
+                              <input type="file" className="hidden" accept="image/*" onChange={e => {
+                                if (e.target.files?.[0]) {
+                                  const file = e.target.files[0];
+                                  const uploadFormData = new FormData();
+                                  uploadFormData.append('file', file);
+                                  fetch('/api/upload', { method: 'POST', body: uploadFormData })
+                                    .then(res => res.json())
+                                    .then(data => {
+                                      if (data.success) {
+                                        const newTrans = [...formData.transportation];
+                                        newTrans[idx].image = data.url;
+                                        setFormData({ ...formData, transportation: newTrans });
+                                      }
+                                    });
+                                }
+                              }} />
                             </label>
                           </div>
                           <div className="flex-1 space-y-4">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { OrganizerStatus } from '../../types';
@@ -30,7 +30,10 @@ export const OrganizerOnboardingPage: React.FC = () => {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [error, setError] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const logoInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState<FormData>({
     organizerName: '',
@@ -60,6 +63,30 @@ export const OrganizerOnboardingPage: React.FC = () => {
     }));
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    setError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'avatars');
+      const response = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await response.json();
+      if (data.success) {
+        setAvatarUrl(data.url);
+      } else {
+        setError(data.message || 'Failed to upload logo');
+      }
+    } catch (err) {
+      setError('Failed to upload logo');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -80,7 +107,7 @@ export const OrganizerOnboardingPage: React.FC = () => {
       const res = await fetch('/api/organizer/onboarding', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, avatar: avatarUrl })
       });
 
       const data = await res.json();
@@ -185,9 +212,30 @@ export const OrganizerOnboardingPage: React.FC = () => {
                     />
                     <div className="space-y-2">
                       <label className="block text-sm font-bold text-primary">Profile Logo</label>
-                      <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:bg-gray-50 transition-colors cursor-pointer">
-                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <span className="text-sm text-gray-500">Click to upload logo</span>
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                      />
+                      <div
+                        onClick={() => logoInputRef.current?.click()}
+                        className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:bg-gray-50 transition-colors cursor-pointer"
+                      >
+                        {avatarUrl ? (
+                          <div className="flex flex-col items-center gap-2">
+                            <img src={avatarUrl} alt="Logo" className="w-16 h-16 rounded-full object-cover" />
+                            <span className="text-sm text-green-600 font-medium">Logo uploaded</span>
+                          </div>
+                        ) : uploadingLogo ? (
+                          <Loader2 className="w-8 h-8 text-gray-400 mx-auto mb-2 animate-spin" />
+                        ) : (
+                          <>
+                            <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                            <span className="text-sm text-gray-500">Click to upload logo</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

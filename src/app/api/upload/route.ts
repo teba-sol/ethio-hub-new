@@ -8,23 +8,27 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
+    const folder = (formData.get('folder') as string) || 'festivals';
 
     if (!file) {
       return NextResponse.json({ success: false, message: 'No file provided.' }, { status: 400 });
     }
 
+    const allowedFolders = ['festivals', 'avatars', 'products', 'hotels'];
+    const safeFolder = allowedFolders.includes(folder) ? folder : 'festivals';
+
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
     const filename = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'festivals');
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', safeFolder);
     const filePath = path.join(uploadDir, filename);
 
     await mkdir(uploadDir, { recursive: true });
 
     await writeFile(filePath, buffer);
 
-    const publicUrl = `/uploads/festivals/${filename}`;
+    const publicUrl = `/uploads/${safeFolder}/${filename}`;
     
     return NextResponse.json({ success: true, url: publicUrl });
 

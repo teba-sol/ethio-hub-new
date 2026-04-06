@@ -29,6 +29,9 @@ export interface User {
     accountHolderName?: string;
     accountNumber?: string;
     isVerified?: boolean;
+    twoFactorEnabled?: boolean;
+    twoFactorSecret?: string;
+    loginAlerts?: boolean;
     notifications?: {
       newBooking?: boolean;
       newReview?: boolean;
@@ -76,6 +79,7 @@ export interface Product {
 
 export interface RoomType {
   id: string;
+  _id?: string;
   name: string;
   description: string;
   capacity: number;
@@ -83,6 +87,8 @@ export interface RoomType {
   availabilityCount: number;
   image: string;
   sqm: number;
+  amenities: string[];
+  bedType: string;
 }
 
 export interface HotelAccommodation {
@@ -92,10 +98,14 @@ export interface HotelAccommodation {
   address: string;
   starRating: number;
   description: string;
+  fullDescription: string;
   policies: string;
   checkInTime: string;
   checkOutTime: string;
+  facilities: string[];
   roomTypes: RoomType[];
+  gallery: string[];
+  rooms?: RoomType[];
 }
 
 export interface TransportOption {

@@ -10,6 +10,13 @@ import {
   CheckCircle2, Filter, Heart, CreditCard, Lock, Calendar,
   Smartphone, X, Check, Download
 } from 'lucide-react';
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
 import { Button, Badge, VerifiedBadge } from '../components/UI';
 import { ProductCard } from '../components/ProductCard';
 import { FestivalCard } from '../components/FestivalCard';
@@ -1113,7 +1120,116 @@ export const FestivalDetailPage: React.FC = () => {
   const id = Array.isArray((params as any)?.id) ? (params as any).id[0] : (params as any)?.id;
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
-  const festival = MOCK_FESTIVALS.find(f => f.id === id) || MOCK_FESTIVALS[0];
+  const [festivalData, setFestivalData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const getImageUrl = (path: string | undefined | null) => {
+    if (!path || path === '') return 'https://images.unsplash.com/photo-1533174072545-7a4b6dad2cf7?w=800&h=400&fit=crop';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    if (path.startsWith('/uploads/')) {
+      const baseUrl = window.location.origin;
+      return `${baseUrl}${path}`;
+    }
+    return path;
+  };
+
+  useEffect(() => {
+    const fetchFestival = async () => {
+      try {
+        const res = await fetch(`/api/festivals/${id}`);
+        const data = await res.json();
+        
+        if (data.success) {
+          const f = data.festival;
+          
+          const transformedHotels = (f.hotels || []).map((hotel: any, index: number) => ({
+            id: hotel._id || hotel.id || `hotel-${index}`,
+            name: hotel.name || '',
+            image: hotel.image || '',
+            address: hotel.address || '',
+            starRating: hotel.starRating || 0,
+            description: hotel.description || '',
+            fullDescription: hotel.fullDescription || '',
+            policies: '',
+            checkInTime: hotel.checkInTime || '',
+            checkOutTime: hotel.checkOutTime || '',
+            facilities: hotel.facilities || [],
+            roomTypes: [],
+            gallery: hotel.gallery || [],
+            rooms: (hotel.rooms || []).map((room: any, roomIndex: number) => ({
+              id: room._id || room.id || `room-${roomIndex}`,
+              _id: room._id,
+              name: room.name || '',
+              description: room.description || '',
+              capacity: room.capacity || 1,
+              pricePerNight: room.pricePerNight || 0,
+              availabilityCount: room.availability || 0,
+              image: room.image || '',
+              sqm: room.sqm || 0,
+              amenities: room.amenities || [],
+              bedType: room.bedType || '',
+            })),
+          }));
+
+          setFestivalData({
+            id: f._id,
+            name: f.name,
+            slug: f.name?.toLowerCase().replace(/\s+/g, '-') || '',
+            startDate: f.startDate,
+            endDate: f.endDate,
+            locationName: f.location?.name || '',
+            address: f.location?.address || '',
+            coordinates: f.location?.coordinates || { lat: 0, lng: 0 },
+            shortDescription: f.shortDescription,
+            fullDescription: f.fullDescription,
+            coverImage: f.coverImage || '',
+            gallery: f.gallery || [],
+            schedule: f.schedule || [],
+            mainActivities: '',
+            performances: [],
+            hotels: transformedHotels,
+            transportation: (f.transportation || []).map((transport: any, index: number) => ({
+              id: transport._id || transport.id || `transport-${index}`,
+              type: transport.type || 'Private Car',
+              image: transport.image || '',
+              price: transport.price || 0,
+              availability: transport.availability || 0,
+              description: transport.description || '',
+              pickupLocations: transport.pickupLocations || [],
+            })),
+            foodPackages: f.services?.foodPackages || [],
+            culturalServices: f.services?.culturalServices || [],
+            baseTicketPrice: f.pricing?.basePrice || 0,
+            vipTicketPrice: f.pricing?.vipPrice,
+            currency: f.pricing?.currency || 'ETB',
+            cancellationPolicy: f.policies?.cancellation || '',
+            bookingTerms: f.policies?.terms || '',
+            safetyRules: f.policies?.safety,
+            ageRestriction: f.policies?.ageRestriction,
+            organizerId: f.organizer?._id || '',
+            isVerified: f.isVerified || false,
+            ticketsAvailable: 100,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching festival:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (id) fetchFestival();
+  }, [id]);
+
+  const festival = festivalData || MOCK_FESTIVALS.find(f => f.id === id) || MOCK_FESTIVALS[0];
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-ethio-bg flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-secondary"></div>
+      </div>
+    );
+  }
+
   const [selectedHotel, setSelectedHotel] = useState<HotelAccommodation | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<{ hotelName: string, room: RoomType } | null>(null);
   const [selectedTransport, setSelectedTransport] = useState<TransportOption | null>(null);
@@ -1167,7 +1283,7 @@ export const FestivalDetailPage: React.FC = () => {
             <h1 className="text-5xl md:text-7xl font-serif font-bold mb-6 tracking-tight leading-tight">{festival.name}</h1>
             <div className="flex flex-wrap gap-8 justify-center md:justify-start font-bold uppercase tracking-widest text-[9px]">
                 <span className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full"><MapPin className="text-secondary w-3.5 h-3.5" /> {festival.locationName}</span>
-                <span className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full"><Calendar className="text-secondary w-3.5 h-3.5" /> {festival.startDate} — {festival.endDate}</span>
+                <span className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full"><Calendar className="text-secondary w-3.5 h-3.5" /> {formatDate(festival.startDate)} — {formatDate(festival.endDate)}</span>
                 <span className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full"><Users className="text-secondary w-3.5 h-3.5" /> {festival.ticketsAvailable} Spots Left</span>
             </div>
         </div>
@@ -1199,15 +1315,28 @@ export const FestivalDetailPage: React.FC = () => {
 
                 <div className="space-y-8 mt-12 pt-12 border-t border-gray-100">
                     <h3 className="text-2xl font-serif font-bold text-primary flex items-center gap-4"><Hotel className="text-secondary w-8 h-8" /> Partner Accommodations</h3>
+                    {(!festival.hotels || festival.hotels.length === 0) ? (
+                        <p className="text-gray-500 text-center py-8">No accommodations available for this festival.</p>
+                    ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {festival.hotels.map(hotel => (
+                        {festival.hotels.map((hotel: any) => (
                             <div key={hotel.id} className={`bg-ethio-bg rounded-[24px] overflow-hidden border group shadow-sm hover:shadow-md transition-all cursor-pointer ${selectedRoom?.hotelName === hotel.name ? 'border-secondary ring-2 ring-secondary/20' : 'border-gray-100'}`} onClick={() => setSelectedHotel(hotel)}>
                                 <div className="h-48 overflow-hidden relative">
-                                    <img src={hotel.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={hotel.name} />
+                                    <img src={getImageUrl(hotel.image)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={hotel.name} />
                                     <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
                                     <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest text-primary">
                                         {selectedRoom?.hotelName === hotel.name ? 'Selected' : 'View Rooms'}
                                     </div>
+                                    {hotel.gallery && hotel.gallery.length > 0 && (
+                                        <div className="absolute top-4 left-4 flex gap-1">
+                                            {hotel.gallery.slice(0, 3).map((img: any, idx: number) => (
+                                                <div key={idx} className="w-8 h-8 rounded-lg overflow-hidden border-2 border-white">
+                                                    <img src={getImageUrl(img)} alt="" className="w-full h-full object-cover" />
+                                                </div>
+                                            ))}
+                                            {hotel.gallery.length > 3 && <div className="w-8 h-8 rounded-lg bg-black/50 flex items-center justify-center text-white text-[8px] font-bold">+{hotel.gallery.length - 3}</div>}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="p-6 space-y-4">
                                     <div className="flex justify-between items-center">
@@ -1215,6 +1344,14 @@ export const FestivalDetailPage: React.FC = () => {
                                         <div className="flex text-secondary items-center"><Star className="w-3.5 h-3.5 fill-current" /> <span className="text-xs font-bold ml-1">{hotel.starRating}</span></div>
                                     </div>
                                     <p className="text-[11px] text-gray-400 line-clamp-2 leading-relaxed">{hotel.description}</p>
+                                    {hotel.facilities && hotel.facilities.length > 0 && (
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {hotel.facilities.slice(0, 4).map((facility: any, idx: number) => (
+                                                <span key={idx} className="text-[8px] px-2 py-1 bg-white rounded-full text-gray-500">{facility}</span>
+                                            ))}
+                                            {hotel.facilities.length > 4 && <span className="text-[8px] text-gray-400">+{hotel.facilities.length - 4} more</span>}
+                                        </div>
+                                    )}
                                     <Button variant="outline" className={`w-full rounded-xl py-3 font-bold text-[9px] uppercase tracking-widest ${selectedRoom?.hotelName === hotel.name ? 'bg-secondary text-white border-secondary' : 'border-secondary text-secondary hover:bg-secondary hover:text-white'}`}>
                                         {selectedRoom?.hotelName === hotel.name ? 'Room Selected' : 'Select Room & Dates'}
                                     </Button>
@@ -1222,15 +1359,16 @@ export const FestivalDetailPage: React.FC = () => {
                             </div>
                         ))}
                     </div>
+                    )}
                 </div>
 
                 <div className="space-y-8 mt-16">
                     <h3 className="text-2xl font-serif font-bold text-primary flex items-center gap-4"><Car className="text-secondary w-8 h-8" /> Ground Transport Options</h3>
                     <div className="space-y-4">
-                        {festival.transport.map(car => (
+                        {festival.transportation.map(car => (
                             <div key={car.id} className={`flex flex-col sm:flex-row items-center gap-8 p-6 bg-ethio-bg rounded-[24px] border group transition-all hover:bg-white hover:shadow-md ${selectedTransport?.id === car.id ? 'border-secondary ring-2 ring-secondary/20 bg-white shadow-md' : 'border-gray-100'}`}>
                                 <div className="w-full sm:w-44 h-32 rounded-2xl overflow-hidden shadow-sm">
-                                    <img src={car.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={car.type} />
+                                    <img src={getImageUrl(car.image)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={car.type} />
                                 </div>
                                 <div className="flex-1 text-center sm:text-left space-y-2">
                                     <h4 className="font-bold text-primary text-xl">{car.type}</h4>
@@ -1240,7 +1378,7 @@ export const FestivalDetailPage: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="text-center sm:text-right border-t sm:border-t-0 sm:border-l border-gray-100 pt-6 sm:pt-0 sm:pl-8 flex flex-col items-center sm:items-end justify-center">
-                                    <div className="text-2xl font-bold text-primary mb-3">${car.price}<span className="text-[9px] font-normal text-gray-400 block tracking-widest uppercase">Per Session</span></div>
+                                    <div className="text-2xl font-bold text-primary mb-3">{festival.currency} {car.price}<span className="text-[9px] font-normal text-gray-400 block tracking-widest uppercase">Per Session</span></div>
                                     <Button 
                                         size="sm" 
                                         className={`rounded-xl px-6 font-bold text-[9px] uppercase tracking-widest ${selectedTransport?.id === car.id ? 'bg-secondary text-white' : ''}`}
@@ -1280,7 +1418,7 @@ export const FestivalDetailPage: React.FC = () => {
                 <div className="space-y-8">
                     <div className="flex justify-between items-center pb-8 border-b border-gray-100">
                         <span className="text-gray-400 font-bold uppercase text-[9px] tracking-widest">Entry Access</span>
-                        <span className="text-4xl font-bold text-primary">${festival.baseTicketPrice}</span>
+                        <span className="text-4xl font-bold text-primary">{festival.currency} {festival.baseTicketPrice}</span>
                     </div>
                     
                     <div className="space-y-6">
@@ -1306,7 +1444,7 @@ export const FestivalDetailPage: React.FC = () => {
                                 <p className="text-xs text-gray-500 mb-2">{selectedRoom.room.name}</p>
                                 <div className="flex justify-between items-center border-t border-gray-200 pt-2 mt-2">
                                     <span className="text-[10px] text-gray-400">Per Night</span>
-                                    <span className="font-bold text-primary">${selectedRoom.room.pricePerNight}</span>
+                                    <span className="font-bold text-primary">{festival.currency} {selectedRoom.room.pricePerNight}</span>
                                 </div>
                             </div>
                         </div>
@@ -1323,7 +1461,7 @@ export const FestivalDetailPage: React.FC = () => {
                                 <p className="text-xs text-gray-500 mb-2">Private Transfer</p>
                                 <div className="flex justify-between items-center border-t border-gray-200 pt-2 mt-2">
                                     <span className="text-[10px] text-gray-400">Fixed Rate</span>
-                                    <span className="font-bold text-primary">${selectedTransport.price}</span>
+                                    <span className="font-bold text-primary">{festival.currency} {selectedTransport.price}</span>
                                 </div>
                             </div>
                         </div>
@@ -1332,7 +1470,7 @@ export const FestivalDetailPage: React.FC = () => {
                     <div className="pt-8 space-y-4 border-t border-gray-100">
                         <div className="flex justify-between items-end mb-4">
                             <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Total</span>
-                            <span className="text-3xl font-bold text-primary">${totalPrice}</span>
+                            <span className="text-3xl font-bold text-primary">{festival.currency} {totalPrice}</span>
                         </div>
                         <Button 
                             className="w-full rounded-2xl py-6 text-xl shadow-xl shadow-primary/20 font-bold uppercase tracking-widest text-[10px]" 
@@ -1358,54 +1496,88 @@ export const FestivalDetailPage: React.FC = () => {
       </div>
 
       {selectedHotel && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-ethio-dark/60 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="bg-white rounded-[32px] w-full max-w-6xl max-h-[90vh] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col relative animate-in zoom-in-95 duration-500">
-                <button onClick={() => setSelectedHotel(null)} className="absolute top-6 right-6 p-3 bg-gray-100 hover:bg-red-50 hover:text-red-500 rounded-full z-20 transition-all group flex items-center gap-2 pr-5">
-                    <div className="bg-white p-1 rounded-full shadow-sm group-hover:bg-red-100 transition-colors">
-                        <X className="w-4 h-4" />
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Close View</span>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-ethio-dark/60 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="bg-white rounded-[32px] w-full max-w-5xl max-h-[90vh] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col relative animate-in zoom-in-95 duration-500">
+                <button onClick={() => setSelectedHotel(null)} className="absolute top-4 right-4 z-20 p-2 bg-gray-100 hover:bg-red-50 hover:text-red-500 rounded-full transition-all">
+                    <X className="w-5 h-5" />
                 </button>
-                <div className="p-10 md:p-16 overflow-y-auto scrollbar-hide">
-                    <header className="mb-12">
-                        <div className="flex items-center space-x-4 mb-4">
-                            <Badge variant="info" className="px-5 py-1.5 uppercase font-bold tracking-widest bg-primary/5 text-primary border-none text-[9px]">Accommodation Selection</Badge>
+                <div className="p-6 md:p-10 overflow-y-auto scrollbar-hide">
+                    <header className="mb-6">
+                        <div className="flex items-center gap-3 mb-3">
+                            <Badge variant="info" className="px-4 py-1 uppercase font-bold tracking-widest bg-primary/5 text-primary border-none text-[8px]">Accommodation</Badge>
                             <div className="flex text-secondary">{[...Array(selectedHotel.starRating)].map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}</div>
                         </div>
-                        <h2 className="text-5xl font-serif font-bold text-primary tracking-tight leading-tight">{selectedHotel.name}</h2>
-                        <p className="text-lg text-gray-400 mt-2 flex items-center font-light"><MapPin className="w-5 h-5 mr-3 text-secondary" /> {selectedHotel.address}</p>
+                        <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary tracking-tight">{selectedHotel.name}</h2>
+                        <p className="text-gray-500 mt-2 flex items-center text-sm"><MapPin className="w-4 h-4 mr-2 text-secondary" /> {selectedHotel.address}</p>
+                        {selectedHotel.fullDescription && (
+                            <p className="text-gray-600 mt-4 text-sm leading-relaxed">{selectedHotel.fullDescription}</p>
+                        )}
+                        {selectedHotel.facilities && selectedHotel.facilities.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-4">
+                                {selectedHotel.facilities.map((facility, idx) => (
+                                    <span key={idx} className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full">{facility}</span>
+                                ))}
+                            </div>
+                        )}
+                        {(selectedHotel.checkInTime || selectedHotel.checkOutTime) && (
+                            <div className="flex gap-6 mt-4 text-xs text-gray-500">
+                                {selectedHotel.checkInTime && <span>Check-in: <strong className="text-gray-700">{selectedHotel.checkInTime}</strong></span>}
+                                {selectedHotel.checkOutTime && <span>Check-out: <strong className="text-gray-700">{selectedHotel.checkOutTime}</strong></span>}
+                            </div>
+                        )}
                     </header>
                     
-                    <div className="space-y-16">
-                        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.4em] pb-4 border-b border-gray-100">Verified Room Inventory</h3>
-                        <div className="grid grid-cols-1 gap-12">
-                            {selectedHotel.roomTypes.map(room => (
-                                <div key={room.id} className="flex flex-col xl:flex-row gap-10 group bg-ethio-bg/50 p-6 rounded-[24px] hover:bg-white hover:shadow-xl transition-all border border-transparent hover:border-gray-50">
-                                    <div className="w-full xl:w-[400px] h-[280px] rounded-2xl overflow-hidden shadow-lg relative flex-shrink-0">
-                                        <img src={room.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" alt={room.name} />
-                                        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-4 py-1.5 rounded-full text-[8px] font-bold uppercase tracking-widest text-primary shadow-sm">{room.sqm} SQM • Premium</div>
+                    {selectedHotel.gallery && selectedHotel.gallery.length > 0 && (
+                        <div className="mb-8">
+                            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.4em] pb-3">Hotel Gallery</h3>
+                            <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                                {selectedHotel.gallery.map((img, idx) => (
+                                    <div key={idx} className="h-20 md:h-24 rounded-xl overflow-hidden">
+                                        <img src={getImageUrl(img)} alt="" className="w-full h-full object-cover hover:scale-110 transition-transform duration-300" />
                                     </div>
-                                    <div className="flex-1 py-2 flex flex-col justify-between">
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <h4 className="text-3xl font-serif font-bold text-primary tracking-tight">{room.name}</h4>
-                                                <span className="text-2xl font-bold text-primary">${room.pricePerNight}<span className="text-xs font-normal text-gray-400 ml-1">/night</span></span>
-                                            </div>
-                                            <p className="text-[14px] text-gray-500 leading-relaxed font-light">{room.description}</p>
-                                            <div className="flex flex-wrap gap-6 pt-2">
-                                                <div className="flex items-center text-gray-400 text-[9px] font-bold uppercase tracking-widest"><Users className="w-4 h-4 mr-2 text-secondary" /> {room.capacity} Pax</div>
-                                                <div className="flex items-center text-emerald-600 text-[9px] font-bold uppercase tracking-widest"><CheckCircle2 className="w-4 h-4 mr-2" /> {room.availabilityCount} Rooms Left</div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    
+                        <div className="space-y-8">
+                            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.4em] pb-3 border-b border-gray-100">Available Rooms</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {(selectedHotel.rooms || selectedHotel.roomTypes || []).map(room => (
+                                <div key={room._id || room.name} className="bg-ethio-bg/30 p-5 rounded-2xl hover:bg-white hover:shadow-lg transition-all border border-transparent hover:border-gray-100">
+                                    <div className="flex gap-4">
+                                        <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0">
+                                            <img src={getImageUrl(room.image)} className="w-full h-full object-cover" alt={room.name} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="text-lg font-bold text-primary">{room.name}</h4>
+                                            <p className="text-xs text-gray-500">{room.bedType || 'Standard'} bed</p>
+                                            {room.description && <p className="text-xs text-gray-400 mt-1 line-clamp-2">{room.description}</p>}
+                                            <div className="flex flex-wrap gap-1.5 mt-2">
+                                                {room.sqm && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-600">{room.sqm}m²</span>}
+                                                <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-600">{room.capacity} Pax</span>
+                                                {room.availabilityCount > 0 && (
+                                                    <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded">{room.availabilityCount} Rooms Left</span>
+                                                )}
+                                                {room.amenities?.slice(0, 2).map((am, i) => (
+                                                    <span key={i} className="text-[10px] bg-primary/10 px-2 py-0.5 rounded text-primary">{am}</span>
+                                                ))}
+                                                {(room.amenities?.length || 0) > 2 && <span className="text-[10px] text-gray-400">+{room.amenities.length - 2}</span>}
                                             </div>
                                         </div>
-                                        <div className="pt-10 flex items-center gap-6">
-                                            <Button 
-                                                className="px-10 rounded-xl py-4 shadow-lg shadow-primary/10 font-bold text-[10px] uppercase tracking-widest"
-                                                onClick={() => handleRoomSelect(selectedHotel.name, room)}
-                                            >
-                                                Select This Room
-                                            </Button>
-                                            <p className="text-[9px] text-gray-400 italic">Availability strictly managed by {selectedHotel.name}.</p>
+                                    </div>
+                                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                                        <div>
+                                            <span className="text-xl font-bold text-primary">{festival.currency} {room.pricePerNight}</span>
+                                            <span className="text-xs text-gray-400">/night</span>
                                         </div>
+                                        <Button 
+                                            size="sm"
+                                            className="px-4 py-2 rounded-lg font-bold text-[10px] uppercase"
+                                            onClick={() => handleRoomSelect(selectedHotel.name, room)}
+                                        >
+                                            Select
+                                        </Button>
                                     </div>
                                 </div>
                             ))}
@@ -1484,7 +1656,7 @@ export const FestivalDetailPage: React.FC = () => {
                                 )}
                                 <div className="flex justify-between text-lg font-bold border-t border-gray-200 pt-4 mt-2">
                                     <span className="text-primary">Total</span>
-                                    <span className="text-primary">${totalPrice}</span>
+                                    <span className="text-primary">{festival.currency} {totalPrice}</span>
                                 </div>
                             </div>
 
@@ -1553,7 +1725,7 @@ export const FestivalDetailPage: React.FC = () => {
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-500">Amount Paid</span>
-                                        <span className="font-bold text-primary">${totalPrice}</span>
+                                        <span className="font-bold text-primary">{festival.currency} {totalPrice}</span>
                                     </div>
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-500">Method</span>

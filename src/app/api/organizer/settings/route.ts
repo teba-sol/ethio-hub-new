@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '../../../../lib/mongodb';
 import User from '../../../../models/User';
 import * as jose from 'jose';
+import bcrypt from 'bcryptjs';
 
 export async function GET(request: NextRequest) {
   try {
@@ -70,6 +71,9 @@ export async function PUT(request: NextRequest) {
     await connectDB();
 
     const token = request.cookies.get('sessionToken')?.value;
+    console.log('=== PUT REQUEST START ===');
+    console.log('Token exists:', !!token);
+    
     if (!token) {
       return new NextResponse(
         JSON.stringify({ success: false, message: 'Authentication required' }),
@@ -80,6 +84,7 @@ export async function PUT(request: NextRequest) {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'ethio-hub-secret-key-2025');
     const { payload } = await jose.jwtVerify(token, secret);
     const organizerId = payload.userId as string;
+    console.log('Organizer ID from token:', organizerId);
 
     if (!organizerId) {
       return new NextResponse(
@@ -89,12 +94,18 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log('Request body keys:', Object.keys(body));
+
     const {
-      name, email, currentPassword, newPassword,
-      organizerProfile
+      name, email, currentPassword, newPassword, resetPassword,
+      organizerProfile, twoFactorEnabled, loginAlerts
     } = body;
 
     const user = await User.findById(organizerId);
+    console.log('User found:', !!user);
+    console.log('User role:', user?.role);
+    console.log('User password (first 15 chars):', user?.password?.substring(0, 15));
+
     if (!user || user.role !== 'organizer') {
       return new NextResponse(
         JSON.stringify({ success: false, message: 'Organizer not found' }),
@@ -102,7 +113,17 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    console.log('User retrieved for password update:', { 
+      id: user._id, 
+      email: user.email, 
+      role: user.role,
+      passwordStartsWith: user.password?.substring(0, 10),
+      passwordLength: user.password?.length
+    });
+
     const $set: any = {};
+
+    if (name) $set.name = name;
 
     if (name) $set.name = name;
 
@@ -117,9 +138,34 @@ export async function PUT(request: NextRequest) {
       $set.email = email;
     }
 
-    if (currentPassword && newPassword) {
-      const bcrypt = await import('bcryptjs');
-      const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (resetPassword && newPassword) {
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      $set.password = hashedPassword;
+    } else if (currentPassword && newPassword) {
+      console.log('=== PASSWORD VERIFICATION DEBUG ===');
+      console.log('User ID:', user._id);
+      console.log('User email:', user.email);
+      console.log('Stored password (first 10 chars):', user.password.substring(0, 10));
+      console.log('Stored password length:', user.password.length);
+      console.log('Current password typed:', currentPassword);
+      console.log('Current password length:', currentPassword.length);
+      
+      // Check if stored password is a bcrypt hash
+      const isBcryptHash = user.password.startsWith('$2a$') || user.password.startsWith('$2b$') || user.password.startsWith('$2y$');
+      console.log('Is bcrypt hash:', isBcryptHash);
+      
+      let isValid = false;
+      if (isBcryptHash) {
+        console.log('Using bcrypt.compare...');
+        isValid = await bcrypt.compare(currentPassword, user.password);
+        console.log('bcrypt.compare result:', isValid);
+      } else {
+        console.log('Comparing plain text...');
+        isValid = currentPassword === user.password;
+        console.log('Plain text compare result:', isValid);
+      }
+      console.log('=== END PASSWORD DEBUG ===');
+      
       if (!isValid) {
         return new NextResponse(
           JSON.stringify({ success: false, message: 'Current password is incorrect' }),
@@ -128,6 +174,13 @@ export async function PUT(request: NextRequest) {
       }
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       $set.password = hashedPassword;
+    }
+
+    if (twoFactorEnabled !== undefined) {
+      $set['organizerProfile.twoFactorEnabled'] = twoFactorEnabled;
+    }
+    if (loginAlerts !== undefined) {
+      $set['organizerProfile.loginAlerts'] = loginAlerts;
     }
 
     if (organizerProfile) {

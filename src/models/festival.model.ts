@@ -16,6 +16,9 @@ export interface IRoom extends Document {
   capacity: number;       // Capacity (number of people)
   pricePerNight: number;  // Price per night
   availability: number;   // Number of rooms available
+  description?: string;    // Room description
+  sqm?: number;           // Room size in square meters
+  amenities?: string[];    // Room amenities (WiFi, AC, etc.)
 }
 
 // Hotel interface with simplified rooms
@@ -24,7 +27,12 @@ export interface IHotel extends Document {
   starRating: number;
   address: string;
   description: string;
+  fullDescription?: string;
   image: string;
+  checkInTime?: string;
+  checkOutTime?: string;
+  facilities?: string[];
+  gallery?: string[];
   rooms: IRoom[];
 }
 
@@ -95,23 +103,31 @@ const ScheduleItemSchema: Schema = new Schema({
   performers: [{ type: String }],
 });
 
-// SIMPLIFIED: Room Schema - only these 6 fields
+// SIMPLIFIED: Room Schema - with all fields
 const RoomSchema: Schema = new Schema({
   name: { type: String, required: true },           // Room Name
   image: { type: String },                           // Room Image URL
   bedType: { type: String, default: 'King Size' },   // Bed Type
-  capacity: { type: Number, required: true, default: 2 }, // Capacity
-  pricePerNight: { type: Number, required: true },   // Price/Night
-  availability: { type: Number, required: true, default: 5 }, // Availability count
+  capacity: { type: Number, default: 2 }, // Capacity
+  pricePerNight: { type: Number },   // Price/Night
+  availability: { type: Number, default: 5 }, // Availability count
+  description: { type: String },                    // Room description
+  sqm: { type: Number },                            // Room size in sqm
+  amenities: [{ type: String }],                    // Room amenities
 }, { _id: true });
 
-// Hotel Schema with simplified rooms
+// Hotel Schema with all fields
 const HotelSchema: Schema = new Schema({
   name: { type: String, required: true },
-  starRating: { type: Number, required: true },
+  starRating: { type: Number },
   address: { type: String },
   description: { type: String },
+  fullDescription: { type: String },
   image: { type: String },
+  checkInTime: { type: String },
+  checkOutTime: { type: String },
+  facilities: [{ type: String }],
+  gallery: [{ type: String }],
   rooms: [RoomSchema],
 });
 
@@ -150,13 +166,13 @@ const PricingSchema: Schema = new Schema({
 
 const FestivalSchema: Schema = new Schema(
   {
-    name: { type: String, required: true },
+  name: { type: String },
     shortDescription: { type: String, required: true },
     fullDescription: { type: String, required: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     location: {
-      name: { type: String, required: true },
+  name: { type: String },
       address: { type: String },
       coordinates: {
         lat: { type: Number },

@@ -81,6 +81,7 @@ export async function PUT(request: NextRequest) {
       bankName,
       accountName,
       accountNumber,
+      avatar,
     } = body;
 
     const errors: string[] = [];
@@ -143,6 +144,10 @@ export async function PUT(request: NextRequest) {
 
     if (website?.trim()) {
       updateOps.$set['organizerProfile.website'] = website.trim();
+    }
+
+    if (avatar) {
+      updateOps.$set['organizerProfile.avatar'] = avatar;
     }
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateOps, {

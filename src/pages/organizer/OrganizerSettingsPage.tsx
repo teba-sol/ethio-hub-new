@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   User, Shield, CreditCard, Bell, Sliders, Link as LinkIcon,
   Camera, CheckCircle2, AlertCircle, Smartphone, Monitor,
   LogOut, Download, Plus, Mail, MessageSquare, Globe,
-  Calendar, Video, Key, Loader2, Save
+  Calendar, Video, Key, Loader2, Save, X, Eye, EyeOff
 } from 'lucide-react';
 import { Button, Badge } from '../../components/UI';
 
@@ -51,7 +51,9 @@ export const OrganizerSettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [profile, setProfile] = useState({
     name: '',
@@ -69,6 +71,22 @@ export const OrganizerSettingsPage: React.FC = () => {
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
+  });
+
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
+
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotPasswordSending, setForgotPasswordSending] = useState(false);
+  const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
+  const [forgotMode, setForgotMode] = useState<'email' | 'direct'>('email');
+  const [showForgotPasswords, setShowForgotPasswords] = useState({
+    new: false,
+    confirm: false,
   });
 
   const [payments, setPayments] = useState({
@@ -96,6 +114,9 @@ export const OrganizerSettingsPage: React.FC = () => {
     defaultLandingPage: 'Overview',
     darkMode: false,
   });
+
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [loginAlerts, setLoginAlerts] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -146,12 +167,40 @@ export const OrganizerSettingsPage: React.FC = () => {
           defaultLandingPage: orgProfile.preferences?.defaultLandingPage || 'Overview',
           darkMode: orgProfile.preferences?.darkMode ?? false,
         });
+
+        setTwoFactorEnabled(orgProfile.twoFactorEnabled ?? false);
+        setLoginAlerts(orgProfile.loginAlerts ?? false);
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
       setMessage({ type: 'error', text: 'Failed to load settings' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingAvatar(true);
+    setMessage(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'avatars');
+      const response = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await response.json();
+      if (data.success) {
+        setProfile(prev => ({ ...prev, avatar: data.url }));
+        setMessage({ type: 'success', text: 'Photo uploaded! Click "Save Changes" to apply.' });
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Failed to upload photo' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to upload photo' });
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -190,11 +239,15 @@ export const OrganizerSettingsPage: React.FC = () => {
 
   const savePassword = async () => {
     if (passwords.newPassword !== passwords.confirmPassword) {
-      setMessage({ type: 'error', text: 'Passwords do not match' });
+      setMessage({ type: 'error', text: 'New passwords do not match' });
       return;
     }
     if (passwords.newPassword.length < 6) {
       setMessage({ type: 'error', text: 'Password must be at least 6 characters' });
+      return;
+    }
+    if (!passwords.currentPassword) {
+      setMessage({ type: 'error', text: 'Please enter your current password' });
       return;
     }
     
@@ -214,10 +267,113 @@ export const OrganizerSettingsPage: React.FC = () => {
         setMessage({ type: 'success', text: 'Password updated successfully!' });
         setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
       } else {
-        setMessage({ type: 'error', text: data.message });
+        setMessage({ type: 'error', text: data.message || 'Failed to update password' });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to update password' });
+      setMessage({ type: 'error', text: 'Network error. Please try again.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const sendForgotPasswordEmail = async () => {
+    if (!forgotEmail) {
+      setMessage({ type: 'error', text: 'Please enter your email address' });
+      return;
+    }
+    
+    setForgotPasswordSending(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setForgotPasswordSent(true);
+        setMessage({ type: 'success', text: 'Password reset link sent to your email!' });
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Failed to send reset email' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Network error. Please try again.' });
+    } finally {
+      setForgotPasswordSending(false);
+    }
+  };
+
+  const handleDirectPasswordReset = async () => {
+    if (!forgotEmail) {
+      setMessage({ type: 'error', text: 'Please enter your email address' });
+      return;
+    }
+    if (passwords.newPassword !== passwords.confirmPassword) {
+      setMessage({ type: 'error', text: 'Passwords do not match' });
+      return;
+    }
+    if (passwords.newPassword.length < 6) {
+      setMessage({ type: 'error', text: 'Password must be at least 6 characters' });
+      return;
+    }
+
+    setForgotPasswordSending(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: forgotEmail,
+          newPassword: passwords.newPassword,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setForgotPasswordSent(true);
+        setMessage({ type: 'success', text: 'Password reset successfully!' });
+        setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Failed to reset password' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Network error. Please try again.' });
+    } finally {
+      setForgotPasswordSending(false);
+    }
+  };
+
+  const resetPassword = async () => {
+    if (passwords.newPassword !== passwords.confirmPassword) {
+      setMessage({ type: 'error', text: 'New passwords do not match' });
+      return;
+    }
+    if (passwords.newPassword.length < 6) {
+      setMessage({ type: 'error', text: 'Password must be at least 6 characters' });
+      return;
+    }
+    
+    setSaving(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/organizer/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resetPassword: true,
+          newPassword: passwords.newPassword,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage({ type: 'success', text: 'Password has been reset successfully!' });
+        setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Failed to reset password' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Network error. Please try again.' });
     } finally {
       setSaving(false);
     }
@@ -309,6 +465,31 @@ export const OrganizerSettingsPage: React.FC = () => {
     }
   };
 
+  const saveSecurity = async () => {
+    setSaving(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/organizer/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          twoFactorEnabled,
+          loginAlerts,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage({ type: 'success', text: 'Security preferences saved!' });
+      } else {
+        setMessage({ type: 'error', text: data.message });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to save security preferences' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -354,12 +535,23 @@ export const OrganizerSettingsPage: React.FC = () => {
         {activeTab === 'profile' && (
           <div className="space-y-10 animate-in fade-in duration-300">
             <div className="flex flex-col md:flex-row gap-8 items-start">
-              <div className="relative group cursor-pointer shrink-0">
+              <div className="relative group cursor-pointer shrink-0" onClick={() => avatarInputRef.current?.click()}>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
                 <div className="w-32 h-32 rounded-full bg-gray-100 overflow-hidden border-4 border-white shadow-lg">
                   <img src={profile.avatar || `https://i.pravatar.cc/150?u=${profile.email}`} alt="Profile" className="w-full h-full object-cover" />
                 </div>
                 <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Camera className="w-8 h-8 text-white" />
+                  {uploadingAvatar ? (
+                    <Loader2 className="w-8 h-8 text-white animate-spin" />
+                  ) : (
+                    <Camera className="w-8 h-8 text-white" />
+                  )}
                 </div>
               </div>
               <div className="flex-1 space-y-2">
@@ -449,43 +641,210 @@ export const OrganizerSettingsPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Current Password</label>
-                  <input 
-                    type="password" 
-                    value={passwords.currentPassword}
-                    onChange={(e) => setPasswords({ ...passwords, currentPassword: e.target.value })}
-                    placeholder="••••••••" 
-                    className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10" 
-                  />
+                  <div className="relative">
+                    <input 
+                      type={showPasswords.current ? 'text' : 'password'} 
+                      value={passwords.currentPassword}
+                      onChange={(e) => setPasswords({ ...passwords, currentPassword: e.target.value })}
+                      placeholder="••••••••" 
+                      className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 pr-12 text-sm focus:ring-2 focus:ring-primary/10" 
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPasswords.current ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="hidden md:block"></div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">New Password</label>
-                  <input 
-                    type="password" 
-                    value={passwords.newPassword}
-                    onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
-                    placeholder="••••••••" 
-                    className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10" 
-                  />
+                  <div className="relative">
+                    <input 
+                      type={showPasswords.new ? 'text' : 'password'} 
+                      value={passwords.newPassword}
+                      onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
+                      placeholder="••••••••" 
+                      className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 pr-12 text-sm focus:ring-2 focus:ring-primary/10" 
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Confirm New Password</label>
-                  <input 
-                    type="password" 
-                    value={passwords.confirmPassword}
-                    onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
-                    placeholder="••••••••" 
-                    className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10" 
-                  />
+                  <div className="relative">
+                    <input 
+                      type={showPasswords.confirm ? 'text' : 'password'} 
+                      value={passwords.confirmPassword}
+                      onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
+                      placeholder="••••••••" 
+                      className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 pr-12 text-sm focus:ring-2 focus:ring-primary/10" 
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="mt-4">
-                <Button variant="outline" onClick={savePassword} disabled={saving || !passwords.currentPassword || !passwords.newPassword}>
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              <div className="mt-4 flex gap-3">
+                <Button variant="primary" onClick={savePassword} disabled={saving || !passwords.currentPassword || !passwords.newPassword}>
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Key className="w-4 h-4 mr-2" />}
                   Update Password
                 </Button>
+                <Button variant="outline" onClick={() => { setShowForgotPassword(true); setForgotEmail(profile.email || ''); }}>
+                  Forgot Password?
+                </Button>
               </div>
+              <p className="text-xs text-gray-400 mt-2">Use your current password to update to a new one.</p>
             </div>
+
+            {/* Forgot Password Modal */}
+            {showForgotPassword && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                <div className="bg-white rounded-[32px] p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-300">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-serif font-bold text-primary">Reset Password</h3>
+                    <button onClick={() => { setShowForgotPassword(false); setForgotPasswordSent(false); setForgotMode('email'); }} className="text-gray-400 hover:text-gray-600">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  
+                  {!forgotPasswordSent ? (
+                    <>
+                      <p className="text-sm text-gray-500 mb-4">
+                        {forgotMode === 'email' 
+                          ? 'Enter your email address and we\'ll send you a link to reset your password.'
+                          : 'Enter your email and a new password to reset your password directly.'}
+                      </p>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Email Address</label>
+                          <input 
+                            type="email" 
+                            value={forgotEmail}
+                            onChange={(e) => setForgotEmail(e.target.value)}
+                            placeholder="your@email.com" 
+                            className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10" 
+                          />
+                        </div>
+                        {forgotMode === 'direct' && (
+                          <>
+                            <div className="space-y-2">
+                              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">New Password</label>
+                              <div className="relative">
+                                <input 
+                                  type={showForgotPasswords.new ? 'text' : 'password'} 
+                                  value={passwords.newPassword}
+                                  onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
+                                  placeholder="••••••••" 
+                                  className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 pr-12 text-sm focus:ring-2 focus:ring-primary/10" 
+                                />
+                                <button 
+                                  type="button"
+                                  onClick={() => setShowForgotPasswords({ ...showForgotPasswords, new: !showForgotPasswords.new })}
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                  {showForgotPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                </button>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Confirm Password</label>
+                              <div className="relative">
+                                <input 
+                                  type={showForgotPasswords.confirm ? 'text' : 'password'} 
+                                  value={passwords.confirmPassword}
+                                  onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
+                                  placeholder="••••••••" 
+                                  className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 pr-12 text-sm focus:ring-2 focus:ring-primary/10" 
+                                />
+                                <button 
+                                  type="button"
+                                  onClick={() => setShowForgotPasswords({ ...showForgotPasswords, confirm: !showForgotPasswords.confirm })}
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                  {showForgotPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                </button>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                        <div className="flex gap-2">
+                          {forgotMode === 'direct' ? (
+                            <>
+                              <Button 
+                                variant="outline" 
+                                className="flex-1" 
+                                onClick={() => {
+                                  setForgotMode('email');
+                                  setPasswords({ ...passwords, newPassword: '', confirmPassword: '' });
+                                }}
+                              >
+                                Back
+                              </Button>
+                              <Button 
+                                variant="primary" 
+                                className="flex-1" 
+                                onClick={handleDirectPasswordReset} 
+                                disabled={forgotPasswordSending || !passwords.newPassword || !passwords.confirmPassword || passwords.newPassword !== passwords.confirmPassword}
+                              >
+                                {forgotPasswordSending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Key className="w-4 h-4 mr-2" />}
+                                Reset Password
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button 
+                                variant="primary" 
+                                className="flex-1" 
+                                onClick={sendForgotPasswordEmail} 
+                                disabled={forgotPasswordSending}
+                              >
+                                {forgotPasswordSending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
+                                Send Reset Link
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                className="flex-1" 
+                                onClick={() => setForgotMode('direct')}
+                              >
+                                Direct Reset
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                        {forgotMode === 'direct' && passwords.newPassword && passwords.confirmPassword && passwords.newPassword !== passwords.confirmPassword && (
+                          <p className="text-xs text-red-500">Passwords do not match</p>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-4">
+                      <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                      </div>
+                      <h4 className="text-lg font-bold text-primary mb-2">Password Reset!</h4>
+                      <p className="text-sm text-gray-500 mb-4">Your password has been reset successfully.</p>
+                      <Button variant="outline" className="mt-4" onClick={() => { setShowForgotPassword(false); setForgotPasswordSent(false); setForgotMode('email'); }}>
+                        Close
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="pt-8 border-t border-gray-100">
               <h3 className="text-xl font-serif font-bold text-primary mb-6">Security Preferences</h3>
@@ -496,7 +855,12 @@ export const OrganizerSettingsPage: React.FC = () => {
                     <p className="text-xs text-gray-500 mt-1">Add an extra layer of security to your account.</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" disabled />
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={twoFactorEnabled}
+                      onChange={(e) => setTwoFactorEnabled(e.target.checked)} 
+                    />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                   </label>
                 </div>
@@ -506,10 +870,21 @@ export const OrganizerSettingsPage: React.FC = () => {
                     <p className="text-xs text-gray-500 mt-1">Get notified when someone logs into your account from a new device.</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" disabled />
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={loginAlerts}
+                      onChange={(e) => setLoginAlerts(e.target.checked)} 
+                    />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                   </label>
                 </div>
+              </div>
+              <div className="mt-6 flex justify-end">
+                <Button onClick={saveSecurity} disabled={saving}>
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                  Save Security Preferences
+                </Button>
               </div>
             </div>
 

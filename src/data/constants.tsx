@@ -128,42 +128,62 @@ export const MOCK_FESTIVALS: Festival[] = [
         address: 'Hilltop, Gondar',
         starRating: 4,
         description: 'Overlooking the imperial city of Gondar, Goha offers the best views of the castles.',
+        fullDescription: 'Goha Hotel Gondar is a premier accommodation offering breathtaking views of the Fasil Ghebbi imperial compound. Located on the hills of Gondar, our hotel combines traditional Ethiopian hospitality with modern amenities. Guests enjoy spacious rooms, authentic local cuisine, and easy access to the city cultural sites.',
         policies: 'No smoking, 2 PM check-in.',
         checkInTime: '14:00',
         checkOutTime: '11:00',
+        facilities: ['Free WiFi', 'Swimming Pool', 'Restaurant', 'Free Parking', 'Room Service'],
+        gallery: [
+          'https://images.unsplash.com/photo-1571896349842-33c89424de2d?q=80&w=1000&auto=format&fit=crop',
+          'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000&auto=format&fit=crop',
+          'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=1000&auto=format&fit=crop'
+        ],
         roomTypes: [
           {
             id: 'r1',
             name: 'Deluxe Suite',
-            description: 'Spacious suite with castle views.',
+            description: 'Spacious suite with castle views and modern amenities.',
             capacity: 2,
             pricePerNight: 210,
             availabilityCount: 4,
             image: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?q=80&w=1000&auto=format&fit=crop',
-            sqm: 45
+            sqm: 45,
+            amenities: ['Free WiFi', 'Air Conditioning', 'Mini Bar', 'TV'],
+            bedType: 'King Size'
           },
           {
             id: 'r2',
             name: 'Superior Queen',
-            description: 'Cozy room with traditional decor.',
+            description: 'Cozy room with traditional decor and city views.',
             capacity: 2,
             pricePerNight: 140,
             availabilityCount: 12,
             image: 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=1000&auto=format&fit=crop',
-            sqm: 28
+            sqm: 28,
+            amenities: ['Free WiFi', 'Air Conditioning', 'TV'],
+            bedType: 'Queen Size'
           }
         ]
       }
     ],
-    transport: [
+    transportation: [
       {
         id: 't1',
         type: 'Private Car',
         image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1000&auto=format&fit=crop',
         price: 85,
         availability: 5,
-        description: 'Full day luxury sedan with driver.',
-        pickupLocations: ['Gondar Airport', 'Town Center']
+        description: 'Full day luxury sedan with professional driver. Includes bottled water and WiFi.',
+        pickupLocations: ['Gondar Airport', 'Town Center', 'Goha Hotel']
+      },
+      {
+        id: 't2',
+        type: 'VIP SUV',
+        image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=1000&auto=format&fit=crop',
+        price: 150,
+        availability: 3,
+        description: 'Luxury SUV with premium leather seating, AC, and refreshments.',
+        pickupLocations: ['Gondar Airport', 'All Hotels']
       }
     ],
     foodPackages: ['Traditional Buffet', 'Coffee Ceremony Access'],
@@ -220,15 +240,15 @@ export const MOCK_FESTIVALS: Festival[] = [
         ]
       }
     ],
-    transport: [
+    transportation: [
       {
         id: 't2',
         type: 'VIP SUV',
         image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=1000&auto=format&fit=crop',
         price: 150,
         availability: 10,
-        description: 'V8 Land Cruiser with professional escort.',
-        pickupLocations: ['Bole Airport', 'Hotel Lobby']
+        description: 'V8 Land Cruiser with professional escort and refreshments.',
+        pickupLocations: ['Bole Airport', 'Hotel Lobby', 'Meskel Square']
       }
     ],
     foodPackages: ['Meskel Feast Package'],

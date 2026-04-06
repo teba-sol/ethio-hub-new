@@ -47,6 +47,9 @@ const UserSchema = new mongoose.Schema(
       accountHolderName: { type: String },
       accountNumber: { type: String },
       isVerified: { type: Boolean, default: false },
+      twoFactorEnabled: { type: Boolean, default: false },
+      twoFactorSecret: { type: String, default: null },
+      loginAlerts: { type: Boolean, default: false },
       notifications: {
         newBooking: { type: Boolean, default: true },
         newReview: { type: Boolean, default: true },
@@ -65,6 +68,10 @@ const UserSchema = new mongoose.Schema(
         darkMode: { type: Boolean, default: false },
       },
     },
+
+    // Password reset fields
+    resetToken: { type: String, default: null },
+    resetTokenExpiry: { type: Date, default: null },
   },
   {
     timestamps: true
