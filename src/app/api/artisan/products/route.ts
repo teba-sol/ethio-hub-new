@@ -1,123 +1,167 @@
-// src/api/artisan/products/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '../../../../lib/mongodb';
-import Product from '../../../../models/product.model';
-import * as jose from 'jose';
+import { NextResponse } from 'next/server';
+import { jwtVerify } from 'jose';
+import { connectDB } from '@/lib/mongodb';
+import Product from '@/models/artisan/product.model';
+import User from '@/models/User';
+import { cookies } from 'next/headers';
 
-// GET all products for the logged-in artisan
-export async function GET(request: NextRequest) {
+const JWT_SECRET = process.env.JWT_SECRET as string;
+
+async function getAuthenticatedUser(req: Request) {
   try {
-    await connectDB();
-
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.split(' ')[1];
-
+    const cookieStore = await cookies();
+    const token = cookieStore.get('sessionToken')?.value;
+    
     if (!token) {
-      return new NextResponse(
-        JSON.stringify({ success: false, message: 'Authentication required' }),
-        { status: 401, headers: { 'content-type': 'application/json' } }
-      );
-    }
-
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-    const { payload } = await jose.jwtVerify(token, secret);
-    const artisanId = payload.userId as string;
-
-    if (!artisanId) {
-        return new NextResponse(
-            JSON.stringify({ success: false, message: 'Artisan ID not found in token' }),
-            { status: 401, headers: { 'content-type': 'application/json' } }
-        );
-    }
-
-    const products = await Product.find({ artisan: artisanId });
-
-    return new NextResponse(
-      JSON.stringify({ success: true, products }),
-      { status: 200, headers: { 'content-type': 'application/json' } }
-    );
-
-  } catch (error: any) {
-    if (error.code === 'ERR_JWT_EXPIRED' || error.code === 'ERR_JWS_INVALID') {
-        return new NextResponse(
-            JSON.stringify({ success: false, message: 'Authentication failed: Invalid token' }),
-            { status: 401, headers: { 'content-type': 'application/json' } }
-        );
+      console.error('No sessionToken cookie found');
+      return null;
     }
     
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(JWT_SECRET));
+    const userId = (payload as any).userId;
+    const user = await User.findById(userId).select('-password');
+    return user;
+  } catch (error) {
+    console.error('JWT verification failed:', error);
+    return null;
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    await connectDB();
+    
+    const user = await getAuthenticatedUser(req);
+    if (!user || user.role !== 'artisan') {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const status = searchParams.get('status');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const skip = (page - 1) * limit;
+
+    const query: any = { artisanId: user._id };
+    
+    if (status && ['Draft', 'Published', 'Archived'].includes(status)) {
+      query.status = status;
+    }
+
+    const products = await Product.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Product.countDocuments(query);
+
+    return NextResponse.json({
+      products,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
     console.error('Error fetching products:', error);
-    return new NextResponse(
-      JSON.stringify({ success: false, message: 'Internal Server Error' }),
-      { status: 500, headers: { 'content-type': 'application/json' } }
+    return NextResponse.json(
+      { message: 'Failed to fetch products' },
+      { status: 500 }
     );
   }
 }
 
-
-// POST a new product for the logged-in artisan
-export async function POST(request: NextRequest) {
+export async function POST(req: Request) {
   try {
     await connectDB();
-
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.split(' ')[1];
-
-    if (!token) {
-      return new NextResponse(
-        JSON.stringify({ success: false, message: 'Authentication required' }),
-        { status: 401, headers: { 'content-type': 'application/json' } }
-      );
+    
+    const user = await getAuthenticatedUser(req);
+    if (!user || user.role !== 'artisan') {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-    const { payload } = await jose.jwtVerify(token, secret);
-    const artisanId = payload.userId as string;
+    const body = await req.json();
 
-    if (!artisanId) {
-        return new NextResponse(
-            JSON.stringify({ success: false, message: 'Artisan ID not found in token' }),
-            { status: 401, headers: { 'content-type': 'application/json' } }
-        );
-    }
-
-    const body = await request.json();
-    const { name, description, price, images, category, stock } = body;
-
-    if (!name || !description || !price || !images || !category || !stock) {
-      return new NextResponse(
-        JSON.stringify({ success: false, message: 'Missing required fields' }),
-        { status: 400, headers: { 'content-type': 'application/json' } }
-      );
-    }
-
-    const newProduct = new Product({
+    const {
       name,
-      description,
-      price,
       images,
-      category,
+      description,
+      material,
+      handmadeBy,
+      region,
+      careInstructions,
+      price,
+      discountPrice,
       stock,
-      artisan: artisanId,
+      sku,
+      category,
+      subcategory,
+      tags,
+      weight,
+      deliveryTime,
+      shippingFee,
+      status,
+    } = body;
+
+    if (!name || !description || !price || !stock || !category || !deliveryTime || !shippingFee) {
+      return NextResponse.json(
+        { message: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    const productStatus = status === 'Publish' ? 'Published' : 'Draft';
+
+    const tagsArray = tags
+      ? (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()) : tags)
+      : [];
+
+    const product = await Product.create({
+      artisanId: user._id,
+      name,
+      images: images || [],
+      description,
+      material,
+      handmadeBy,
+      region,
+      careInstructions,
+      price: Number(price),
+      discountPrice: discountPrice ? Number(discountPrice) : undefined,
+      stock: Number(stock),
+      sku,
+      category,
+      subcategory,
+      tags: tagsArray,
+      weight,
+      deliveryTime,
+      shippingFee,
+      status: productStatus,
     });
 
-    await newProduct.save();
-
-    return new NextResponse(
-      JSON.stringify({ success: true, product: newProduct }),
-      { status: 201, headers: { 'content-type': 'application/json' } }
+    return NextResponse.json(
+      {
+        message: productStatus === 'Published' ? 'Product published successfully' : 'Product saved as draft',
+        product,
+      },
+      { status: 201 }
     );
   } catch (error: any) {
-    if (error.code === 'ERR_JWT_EXPIRED' || error.code === 'ERR_JWS_INVALID') {
-        return new NextResponse(
-            JSON.stringify({ success: false, message: 'Authentication failed: Invalid token' }),
-            { status: 401, headers: { 'content-type': 'application/json' } }
-        );
-    }
-    
     console.error('Error creating product:', error);
-    return new NextResponse(
-      JSON.stringify({ success: false, message: 'Internal Server Error' }),
-      { status: 500, headers: { 'content-type': 'application/json' } }
+    console.error('Error name:', error?.name);
+    console.error('Error message:', error?.message);
+    console.error('Error code:', error?.code);
+    // If it's a validation error, send more details
+    if (error.name === 'ValidationError') {
+      return NextResponse.json(
+        { message: 'Validation error', errors: Object.values(error.errors).map((e: any) => e.message) },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json(
+      { message: 'Failed to create product', error: error?.message },
+      { status: 500 }
     );
   }
 }

@@ -9,6 +9,7 @@ export const ArtisanOnboardingPage: React.FC = () => {
   const { user, updateUser } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     phone: '',
@@ -26,18 +27,193 @@ export const ArtisanOnboardingPage: React.FC = () => {
     accountNumber: '',
   });
 
+  const [profileImage, setProfileImage] = useState<string | null>(user?.profileImage || null);
+  const [idDocument, setIdDocument] = useState<string | null>(null);
+  const [workshopPhoto, setWorkshopPhoto] = useState<string | null>(null);
+  const [craftProcessPhoto, setCraftProcessPhoto] = useState<string | null>(null);
+  const [productSamplePhotos, setProductSamplePhotos] = useState<string[]>([]);
+  const [phoneError, setPhoneError] = useState('');
+  const [experienceError, setExperienceError] = useState('');
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    if (name === 'phone') {
+      const cleaned = value.replace(/\D/g, '');
+      const startsWith09 = value.startsWith('09');
+      const startsWithPlus = value.startsWith('+251');
+      if (value === '' || (startsWith09 && cleaned.length <= 10) || (startsWithPlus && cleaned.length <= 13)) {
+        setPhoneError('');
+      } else if (startsWith09 && cleaned.length !== 10) {
+        setPhoneError('Phone must be 10 digits starting with 09');
+      } else if (startsWithPlus && cleaned.length !== 13) {
+        setPhoneError('Phone must be +251 followed by 9 digits');
+      } else {
+        setPhoneError('Phone must start with +251 or 09');
+      }
+    }
+    if (name === 'experience') {
+      const num = parseInt(value);
+      if (value === '' || num >= 0) {
+        setExperienceError('');
+      } else {
+        setExperienceError('Experience cannot be negative');
+      }
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleProfileImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image must be less than 5MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleIdDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File must be less than 5MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setIdDocument(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleWorkshopPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image must be less than 5MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setWorkshopPhoto(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCraftProcessPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image must be less than 5MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCraftProcessPhoto(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleProductSampleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      if (files.length + productSamplePhotos.length > 5) {
+        alert('Maximum 5 images allowed');
+        return;
+      }
+      files.forEach(file => {
+        if (file.size > 5 * 1024 * 1024) {
+          alert('Each image must be less than 5MB');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setProductSamplePhotos(prev => [...prev, reader.result as string]);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const removeProductSample = (index: number) => {
+    setProductSamplePhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step < 4) {
+      if (step === 1) {
+        const phone = formData.phone.trim();
+        const cleaned = phone.replace(/\D/g, '');
+        const startsWith09 = phone.startsWith('09') && cleaned.length === 10;
+        const startsWithPlus = phone.startsWith('+251') && cleaned.length === 13;
+        if (!startsWith09 && !startsWithPlus) {
+          setPhoneError('Phone must start with +251 (13 digits) or 09 (10 digits)');
+          return;
+        }
+        setPhoneError('');
+      }
+      if (step === 2) {
+        const exp = parseInt(formData.experience);
+        if (isNaN(exp) || exp < 0) {
+          setExperienceError('Experience cannot be negative');
+          return;
+        }
+        setExperienceError('');
+      }
       setStep(step + 1);
     } else {
-      // Final submission
-      updateUser({ artisanStatus: 'Pending' as ArtisanStatus });
-      router.push('/dashboard');
+      const phone = formData.phone.trim();
+      const cleaned = phone.replace(/\D/g, '');
+      const startsWith09 = phone.startsWith('09') && cleaned.length === 10;
+      const startsWithPlus = phone.startsWith('+251') && cleaned.length === 13;
+      if (!startsWith09 && !startsWithPlus) {
+        setPhoneError('Phone must start with +251 (13 digits) or 09 (10 digits)');
+        return;
+      }
+      const exp = parseInt(formData.experience);
+      if (isNaN(exp) || exp < 0) {
+        setExperienceError('Experience cannot be negative');
+        return;
+      }
+      try {
+        setSubmitting(true);
+        const response = await fetch('/api/artisan/onboarding', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...formData,
+            profileImage,
+            idDocument,
+            workshopPhoto,
+            craftProcessPhoto,
+            productSamplePhotos,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          updateUser({ artisanStatus: 'Pending' as ArtisanStatus });
+          alert('Application submitted successfully!');
+          router.push('/artisan/waiting');
+        } else {
+          alert(data.message || 'Failed to submit application');
+        }
+      } catch (error: any) {
+        console.error('Error submitting application:', error);
+        alert('An error occurred while submitting your application');
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
@@ -67,7 +243,6 @@ export const ArtisanOnboardingPage: React.FC = () => {
           <p className="text-gray-500">Complete your profile to start selling your crafts</p>
         </div>
 
-        {/* Progress Bar */}
         <div className="flex justify-between mb-8 relative">
           <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 -translate-y-1/2 z-0"></div>
           <div 
@@ -95,7 +270,6 @@ export const ArtisanOnboardingPage: React.FC = () => {
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
           <form onSubmit={handleSubmit} className="space-y-6">
             
-            {/* Step 1: Personal & Location */}
             {step === 1 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
                 <h3 className="text-xl font-bold text-gray-800 border-b pb-2">Personal Information</h3>
@@ -103,20 +277,24 @@ export const ArtisanOnboardingPage: React.FC = () => {
                 <div className="flex justify-center mb-6">
                   <div className="relative">
                     <div className="w-24 h-24 bg-gray-100 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden">
-                      {user?.profileImage ? (
-                        <img src={user.profileImage} alt="Profile" className="w-full h-full object-cover" />
+                      {profileImage ? (
+                        <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
                       ) : (
                         <Camera className="w-8 h-8 text-gray-400" />
                       )}
                     </div>
-                    <button type="button" className="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full shadow-lg hover:bg-primary-dark transition-colors">
+                    <label className="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full shadow-lg hover:bg-primary-dark transition-colors cursor-pointer">
                       <Upload className="w-4 h-4" />
-                    </button>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleProfileImageUpload} />
+                    </label>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Input label="Phone Number" name="phone" value={formData.phone} onChange={handleChange} placeholder="+251 911 234 567" required />
+                  <div className="space-y-1">
+                    <Input label="Phone Number" name="phone" value={formData.phone} onChange={handleChange} placeholder="+251 or 09..." required />
+                    {phoneError && <p className="text-red-500 text-xs ml-1">{phoneError}</p>}
+                  </div>
                   <div className="space-y-2">
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Gender</label>
                     <select name="gender" value={formData.gender} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all bg-gray-50 hover:bg-white" required>
@@ -138,7 +316,6 @@ export const ArtisanOnboardingPage: React.FC = () => {
               </div>
             )}
 
-            {/* Step 2: Business Info */}
             {step === 2 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
                 <h3 className="text-xl font-bold text-gray-800 border-b pb-2">Business Information</h3>
@@ -158,7 +335,10 @@ export const ArtisanOnboardingPage: React.FC = () => {
                       <option value="Coffee Items">Coffee Items</option>
                     </select>
                   </div>
-                  <Input label="Years of Experience" name="experience" type="number" value={formData.experience} onChange={handleChange} placeholder="E.g. 5" required />
+                  <div className="space-y-1">
+                    <Input label="Years of Experience" name="experience" type="number" value={formData.experience} onChange={handleChange} placeholder="E.g. 5" required min="0" />
+                    {experienceError && <p className="text-red-500 text-xs ml-1">{experienceError}</p>}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -175,18 +355,28 @@ export const ArtisanOnboardingPage: React.FC = () => {
               </div>
             )}
 
-            {/* Step 3: Verification */}
             {step === 3 && (
               <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
                 <div>
                   <h3 className="text-xl font-bold text-gray-800 border-b pb-2 mb-4">Identity Verification</h3>
                   <p className="text-sm text-gray-500 mb-4">To avoid fake sellers, please upload a valid ID.</p>
                   
-                  <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="font-bold text-gray-700">Upload National ID / Passport</p>
-                    <p className="text-xs text-gray-500 mt-1">JPG, PNG or PDF (Max 5MB)</p>
-                  </div>
+                  <label className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50 block">
+                    {idDocument ? (
+                      <div>
+                        <img src={idDocument} alt="ID Document" className="w-32 h-32 object-cover rounded-xl mx-auto mb-2" />
+                        <p className="font-bold text-green-600">ID Uploaded ✓</p>
+                        <p className="text-xs text-gray-500 mt-1">Click to change</p>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="font-bold text-gray-700">Upload National ID / Passport</p>
+                        <p className="text-xs text-gray-500 mt-1">JPG, PNG or PDF (Max 5MB)</p>
+                      </>
+                    )}
+                    <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleIdDocumentUpload} />
+                  </label>
                 </div>
 
                 <div>
@@ -194,25 +384,59 @@ export const ArtisanOnboardingPage: React.FC = () => {
                   <p className="text-sm text-gray-500 mb-4">Proof that you actually produce items. This increases authenticity.</p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50">
-                      <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm font-bold text-gray-700">Workshop Photo</p>
-                    </div>
-                    <div className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50">
-                      <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm font-bold text-gray-700">Craft Process</p>
-                    </div>
-                    <div className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50">
-                      <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm font-bold text-gray-700">Product Samples</p>
-                      <p className="text-[10px] text-gray-500 mt-1">(3-5 images)</p>
+                    <label className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50 block">
+                      {workshopPhoto ? (
+                        <>
+                          <img src={workshopPhoto} alt="Workshop" className="w-20 h-20 object-cover rounded-xl mx-auto mb-2" />
+                          <p className="text-xs font-bold text-green-600">Uploaded ✓</p>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm font-bold text-gray-700">Workshop Photo</p>
+                        </>
+                      )}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleWorkshopPhotoUpload} />
+                    </label>
+                    <label className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50 block">
+                      {craftProcessPhoto ? (
+                        <>
+                          <img src={craftProcessPhoto} alt="Craft Process" className="w-20 h-20 object-cover rounded-xl mx-auto mb-2" />
+                          <p className="text-xs font-bold text-green-600">Uploaded ✓</p>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm font-bold text-gray-700">Craft Process</p>
+                        </>
+                      )}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleCraftProcessPhotoUpload} />
+                    </label>
+                    <div>
+                      <div className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center bg-gray-50">
+                        <p className="text-sm font-bold text-gray-700 mb-2">Product Samples</p>
+                        <p className="text-[10px] text-gray-500 mb-2">(3-5 images)</p>
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          {productSamplePhotos.map((img, idx) => (
+                            <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden">
+                              <img src={img} alt={`Sample ${idx + 1}`} className="w-full h-full object-cover" />
+                              <button type="button" onClick={() => removeProductSample(idx)} className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs">&times;</button>
+                            </div>
+                          ))}
+                          {productSamplePhotos.length < 5 && (
+                            <label className="w-16 h-16 rounded-lg border border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary">
+                              <Upload className="w-4 h-4 text-gray-400" />
+                              <input type="file" accept="image/*" multiple className="hidden" onChange={handleProductSampleUpload} />
+                            </label>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Step 4: Payment */}
             {step === 4 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
                 <h3 className="text-xl font-bold text-gray-800 border-b pb-2">Payment Information</h3>
@@ -261,7 +485,7 @@ export const ArtisanOnboardingPage: React.FC = () => {
                 >
                   Skip
                 </Button>
-                <Button type="submit">
+                <Button type="submit" isLoading={submitting}>
                   {step < 4 ? 'Continue' : 'Submit Application'}
                 </Button>
               </div>

@@ -22,15 +22,16 @@ export const LoginPage: React.FC = () => {
       if (res.success) {
         const userRole = res.user.role?.toLowerCase();
         
-        // Check if onboarding is required
         if (userRole === 'organizer' && res.user.organizerStatus === 'Not Submitted') {
           router.push('/dashboard/organizer/onboarding');
         } else if (userRole === 'artisan' && res.user.artisanStatus === 'Not Submitted') {
           router.push('/dashboard/artisan/onboarding');
+        } else if (userRole === 'artisan' && res.user.artisanStatus !== 'Approved') {
+          router.push('/artisan/waiting');
         } else {
-          router.push(userRole === 'admin' ? '/dashboard/admin' : 
+          router.push(userRole === 'admin' ? '/dashboard/admin/overview' : 
                       userRole === 'organizer' ? '/dashboard/organizer/overview' : 
-                      userRole === 'artisan' ? '/dashboard/artisan' : '/');
+                      userRole === 'artisan' ? '/dashboard/artisan/overview' : '/');
         }
       } else {
         alert(res.message || "Login failed. Please check your credentials.");

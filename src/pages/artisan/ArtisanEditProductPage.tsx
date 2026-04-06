@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   X, Image as ImageIcon, Upload, Trash2, Info, 
@@ -7,8 +7,11 @@ import {
 } from 'lucide-react';
 import { Button, Input, Badge } from '../../components/UI';
 
-export const ArtisanCreateProductPage: React.FC = () => {
+export const ArtisanEditProductPage: React.FC<{ params: Promise<{ id: string }> }> = ({ params }) => {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [productId, setProductId] = useState<string>('');
   const [formData, setFormData] = useState({
     name: '',
     images: [] as string[],
@@ -32,6 +35,55 @@ export const ArtisanCreateProductPage: React.FC = () => {
 
   const [previewImages, setPreviewImages] = useState<string[]>([]);
 
+  useEffect(() => {
+    const init = async () => {
+      const resolved = await params;
+      setProductId(resolved.id);
+      fetchProduct(resolved.id);
+    };
+    init();
+  }, [params]);
+
+  const fetchProduct = async (id: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/artisan/products/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        const product = data.product;
+        setFormData({
+          name: product.name || '',
+          images: product.images || [],
+          description: product.description || '',
+          material: product.material || '',
+          handmadeBy: product.handmadeBy || '',
+          region: product.region || '',
+          careInstructions: product.careInstructions || '',
+          price: product.price?.toString() || '',
+          discountPrice: product.discountPrice?.toString() || '',
+          stock: product.stock?.toString() || '',
+          sku: product.sku || '',
+          category: product.category || '',
+          subcategory: product.subcategory || '',
+          tags: Array.isArray(product.tags) ? product.tags.join(', ') : '',
+          weight: product.weight || '',
+          deliveryTime: product.deliveryTime || '',
+          shippingFee: product.shippingFee || '',
+          status: product.status === 'Published' ? 'Publish' : 'Draft'
+        });
+        setPreviewImages(product.images || []);
+      } else {
+        alert('Failed to load product');
+        router.push('/dashboard/artisan/products');
+      }
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      alert('Failed to load product');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
@@ -42,7 +94,6 @@ export const ArtisanCreateProductPage: React.FC = () => {
       
       const newPreviews = files.map((file: File) => URL.createObjectURL(file));
       setPreviewImages([...previewImages, ...newPreviews]);
-      // In a real app, you'd handle the actual file upload here
     }
   };
 
@@ -52,92 +103,88 @@ export const ArtisanCreateProductPage: React.FC = () => {
     setPreviewImages(newPreviews);
   };
 
-   const handleSubmit = async (status: 'Draft' | 'Publish') => {
-     // Validate required fields
-     if (!formData.name || previewImages.length === 0 || !formData.description || !formData.price || !formData.stock || !formData.category || !formData.deliveryTime || !formData.shippingFee) {
-       alert('Please fill in all required fields marked with *');
-       return;
-     }
+  const handleSubmit = async (status: 'Draft' | 'Publish') => {
+    if (!formData.name || !formData.description || !formData.price || !formData.stock || !formData.category || !formData.deliveryTime || !formData.shippingFee) {
+      alert('Please fill in all required fields marked with *');
+      return;
+    }
 
-     try {
-       const token = localStorage.getItem('token');
-       console.log('Token retrieved:', token ? 'Present' : 'Missing');
-       if (!token) {
-         alert('Authentication required. Please log in again.');
-         router.push('/login');
-         return;
-       }
+    try {
+      setSaving(true);
+      const productData = {
+        name: formData.name,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        images: previewImages,
+        category: formData.category,
+        stock: parseInt(formData.stock),
+        material: formData.material || undefined,
+        handmadeBy: formData.handmadeBy || undefined,
+        region: formData.region || undefined,
+        careInstructions: formData.careInstructions || undefined,
+        discountPrice: formData.discountPrice ? parseFloat(formData.discountPrice) : undefined,
+        sku: formData.sku || undefined,
+        subcategory: formData.subcategory || undefined,
+        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : undefined,
+        weight: formData.weight || undefined,
+        deliveryTime: formData.deliveryTime,
+        shippingFee: formData.shippingFee === 'Free Shipping' ? 'Free Shipping' : formData.shippingFee,
+        status: status === 'Publish' ? 'Published' : 'Draft'
+      };
 
-       const productData = {
-         name: formData.name,
-         description: formData.description,
-         price: parseFloat(formData.price),
-         images: previewImages,
-         category: formData.category,
-         stock: parseInt(formData.stock),
-         material: formData.material || undefined,
-         handmadeBy: formData.handmadeBy || undefined,
-         region: formData.region || undefined,
-         careInstructions: formData.careInstructions || undefined,
-         discountPrice: formData.discountPrice ? parseFloat(formData.discountPrice) : undefined,
-         sku: formData.sku || undefined,
-         subcategory: formData.subcategory || undefined,
-         tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : undefined,
-         weight: formData.weight || undefined,
-         deliveryTime: formData.deliveryTime,
-         shippingFee: formData.shippingFee === 'Free Shipping' ? 'Free Shipping' : formData.shippingFee,
-         status: status === 'Publish' ? 'Published' : 'Draft'
-       };
+      const response = await fetch(`/api/artisan/products/${productId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(productData)
+      });
 
-       console.log('Sending product data:', productData);
+      const result = await response.json();
 
-       const response = await fetch('/api/artisan/products', {
-         method: 'POST',
-         headers: {
-           'Content-Type': 'application/json',
-           'Authorization': `Bearer ${token}`
-         },
-         body: JSON.stringify(productData)
-       });
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to update product');
+      }
 
-       const result = await response.json();
+      alert(`Artifact ${status === 'Publish' ? 'Published' : 'Saved as Draft'} Successfully!`);
+      router.push('/dashboard/artisan/products');
+    } catch (error: any) {
+      console.error('Error updating product:', error);
+      alert(error.message || 'An error occurred while saving the product');
+    } finally {
+      setSaving(false);
+    }
+  };
 
-       if (!response.ok) {
-         throw new Error(result.message || 'Failed to save product');
-       }
-
-       alert(`Artifact ${status === 'Publish' ? 'Published' : 'Saved as Draft'} Successfully!`);
-       router.push('/dashboard/artisan/products');
-     } catch (error: any) {
-       console.error('Error submitting product:', error);
-       alert(error.message || 'An error occurred while saving the product');
-     }
-   };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Loading product...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto pb-20 animate-in fade-in duration-500">
-      {/* Header */}
       <header className="flex justify-between items-center mb-8 sticky top-0 bg-gray-50/80 backdrop-blur-md z-10 py-4">
         <div className="flex items-center gap-4">
           <button onClick={() => router.back()} className="p-2 hover:bg-white rounded-xl transition-colors">
             <ChevronLeft className="w-6 h-6 text-gray-500" />
           </button>
           <div>
-            <h1 className="text-3xl font-serif font-bold text-primary">Add New Artifact</h1>
-            <p className="text-gray-500 text-sm">Share your craft with the world.</p>
+            <h1 className="text-3xl font-serif font-bold text-primary">Edit Artifact</h1>
+            <p className="text-gray-500 text-sm">Update your artifact details.</p>
           </div>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" leftIcon={Save} onClick={() => handleSubmit('Draft')}>Save Draft</Button>
-          <Button leftIcon={CheckCircle2} onClick={() => handleSubmit('Publish')}>Publish Artifact</Button>
+          <Button variant="outline" leftIcon={Save} onClick={() => handleSubmit('Draft')} isLoading={saving}>Save Draft</Button>
+          <Button leftIcon={CheckCircle2} onClick={() => handleSubmit('Publish')} isLoading={saving}>Publish Artifact</Button>
         </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Form Column */}
         <div className="lg:col-span-2 space-y-8">
           
-          {/* 1. Basic Information */}
           <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-6">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Info className="w-5 h-5" /></div>
@@ -152,7 +199,7 @@ export const ArtisanCreateProductPage: React.FC = () => {
             />
 
             <div className="space-y-3">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Product Images * (Max 5)</label>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Product Images (Max 5)</label>
               <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
                 {previewImages.map((img, idx) => (
                   <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden group border border-gray-100">
@@ -213,7 +260,6 @@ export const ArtisanCreateProductPage: React.FC = () => {
             </div>
           </section>
 
-          {/* 2. Pricing Section */}
           <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-6">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><DollarSign className="w-5 h-5" /></div>
@@ -247,7 +293,6 @@ export const ArtisanCreateProductPage: React.FC = () => {
              )}
           </section>
 
-          {/* 3. Inventory Section */}
           <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-6">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><Package className="w-5 h-5" /></div>
@@ -277,10 +322,8 @@ export const ArtisanCreateProductPage: React.FC = () => {
           </section>
         </div>
 
-        {/* Sidebar Column */}
         <div className="space-y-8">
           
-          {/* 4. Category & Classification */}
           <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-6">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-amber-50 text-amber-600 rounded-lg"><Tag className="w-5 h-5" /></div>
@@ -319,7 +362,6 @@ export const ArtisanCreateProductPage: React.FC = () => {
             />
           </section>
 
-          {/* 5. Shipping Information */}
           <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-6">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Truck className="w-5 h-5" /></div>
@@ -384,7 +426,6 @@ export const ArtisanCreateProductPage: React.FC = () => {
             </div>
           </section>
 
-          {/* 6. Product Status */}
           <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-6">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-gray-100 text-gray-600 rounded-lg"><Eye className="w-5 h-5" /></div>
