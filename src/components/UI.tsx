@@ -52,16 +52,29 @@ export const Button: React.FC<ButtonProps> = ({
   );
 };
 
-export const Badge: React.FC<{ children: React.ReactNode; variant?: 'success' | 'warning' | 'error' | 'info' | 'outline'; className?: string }> = ({ children, variant = 'info', className = '' }) => {
+export const Badge: React.FC<{ 
+  children: React.ReactNode; 
+  variant?: 'success' | 'warning' | 'error' | 'info' | 'outline' | 'secondary'; 
+  size?: 'sm' | 'md' | 'lg';
+  className?: string 
+}> = ({ children, variant = 'info', size = 'md', className = '' }) => {
   const variants = {
     success: "bg-green-100 text-green-800",
     warning: "bg-yellow-100 text-yellow-800",
     error: "bg-red-100 text-red-800",
     info: "bg-blue-100 text-blue-800",
     outline: "border border-gray-200 text-gray-600",
+    secondary: "bg-gray-100 text-gray-800",
   };
+
+  const sizes = {
+    sm: "px-2 py-0.5 text-[10px]",
+    md: "px-2.5 py-0.5 text-xs",
+    lg: "px-3 py-1 text-sm",
+  };
+
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variants[variant]} ${className}`}>
+    <span className={`inline-flex items-center rounded-full font-medium ${variants[variant]} ${sizes[size]} ${className}`}>
       {children}
     </span>
   );
