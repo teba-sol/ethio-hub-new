@@ -47,7 +47,7 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
         >
           <Heart className={`w-5 h-5 ${isWishlisted && isTourist ? 'fill-current' : ''}`} />
         </button>
-        {product.isVerified && (
+        {(product.isVerified || (product as any).verificationStatus === 'Approved') && (
           <div className="absolute bottom-4 left-4">
             <VerifiedBadge />
           </div>

@@ -23,6 +23,8 @@ interface Product {
   sold?: number;
   rating?: number;
   status: 'Published' | 'Draft' | 'Archived';
+  verificationStatus: 'Pending' | 'Approved' | 'Rejected';
+  rejectionReason?: string;
   category: string;
   tags?: string[];
   sku?: string;
@@ -324,6 +326,8 @@ export const ArtisanProductManager: React.FC = () => {
     if (product.stock === 0) return <Badge variant="error">Out of Stock</Badge>;
     if (product.status === 'Draft') return <Badge variant="warning">Draft</Badge>;
     if (product.status === 'Archived') return <Badge variant="outline">Archived</Badge>;
+    if (product.verificationStatus === 'Pending') return <Badge variant="warning">Pending Verification</Badge>;
+    if (product.verificationStatus === 'Rejected') return <Badge variant="error">Rejected</Badge>;
     return <Badge variant="success">Published</Badge>;
   };
 

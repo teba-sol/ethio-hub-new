@@ -146,7 +146,7 @@ export const ArtisanEditProductPage: React.FC<{ params: Promise<{ id: string }> 
         throw new Error(result.message || 'Failed to update product');
       }
 
-      alert(`Artifact ${status === 'Publish' ? 'Published' : 'Saved as Draft'} Successfully!`);
+      alert(`Artifact ${status === 'Publish' ? 'submitted for admin verification' : 'Saved as Draft'} Successfully!`);
       router.push('/dashboard/artisan/products');
     } catch (error: any) {
       console.error('Error updating product:', error);
@@ -449,7 +449,7 @@ export const ArtisanEditProductPage: React.FC<{ params: Promise<{ id: string }> 
             <p className="text-xs text-gray-400 leading-relaxed">
               {formData.status === 'Draft' 
                 ? 'Product will be saved but not visible to customers.' 
-                : 'Product will be live and visible to all customers immediately.'}
+                : 'Product will be submitted for admin verification before going live.'}
             </p>
           </section>
 

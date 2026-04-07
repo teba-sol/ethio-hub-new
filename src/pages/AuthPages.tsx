@@ -136,11 +136,11 @@ export const RegisterPage: React.FC = () => {
       if (res.success) {
         const userRole = res.user.role?.toLowerCase();
         
-        // Redirect to onboarding for organizers and artisans
-        if (userRole === 'organizer') {
+        if (userRole === 'artisan') {
+          alert('Successfully registered! Please log in to complete your onboarding.');
+          router.push('/login');
+        } else if (userRole === 'organizer') {
           router.push('/dashboard/organizer/onboarding');
-        } else if (userRole === 'artisan') {
-          router.push('/dashboard/artisan/onboarding');
         } else {
           router.push(userRole === 'admin' ? '/dashboard/admin' : '/');
         }
