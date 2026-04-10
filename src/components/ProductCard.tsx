@@ -29,13 +29,13 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   };
 
   return (
-    <article className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 border border-gray-100 flex flex-col h-full">
-      <div className="relative aspect-[4/5] overflow-hidden">
+    <article className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 flex flex-col h-full">
+      <div className="relative aspect-square overflow-hidden bg-gray-100">
         <Link href={`/products/${product.id}`}>
           <img 
             src={product.images[0]} 
             alt={product.name} 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
         </Link>
         <button 
