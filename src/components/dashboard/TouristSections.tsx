@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   MapIcon, Ticket, ShoppingCart, Heart, User as UserIcon,
   Search, Plus, Package, Calendar, CreditCard, ChevronRight,
-  ShieldCheck, HelpCircle, FileText, Mail
+  ShieldCheck, HelpCircle, FileText, Mail, X
 } from 'lucide-react';
 import { Button, Input, Badge } from '../UI';
 import { useAuth } from '../../context/AuthContext';
+import apiClient from '../../lib/apiClient';
 
 // Mock Data
 const MOCK_ORDERS = [
@@ -29,14 +31,94 @@ const MOCK_PAYMENTS = [
 
 export const TouristBookingsView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [timeFilter, setTimeFilter] = useState('All Time');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
+  const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
 
-  const filteredBookings = MOCK_BOOKINGS.filter(booking => {
-    const matchesSearch = booking.event.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          booking.location.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        const response = await apiClient.get('/api/tourist/bookings');
+        if (response.success) {
+          setBookings(response.bookings);
+        } else {
+          setError(response.message || 'Failed to fetch bookings');
+        }
+      } catch (err: any) {
+        setError(err.message || 'An error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBookings();
+  }, []);
+
+  const handleCancelBooking = async (bookingId: string) => {
+    if (!confirm('Are you sure you want to cancel this booking?')) return;
+    setCancelling(bookingId);
+    try {
+      const response = await apiClient.put('/api/tourist/bookings', {
+        bookingId,
+        action: 'cancel'
+      });
+      if (response.success) {
+        setBookings(prev => prev.map((b: any) => 
+          b._id === bookingId ? { ...b, status: 'cancelled' } : b
+        ));
+        setSelectedBooking(null);
+      } else {
+        alert(response.message || 'Failed to cancel booking');
+      }
+    } catch (err: any) {
+      alert(err.message || 'An error occurred');
+    } finally {
+      setCancelling(null);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return <Badge variant="success" className="capitalize">{status}</Badge>;
+      case 'pending':
+        return <Badge variant="info" className="capitalize">{status}</Badge>;
+      case 'cancelled':
+        return <Badge variant="secondary" className="capitalize">{status}</Badge>;
+      case 'completed':
+        return <Badge variant="success" className="capitalize">{status}</Badge>;
+      default:
+        return <Badge className="capitalize">{status}</Badge>;
+    }
+  };
+
+  const filteredBookings = bookings.filter((booking: any) => {
+    const eventName = booking.festival?.name || '';
+    const matchesSearch = eventName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'All' || booking.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-500">{error}</p>
+        <Button className="mt-4" onClick={() => window.location.reload()}>Try Again</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -55,150 +137,87 @@ export const TouristBookingsView: React.FC = () => {
           </div>
           <select 
             className="bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/10 w-full sm:w-auto"
-            value={timeFilter}
-            onChange={(e) => setTimeFilter(e.target.value)}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option>All Time</option>
-            <option>Last 30 Days</option>
-            <option>Last 6 Months</option>
-            <option>Last Year</option>
+            <option value="All">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="completed">Completed</option>
           </select>
         </div>
       </div>
       
       <div className="grid gap-6">
         {filteredBookings.length > 0 ? (
-          filteredBookings.map((booking) => (
-            <div key={booking.id} className="bg-white p-6 rounded-3xl border border-gray-100 flex flex-col md:flex-row gap-6 hover:shadow-md transition-shadow">
+          filteredBookings.map((booking: any) => (
+            <div key={booking._id} className="bg-white p-6 rounded-3xl border border-gray-100 flex flex-col md:flex-row gap-6 hover:shadow-md transition-shadow">
               <div className="w-full md:w-48 h-32 rounded-2xl overflow-hidden shrink-0">
-                <img src={booking.image} alt={booking.event} className="w-full h-full object-cover" />
+                <img 
+                  src={booking.festival?.coverImage || 'https://images.unsplash.com/photo-1566998826769-e58f276226b9?q=80&w=200'} 
+                  alt={booking.festival?.name} 
+                  className="w-full h-full object-cover" 
+                />
               </div>
               <div className="flex-1 flex flex-col justify-between">
                 <div>
                   <div className="flex justify-between items-start">
-                    <h3 className="text-xl font-bold text-primary">{booking.event}</h3>
-                    <Badge variant={booking.status === 'Confirmed' ? 'success' : 'info'}>{booking.status}</Badge>
+                    <h3 className="text-xl font-bold text-primary">{booking.festival?.name || 'Festival'}</h3>
+                    {getStatusBadge(booking.status)}
                   </div>
                   <div className="flex items-center text-gray-500 text-sm mt-2 gap-4">
-                    <span className="flex items-center"><Calendar className="w-4 h-4 mr-1" /> {booking.date}</span>
-                    <span className="flex items-center"><MapIcon className="w-4 h-4 mr-1" /> {booking.location}</span>
+                    <span className="flex items-center"><Calendar className="w-4 h-4 mr-1" /> 
+                      {booking.festival?.startDate ? new Date(booking.festival.startDate).toLocaleDateString() : 'Date TBD'}
+                    </span>
+                    <span className="flex items-center"><MapIcon className="w-4 h-4 mr-1" /> {booking.festival?.locationName || 'Location TBD'}</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-end mt-4">
                   <div className="text-sm font-medium text-gray-600">
-                    <span className="text-primary font-bold">{booking.tickets}</span> Ticket(s)
+                    <span className="text-primary font-bold">{booking.quantity}</span> Ticket(s) • 
+                    <span className="text-primary font-bold ml-1">{booking.currency} {booking.totalPrice}</span>
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => setSelectedBooking(booking)}>View Ticket</Button>
+                  <Button size="sm" variant="outline" onClick={() => setSelectedBooking(booking)}>View Details</Button>
                 </div>
               </div>
             </div>
           ))
         ) : (
           <div className="text-center py-12 bg-white rounded-3xl border border-gray-100">
-            <p className="text-gray-500">No bookings found matching your criteria.</p>
+            <p className="text-gray-500">No bookings found.</p>
+            <Link href="/festivals" className="text-primary underline mt-2 inline-block">Browse Festivals</Link>
           </div>
         )}
       </div>
 
-      {/* Professional Ticket Modal */}
       {selectedBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md" onClick={() => setSelectedBooking(null)}>
-          <div className="relative w-full max-w-md animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
-            
-            {/* Ticket Container */}
-            <div className="bg-white rounded-[32px] shadow-2xl relative max-h-[80vh] overflow-y-auto overflow-x-hidden">
-              
-              {/* Decorative Circles for "Ticket" look */}
-              <div className="absolute top-[65%] -left-4 w-8 h-8 bg-[#7f7f7f] rounded-full z-10"></div>
-              <div className="absolute top-[65%] -right-4 w-8 h-8 bg-[#7f7f7f] rounded-full z-10"></div>
-
-              {/* Header Image */}
-              <div className="h-56 relative rounded-t-[32px] overflow-hidden">
-                <img src={selectedBooking.image} alt={selectedBooking.event} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex items-end p-8">
-                  <div className="w-full">
-                    <div className="flex justify-between items-end mb-2">
-                       <Badge size="sm" variant={selectedBooking.status === 'Confirmed' ? 'success' : 'info'} className="border-none shadow-lg backdrop-blur-md bg-white/20 text-white">
-                        {selectedBooking.status}
-                      </Badge>
-                      <div className="bg-white/20 backdrop-blur-md p-2 rounded-lg">
-                         <Ticket className="w-5 h-5 text-white" />
-                      </div>
-                    </div>
-                    <h3 className="text-2xl font-bold text-white leading-tight font-serif">{selectedBooking.event}</h3>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setSelectedBooking(null)} 
-                  className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 text-white rounded-full backdrop-blur-sm transition-all"
-                >
-                  <Plus className="w-5 h-5 rotate-45" />
-                </button>
+          <div className="relative w-full max-w-md animate-in zoom-in-95 duration-300 bg-white rounded-[32px] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setSelectedBooking(null)} className="absolute top-4 right-4 z-10 p-2 bg-white/80 rounded-full">
+              <X className="w-5 h-5 text-gray-600" />
+            </button>
+            <div className="h-40 relative">
+              <img src={selectedBooking.festival?.coverImage || 'https://images.unsplash.com/photo-1566998826769-e58f276226b9?q=80&w=400'} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-primary">{selectedBooking.festival?.name}</h3>
+                <p className="text-gray-500 text-sm">#{selectedBooking._id?.slice(-8)}</p>
               </div>
-
-              {/* Ticket Body */}
-              <div className="p-8 pb-10 bg-white">
-                <div className="grid grid-cols-2 gap-y-8 gap-x-4 mb-8">
-                  <div>
-                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1.5">Date</p>
-                    <div className="flex items-center gap-2 font-bold text-gray-800 text-sm">
-                      <Calendar className="w-4 h-4 text-secondary" />
-                      {selectedBooking.date}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1.5">Time</p>
-                    <div className="flex items-center gap-2 font-bold text-gray-800 text-sm">
-                      <Package className="w-4 h-4 text-secondary" />
-                      09:00 AM
-                    </div>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1.5">Location</p>
-                    <div className="flex items-center gap-2 font-bold text-gray-800 text-sm">
-                      <MapIcon className="w-4 h-4 text-secondary" />
-                      {selectedBooking.location}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1.5">Guest</p>
-                    <div className="flex items-center gap-2 font-bold text-gray-800 text-sm">
-                      <UserIcon className="w-4 h-4 text-secondary" />
-                      Tourist User
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1.5">Admit</p>
-                    <div className="flex items-center gap-2 font-bold text-gray-800 text-sm">
-                      <Ticket className="w-4 h-4 text-secondary" />
-                      {selectedBooking.tickets} Person(s)
-                    </div>
-                  </div>
-                </div>
-
-                {/* Perforated Line */}
-                <div className="border-t-2 border-dashed border-gray-200 -mx-8 mb-8 relative"></div>
-
-                {/* QR Code Section */}
-                <div className="flex flex-row items-center justify-between gap-6">
-                  <div className="flex-1">
-                     <p className="text-xs text-gray-400 mb-1">Booking Reference</p>
-                     <p className="font-mono text-xl font-bold text-primary tracking-wider">{selectedBooking.id}</p>
-                     <p className="text-[10px] text-gray-400 mt-2">Scan this code at the entrance</p>
-                  </div>
-                  <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm shrink-0">
-                    <div className="w-24 h-24 bg-gray-900 rounded-lg flex items-center justify-center text-white">
-                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 opacity-50"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><rect x="7" y="7" width="3" height="3"/><rect x="14" y="7" width="3" height="3"/><rect x="7" y="14" width="3" height="3"/><rect x="14" y="14" width="3" height="3"/></svg>
-                    </div>
-                  </div>
-                </div>
+              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl">
+                <div><p className="text-xs text-gray-400 uppercase">Date</p><p className="font-bold text-sm">{selectedBooking.festival?.startDate ? new Date(selectedBooking.festival.startDate).toLocaleDateString() : 'TBD'}</p></div>
+                <div><p className="text-xs text-gray-400 uppercase">Location</p><p className="font-bold text-sm">{selectedBooking.festival?.locationName || 'TBD'}</p></div>
+                <div><p className="text-xs text-gray-400 uppercase">Guest</p><p className="font-bold text-sm">{selectedBooking.contactInfo?.fullName || 'Guest'}</p></div>
+                <div><p className="text-xs text-gray-400 uppercase">Tickets</p><p className="font-bold text-sm">{selectedBooking.quantity}</p></div>
               </div>
-
-              {/* Footer Actions */}
-              <div className="bg-gray-50 p-6 flex gap-3 border-t border-gray-100 rounded-b-[32px]">
-                <Button className="flex-1 shadow-lg shadow-primary/20 rounded-xl" leftIcon={Package}>Download</Button>
-                <Button variant="outline" className="flex-1 bg-white rounded-xl" leftIcon={Calendar}>Calendar</Button>
-              </div>
+              <div className="flex justify-between border-t pt-4"><span className="text-gray-500">Total</span><span className="font-bold text-xl">{selectedBooking.currency} {selectedBooking.totalPrice}</span></div>
+              {selectedBooking.status === 'pending' && (
+                <Button className="w-full bg-red-500 hover:bg-red-600" onClick={() => handleCancelBooking(selectedBooking._id)} disabled={cancelling === selectedBooking._id}>
+                  {cancelling === selectedBooking._id ? 'Cancelling...' : 'Cancel Booking'}
+                </Button>
+              )}
             </div>
           </div>
         </div>

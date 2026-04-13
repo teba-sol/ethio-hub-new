@@ -11,7 +11,7 @@ import {
   Utensils, Heart, Image as ImageIcon, Mail, Phone, CreditCard, QrCode,
   History, UserCheck, UserMinus, FileText, ChevronLeft, Eye,
   LayoutGrid, CalendarDays, BarChart2, MoreHorizontal, Bell, AlertTriangle, Filter, ArrowUpDown,
-  HelpCircle, Lightbulb, BarChart, Map, Clock, Camera, ZoomIn, Maximize2
+  HelpCircle, Lightbulb, BarChart, Map, Clock, Camera, ZoomIn, Maximize2, Check
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Festival, HotelAccommodation, Review } from '../../types';
@@ -2727,6 +2727,24 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
     );
   };
 
+  const handleBookingStatusUpdate = async (bookingId: string, newStatus: string) => {
+    try {
+      const response = await apiClient.put('/api/organizer/bookings', {
+        bookingId,
+        status: newStatus
+      });
+      if (response.success) {
+        setBookings(prev => prev.map(b => 
+          b._id === bookingId ? { ...b, status: newStatus } : b
+        ));
+      } else {
+        alert(response.message || 'Failed to update booking');
+      }
+    } catch (err: any) {
+      alert(err.message || 'An error occurred');
+    }
+  };
+
   const totalTickets = filteredBookings.reduce((acc, b) => acc + (b.quantity || 0), 0);
   const confirmedBookings = filteredBookings.filter(b => b.status === 'confirmed').reduce((acc, b) => acc + (b.quantity || 0), 0);
   const totalRevenue = filteredBookings.reduce((acc, b) => acc + (b.totalPrice || 0), 0);
@@ -2944,52 +2962,66 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
                   />
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm font-mono font-bold text-primary">{booking.id}</span>
+                  <span className="text-sm font-mono font-bold text-primary">{booking._id?.slice(-8)}</span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm text-gray-600">{booking.bookingDate}</span>
+                  <span className="text-sm text-gray-600">{new Date(booking.createdAt).toLocaleDateString()}</span>
                 </td>
                 <td className="px-6 py-4">
                   <div>
-                    <p className="text-sm font-bold text-primary">{booking.guest.name}</p>
-                    <p className="text-xs text-gray-400">{booking.guest.email}</p>
+                    <p className="text-sm font-bold text-primary">{booking.contactInfo?.fullName || 'N/A'}</p>
+                    <p className="text-xs text-gray-400">{booking.contactInfo?.email || 'N/A'}</p>
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <p className="text-sm font-bold text-primary">{booking.event.name}</p>
+                  <p className="text-sm font-bold text-primary">{booking.festival?.name || 'N/A'}</p>
                 </td>
                 <td className="px-6 py-4">
-                  <Badge variant="secondary" className="bg-gray-100 text-gray-700 border-none">{booking.event.ticketType}</Badge>
+                  <Badge variant="secondary" className="bg-gray-100 text-gray-700 border-none capitalize">{booking.ticketType}</Badge>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm font-bold text-primary">x{booking.event.quantity}</span>
+                  <span className="text-sm font-bold text-primary">x{booking.quantity}</span>
                 </td>
                 <td className="px-6 py-4">
-                  <p className="text-sm font-bold text-secondary">ETB {booking.payment.grandTotal}</p>
+                  <p className="text-sm font-bold text-secondary">{booking.currency} {booking.totalPrice}</p>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm text-gray-600">{booking.payment.method}</span>
+                  <span className="text-sm text-gray-600 capitalize">{booking.paymentStatus}</span>
                 </td>
                 <td className="px-6 py-4">
                   <Badge variant="secondary" className={`border-none ${
-                    booking.status === 'Confirmed' ? 'bg-emerald-100 text-emerald-700' : 
-                    booking.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
-                    booking.status === 'Checked-in' ? 'bg-blue-100 text-blue-700' :
-                    booking.status === 'Refunded' ? 'bg-purple-100 text-purple-700' :
-                    booking.status === 'No-show' ? 'bg-gray-200 text-gray-700' :
-                    'bg-red-100 text-red-700'
+                    booking.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : 
+                    booking.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                    booking.status === 'completed' ? 'bg-blue-100 text-blue-700' :
+                    booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                    'bg-gray-100 text-gray-700'
                   }`}>
                     {booking.status}
                   </Badge>
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => onViewBooking(booking.id)} className="p-2 bg-white border border-gray-100 rounded-xl text-primary hover:bg-primary hover:text-white transition-all shadow-sm">
+                    <button onClick={() => onViewBooking(booking._id)} className="p-2 bg-white border border-gray-100 rounded-xl text-primary hover:bg-primary hover:text-white transition-all shadow-sm">
                       <Eye className="w-4 h-4" />
                     </button>
-                    <button className="p-2 bg-white border border-gray-100 rounded-xl text-gray-400 hover:text-primary transition-all shadow-sm">
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
+                    {booking.status === 'pending' && (
+                      <>
+                        <button 
+                          onClick={() => handleBookingStatusUpdate(booking._id, 'confirmed')}
+                          className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                          title="Confirm"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleBookingStatusUpdate(booking._id, 'cancelled')}
+                          className="p-2 bg-red-50 border border-red-200 rounded-xl text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                          title="Cancel"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>
