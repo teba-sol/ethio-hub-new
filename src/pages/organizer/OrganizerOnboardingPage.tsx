@@ -113,8 +113,8 @@ export const OrganizerOnboardingPage: React.FC = () => {
       const data = await res.json();
 
       if (data.success) {
-        updateUser({ organizerStatus: 'Approved' as OrganizerStatus });
-        router.push('/dashboard/organizer/overview');
+        updateUser({ organizerStatus: 'Pending' as OrganizerStatus });
+        router.push('/organizer/waiting');
       } else {
         setError(data.message || 'Failed to submit application');
       }
@@ -581,8 +581,8 @@ export const OrganizerOnboardingPage: React.FC = () => {
                       });
                       const data = await res.json();
                       if (data.success) {
-                        updateUser({ organizerStatus: 'Approved' as OrganizerStatus });
-                        router.push('/dashboard/organizer/overview');
+                        updateUser({ organizerStatus: 'Pending' as OrganizerStatus });
+                        router.push('/organizer/waiting');
                       }
                     } finally {
                       setLoading(false);

@@ -85,6 +85,15 @@ export interface IFestival extends Document {
   gallery?: string[];
   status: 'Draft' | 'Published' | 'Cancelled';
   isVerified: boolean;
+  verificationStatus: 'Draft' | 'Pending Approval' | 'Under Review' | 'Approved' | 'Rejected';
+  submittedAt?: Date;
+  reviewedAt?: Date;
+  reviewedBy?: mongoose.Types.ObjectId;
+  rejectionReason?: string;
+  changesVersion?: number;
+  isEditedAfterApproval?: boolean;
+  reverificationRequested?: boolean;
+  lastEditedAt?: Date;
   schedule: IScheduleItem[];
   hotels: IHotel[];
   transportation: ITransportation[];
@@ -192,6 +201,19 @@ const FestivalSchema: Schema = new Schema(
       default: 'Draft',
     },
     isVerified: { type: Boolean, default: false },
+    verificationStatus: {
+      type: String,
+      enum: ['Draft', 'Pending Approval', 'Under Review', 'Approved', 'Rejected'],
+      default: 'Draft',
+    },
+    submittedAt: { type: Date },
+    reviewedAt: { type: Date },
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    rejectionReason: { type: String },
+    changesVersion: { type: Number, default: 0 },
+    isEditedAfterApproval: { type: Boolean, default: false },
+    reverificationRequested: { type: Boolean, default: false },
+    lastEditedAt: { type: Date },
     schedule: [ScheduleItemSchema],
     hotels: [HotelSchema],
     transportation: [TransportationSchema],

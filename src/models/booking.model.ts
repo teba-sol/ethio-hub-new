@@ -16,6 +16,17 @@ export interface IBooking extends Document {
     phone: string;
   };
   specialRequests?: string;
+  bookingDetails?: {
+    room?: {
+      hotelName: string;
+      roomName: string;
+      roomPrice: number;
+    };
+    transport?: {
+      type: string;
+      price: number;
+    };
+  };
   bookedAt: Date;
   updatedAt: Date;
 }
@@ -72,6 +83,17 @@ const BookingSchema: Schema = new Schema(
     },
     specialRequests: {
       type: String,
+    },
+    bookingDetails: {
+      room: {
+        hotelName: String,
+        roomName: String,
+        roomPrice: Number,
+      },
+      transport: {
+        type: String,
+        price: Number,
+      },
     },
   },
   {

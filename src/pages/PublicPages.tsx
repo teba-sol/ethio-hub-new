@@ -456,26 +456,72 @@ export const ProductListingPage: React.FC = () => {
 export const FestivalListingPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("All");
+  const [festivals, setFestivals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const festivalTypes = ["All", "Religious", "Historical", "Harvest", "New Year"];
 
-  // Mock adding types to festivals for filtering demo
-  const enhancedFestivals = MOCK_FESTIVALS.map(f => {
+  useEffect(() => {
+    const fetchFestivals = async () => {
+      try {
+        const res = await fetch('/api/festivals');
+        const data = await res.json();
+        if (data.success) {
+          setFestivals(data.festivals);
+        } else {
+          setError(data.message || 'Failed to fetch festivals');
+        }
+      } catch (err) {
+        setError('An error occurred while fetching festivals');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchFestivals();
+  }, []);
+
+  const enhancedFestivals = festivals.map((f: any) => {
     let type = "Cultural";
-    if (f.name.includes("Timket") || f.name.includes("Meskel") || f.name.includes("Gena") || f.name.includes("Fasika")) type = "Religious";
-    else if (f.name.includes("Adwa")) type = "Historical";
-    else if (f.name.includes("Irreecha")) type = "Harvest";
-    else if (f.name.includes("Enkutatash")) type = "New Year";
+    if (f.name?.includes("Timket") || f.name?.includes("Meskel") || f.name?.includes("Gena") || f.name?.includes("Fasika")) type = "Religious";
+    else if (f.name?.includes("Adwa")) type = "Historical";
+    else if (f.name?.includes("Irreecha")) type = "Harvest";
+    else if (f.name?.includes("Enkutatash")) type = "New Year";
     
-    return { ...f, type };
+    return { 
+      ...f, 
+      type,
+      id: f._id,
+      locationName: f.locationName || f.location?.name || '',
+      coverImage: f.coverImage || f.gallery?.[0] || 'https://images.unsplash.com/photo-1532566086724-4c4c7713437c?q=80&w=1200&auto=format&fit=crop',
+    };
   });
 
-  const filteredFestivals = enhancedFestivals.filter(f => {
-    const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          f.locationName.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredFestivals = enhancedFestivals.filter((f: any) => {
+    const matchesSearch = f.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          f.locationName?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === "All" || f.type === selectedType;
     return matchesSearch && matchesType;
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-ethio-bg flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-secondary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-ethio-bg flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 text-lg">{error}</p>
+          <button onClick={() => window.location.reload()} className="mt-4 text-primary underline">Try Again</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-ethio-bg">
@@ -1122,6 +1168,16 @@ export const FestivalDetailPage: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const [festivalData, setFestivalData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedHotel, setSelectedHotel] = useState<HotelAccommodation | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<{ hotelName: string, room: RoomType } | null>(null);
+  const [selectedTransport, setSelectedTransport] = useState<TransportOption | null>(null);
+  const [ticketCount, setTicketCount] = useState(1);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [paymentStep, setPaymentStep] = useState<'select' | 'processing' | 'receipt'>('select');
+  const [selectedMethod, setSelectedMethod] = useState<'chapa' | 'telebirr' | null>(null);
+  const [transactionRef, setTransactionRef] = useState('');
 
   const getImageUrl = (path: string | undefined | null) => {
     if (!path || path === '') return 'https://images.unsplash.com/photo-1533174072545-7a4b6dad2cf7?w=800&h=400&fit=crop';
@@ -1199,13 +1255,13 @@ export const FestivalDetailPage: React.FC = () => {
             })),
             foodPackages: f.services?.foodPackages || [],
             culturalServices: f.services?.culturalServices || [],
-            baseTicketPrice: f.pricing?.basePrice || 0,
-            vipTicketPrice: f.pricing?.vipPrice,
+            baseTicketPrice: f.pricing?.basePrice || 100,
+            vipTicketPrice: f.pricing?.vipPrice || 200,
             currency: f.pricing?.currency || 'ETB',
-            cancellationPolicy: f.policies?.cancellation || '',
-            bookingTerms: f.policies?.terms || '',
-            safetyRules: f.policies?.safety,
-            ageRestriction: f.policies?.ageRestriction,
+            cancellationPolicy: f.policies?.cancellation || 'Standard cancellation policy applies',
+            bookingTerms: f.policies?.terms || 'Standard terms and conditions apply',
+            safetyRules: f.policies?.safety || 'Follow all safety guidelines during the event',
+            ageRestriction: f.policies?.ageRestriction || 'All ages welcome',
             organizerId: f.organizer?._id || '',
             isVerified: f.isVerified || false,
             ticketsAvailable: 100,
@@ -1220,7 +1276,7 @@ export const FestivalDetailPage: React.FC = () => {
     if (id) fetchFestival();
   }, [id]);
 
-  const festival = festivalData || MOCK_FESTIVALS.find(f => f.id === id) || MOCK_FESTIVALS[0];
+  const festival = festivalData;
   
   if (loading) {
     return (
@@ -1230,16 +1286,19 @@ export const FestivalDetailPage: React.FC = () => {
     );
   }
 
-  const [selectedHotel, setSelectedHotel] = useState<HotelAccommodation | null>(null);
-  const [selectedRoom, setSelectedRoom] = useState<{ hotelName: string, room: RoomType } | null>(null);
-  const [selectedTransport, setSelectedTransport] = useState<TransportOption | null>(null);
-  const [ticketCount, setTicketCount] = useState(1);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [paymentStep, setPaymentStep] = useState<'select' | 'processing' | 'receipt'>('select');
-  const [selectedMethod, setSelectedMethod] = useState<'chapa' | 'telebirr' | null>(null);
-  const [transactionRef, setTransactionRef] = useState('');
+  if (!festival) {
+    return (
+      <div className="min-h-screen bg-ethio-bg flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-primary">Festival Not Found</h2>
+          <p className="text-gray-500 mt-2">This festival may not be available.</p>
+          <button onClick={() => router.push('/festivals')} className="mt-4 text-primary underline">
+            Back to Festivals
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const totalPrice = (festival.baseTicketPrice * ticketCount) + 
                      (selectedRoom ? selectedRoom.room.pricePerNight : 0) + 
@@ -1409,10 +1468,98 @@ export const FestivalDetailPage: React.FC = () => {
                         </div>
                     ))}
                 </div>
-             </section>
-          </div>
+              </section>
 
-          <aside className="space-y-8">
+              {/* Services Section */}
+              {(festival.foodPackages?.length > 0 || festival.culturalServices?.length > 0) && (
+                <section className="bg-white p-10 md:p-12 rounded-[32px] shadow-sm border border-gray-100">
+                  <h2 className="text-3xl font-serif font-bold text-primary mb-10">Included Services</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {festival.foodPackages?.length > 0 && (
+                      <div className="space-y-4">
+                        <h3 className="text-xl font-bold text-primary flex items-center gap-3">
+                          <span className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                            <svg className="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          </span>
+                          Food Packages
+                        </h3>
+                        <ul className="space-y-3">
+                          {festival.foodPackages.map((item: string, idx: number) => (
+                            <li key={idx} className="flex items-center gap-3 text-gray-600">
+                              <Check className="w-4 h-4 text-green-500" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {festival.culturalServices?.length > 0 && (
+                      <div className="space-y-4">
+                        <h3 className="text-xl font-bold text-primary flex items-center gap-3">
+                          <span className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                            <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
+                          </span>
+                          Cultural Services
+                        </h3>
+                        <ul className="space-y-3">
+                          {festival.culturalServices.map((item: string, idx: number) => (
+                            <li key={idx} className="flex items-center gap-3 text-gray-600">
+                              <Check className="w-4 h-4 text-green-500" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {/* Policies Section */}
+              <section className="bg-white p-10 md:p-12 rounded-[32px] shadow-sm border border-gray-100">
+                <h2 className="text-3xl font-serif font-bold text-primary mb-10">Policies & Guidelines</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-bold text-primary flex items-center gap-3">
+                      <span className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
+                      </span>
+                      Cancellation Policy
+                    </h3>
+                    <p className="text-gray-600 leading-relaxed">{festival.cancellationPolicy}</p>
+                  </div>
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-bold text-primary flex items-center gap-3">
+                      <span className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                      </span>
+                      Safety Guidelines
+                    </h3>
+                    <p className="text-gray-600 leading-relaxed">{festival.safetyRules}</p>
+                  </div>
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-bold text-primary flex items-center gap-3">
+                      <span className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                      </span>
+                      Booking Terms
+                    </h3>
+                    <p className="text-gray-600 leading-relaxed">{festival.bookingTerms}</p>
+                  </div>
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-bold text-primary flex items-center gap-3">
+                      <span className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                      </span>
+                      Age Restriction
+                    </h3>
+                    <p className="text-gray-600 leading-relaxed">{festival.ageRestriction}</p>
+                  </div>
+                </div>
+              </section>
+           </div>
+
+           <aside className="space-y-8">
             <div className="bg-white p-10 rounded-[32px] shadow-lg border border-gray-100 sticky top-28">
                 <h3 className="text-2xl font-serif font-bold text-primary mb-8 tracking-tight">Reserve Pass</h3>
                 <div className="space-y-8">

@@ -194,7 +194,8 @@ export const MOCK_FESTIVALS: Festival[] = [
     bookingTerms: 'Official Tourism Board pass included.',
     organizerId: 'o1',
     isVerified: true,
-    ticketsAvailable: 120
+    ticketsAvailable: 120,
+    verificationStatus: 'Approved' as const
   },
   {
     id: 'f2',

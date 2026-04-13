@@ -63,27 +63,46 @@ export async function PUT(request: NextRequest) {
       return new NextResponse(JSON.stringify({ success: false, message: 'Festival ID is required' }), { status: 400 });
     }
 
-    const updatedFestival = await Festival.findOneAndUpdate(
-      { _id: id, organizer: organizerId },
-      { $set: body },
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedFestival) {
+    const existingFestival = await Festival.findOne({ _id: id, organizer: organizerId });
+    if (!existingFestival) {
       return new NextResponse(JSON.stringify({ success: false, message: 'Festival not found or you do not have permission to edit it.' }), { status: 404 });
     }
 
-    return new NextResponse(JSON.stringify({ success: true, festival: updatedFestival }), { status: 200 });
+    const isApprovedEvent = existingFestival.verificationStatus === 'Approved';
+    
+    let normalUpdate = { ...body };
+
+    if (isApprovedEvent) {
+      normalUpdate.lastEditedAt = new Date();
+      const newVersion = (existingFestival.changesVersion || 0) + 1;
+      
+      await Festival.collection.updateOne(
+        { _id: existingFestival._id },
+        {
+          $set: {
+            lastEditedAt: new Date(),
+            changesVersion: newVersion,
+            verificationStatus: 'Draft',
+            status: 'Draft',
+            isVerified: false,
+            isEditedAfterApproval: true
+          }
+        }
+      );
+    }
+
+    const updatedFestival = await Festival.findOneAndUpdate(
+      { _id: id, organizer: organizerId },
+      isApprovedEvent ? { $set: normalUpdate } : { $set: normalUpdate },
+      { new: true }
+    );
+
+    const finalFestival = await Festival.findById(id);
+    return new NextResponse(JSON.stringify({ success: true, festival: finalFestival }), { status: 200 });
 
   } catch (error: any) {
     console.error(`Error updating festival by ID: ${id}`, error);
-    if (error.name === 'CastError') {
-      return new NextResponse(JSON.stringify({ success: false, message: 'Invalid Festival ID format.' }), { status: 400 });
-    }
-    if (error.name === 'ValidationError') {
-      return new NextResponse(JSON.stringify({ success: false, message: 'Validation Error', errors: error.errors }), { status: 400 });
-    }
-    return new NextResponse(JSON.stringify({ success: false, message: 'Internal Server Error' }), { status: 500 });
+    return new NextResponse(JSON.stringify({ success: false, message: 'Internal Server Error: ' + error.message }), { status: 500 });
   }
 }
 

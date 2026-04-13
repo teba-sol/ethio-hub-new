@@ -120,6 +120,7 @@ export interface TransportOption {
 
 export interface Festival {
   id: string;
+  _id?: string;
   name: string;
   slug: string;
   startDate: string;
@@ -148,6 +149,14 @@ export interface Festival {
   organizerId: string;
   isVerified: boolean;
   ticketsAvailable: number;
+  status: 'Draft' | 'Published' | 'Cancelled';
+  verificationStatus: 'Not Submitted' | 'Pending Review' | 'Under Review' | 'Approved' | 'Rejected';
+  submittedAt?: string;
+  reviewedAt?: string;
+  rejectionReason?: string;
+  isEditedAfterApproval?: boolean;
+  reverificationRequested?: boolean;
+  lastEditedAt?: string;
 }
 
 export interface Booking {

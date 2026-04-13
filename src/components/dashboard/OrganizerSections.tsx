@@ -165,44 +165,52 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
   fetchFestival();
 }, [eventId]);
 
-  const handleSaveChanges = async () => {
-    setSaving(true);
-    try {
-      const dataToSave = { ...editData };
+   const handleSaveChanges = async () => {
+     setSaving(true);
+     try {
+       const dataToSave = { ...editData };
 
-      // Strip incomplete array entries with empty required fields
-      if (Array.isArray(dataToSave.transportation)) {
-        dataToSave.transportation = dataToSave.transportation.filter((t: any) => t.type?.trim());
-      }
-      if (Array.isArray(dataToSave.hotels)) {
-        dataToSave.hotels = dataToSave.hotels
-          .filter((h: any) => h.name?.trim())
-          .map((h: any) => ({
-            ...h,
-            rooms: (h.rooms || []).filter((r: any) => r.name?.trim()),
-          }));
-      }
-      if (Array.isArray(dataToSave.schedule)) {
-        dataToSave.schedule = dataToSave.schedule.filter((s: any) => s.title?.trim());
-      }
+       // Strip incomplete array entries with empty required fields
+       if (Array.isArray(dataToSave.transportation)) {
+         dataToSave.transportation = dataToSave.transportation.filter((t: any) => t.type?.trim());
+       }
+       if (Array.isArray(dataToSave.hotels)) {
+         dataToSave.hotels = dataToSave.hotels
+           .filter((h: any) => h.name?.trim())
+           .map((h: any) => ({
+             ...h,
+             rooms: (h.rooms || []).filter((r: any) => r.name?.trim()),
+           }));
+       }
+       if (Array.isArray(dataToSave.schedule)) {
+         dataToSave.schedule = dataToSave.schedule.filter((s: any) => s.title?.trim());
+       }
 
-      console.log('Saving festival data:', JSON.stringify(dataToSave, null, 2));
-      const response = await apiClient.put(`/api/organizer/festivals/${eventId}`, dataToSave);
-      console.log('Save response:', response);
-      if (response.success) {
-        setFestival(response.festival || dataToSave);
-        setEditData(response.festival || dataToSave);
-        setIsEditing(false);
-        alert('Event updated successfully!');
-      } else {
-        alert(response.message || 'Failed to update event');
-      }
-    } catch (err: any) {
-      alert(err.message || 'An error occurred while saving');
-    } finally {
-      setSaving(false);
-    }
-  };
+       // If this is an approved event being edited, mark it for reverification
+       if (currentData.verificationStatus === 'Approved') {
+         dataToSave.isEditedAfterApproval = true;
+         dataToSave.verificationStatus = 'Pending Approval';
+         dataToSave.status = 'Draft';
+         dataToSave.isVerified = false;
+       }
+
+       console.log('Saving festival data:', JSON.stringify(dataToSave, null, 2));
+       const response = await apiClient.put(`/api/organizer/festivals/${eventId}`, dataToSave);
+       console.log('Save response:', response);
+       if (response.success) {
+         setFestival(response.festival || dataToSave);
+         setEditData(response.festival || dataToSave);
+         setIsEditing(false);
+         alert('Event updated successfully!');
+       } else {
+         alert(response.message || 'Failed to update event');
+       }
+     } catch (err: any) {
+       alert(err.message || 'An error occurred while saving');
+     } finally {
+       setSaving(false);
+     }
+   };
 
   const handleCancelEdit = () => {
     setEditData(JSON.parse(JSON.stringify(festival)));
@@ -345,16 +353,39 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
     </div>
   )}
 </div>
-          <div className="flex-1 space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <button onClick={onBack} className="p-2 bg-ethio-bg rounded-xl text-primary hover:bg-primary hover:text-white transition-all mr-2">
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <Badge variant="secondary" className="bg-secondary/10 text-secondary border-none">
-                {new Date(currentData.startDate) > new Date() ? 'Upcoming' : 'Live'}
-              </Badge>
-              {currentData.isVerified && <VerifiedBadge />}
-            </div>
+           <div className="flex-1 space-y-4">
+             <div className="flex flex-wrap items-center gap-3">
+               <button onClick={onBack} className="p-2 bg-ethio-bg rounded-xl text-primary hover:bg-primary hover:text-white transition-all mr-2">
+                 <ChevronLeft className="w-5 h-5" />
+               </button>
+               <Badge variant="secondary" className="bg-secondary/10 text-secondary border-none">
+                 {new Date(currentData.startDate) > new Date() ? 'Upcoming' : 'Live'}
+               </Badge>
+               {currentData.isVerified && <VerifiedBadge />}
+               {/* Verification Status Badge */}
+               <span className="px-3 py-1 rounded-full text-xs font-medium">
+                 {currentData.verificationStatus === 'Pending Approval' && (
+                   <Badge variant="outline" className="bg-primary/10 text-primary border-primary">
+                     Pending Review
+                   </Badge>
+                 )}
+                 {currentData.verificationStatus === 'Under Review' && (
+                   <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500">
+                     Under Review
+                   </Badge>
+                 )}
+                 {currentData.verificationStatus === 'Approved' && (
+                   <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500">
+                     Approved
+                   </Badge>
+                 )}
+                 {currentData.verificationStatus === 'Rejected' && (
+                   <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500">
+                     Rejected
+                   </Badge>
+                 )}
+               </span>
+             </div>
             
             {isEditing ? (
               <input
@@ -3113,9 +3144,71 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
                     <p className="flex items-center gap-2"><Calendar className="w-3 h-3 text-secondary" /> {new Date(festival.startDate).toLocaleDateString()} - {new Date(festival.endDate).toLocaleDateString()}</p>
                     <p className="flex items-center gap-2"><MapPin className="w-3 h-3 text-secondary" /> {festival.locationName}</p>
                   </div>
-                  <div className="pt-4 border-t border-gray-100 flex gap-3">
-                    <Button variant="primary" size="sm" className="flex-1" onClick={() => onManageEvent(festival._id)}>Manage</Button>
-                    <Button variant="outline" size="sm" className="flex-1">View Public</Button>
+                  <div className="pt-4 border-t border-gray-100 flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <Button variant="primary" size="sm" className="flex-1" onClick={() => onManageEvent(festival._id)}>Manage</Button>
+                      <Button variant="outline" size="sm" className="flex-1" disabled={festival.verificationStatus === 'Approved'}>View Public</Button>
+                    </div>
+                     {[(festival as any).verificationStatus === 'Draft', (festival as any).verificationStatus === 'Rejected'].includes(true) && (
+                       <Button 
+                         variant="secondary" 
+                         size="sm" 
+                         className="w-full"
+                         onClick={async (e) => {
+                           e.stopPropagation();
+                           try {
+                             const res = await fetch(`/api/organizer/festivals/${festival._id}/submit`, { method: 'POST' });
+                             const data = await res.json();
+                             if (data.success) {
+                               setFestivals(prev => prev.map(f => f._id === festival._id ? { ...f, verificationStatus: 'Pending Review', submittedAt: new Date().toISOString() } : f));
+                               alert('Event submitted for review');
+                             } else {
+                               alert(data.message || 'Failed to submit');
+                             }
+                           } catch (err) {
+                             alert('Error submitting event');
+                           }
+                         }}
+                       >
+                         {(festival as any).verificationStatus === 'Rejected' ? 'Resubmit for Review' : 'Submit for Review'}
+                       </Button>
+                     )}
+                    {(festival as any).verificationStatus === 'Pending Review' && (
+                      <div className="text-center text-xs text-amber-600 py-1 bg-amber-50 rounded-lg">
+                        Awaiting Admin Review
+                      </div>
+                    )}
+                    {festival.verificationStatus === 'Approved' && (
+                      <>
+                        <div className="text-center text-xs text-emerald-600 py-1 bg-emerald-50 rounded-lg">
+                          Published
+                        </div>
+                        {(festival as any).isEditedAfterApproval && (
+                          <div className="text-center text-xs text-amber-600 py-1 bg-amber-50 rounded-lg mt-1">
+                            Pending Re-verification
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {festival.verificationStatus === 'Rejected' && (
+                      <div className="space-y-2">
+                        <div className="p-3 bg-red-50 border border-red-100 rounded-xl">
+                          <p className="text-[10px] font-bold text-red-600 uppercase mb-1">Rejection Reason</p>
+                          <p className="text-xs text-red-700">{(festival as any).rejectionReason || 'Please edit and resubmit your event'}</p>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onManageEvent(festival._id);
+                          }}
+                        >
+                          Edit & Resubmit
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

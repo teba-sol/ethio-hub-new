@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, Filter, CheckCircle2, XCircle, Eye, AlertCircle, 
   MapPin, Calendar, Clock, User, DollarSign, FileText, 
@@ -9,7 +9,7 @@ import {
 import { Button, Badge, Input } from '../../components/UI';
 
 // --- Types ---
-type VerificationStatus = 'Not Submitted' | 'Submitted' | 'Under Review' | 'Approved' | 'Rejected';
+type VerificationStatus = 'Not Submitted' | 'Pending Review' | 'Under Review' | 'Approved' | 'Rejected';
 type AccountStatus = 'Active' | 'Suspended' | 'Deleted';
 
 interface VerificationDocument {
@@ -154,14 +154,14 @@ const MOCK_EVENTS: Event[] = Array.from({ length: 8 }).map((_, i) => ({
     accountName: i % 3 === 0 ? 'Addis Events PLC' : 'Cultural Heritage Tours'
   },
   submittedAt: new Date(Date.now() - i * 3600000 * 5).toLocaleString(),
-  status: i === 0 ? 'Submitted' : i % 3 === 0 ? 'Approved' : i % 4 === 0 ? 'Under Review' : 'Rejected',
+  status: i === 0 ? 'Pending Review' : i % 3 === 0 ? 'Approved' : i % 4 === 0 ? 'Under Review' : 'Rejected',
   documents: [
     { id: 'D1', name: 'Business License', type: 'License', url: '#', thumbnail: 'https://picsum.photos/seed/doc1/100/100', expiryDate: '2026-12-31', uploadedAt: '2025-10-20' },
     { id: 'D2', name: 'Event Permit', type: 'Permit', url: '#', thumbnail: 'https://picsum.photos/seed/doc2/100/100', uploadedAt: '2025-10-20' }
   ],
   riskBadges: i === 1 ? ['New Organizer', 'High Capacity'] : i === 3 ? ['High Ticket Price'] : [],
   verificationHistory: [
-    { date: '2025-10-20 10:00 AM', action: 'Submitted', by: 'System' }
+    { date: '2025-10-20 10:00 AM', action: 'Pending Review', by: 'System' }
   ],
   reviewedAt: i % 3 === 0 ? '2025-10-21 02:00 PM' : undefined,
   reviewedBy: i % 3 === 0 ? 'Admin Sarah' : undefined
@@ -171,13 +171,122 @@ export const AdminEventsPage: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
-  
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
   // Modal States
-  const [viewEvent, setViewEvent] = useState<Event | null>(null);
-  const [rejectEvent, setRejectEvent] = useState<Event | null>(null);
-  const [approveEvent, setApproveEvent] = useState<Event | null>(null);
-  const [resubmitEvent, setResubmitEvent] = useState<Event | null>(null);
-  const [viewOrganizer, setViewOrganizer] = useState<OrganizerProfile | null>(null);
+  const [viewEvent, setViewEvent] = useState<any | null>(null);
+  const [rejectEvent, setRejectEvent] = useState<any | null>(null);
+  const [approveEvent, setApproveEvent] = useState<any | null>(null);
+  const [resubmitEvent, setResubmitEvent] = useState<any | null>(null);
+  const [viewOrganizer, setViewOrganizer] = useState<any | null>(null);
+
+  const fetchEvents = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (filterStatus !== 'All') params.set('status', filterStatus);
+      
+      const res = await fetch(`/api/admin/events?${params.toString()}`);
+      const data = await res.json();
+      const eventData = data.requests || data.events || [];
+      if (data.success || data.events || data.requests) {
+        setEvents(eventData.length > 0 ? eventData : MOCK_EVENTS);
+      } else {
+        setEvents(MOCK_EVENTS);
+      }
+    } catch (error) {
+      console.error('Failed to fetch events:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, [filterStatus]);
+
+  const handleApprove = async (id: string) => {
+    const previousEvents = [...events];
+    setEvents(prev => prev.map(ev => 
+      ev.id === id ? { ...ev, verificationStatus: 'approved' } : ev
+    ));
+    
+    setActionLoading(id);
+    try {
+      const res = await fetch(`/api/admin/events/${id}/approve`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setApproveEvent(null);
+        fetchEvents();
+      } else {
+        setEvents(previousEvents);
+        alert(data.message || 'Failed to approve');
+      }
+    } catch (error) {
+      setEvents(previousEvents);
+      console.error('Failed to approve:', error);
+      alert('Failed to approve event');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    if (!rejectionReason.trim()) return;
+    
+    const previousEvents = [...events];
+    setEvents(prev => prev.map(ev => 
+      ev.id === id ? { ...ev, verificationStatus: 'rejected', rejectionReason: rejectionReason } : ev
+    ));
+    
+    setActionLoading(id);
+    try {
+      const res = await fetch(`/api/admin/events/${id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: rejectionReason }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRejectEvent(null);
+        setRejectionReason('');
+        fetchEvents();
+      } else {
+        setEvents(previousEvents);
+        alert(data.message || 'Failed to reject');
+      }
+    } catch (error) {
+      setEvents(previousEvents);
+      console.error('Failed to reject:', error);
+      alert('Failed to reject event');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const filteredEvents = events.filter((event: any) => {
+     const statusMap: Record<string, string> = {
+         'pending_approval': 'Pending Review',
+       'under_review': 'Under Review',
+       'approved': 'Approved',
+       'rejected': 'Rejected',
+       'draft': 'Not Submitted',
+     };
+    const mappedStatus = statusMap[event.verificationStatus] || event.verificationStatus;
+    const matchesStatus = filterStatus === 'All' || mappedStatus === filterStatus;
+    const matchesSearch = (event.title || event.eventName || '')?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (event.organizerName || event.organizer?.name || '')?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return matchesStatus && matchesSearch;
+  });
+
+  const formatDate = (dateStr: string | undefined) => {
+    if (!dateStr) return 'N/A';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
 
   // Rejection State
   const [rejectionReason, setRejectionReason] = useState('');
@@ -193,18 +302,21 @@ export const AdminEventsPage: React.FC = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDateRange, setTempDateRange] = useState({ start: '', end: '' });
 
-  const filteredEvents = MOCK_EVENTS.filter(event => {
-    const matchesStatus = filterStatus === 'All' || event.status === filterStatus;
-    const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          event.organizer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          event.organizer.email.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const eventDate = new Date(event.submittedAt);
-    const matchesDate = (!dateRange.start || eventDate >= new Date(dateRange.start)) &&
-                        (!dateRange.end || eventDate <= new Date(dateRange.end));
+  const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
 
-    return matchesStatus && matchesSearch && matchesDate;
-  });
+  // Toggle action menu
+  const toggleActionMenu = (id: string) => {
+    setOpenActionMenu(openActionMenu === id ? null : id);
+  };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setOpenActionMenu(null);
+    if (openActionMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [openActionMenu]);
 
   const toggleSelectEvent = (id: string) => {
     if (selectedEventIds.includes(id)) {
@@ -381,8 +493,12 @@ export const AdminEventsPage: React.FC = () => {
           <div className="flex justify-end gap-3 pt-4">
             <Button variant="ghost" onClick={onClose}>Cancel</Button>
             <Button className="bg-red-500 hover:bg-red-600 border-red-500 text-white" onClick={() => {
-              console.log('Rejected:', event.id, rejectionType, rejectionReason);
-              onClose();
+              if (rejectionReason.trim()) {
+                handleReject(event.id);
+                onClose();
+              } else {
+                alert('Please provide a rejection reason');
+              }
             }}>
               Confirm Rejection
             </Button>
@@ -432,7 +548,7 @@ export const AdminEventsPage: React.FC = () => {
           <div className="flex justify-end gap-3 pt-4">
             <Button variant="ghost" onClick={onClose}>Cancel</Button>
             <Button className="bg-emerald-500 hover:bg-emerald-600 border-emerald-500 text-white" onClick={() => {
-              console.log('Approved:', event.id, approvalNote);
+              handleApprove(event.id);
               onClose();
             }}>
               Confirm Approval
@@ -444,7 +560,7 @@ export const AdminEventsPage: React.FC = () => {
   );
 
   const EventDetailsModal = ({ event, onClose }: { event: Event; onClose: () => void }) => {
-    const statusSteps = ['Submitted', 'Under Review', 'Approved'];
+    const statusSteps = ['Pending Review', 'Under Review', 'Approved'];
     const currentStepIndex = statusSteps.indexOf(event.status === 'Rejected' ? 'Under Review' : event.status);
 
     return (
@@ -457,13 +573,13 @@ export const AdminEventsPage: React.FC = () => {
               <p className="text-sm text-gray-500">ID: {event.id} • Submitted: {event.submittedAt}</p>
             </div>
             <div className="flex gap-2">
-              {['Submitted', 'Under Review'].includes(event.status) && (
-                <>
-                  <Button variant="outline" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => setResubmitEvent(event)}>Request Resubmission</Button>
-                  <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => setRejectEvent(event)}>Reject</Button>
-                  <Button className="bg-emerald-500 hover:bg-emerald-600 border-emerald-500" onClick={() => setApproveEvent(event)}>Approve</Button>
-                </>
-              )}
+       {['pending_approval', 'under_review'].includes((event as any).verificationStatus || event.status) && (
+         <>
+           <Button variant="outline" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => setResubmitEvent(event)}>Request Resubmission</Button>
+           <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => setRejectEvent(event)}>Reject</Button>
+           <Button className="bg-emerald-500 hover:bg-emerald-600 border-emerald-500" onClick={() => setApproveEvent(event)}>Approve</Button>
+         </>
+       )}
               <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full ml-2">
                 <XCircle className="w-6 h-6 text-gray-400" />
               </button>
@@ -471,6 +587,35 @@ export const AdminEventsPage: React.FC = () => {
           </div>
 
           <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            {/* Rejection Reason Banner */}
+            {(event as any).rejectionReason && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold text-red-700">Rejection Reason</p>
+                    <p className="text-xs text-red-600 mt-1">{(event as any).rejectionReason}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Re-verification Banner */}
+            {(event as any).isEditedAfterApproval && (event as any).verificationStatus === 'Pending Review' && (
+              <div className="mb-6 p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold text-amber-700">Re-verification Required</p>
+                    <p className="text-xs text-amber-600 mt-1">Organizer made changes to this published event. Please review the updates.</p>
+                    {(event as any).lastEditedAt && (
+                      <p className="text-[10px] text-amber-500 mt-1">Last edited: {new Date((event as any).lastEditedAt).toLocaleString()}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Progress Indicator */}
             <div className="mb-10">
               <div className="flex items-center justify-between max-w-2xl mx-auto relative">
@@ -575,15 +720,15 @@ export const AdminEventsPage: React.FC = () => {
                         <MapPin className="w-4 h-4" /> Partner Hotels
                       </h3>
                       <div className="space-y-4">
-                        {event.hotels.map((h, i) => (
-                          <div key={i} className="text-xs flex justify-between items-center p-2 bg-gray-50 rounded-lg">
-                            <div>
-                              <p className="font-bold text-gray-800">{h.name}</p>
-                              <p className="text-[10px] text-gray-500">{h.distance}</p>
-                            </div>
-                            <span className="font-bold text-primary">{h.price}</span>
-                          </div>
-                        ))}
+                       {Array.isArray(event.hotels) ? event.hotels.map((h, i) => (
+                             <div key={i} className="text-xs flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                               <div>
+                                 <p className="font-bold text-gray-800">{h.name}</p>
+                                 <p className="text-[10px] text-gray-500">{h.distance}</p>
+                               </div>
+                               <span className="font-bold text-primary">{h.price}</span>
+                             </div>
+                           )) : []}
                       </div>
                     </div>
 
@@ -592,12 +737,12 @@ export const AdminEventsPage: React.FC = () => {
                         <Flag className="w-4 h-4" /> Transportation
                       </h3>
                       <div className="space-y-3">
-                        {event.transportation.map((t, i) => (
-                          <div key={i} className="p-3 bg-gray-50 rounded-xl">
-                            <p className="text-[10px] font-bold text-primary uppercase mb-1">{t.type} • {t.provider}</p>
-                            <p className="text-[10px] text-gray-600 leading-tight">{t.details}</p>
-                          </div>
-                        ))}
+                         {Array.isArray(event.transportation) ? event.transportation.map((t, i) => (
+                           <div key={i} className="p-3 bg-gray-50 rounded-xl">
+                             <p className="text-[10px] font-bold text-primary uppercase mb-1">{t.type} • {t.provider}</p>
+                             <p className="text-[10px] text-gray-600 leading-tight">{t.details}</p>
+                           </div>
+                         )) : []}
                       </div>
                     </div>
                   </div>
@@ -674,20 +819,35 @@ export const AdminEventsPage: React.FC = () => {
                       <Shield className="w-4 h-4" /> Services & Policies
                     </h3>
                     <div className="space-y-6">
-                      <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Included Services</p>
-                        <div className="flex flex-wrap gap-2">
-                          {event.services.map((s, i) => (
-                            <span key={i} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
-                              {s}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
+                       <div>
+                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Included Services</p>
+                         <div className="flex flex-wrap gap-2">
+                           {Array.isArray((event.services || {}).foodPackages) ? ((event.services || {}).foodPackages || []).map((s, i) => (
+                             <span key={`food-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                               {s}
+                             </span>
+                           )) : []}
+                           {Array.isArray((event.services || {}).culturalServices) ? ((event.services || {}).culturalServices || []).map((s, i) => (
+                             <span key={`cultural-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                               {s}
+                             </span>
+                           )) : []}
+                           {Array.isArray((event.services || {}).specialAssistance) ? ((event.services || {}).specialAssistance || []).map((s, i) => (
+                             <span key={`special-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                               {s}
+                             </span>
+                           )) : []}
+                           {Array.isArray((event.services || {}).extras) ? ((event.services || {}).extras || []).map((s, i) => (
+                             <span key={`extra-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                               {s}
+                             </span>
+                           )) : []}
+                         </div>
+                       </div>
                       <div>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Event Policies</p>
                         <ul className="space-y-3">
-                          {event.policies.map((p, i) => (
+                          {(event.policies || []).map((p, i) => (
                             <li key={i} className="text-xs text-gray-600 flex items-start gap-3">
                               <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0"></div>
                               {p}
@@ -818,7 +978,7 @@ export const AdminEventsPage: React.FC = () => {
                 className="pl-9 pr-8 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 border-none cursor-pointer hover:bg-gray-100 appearance-none"
               >
                 <option value="All">All Status</option>
-                <option value="Submitted">Submitted</option>
+                <option value="Pending Review">Pending Review</option>
                 <option value="Under Review">Under Review</option>
                 <option value="Approved">Approved</option>
                 <option value="Rejected">Rejected</option>
@@ -895,22 +1055,35 @@ export const AdminEventsPage: React.FC = () => {
 
       {/* Events Table */}
       <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50/50 border-b border-gray-100">
-                <th className="px-6 py-4">
-                  <input 
-                    type="checkbox" 
-                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-                    checked={selectedEventIds.length === filteredEvents.length && filteredEvents.length > 0}
-                    onChange={(e) => {
-                      if (e.target.checked) setSelectedEventIds(filteredEvents.map(ev => ev.id));
-                      else setSelectedEventIds([]);
-                    }}
-                  />
-                </th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">User / Organizer</th>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : filteredEvents.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <Calendar className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">No Events Found</h3>
+            <p className="text-gray-500 text-sm">No events match your current filters.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-6 py-4">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      checked={selectedEventIds.length === filteredEvents.length && filteredEvents.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedEventIds(filteredEvents.map(ev => ev.id));
+                        else setSelectedEventIds([]);
+                      }}
+                    />
+                  </th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">User / Organizer</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Event Title</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Submitted On</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Documents</th>
@@ -932,29 +1105,28 @@ export const AdminEventsPage: React.FC = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-sm shrink-0">
-                        {event.organizer.name.charAt(0)}
+                        {(event.organizer?.name || 'U').charAt(0)}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-bold text-gray-800 truncate">{event.organizer.name}</p>
-                        <p className="text-[10px] text-gray-500 truncate">{event.organizer.email}</p>
-                        <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-tighter">{event.organizer.role}</p>
+                        <p className="text-sm font-bold text-gray-800 truncate">{event.organizer?.name || 'Unknown'}</p>
+                        <p className="text-[10px] text-gray-500 truncate">{event.organizer?.email || ''}</p>
+                        <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-tighter">{event.organizer?.role || 'Organizer'}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-sm font-bold text-gray-800">{event.title}</p>
+                    <p className="text-sm font-bold text-gray-800">{event.title || event.eventName || 'Untitled'}</p>
                     <p className="text-[10px] text-gray-500 flex items-center gap-1">
-                      <MapPin className="w-3 h-3" /> {event.location.city}
+                      <MapPin className="w-3 h-3" /> {event.location?.city || 'N/A'}
                     </p>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-sm text-gray-600">{event.submittedAt.split(',')[0]}</p>
-                    <p className="text-[10px] text-gray-400">{event.submittedAt.split(',')[1]}</p>
+                    <p className="text-sm text-gray-600">{formatDate(event.submittedAt)}</p>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="bg-gray-50">
-                        {event.documents.length} Files
+                        {(event.documents?.length || 0)} Files
                       </Badge>
                       <button 
                         className="p-1.5 text-gray-400 hover:text-primary transition-colors"
@@ -966,16 +1138,22 @@ export const AdminEventsPage: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <Badge variant={
-                      event.status === 'Approved' ? 'success' : 
-                      event.status === 'Rejected' ? 'error' : 
-                      event.status === 'Under Review' ? 'info' : 'warning'
-                    }>
-                      {event.status}
-                    </Badge>
+                   <Badge variant={
+                       event.verificationStatus === 'approved' || event.verificationStatus === 'Approved' ? 'success' : 
+                       event.verificationStatus === 'rejected' || event.verificationStatus === 'Rejected' ? 'error' : 
+                       event.verificationStatus === 'under_review' || event.verificationStatus === 'Under Review' ? 'info' : 
+                       (event.verificationStatus === 'pending_approval' || event.verificationStatus === 'Pending Approval') ? 'warning' : 'secondary'
+                     }>
+                       {event.verificationStatus === 'approved' ? 'Published' : 
+                        event.verificationStatus === 'rejected' ? 'Rejected' : 
+                        event.verificationStatus === 'under_review' ? 'Under Review' : 
+                        (event.verificationStatus === 'pending_approval' || event.verificationStatus === 'Pending Approval') ? 
+                          ((event as any).reverificationRequested ? 'Pending Re-verification' : 'Pending Review') : 
+                        event.status || 'Draft'}
+                     </Badge>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-2 items-center">
                       <Button 
                         variant="ghost" 
                         size="sm" 
@@ -984,38 +1162,51 @@ export const AdminEventsPage: React.FC = () => {
                       >
                         Review
                       </Button>
-                      <div className="relative group/actions">
-                        <button className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400">
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-20 hidden group-hover/actions:block animate-in fade-in slide-in-from-top-1">
+                      {['Pending Review', 'Under Review', 'pending_review', 'under_review'].includes(event.status) ? (
+                        <div className="relative">
                           <button 
-                            className="w-full text-left px-4 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 flex items-center gap-2"
-                            onClick={() => setApproveEvent(event)}
+                            className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 bg-gray-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleActionMenu(event.id);
+                            }}
                           >
-                            <Check className="w-3.5 h-3.5" /> Approve Submission
+                            <MoreVertical className="w-4 h-4" />
                           </button>
-                          <button 
-                            className="w-full text-left px-4 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-2"
-                            onClick={() => setResubmitEvent(event)}
-                          >
-                            <AlertCircle className="w-3.5 h-3.5" /> Request Resubmission
-                          </button>
-                          <button 
-                            className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2"
-                            onClick={() => setRejectEvent(event)}
-                          >
-                            <Ban className="w-3.5 h-3.5" /> Reject Submission
-                          </button>
+                          {openActionMenu === event.id && (
+                            <div className="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-20">
+                              <button 
+                                className="w-full text-left px-4 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 flex items-center gap-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setApproveEvent(event);
+                                  setOpenActionMenu(null);
+                                }}
+                              >
+                                <Check className="w-3.5 h-3.5" /> Approve Submission
+                              </button>
+                              <button 
+                                className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRejectEvent(event);
+                                  setOpenActionMenu(null);
+                                }}
+                              >
+                                <Ban className="w-3.5 h-3.5" /> Reject Submission
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      </div>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
