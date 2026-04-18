@@ -2,6 +2,7 @@
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import { WishlistProvider } from '@/context/WishlistContext';
+import { BookingProvider } from '@/context/BookingContext';
 import { Header, Footer } from '@/components/Layout';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -22,7 +23,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     pathname === '/about' ||
     pathname.startsWith('/products/') ||
     pathname.startsWith('/festivals/') ||
-    pathname.startsWith('/payment/')
+    pathname.startsWith('/event/') ||
+    pathname.startsWith('/hotels/') ||
+    pathname.startsWith('/payment/') ||
+    pathname.startsWith('/confirmation/')
   );
 
   const showHeader = mounted && isPublicPage;
@@ -33,11 +37,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
-              <div className="flex flex-col min-h-screen">
-                {showHeader && <Header />}
-                <main className="flex-grow">{children}</main>
-                {showHeader && <Footer />}
-              </div>
+              <BookingProvider>
+                <div className="flex flex-col min-h-screen">
+                  {showHeader && <Header />}
+                  <main className="flex-grow">{children}</main>
+                  {showHeader && <Footer />}
+                </div>
+              </BookingProvider>
             </WishlistProvider>
           </CartProvider>
         </AuthProvider>

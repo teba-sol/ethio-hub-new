@@ -141,8 +141,9 @@ export interface Festival {
   transportation: TransportOption[];
   foodPackages: string[];
   culturalServices: string[];
-  baseTicketPrice: number;
+  baseTicketPrice?: number;
   vipTicketPrice?: number;
+  earlyBirdPrice?: number;
   currency: string;
   cancellationPolicy: string;
   bookingTerms: string;
