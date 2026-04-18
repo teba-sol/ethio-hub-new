@@ -9,6 +9,8 @@ export const login = async (credentials: { email: string; password: string }) =>
   await connectDB();
   
   const user = await User.findOne({ email: credentials.email });
+  console.log('Login - User from DB:', JSON.stringify(user?.touristProfile));
+  
   if (!user) {
     throw new Error('Invalid credentials');
   }
@@ -28,16 +30,20 @@ export const login = async (credentials: { email: string; password: string }) =>
     .setExpirationTime('1h')
     .sign(new TextEncoder().encode(JWT_SECRET));
   
-  return { 
+  // Refresh user from DB to get latest data
+const freshUser = await User.findById(user._id);
+
+return { 
     token, 
     user: { 
-      id: user._id,
-      email: user.email, 
-      role: user.role, 
-      name: user.name,
-      artisanStatus: user.artisanStatus || 'Not Submitted',
-      organizerStatus: user.organizerStatus || 'Not Submitted',
-      organizerProfile: user.organizerProfile || null,
+      id: freshUser._id,
+      email: freshUser.email, 
+      role: freshUser.role, 
+      name: freshUser.name,
+      artisanStatus: freshUser.artisanStatus || 'Not Submitted',
+      organizerStatus: freshUser.organizerStatus || 'Not Submitted',
+      organizerProfile: freshUser.organizerProfile || null,
+      touristProfile: freshUser.touristProfile || null,
     } 
   };
 };

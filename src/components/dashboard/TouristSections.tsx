@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { 
   MapIcon, Ticket, ShoppingCart, Heart, User as UserIcon,
   Search, Plus, Package, Calendar, CreditCard, ChevronRight,
-  ShieldCheck, HelpCircle, FileText, Mail, X
+  ShieldCheck, HelpCircle, FileText, Mail, X, User, Phone
 } from 'lucide-react';
 import { Button, Input, Badge } from '../UI';
 import { useAuth } from '../../context/AuthContext';
@@ -44,12 +44,14 @@ export const TouristBookingsView: React.FC = () => {
     const fetchBookings = async () => {
       try {
         const response = await apiClient.get('/api/tourist/bookings');
+        console.log('Bookings API response:', response);
         if (response.success) {
-          setBookings(response.bookings);
+          setBookings(response.bookings || []);
         } else {
           setError(response.message || 'Failed to fetch bookings');
         }
       } catch (err: any) {
+        console.error('Bookings fetch error:', err);
         setError(err.message || 'An error occurred');
       } finally {
         setLoading(false);
@@ -177,6 +179,7 @@ export const TouristBookingsView: React.FC = () => {
                   <div className="text-sm font-medium text-gray-600">
                     <span className="text-primary font-bold">{booking.quantity}</span> Ticket(s) • 
                     <span className="text-primary font-bold ml-1">{booking.currency} {booking.totalPrice}</span>
+                    <span className="ml-2 text-xs bg-gray-100 px-2 py-0.5 rounded-full capitalize">{booking.ticketType}</span>
                   </div>
                   <Button size="sm" variant="outline" onClick={() => setSelectedBooking(booking)}>View Details</Button>
                 </div>
@@ -193,30 +196,77 @@ export const TouristBookingsView: React.FC = () => {
 
       {selectedBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md" onClick={() => setSelectedBooking(null)}>
-          <div className="relative w-full max-w-md animate-in zoom-in-95 duration-300 bg-white rounded-[32px] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="relative w-full max-w-lg animate-in zoom-in-95 duration-300 bg-white rounded-[32px] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <button onClick={() => setSelectedBooking(null)} className="absolute top-4 right-4 z-10 p-2 bg-white/80 rounded-full">
               <X className="w-5 h-5 text-gray-600" />
             </button>
             <div className="h-40 relative">
               <img src={selectedBooking.festival?.coverImage || 'https://images.unsplash.com/photo-1566998826769-e58f276226b9?q=80&w=400'} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4">
+                <h3 className="text-white font-bold text-xl">{selectedBooking.festival?.name}</h3>
+              </div>
             </div>
             <div className="p-6 space-y-4">
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-primary">{selectedBooking.festival?.name}</h3>
-                <p className="text-gray-500 text-sm">#{selectedBooking._id?.slice(-8)}</p>
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-xs text-gray-400 uppercase">Booking ID</p>
+                  <p className="font-mono text-sm font-bold">#{selectedBooking._id?.slice(-8).toUpperCase()}</p>
+                </div>
+                {getStatusBadge(selectedBooking.status)}
               </div>
+              
               <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl">
-                <div><p className="text-xs text-gray-400 uppercase">Date</p><p className="font-bold text-sm">{selectedBooking.festival?.startDate ? new Date(selectedBooking.festival.startDate).toLocaleDateString() : 'TBD'}</p></div>
-                <div><p className="text-xs text-gray-400 uppercase">Location</p><p className="font-bold text-sm">{selectedBooking.festival?.locationName || 'TBD'}</p></div>
-                <div><p className="text-xs text-gray-400 uppercase">Guest</p><p className="font-bold text-sm">{selectedBooking.contactInfo?.fullName || 'Guest'}</p></div>
-                <div><p className="text-xs text-gray-400 uppercase">Tickets</p><p className="font-bold text-sm">{selectedBooking.quantity}</p></div>
+                <div><p className="text-xs text-gray-400 uppercase">Event Date</p><p className="font-bold text-sm">{selectedBooking.festival?.startDate ? new Date(selectedBooking.festival.startDate).toLocaleDateString() : 'TBD'}</p></div>
+                <div><p className="text-xs text-gray-400 uppercase">Location</p><p className="font-bold text-sm truncate">{selectedBooking.festival?.locationName || 'TBD'}</p></div>
+                <div><p className="text-xs text-gray-400 uppercase">Ticket Type</p><p className="font-bold text-sm capitalize">{selectedBooking.ticketType}</p></div>
+                <div><p className="text-xs text-gray-400 uppercase">Quantity</p><p className="font-bold text-sm">{selectedBooking.quantity} Ticket(s)</p></div>
               </div>
-              <div className="flex justify-between border-t pt-4"><span className="text-gray-500">Total</span><span className="font-bold text-xl">{selectedBooking.currency} {selectedBooking.totalPrice}</span></div>
-              {selectedBooking.status === 'pending' && (
+              
+              <div className="bg-gray-50 p-4 rounded-xl space-y-2">
+                <p className="text-xs text-gray-400 uppercase">Contact Information</p>
+                <div className="flex items-center gap-2 text-sm"><User className="w-4 h-4 text-gray-400" /><span className="font-medium">{selectedBooking.contactInfo?.fullName || 'N/A'}</span></div>
+                <div className="flex items-center gap-2 text-sm"><Mail className="w-4 h-4 text-gray-400" /><span className="font-medium">{selectedBooking.contactInfo?.email || 'N/A'}</span></div>
+                <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-gray-400" /><span className="font-medium">{selectedBooking.contactInfo?.phone || 'N/A'}</span></div>
+              </div>
+
+              {selectedBooking.bookingDetails && (selectedBooking.bookingDetails.room || selectedBooking.bookingDetails.transport) && (
+                <div className="bg-gray-50 p-4 rounded-xl space-y-2">
+                  <p className="text-xs text-gray-400 uppercase">Additional Services</p>
+                  {selectedBooking.bookingDetails.room && (
+                    <div className="text-sm flex justify-between">
+                      <span>Hotel: {selectedBooking.bookingDetails.room.hotelName}</span>
+                      <span className="font-medium">ETB {selectedBooking.bookingDetails.room.roomPrice}</span>
+                    </div>
+                  )}
+                  {selectedBooking.bookingDetails.transport && (
+                    <div className="text-sm flex justify-between">
+                      <span>Transport: {selectedBooking.bookingDetails.transport.type}</span>
+                      <span className="font-medium">ETB {selectedBooking.bookingDetails.transport.price}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <div className="flex justify-between items-center border-t pt-4">
+                <span className="text-gray-500">Total Amount</span>
+                <span className="font-bold text-2xl text-primary">{selectedBooking.currency} {selectedBooking.totalPrice}</span>
+              </div>
+              
+              <div className="flex justify-between text-xs text-gray-400">
+                <span>Booked on: {new Date(selectedBooking.createdAt).toLocaleDateString()}</span>
+                <span className={`capitalize ${selectedBooking.paymentStatus === 'paid' ? 'text-green-600' : 'text-amber-600'}`}>Payment: {selectedBooking.paymentStatus}</span>
+              </div>
+              
+              {selectedBooking.status === 'pending' && selectedBooking.paymentStatus === 'pending' && (
                 <Button className="w-full bg-red-500 hover:bg-red-600" onClick={() => handleCancelBooking(selectedBooking._id)} disabled={cancelling === selectedBooking._id}>
                   {cancelling === selectedBooking._id ? 'Cancelling...' : 'Cancel Booking'}
                 </Button>
+              )}
+              
+              {selectedBooking.status === 'confirmed' && selectedBooking.paymentStatus === 'paid' && (
+                <div className="text-center text-sm text-green-600 font-medium">
+                  Booking confirmed - enjoy your festival!
+                </div>
               )}
             </div>
           </div>
@@ -515,7 +565,8 @@ export const TouristPaymentsView: React.FC = () => {
 };
 
 export const TouristSettingsView: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout, updateUser } = useAuth();
+  const router = useRouter();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -524,6 +575,103 @@ export const TouristSettingsView: React.FC = () => {
   });
   const [passwordStatus, setPasswordStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  
+  // Get profile from user context
+  const touristProfile = (user as any)?.touristProfile;
+  
+  // Initialize form from user context - no loading state
+  const [profileForm, setProfileForm] = React.useState(() => ({
+    name: user?.name || '',
+    phone: touristProfile?.phone || '',
+    country: touristProfile?.country || '',
+    nationality: touristProfile?.nationality || '',
+    dateOfBirth: touristProfile?.dateOfBirth || '',
+    profileImage: touristProfile?.profileImage || ''
+  }));
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'avatars');
+      
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setProfileForm(prev => ({ ...prev, profileImage: data.url }));
+      } else {
+        alert('Failed to upload image');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleProfileSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingProfile(true);
+    
+    console.log('Saving profile:', profileForm);
+    
+    try {
+      const bodyData = {
+        name: profileForm.name,
+        phone: profileForm.phone,
+        country: profileForm.country,
+        nationality: profileForm.nationality,
+        dateOfBirth: profileForm.dateOfBirth || null,
+        profileImage: profileForm.profileImage || null
+      };
+      console.log('Request body:', bodyData);
+      
+      const response = await fetch('/api/tourist/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodyData),
+        credentials: 'include'
+      });
+      
+      const data = await response.json();
+      console.log('Save response:', data);
+      
+      if (data.success) {
+        // Update user context immediately so changes persist
+        updateUser({
+          name: profileForm.name,
+          touristProfile: {
+            phone: profileForm.phone,
+            country: profileForm.country,
+            nationality: profileForm.nationality,
+            dateOfBirth: profileForm.dateOfBirth,
+            profileImage: profileForm.profileImage
+          }
+        } as any);
+        
+        alert('Profile saved successfully!');
+      } else {
+        alert(data.message || 'Failed to save profile');
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      alert('Failed to save profile');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -561,15 +709,73 @@ export const TouristSettingsView: React.FC = () => {
         <div className="md:col-span-2 space-y-8">
           <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
             <h3 className="text-xl font-bold text-primary mb-6">Profile Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input label="Full Name" defaultValue={user?.name || "Tourist User"} />
-              <Input label="Email Address" defaultValue={user?.email || "tourist@example.com"} disabled />
-              <Input label="Phone Number" defaultValue="+251 911 234 567" />
-              <Input label="Country" defaultValue="United States" />
-            </div>
-            <div className="mt-8 flex justify-end">
-              <Button>Save Changes</Button>
-            </div>
+            <form onSubmit={handleProfileSave}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input 
+                  label="Full Name" 
+                  value={profileForm.name}
+                  onChange={(e) => setProfileForm({...profileForm, name: e.target.value})}
+                />
+                <Input label="Email Address" value={user?.email || ""} disabled />
+                <Input 
+                  label="Phone Number" 
+                  value={profileForm.phone}
+                  onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
+                  placeholder="+251 911 234 567"
+                />
+                <Input 
+                  label="Country" 
+                  value={profileForm.country}
+                  onChange={(e) => setProfileForm({...profileForm, country: e.target.value})}
+                  placeholder="Ethiopia"
+                />
+                <Input 
+                  label="Nationality" 
+                  value={profileForm.nationality}
+                  onChange={(e) => setProfileForm({...profileForm, nationality: e.target.value})}
+                  placeholder="Ethiopian"
+                />
+                <Input 
+                  label="Date of Birth" 
+                  type="date"
+                  value={profileForm.dateOfBirth}
+                  onChange={(e) => setProfileForm({...profileForm, dateOfBirth: e.target.value})}
+                />
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Profile Photo</label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingImage}
+                      className="px-4 py-2 bg-primary text-white rounded-lg font-medium text-sm hover:bg-primary/90 disabled:opacity-50"
+                    >
+                      {uploadingImage ? 'Uploading...' : 'Choose Image'}
+                    </button>
+                    {profileForm.profileImage && (
+                      <span className="text-sm text-green-600">Image uploaded!</span>
+                    )}
+                  </div>
+                  {profileForm.profileImage && (
+                    <div className="mt-4 w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200">
+                      <img src={profileForm.profileImage} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="mt-8 flex justify-end">
+                <Button type="submit" disabled={savingProfile}>
+                  {savingProfile ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </form>
           </section>
 
           <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
@@ -597,9 +803,9 @@ export const TouristSettingsView: React.FC = () => {
           <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
             <div className="flex flex-col items-center text-center">
               <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg mb-4">
-                <img src={user?.profileImage || "https://ui-avatars.com/api/?name=Tourist"} alt="Profile" className="w-full h-full object-cover" />
+                <img src={profileForm.profileImage || "https://ui-avatars.com/api/?name=" + encodeURIComponent(profileForm.name || 'Tourist')} alt="Profile" className="w-full h-full object-cover" />
               </div>
-              <Button variant="outline" size="sm" className="text-xs">Change Photo</Button>
+              <p className="text-xs text-gray-500">Upload a photo above</p>
             </div>
           </section>
           

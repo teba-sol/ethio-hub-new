@@ -84,7 +84,7 @@ export interface RoomType {
   description: string;
   capacity: number;
   pricePerNight: number;
-  availabilityCount: number;
+  availability: number;
   image: string;
   sqm: number;
   amenities: string[];
@@ -103,19 +103,21 @@ export interface HotelAccommodation {
   checkInTime: string;
   checkOutTime: string;
   facilities: string[];
-  roomTypes: RoomType[];
+  rooms: RoomType[];
   gallery: string[];
-  rooms?: RoomType[];
 }
 
 export interface TransportOption {
   id: string;
   type: 'Private Car' | 'VIP SUV' | 'Shuttle Bus' | 'Luxury Coach' | 'Helicopter Transfer';
+  provider?: string;
   image: string;
   price: number;
-  availability: number;
+  availability?: number;
+  capacity?: number;
+  features?: string[];
   description: string;
-  pickupLocations: string[];
+  pickupLocations?: string[];
 }
 
 export interface Festival {

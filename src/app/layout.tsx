@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import '@/index.css';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -20,8 +20,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     pathname === '/products' || 
     pathname === '/festivals' || 
     pathname === '/about' ||
-    (pathname?.startsWith('/products/') ?? false) ||
-    (pathname?.startsWith('/festivals/') ?? false)
+    pathname.startsWith('/products/') ||
+    pathname.startsWith('/festivals/') ||
+    pathname.startsWith('/payment/')
   );
 
   const showHeader = mounted && isPublicPage;

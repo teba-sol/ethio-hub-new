@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null;
     const folder = (formData.get('folder') as string) || 'festivals';
 
-    if (!file) {
+    if (!file || !file.name) {
       return NextResponse.json({ success: false, message: 'No file provided.' }, { status: 400 });
     }
 
@@ -20,7 +20,8 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const filename = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+    const ext = file.name.split('.').pop() || 'jpg';
+    const filename = `${Date.now()}.${ext}`;
     const uploadDir = path.join(process.cwd(), 'public', 'uploads', safeFolder);
     const filePath = path.join(uploadDir, filename);
 

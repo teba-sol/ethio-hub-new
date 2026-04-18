@@ -28,6 +28,7 @@ export interface IHotel extends Document {
   address: string;
   description: string;
   fullDescription?: string;
+  policies?: string;
   image: string;
   checkInTime?: string;
   checkOutTime?: string;
@@ -132,6 +133,7 @@ const HotelSchema: Schema = new Schema({
   address: { type: String },
   description: { type: String },
   fullDescription: { type: String },
+  policies: { type: String },
   image: { type: String },
   checkInTime: { type: String },
   checkOutTime: { type: String },
@@ -148,6 +150,7 @@ const TransportationSchema: Schema = new Schema({
   image: { type: String },
   availability: { type: Number },
   capacity: { type: Number },
+  features: [{ type: String }],
   pickupLocations: { type: String },
 });
 
