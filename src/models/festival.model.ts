@@ -126,6 +126,14 @@ const RoomSchema: Schema = new Schema({
   amenities: [{ type: String }],                    // Room amenities
 }, { _id: true });
 
+// Food Package Schema
+const FoodPackageSchema: Schema = new Schema({
+  name: { type: String, required: true },
+  description: { type: String },
+  pricePerPerson: { type: Number, required: true },
+  items: [{ type: String }], // ["Breakfast", "Lunch", "Dinner", "Drinks"]
+}, { _id: true });
+
 // Hotel Schema with all fields
 const HotelSchema: Schema = new Schema({
   name: { type: String, required: true },
@@ -155,7 +163,7 @@ const TransportationSchema: Schema = new Schema({
 });
 
 const ServicesSchema: Schema = new Schema({
-  foodPackages: [{ type: String }],
+  foodPackages: [FoodPackageSchema],
   culturalServices: [{ type: String }],
   specialAssistance: [{ type: String }],
   extras: [{ type: String }],

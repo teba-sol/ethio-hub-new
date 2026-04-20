@@ -91,6 +91,15 @@ export interface RoomType {
   bedType: string;
 }
 
+export interface FoodPackage {
+  id: string;
+  _id?: string;
+  name: string;
+  description: string;
+  pricePerPerson: number;
+  items: string[];
+}
+
 export interface HotelAccommodation {
   id: string;
   name: string;

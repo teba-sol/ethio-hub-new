@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Festival, HotelAccommodation, RoomType, TransportOption } from '../types';
+import { Festival, HotelAccommodation, RoomType, TransportOption, FoodPackage } from '../types';
 
 interface TicketSelection {
   type: 'vip' | 'standard' | 'earlyBird';
@@ -19,12 +19,17 @@ interface BookingContextType {
   selectedRoom: RoomType | null;
   checkIn: Date | null;
   checkOut: Date | null;
-  guests: number;
-  setSelectedHotel: (hotel: HotelAccommodation | null) => void;
-  setSelectedRoom: (room: RoomType | null) => void;
-  setCheckIn: (date: Date | null) => void;
-  setCheckOut: (date: Date | null) => void;
-  setGuests: (count: number) => void;
+    guests: number;
+    selectedFoodPackages: FoodPackage[];
+    setSelectedHotel: (hotel: HotelAccommodation | null) => void;
+    setSelectedRoom: (room: RoomType | null) => void;
+    setCheckIn: (date: Date | null) => void;
+    setCheckOut: (date: Date | null) => void;
+    setGuests: (count: number) => void;
+    clearFoodPackages: () => void;
+    addFoodPackage: (pkg: FoodPackage) => void;
+    removeFoodPackage: (pkgId: string) => void;
+    toggleFoodPackage: (pkg: FoodPackage) => void;
   
   // Transport
   selectedTransport: TransportOption | null;
@@ -39,6 +44,7 @@ interface BookingContextType {
   // Pricing
   getTicketTotal: () => number;
   getHotelTotal: () => number;
+  getFoodPackageTotal: () => number;
   getTransportTotal: () => number;
   getGrandTotal: () => number;
   
@@ -62,6 +68,7 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [checkIn, setCheckIn] = useState<Date | null>(null);
   const [checkOut, setCheckOut] = useState<Date | null>(null);
   const [guests, setGuests] = useState(1);
+  const [selectedFoodPackages, setSelectedFoodPackages] = useState<FoodPackage[]>([]);
   
   // Transport
   const [selectedTransport, setSelectedTransport] = useState<TransportOption | null>(null);
@@ -86,7 +93,17 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
   
   const getHotelTotal = () => {
     if (!selectedRoom || !checkIn || !checkOut) return 0;
-    return selectedRoom.pricePerNight * hotelNights * guests;
+    const roomTotal = selectedRoom.pricePerNight * hotelNights * guests;
+    const foodTotal = selectedFoodPackages.reduce(
+      (sum, pkg) => sum + pkg.pricePerPerson * guests, 0
+    );
+    return roomTotal + foodTotal;
+  };
+  
+  const getFoodPackageTotal = () => {
+    return selectedFoodPackages.reduce(
+      (sum, pkg) => sum + pkg.pricePerPerson * guests, 0
+    );
   };
   
   const getTransportTotal = () => {
@@ -98,6 +115,29 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
     return getTicketTotal() + getHotelTotal() + getTransportTotal();
   };
   
+  const clearFoodPackages = () => {
+    setSelectedFoodPackages([]);
+  };
+  
+  const addFoodPackage = (pkg: FoodPackage) => {
+    setSelectedFoodPackages(prev => {
+      if (prev.find(p => p.id === pkg.id)) return prev;
+      return [...prev, pkg];
+    });
+  };
+  
+  const removeFoodPackage = (pkgId: string) => {
+    setSelectedFoodPackages(prev => prev.filter(p => p.id !== pkgId));
+  };
+  
+  const toggleFoodPackage = (pkg: FoodPackage) => {
+    if (selectedFoodPackages.find(p => p.id === pkg.id)) {
+      removeFoodPackage(pkg.id);
+    } else {
+      addFoodPackage(pkg);
+    }
+  };
+  
   // Clear all selections
   const clearBooking = () => {
     setEvent(null);
@@ -106,6 +146,7 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
     setCheckIn(null);
     setCheckOut(null);
     setGuests(1);
+    setSelectedFoodPackages([]);
     setSelectedTransport(null);
     setTransportDays(1);
     setTicketSelection(null);
@@ -121,11 +162,16 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
       checkIn,
       checkOut,
       guests,
+      selectedFoodPackages,
       setSelectedHotel,
       setSelectedRoom,
       setCheckIn,
       setCheckOut,
       setGuests,
+      clearFoodPackages,
+      addFoodPackage,
+      removeFoodPackage,
+      toggleFoodPackage,
       selectedTransport,
       setSelectedTransport,
       transportDays,
@@ -134,6 +180,7 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
       setTicketSelection,
       getTicketTotal,
       getHotelTotal,
+      getFoodPackageTotal,
       getTransportTotal,
       getGrandTotal,
       bookingId,

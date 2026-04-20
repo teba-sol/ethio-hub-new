@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useBooking } from '@/context/BookingContext';
-import { Check } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 
 interface PriceSummaryProps {
   eventId: string;
@@ -17,11 +17,14 @@ export const PriceSummary: React.FC<PriceSummaryProps> = ({ eventId }) => {
     checkOut,
     selectedTransport,
     transportDays,
+    selectedFoodPackages,
     getTicketTotal,
     getHotelTotal,
+    getFoodPackageTotal,
     getTransportTotal,
     getGrandTotal,
     guests,
+    removeFoodPackage,
   } = useBooking();
   
   const hotelNights = checkIn && checkOut 
@@ -29,6 +32,7 @@ export const PriceSummary: React.FC<PriceSummaryProps> = ({ eventId }) => {
     : 0;
   
   const grandTotal = getGrandTotal();
+  const foodPackageTotal = getFoodPackageTotal();
   
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -56,16 +60,39 @@ export const PriceSummary: React.FC<PriceSummaryProps> = ({ eventId }) => {
         
         {/* Hotel */}
         {(selectedRoom && checkIn && checkOut) ? (
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="font-medium text-gray-900">
-                {selectedHotel?.name || selectedRoom.name}
-              </p>
-              <p className="text-sm text-gray-500">
-                {guests} guest{guests > 1 ? 's' : ''} × {hotelNights} night{hotelNights > 1 ? 's' : ''} × ${selectedRoom.pricePerNight}
-              </p>
+          <div className="space-y-2">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="font-medium text-gray-900">
+                  {selectedHotel?.name || selectedRoom.name}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {guests} guest{guests > 1 ? 's' : ''} × {hotelNights} night{hotelNights > 1 ? 's' : ''} × ${selectedRoom.pricePerNight}
+                </p>
+              </div>
+              <span className="font-bold text-primary">${selectedRoom.pricePerNight * hotelNights * guests}</span>
             </div>
-            <span className="font-bold text-primary">${getHotelTotal()}</span>
+            
+            {/* Food Packages */}
+            {selectedFoodPackages.length > 0 && (
+              <div className="bg-primary/5 p-3 rounded-lg space-y-2">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Food Packages</p>
+                {selectedFoodPackages.map((pkg, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">{pkg.name} ({guests} × ${pkg.pricePerPerson})</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-primary">${pkg.pricePerPerson * guests}</span>
+                      <button 
+                        onClick={() => removeFoodPackage(pkg.id)}
+                        className="text-gray-400 hover:text-red-500"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-sm text-gray-400">Select hotel to continue</div>

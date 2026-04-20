@@ -2,11 +2,21 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, MapPin, Calendar, Users, Star, Check, ChevronDown, ChevronUp, X } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft, MapPin, Calendar, Users, Star, Check, ChevronDown, ChevronUp, X, SlidersHorizontal, Wifi, Waves, Utensils, Dumbbell, Car, Coffee } from 'lucide-react';
 import { useBooking } from '@/context/BookingContext';
 import { PriceSummary } from '@/components/booking/PriceSummary';
 import apiClient from '@/lib/apiClient';
 import { Festival, HotelAccommodation, RoomType } from '@/types';
+
+const FACILITIES = [
+  { id: 'wifi', label: 'Free WiFi', icon: Wifi },
+  { id: 'pool', label: 'Swimming Pool', icon: Waves },
+  { id: 'restaurant', label: 'Restaurant', icon: Utensils },
+  { id: 'gym', label: 'Fitness Center', icon: Dumbbell },
+  { id: 'parking', label: 'Free Parking', icon: Car },
+  { id: 'spa', label: 'Spa & Wellness', icon: Coffee },
+];
 
 export default function HotelsPage() {
   const params = useParams();
@@ -24,13 +34,24 @@ export default function HotelsPage() {
     checkOut,
     setCheckOut,
     guests,
-    setGuests
+    setGuests,
+    selectedFoodPackages,
+    clearFoodPackages,
+    removeFoodPackage
   } = useBooking();
   
   const [festival, setFestival] = useState<Festival | null>(null);
   const [hotels, setHotels] = useState<HotelAccommodation[]>([]);
+  const [filteredHotels, setFilteredHotels] = useState<HotelAccommodation[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedHotel, setExpandedHotel] = useState<string | null>(null);
+  
+  // Filter states
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState('recommended');
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [selectedStars, setSelectedStars] = useState<number[]>([]);
+  const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,8 +66,10 @@ export default function HotelsPage() {
         
         if (festivalData?.hotels && festivalData.hotels.length > 0) {
           setHotels(festivalData.hotels);
+          setFilteredHotels(festivalData.hotels);
         } else {
           setHotels(festivalData?.hotels || []);
+          setFilteredHotels(festivalData?.hotels || []);
         }
       } catch (e) {
         console.error('Error:', e);
@@ -58,15 +81,70 @@ export default function HotelsPage() {
     fetchData();
   }, [eventId]);
 
+  // Apply filters and sorting
+  useEffect(() => {
+    let result = [...hotels];
+    
+    // Filter by price
+    result = result.filter(h => {
+      const minPrice = h.rooms?.[0]?.pricePerNight || 0;
+      return minPrice >= priceRange[0] && minPrice <= priceRange[1];
+    });
+    
+    // Filter by stars
+    if (selectedStars.length > 0) {
+      result = result.filter(h => selectedStars.includes(h.starRating));
+    }
+    
+    // Filter by facilities
+    if (selectedFacilities.length > 0) {
+      result = result.filter(h => 
+        selectedFacilities.every(f => h.facilities?.includes(f))
+      );
+    }
+    
+    // Sort
+    switch (sortBy) {
+      case 'price_low':
+        result.sort((a, b) => (a.rooms?.[0]?.pricePerNight || 0) - (b.rooms?.[0]?.pricePerNight || 0));
+        break;
+      case 'price_high':
+        result.sort((a, b) => (b.rooms?.[0]?.pricePerNight || 0) - (a.rooms?.[0]?.pricePerNight || 0));
+        break;
+      case 'rating':
+        result.sort((a, b) => b.starRating - a.starRating);
+        break;
+      default:
+        // Recommended - keep original order
+        break;
+    }
+    
+    setFilteredHotels(result);
+  }, [hotels, priceRange, selectedStars, selectedFacilities, sortBy]);
+
   const handleSelectRoom = (hotel: HotelAccommodation, room: RoomType) => {
     setSelectedHotel(hotel);
     setSelectedRoom(room);
+    // Clear food packages when switching hotels
+    setSelectedFoodPackages([]);
   };
 
   const handleContinue = () => {
     if (selectedRoom) {
       router.push(`/event/${eventId}/transport`);
     }
+  };
+
+  const toggleStar = (star: number) => {
+    setSelectedStars(prev => 
+      prev.includes(star) ? prev.filter(s => s !== star) : [...prev, star]
+    );
+  };
+
+  const toggleFacility = (facility: string) => {
+    setSelectedFacilities(prev => 
+      prev.includes(facility) ? prev.filter(f => f !== facility) : [...prev, facility]
+    );
   };
 
   if (loading) {
@@ -140,8 +218,8 @@ export default function HotelsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="mb-12">
-          <h1 className="text-4xl font-serif font-bold text-primary mb-4">
+        <div className="mb-8">
+          <h1 className="text-4xl font-serif font-bold text-primary mb-2">
             Select Your Accommodation
           </h1>
           <p className="text-gray-500 text-lg">
@@ -149,174 +227,358 @@ export default function HotelsPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Hotel List */}
-          <div className="lg:col-span-2 space-y-4">
-            {hotels.map((hotel) => (
-              <div 
-                key={hotel.id} 
-                className={`bg-white rounded-2xl overflow-hidden border transition-all ${
-                  selectedHotel?.id === hotel.id 
-                    ? 'border-primary shadow-lg' 
-                    : 'border-gray-100'
-                }`}
-              >
-                <div 
-                  className="flex cursor-pointer"
-                  onClick={() => setExpandedHotel(expandedHotel === hotel.id ? null : hotel.id)}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Filter Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 sticky top-24">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-bold text-primary flex items-center gap-2">
+                  <SlidersHorizontal className="w-4 h-4" />
+                  Filters
+                </h3>
+                <button 
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="lg:hidden text-gray-500"
                 >
-                  <div className="w-48 h-40 flex-shrink-0">
-                    <img 
-                      src={hotel.image} 
-                      alt={hotel.name}
-                      className="w-full h-full object-cover"
+                  {showFilters ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              
+              <div className={`space-y-6 ${showFilters ? 'block' : 'hidden lg:block'}`}>
+                {/* Price Range */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Price Range ($)</label>
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="number" 
+                      value={priceRange[0]}
+                      onChange={(e) => setPriceRange([parseInt(e.target.value) || 0, priceRange[1]])}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                      placeholder="Min"
+                    />
+                    <span className="text-gray-400">-</span>
+                    <input 
+                      type="number" 
+                      value={priceRange[1]}
+                      onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 1000])}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                      placeholder="Max"
                     />
                   </div>
-                  
-                  <div className="flex-1 p-5">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-lg font-bold text-primary">{hotel.name}</h3>
-                          {hotel.starRating && (
-                            <span className="flex items-center gap-1 text-xs bg-gray-100 px-2 py-0.5 rounded-full">
-                              <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                              {hotel.starRating}
+                </div>
+
+                {/* Star Rating */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Hotel Star</label>
+                  <div className="flex gap-2">
+                    {[5, 4, 3, 2, 1].map(star => (
+                      <button
+                        key={star}
+                        onClick={() => toggleStar(star)}
+                        className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm transition-all ${
+                          selectedStars.includes(star) 
+                            ? 'bg-primary text-white' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        <Star className={`w-3 h-3 ${selectedStars.includes(star) ? 'fill-white' : 'fill-yellow-400 text-yellow-400'}`} />
+                        {star}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Facilities */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Facilities</label>
+                  <div className="space-y-2">
+                    {FACILITIES.map(facility => (
+                      <label 
+                        key={facility.id}
+                        className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all ${
+                          selectedFacilities.includes(facility.label)
+                            ? 'bg-primary/10 text-primary border border-primary'
+                            : 'hover:bg-gray-50 text-gray-600'
+                        }`}
+                      >
+                        <input 
+                          type="checkbox" 
+                          className="hidden"
+                          checked={selectedFacilities.includes(facility.label)}
+                          onChange={() => toggleFacility(facility.label)}
+                        />
+                        <facility.icon className="w-4 h-4" />
+                        <span className="text-sm">{facility.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Clear Filters */}
+                {(selectedStars.length > 0 || selectedFacilities.length > 0 || priceRange[0] > 0 || priceRange[1] < 1000) && (
+                  <button
+                    onClick={() => {
+                      setSelectedStars([]);
+                      setSelectedFacilities([]);
+                      setPriceRange([0, 1000]);
+                    }}
+                    className="text-sm text-gray-500 hover:text-primary"
+                  >
+                    Clear all filters
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Hotel List */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Sort & Results Count */}
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-gray-500 text-sm">
+                {filteredHotels.length} hotel{filteredHotels.length !== 1 ? 's' : ''} found
+              </p>
+              <select 
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="recommended">Recommended</option>
+                <option value="price_low">Price (Low to High)</option>
+                <option value="price_high">Price (High to Low)</option>
+                <option value="rating">Rating (High to Low)</option>
+              </select>
+            </div>
+
+            {filteredHotels.map((hotel) => {
+              const minPrice = hotel.rooms?.[0]?.pricePerNight || 0;
+              
+              return (
+                <div 
+                  key={hotel.id} 
+                  className={`bg-white rounded-2xl overflow-hidden border transition-all ${
+                    selectedHotel?.id === hotel.id 
+                      ? 'border-primary shadow-lg' 
+                      : 'border-gray-100 hover:border-gray-200'
+                  }`}
+                >
+                  <div className="flex flex-col md:flex-row">
+                    {/* Hotel Image - Clickable to go to detail */}
+                    <Link 
+                      href={`/event/${eventId}/hotels/${hotel.id}`}
+                      className="w-full md:w-64 h-48 md:h-auto flex-shrink-0 block relative group"
+                    >
+                      <img 
+                        src={hotel.image} 
+                        alt={hotel.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                    </Link>
+                    
+                    {/* Hotel Info */}
+                    <div className="flex-1 p-5">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <Link 
+                            href={`/event/${eventId}/hotels/${hotel.id}`}
+                            className="hover:text-primary transition-colors"
+                          >
+                            <h3 className="text-lg font-bold text-primary">{hotel.name}</h3>
+                          </Link>
+                          <div className="flex items-center gap-2 mt-1">
+                            {hotel.starRating && (
+                              <div className="flex items-center gap-1">
+                                {[...Array(hotel.starRating)].map((_, i) => (
+                                  <Star key={i} className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                                ))}
+                              </div>
+                            )}
+                            <span className="text-xs text-gray-400">
+                              {hotel.starRating} Star{hotel.starRating !== 1 ? 's' : ''}
                             </span>
-                          )}
+                          </div>
+                          <div className="flex items-center gap-1 text-gray-500 text-sm mt-1">
+                            <MapPin className="w-4 h-4" />
+                            <span>{hotel.address}</span>
+                            <a 
+                              href={`https://maps.google.com/?q=${encodeURIComponent(hotel.address)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary text-xs ml-2 hover:underline"
+                            >
+                              View on map
+                            </a>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1 text-gray-500 text-sm">
-                          <MapPin className="w-4 h-4" />
-                          <span>{hotel.address}</span>
+                        
+                        <div className="text-right">
+                          <span className="text-2xl font-bold text-primary">
+                            ${minPrice}
+                          </span>
+                          <span className="text-gray-500 text-sm">/night</span>
+                          <p className="text-xs text-gray-400 mt-1">from</p>
                         </div>
                       </div>
                       
-                      <div className="text-right">
-                        <span className="text-2xl font-bold text-primary">
-                          ${hotel.rooms?.[0]?.pricePerNight || 'N/A'}
-                        </span>
-                        <span className="text-gray-500 text-sm">/night</span>
-                      </div>
-                    </div>
-                    
-                    {hotel.facilities && hotel.facilities.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        {hotel.facilities.slice(0, 4).map((facility, idx) => (
-                          <span key={idx} className="text-xs bg-gray-50 px-2 py-1 rounded-full text-gray-600">
-                            {facility}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {selectedHotel?.id === hotel.id && selectedRoom && (
-                      <div className="mt-3 flex items-center gap-2 text-primary text-sm font-medium">
-                        <Check className="w-4 h-4" />
-                        {selectedRoom.name} selected
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="p-5 flex items-center">
-                    {expandedHotel === hotel.id ? (
-                      <ChevronUp className="w-5 h-5 text-gray-400" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
-                    )}
-                  </div>
-                </div>
-                
-                {/* Expanded Room Details */}
-                {expandedHotel === hotel.id && (
-                  <div className="border-t border-gray-100 p-5 bg-gray-50">
-                    <h4 className="font-bold text-gray-700 mb-4">Select a Room</h4>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                      {hotel.rooms?.map((room) => (
-                        <div 
-                          key={room.id}
-                          onClick={() => handleSelectRoom(hotel, room)}
-                          className={`p-4 bg-white rounded-xl border cursor-pointer transition-all ${
-                            selectedRoom?.id === room.id
-                              ? 'border-primary ring-2 ring-primary/20'
-                              : 'border-gray-200 hover:border-primary'
-                          }`}
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <h5 className="font-bold text-primary">{room.name}</h5>
-                              <p className="text-gray-500 text-sm">{room.bedType} bed</p>
-                            </div>
-                            <span className="text-lg font-bold text-primary">${room.pricePerNight}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-gray-500 text-sm">
-                            <Users className="w-4 h-4" />
-                            Up to {room.capacity} guests
-                          </div>
-                          {room.amenities && room.amenities.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {room.amenities.slice(0, 3).map((amenity, idx) => (
-                                <span key={idx} className="text-xs text-gray-500">{amenity}</span>
-                              ))}
+                      {hotel.facilities && hotel.facilities.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {hotel.facilities.slice(0, 4).map((facility, idx) => (
+                            <span key={idx} className="text-xs bg-gray-50 px-2 py-1 rounded-full text-gray-600">
+                              {facility}
+                            </span>
+                          ))}
+                          {hotel.facilities.length > 4 && (
+                            <span className="text-xs text-gray-400">+{hotel.facilities.length - 4} more</span>
+                          )}
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center justify-between mt-4">
+                        <div className="flex items-center gap-4">
+                          {selectedHotel?.id === hotel.id && selectedRoom && (
+                            <div className="flex items-center gap-2 text-primary text-sm font-medium">
+                              <Check className="w-4 h-4" />
+                              {selectedRoom.name} selected
                             </div>
                           )}
                         </div>
-                      ))}
-                    </div>
-                    
-                    {/* Date Selection */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Check-in</label>
-                        <input 
-                          type="date" 
-                          className="w-full px-4 py-3 border border-gray-200 rounded-xl"
-                          min={new Date().toISOString().split('T')[0]}
-                          onChange={(e) => setCheckIn(e.target.value ? new Date(e.target.value) : null)}
-                          value={checkIn ? new Date(checkIn).toISOString().split('T')[0] : ''}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Check-out</label>
-                        <input 
-                          type="date" 
-                          className="w-full px-4 py-3 border border-gray-200 rounded-xl"
-                          min={checkIn ? new Date(checkIn).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
-                          onChange={(e) => setCheckOut(e.target.value ? new Date(e.target.value) : null)}
-                          value={checkOut ? new Date(checkOut).toISOString().split('T')[0] : ''}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Guests</label>
-                        <select 
-                          value={guests}
-                          onChange={(e) => setGuests(parseInt(e.target.value))}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-xl"
+                        
+                        <button 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setExpandedHotel(expandedHotel === hotel.id ? null : hotel.id);
+                          }}
+                          className="flex items-center gap-2 text-sm text-gray-500 hover:text-primary"
                         >
-                          {[1,2,3,4,5,6].map(num => (
-                            <option key={num} value={num}>{num} {num === 1 ? 'Guest' : 'Guests'}</option>
-                          ))}
-                        </select>
+                          {expandedHotel === hotel.id ? 'Hide Details' : 'View Details'}
+                          {expandedHotel === hotel.id ? (
+                            <ChevronUp className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
+                        </button>
                       </div>
                     </div>
-                    
-                    {/* Clear Selection */}
-                    {selectedHotel?.id === hotel.id && (
-                      <button
-                        onClick={() => {
-                          setSelectedHotel(null);
-                          setSelectedRoom(null);
-                        }}
-                        className="text-gray-500 hover:text-red-500 text-sm flex items-center gap-1"
-                      >
-                        <X className="w-4 h-4" />
-                        Clear selection
-                      </button>
-                    )}
                   </div>
-                )}
+                  
+                  {/* Expanded Room Details */}
+                  {expandedHotel === hotel.id && (
+                    <div className="border-t border-gray-100 p-5 bg-gray-50">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-bold text-gray-700">Select a Room</h4>
+                        <Link 
+                          href={`/event/${eventId}/hotels/${hotel.id}`}
+                          className="text-sm text-primary hover:underline font-medium"
+                        >
+                          View Full Details →
+                        </Link>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        {hotel.rooms?.map((room) => (
+                          <div 
+                            key={room.id}
+                            onClick={() => handleSelectRoom(hotel, room)}
+                            className={`p-4 bg-white rounded-xl border cursor-pointer transition-all ${
+                              selectedRoom?.id === room.id
+                                  ? 'border-primary ring-2 ring-primary/20'
+                                  : 'border-gray-200 hover:border-primary'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <h5 className="font-bold text-primary">{room.name}</h5>
+                                <p className="text-gray-500 text-sm">{room.bedType} bed</p>
+                              </div>
+                              <span className="text-lg font-bold text-primary">${room.pricePerNight}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-500 text-sm">
+                              <Users className="w-4 h-4" />
+                              Up to {room.capacity} guests
+                            </div>
+                            {room.amenities && room.amenities.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {room.amenities.slice(0, 3).map((amenity, idx) => (
+                                  <span key={idx} className="text-xs text-gray-500">{amenity}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Date Selection */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Check-in</label>
+                          <input 
+                            type="date" 
+                            className="w-full px-4 py-3 border border-gray-200 rounded-xl"
+                            min={new Date().toISOString().split('T')[0]}
+                            onChange={(e) => setCheckIn(e.target.value ? new Date(e.target.value) : null)}
+                            value={checkIn ? new Date(checkIn).toISOString().split('T')[0] : ''}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Check-out</label>
+                          <input 
+                            type="date" 
+                            className="w-full px-4 py-3 border border-gray-200 rounded-xl"
+                            min={checkIn ? new Date(checkIn).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                            onChange={(e) => setCheckOut(e.target.value ? new Date(e.target.value) : null)}
+                            value={checkOut ? new Date(checkOut).toISOString().split('T')[0] : ''}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Guests</label>
+                          <select 
+                            value={guests}
+                            onChange={(e) => setGuests(parseInt(e.target.value))}
+                            className="w-full px-4 py-3 border border-gray-200 rounded-xl"
+                          >
+                            {[1,2,3,4,5,6].map(num => (
+                              <option key={num} value={num}>{num} {num === 1 ? 'Guest' : 'Guests'}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      
+                      {/* Clear Selection */}
+                      {selectedHotel?.id === hotel.id && (
+                        <button
+                          onClick={() => {
+                            setSelectedHotel(null);
+                            setSelectedRoom(null);
+clearFoodPackages();
+                          }}
+                          className="text-gray-500 hover:text-red-500 text-sm flex items-center gap-1"
+                        >
+                          <X className="w-4 h-4" />
+                          Clear selection
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {filteredHotels.length === 0 && (
+              <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
+                <p className="text-gray-500">No hotels match your filters.</p>
+                <button
+                  onClick={() => {
+                    setSelectedStars([]);
+                    setSelectedFacilities([]);
+                    setPriceRange([0, 1000]);
+                  }}
+                  className="text-primary hover:underline mt-2"
+                >
+                  Clear filters
+                </button>
               </div>
-            ))}
+            )}
           </div>
 
           {/* Price Summary Sidebar */}
