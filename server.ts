@@ -170,7 +170,13 @@ async function startServer() {
     res.json({ message: "Product status updated" });
   });
   app.get("/api/admin/events", (req, res) => {
-    res.json({ events: [] });
+    res.json({ requests: [] });
+  });
+  app.post("/api/admin/events/:id/approve", (req, res) => {
+    res.json({ success: true, message: "Event approved and published" });
+  });
+  app.post("/api/admin/events/:id/reject", (req, res) => {
+    res.json({ success: true, message: "Event rejected", reason: req.body.reason });
   });
   app.put("/api/admin/events/:id/status", (req, res) => {
     res.json({ message: "Event status updated" });

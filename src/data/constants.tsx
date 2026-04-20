@@ -138,14 +138,14 @@ export const MOCK_FESTIVALS: Festival[] = [
           'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000&auto=format&fit=crop',
           'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=1000&auto=format&fit=crop'
         ],
-        roomTypes: [
+        rooms: [
           {
             id: 'r1',
             name: 'Deluxe Suite',
             description: 'Spacious suite with castle views and modern amenities.',
             capacity: 2,
             pricePerNight: 210,
-            availabilityCount: 4,
+            availability: 4,
             image: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?q=80&w=1000&auto=format&fit=crop',
             sqm: 45,
             amenities: ['Free WiFi', 'Air Conditioning', 'Mini Bar', 'TV'],
@@ -157,7 +157,7 @@ export const MOCK_FESTIVALS: Festival[] = [
             description: 'Cozy room with traditional decor and city views.',
             capacity: 2,
             pricePerNight: 140,
-            availabilityCount: 12,
+            availability: 12,
             image: 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=1000&auto=format&fit=crop',
             sqm: 28,
             amenities: ['Free WiFi', 'Air Conditioning', 'TV'],
@@ -194,7 +194,8 @@ export const MOCK_FESTIVALS: Festival[] = [
     bookingTerms: 'Official Tourism Board pass included.',
     organizerId: 'o1',
     isVerified: true,
-    ticketsAvailable: 120
+    ticketsAvailable: 120,
+    verificationStatus: 'Approved' as const
   },
   {
     id: 'f2',
@@ -226,14 +227,14 @@ export const MOCK_FESTIVALS: Festival[] = [
         policies: 'Passport required, 24h cancellation.',
         checkInTime: '15:00',
         checkOutTime: '12:00',
-        roomTypes: [
+        rooms: [
           {
             id: 'r3',
             name: 'Executive Suite',
             description: 'Modern luxury with city views.',
             capacity: 2,
             pricePerNight: 350,
-            availabilityCount: 8,
+            availability: 8,
             image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=1000&auto=format&fit=crop',
             sqm: 65
           }

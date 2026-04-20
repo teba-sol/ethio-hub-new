@@ -41,7 +41,7 @@ export async function POST(
 
     const { id } = await params;
     const body = await request.json();
-    const { reason } = body;
+    const { reason, role } = body;
 
     if (!reason || !reason.trim()) {
       return new NextResponse(
@@ -51,12 +51,26 @@ export async function POST(
     }
 
     const trimmedReason = reason.trim();
+    const userRole = role || 'artisan';
 
-    // Single update - no need to fetch first
+    let updateField: string;
+    let successMessage: string;
+    let recordRole: 'artisan' | 'organizer';
+
+    if (userRole === 'organizer') {
+      updateField = 'organizerStatus';
+      successMessage = 'Organizer rejected successfully';
+      recordRole = 'organizer';
+    } else {
+      updateField = 'artisanStatus';
+      successMessage = 'Artisan rejected successfully';
+      recordRole = 'artisan';
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
       id,
-      { artisanStatus: 'Rejected', rejectionReason: trimmedReason },
-      { new: true, select: 'name email artisanStatus role rejectionReason' }
+      { [updateField]: 'Rejected', rejectionReason: trimmedReason },
+      { new: true, select: 'name email role artisanStatus organizerStatus rejectionReason' }
     );
 
     if (!updatedUser) {
@@ -66,17 +80,9 @@ export async function POST(
       );
     }
 
-    if (updatedUser.role !== 'artisan') {
-      return new NextResponse(
-        JSON.stringify({ success: false, message: 'User is not an artisan' }),
-        { status: 400, headers: { 'content-type': 'application/json' } }
-      );
-    }
-
-    // Fire-and-forget: log verification record without blocking response
     VerificationRecord.create({
       userId: id,
-      userRole: 'artisan',
+      userRole: recordRole,
       action: 'rejected',
       adminId,
       reason: trimmedReason,
@@ -86,19 +92,21 @@ export async function POST(
     return new NextResponse(
       JSON.stringify({
         success: true,
-        message: 'Artisan rejected successfully',
+        message: successMessage,
         user: {
           id: updatedUser._id,
           name: updatedUser.name,
           email: updatedUser.email,
-          artisanStatus: 'Rejected',
+          role: updatedUser.role,
+          artisanStatus: updatedUser.artisanStatus,
+          organizerStatus: updatedUser.organizerStatus,
           rejectionReason: trimmedReason,
         },
       }),
       { status: 200, headers: { 'content-type': 'application/json' } }
     );
   } catch (error: any) {
-    console.error('Error rejecting artisan:', error);
+    console.error('Error rejecting user:', error);
     return new NextResponse(
       JSON.stringify({ success: false, message: 'Internal Server Error' }),
       { status: 500, headers: { 'content-type': 'application/json' } }

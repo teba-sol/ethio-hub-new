@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/models/User';
 import ArtisanProfile from '@/models/artisan/artisanProfile.model';
+import OrganizerProfile from '@/models/organizer/organizerProfile.model';
 import { jwtVerify } from 'jose';
 
 export const dynamic = 'force-dynamic';
@@ -38,6 +39,7 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
     const search = url.searchParams.get('search');
+    const role = url.searchParams.get('role') || 'all';
 
     let statusFilter: string[] = ['Pending', 'Under Review', 'Approved', 'Rejected', 'Modification Requested'];
 
@@ -54,55 +56,110 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const query: any = {
-      role: 'artisan',
-      artisanStatus: { $in: statusFilter },
-    };
+    const requests: any[] = [];
 
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-      ];
+    if (role === 'all' || role === 'artisan') {
+      const artisanQuery: any = {
+        role: 'artisan',
+        artisanStatus: { $in: statusFilter },
+      };
+
+      if (search) {
+        artisanQuery.$or = [
+          { name: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+        ];
+      }
+
+      const [artisanUsers, artisanProfiles] = await Promise.all([
+        User.find(artisanQuery)
+          .select('-password')
+          .sort({ createdAt: -1 })
+          .lean(),
+        ArtisanProfile.find({}).lean(),
+      ]);
+
+      const artisanProfileMap = new Map();
+      artisanProfiles.forEach((p: any) => {
+        artisanProfileMap.set(p.userId.toString(), p);
+      });
+
+      artisanUsers.forEach((user: any) => {
+        const profile = artisanProfileMap.get(user._id.toString());
+        requests.push({
+          id: user._id.toString(),
+          userId: user._id.toString(),
+          userName: user.name,
+          userEmail: user.email,
+          userPhone: profile?.phone || '',
+          userRole: 'Artisan',
+          profileCompletion: profile ? calculateArtisanProfileCompletion(profile) : 0,
+          registrationDate: formatDate(user.createdAt),
+          submittedAt: profile ? formatDate(profile.createdAt) : '',
+          status: mapStatus(user.artisanStatus),
+          documents: profile ? buildArtisanDocuments(profile) : [],
+          profile: profile || null,
+          rejectionReason: user.rejectionReason || '',
+          userAvatar: profile?.profileImage || user.profileImage || null,
+          businessName: profile?.businessName || '',
+          category: profile?.category || '',
+          region: profile?.region || '',
+          city: profile?.city || '',
+        });
+      });
     }
 
-    // Fetch users and profiles in parallel for speed
-    const [users, profiles] = await Promise.all([
-      User.find(query)
-        .select('-password')
-        .sort({ createdAt: -1 })
-        .lean(),
-      ArtisanProfile.find({}).lean(),
-    ]);
-
-    const profileMap = new Map();
-    profiles.forEach((p: any) => {
-      profileMap.set(p.userId.toString(), p);
-    });
-
-    const requests = users.map((user: any) => {
-      const profile = profileMap.get(user._id.toString());
-      return {
-        id: user._id.toString(),
-        userId: user._id.toString(),
-        userName: user.name,
-        userEmail: user.email,
-        userPhone: profile?.phone || '',
-        userRole: 'Artisan' as const,
-        profileCompletion: profile ? calculateProfileCompletion(profile) : 0,
-        registrationDate: formatDate(user.createdAt),
-        submittedAt: profile ? formatDate(profile.createdAt) : '',
-        status: mapArtisanStatus(user.artisanStatus),
-        documents: profile ? buildDocuments(profile) : [],
-        artisanProfile: profile || null,
-        rejectionReason: user.rejectionReason || '',
-        userAvatar: profile?.profileImage || user.profileImage || null,
-        businessName: profile?.businessName || '',
-        category: profile?.category || '',
-        region: profile?.region || '',
-        city: profile?.city || '',
+    if (role === 'all' || role === 'organizer') {
+      const organizerQuery: any = {
+        role: 'organizer',
+        organizerStatus: { $in: statusFilter },
       };
-    });
+
+      if (search) {
+        organizerQuery.$or = [
+          { name: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+        ];
+      }
+
+      const [organizerUsers, organizerProfiles] = await Promise.all([
+        User.find(organizerQuery)
+          .select('-password')
+          .sort({ createdAt: -1 })
+          .lean(),
+        OrganizerProfile.find({}).lean(),
+      ]);
+
+      const organizerProfileMap = new Map();
+      organizerProfiles.forEach((p: any) => {
+        organizerProfileMap.set(p.userId.toString(), p);
+      });
+
+      organizerUsers.forEach((user: any) => {
+        const profile = organizerProfileMap.get(user._id.toString());
+        requests.push({
+          id: user._id.toString(),
+          userId: user._id.toString(),
+          userName: user.name,
+          userEmail: user.email,
+          userPhone: profile?.phone || '',
+          userRole: 'Organizer',
+          profileCompletion: profile ? calculateOrganizerProfileCompletion(profile) : 0,
+          registrationDate: formatDate(user.createdAt),
+          submittedAt: profile ? formatDate(profile.createdAt) : '',
+          status: mapStatus(user.organizerStatus),
+          documents: profile ? buildOrganizerDocuments(profile) : [],
+          profile: profile || null,
+          rejectionReason: user.rejectionReason || '',
+          userAvatar: profile?.logo || user.profileImage || null,
+          companyName: profile?.companyName || '',
+          region: profile?.region || '',
+          city: profile?.city || '',
+        });
+      });
+    }
+
+    requests.sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime());
 
     return new NextResponse(
       JSON.stringify({ success: true, requests }),
@@ -117,12 +174,22 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function calculateProfileCompletion(profile: any): number {
+function calculateArtisanProfileCompletion(profile: any): number {
   const fields = [
     'phone', 'gender', 'businessName', 'category', 'experience', 'bio',
     'country', 'region', 'city', 'address', 'bankName', 'accountName',
     'accountNumber', 'profileImage', 'idDocument', 'workshopPhoto',
     'craftProcessPhoto',
+  ];
+  const filled = fields.filter((f) => profile[f] && profile[f] !== '').length;
+  return Math.round((filled / fields.length) * 100);
+}
+
+function calculateOrganizerProfileCompletion(profile: any): number {
+  const fields = [
+    'companyName', 'phone', 'bio', 'country', 'region', 'city', 'address',
+    'payoutMethod', 'bankName', 'accountHolderName', 'accountNumber',
+    'logo', 'businessLicense',
   ];
   const filled = fields.filter((f) => profile[f] && profile[f] !== '').length;
   return Math.round((filled / fields.length) * 100);
@@ -134,7 +201,7 @@ function formatDate(date: any): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function mapArtisanStatus(status: string): string {
+function mapStatus(status: string): string {
   const map: Record<string, string> = {
     'Not Submitted': 'not_submitted',
     'Pending': 'submitted',
@@ -146,7 +213,7 @@ function mapArtisanStatus(status: string): string {
   return map[status] || 'not_submitted';
 }
 
-function buildDocuments(profile: any): any[] {
+function buildArtisanDocuments(profile: any): any[] {
   const docs: any[] = [];
   if (profile.idDocument) {
     docs.push({
@@ -184,6 +251,29 @@ function buildDocuments(profile: any): any[] {
         url: photo,
         uploadedAt: formatDate(profile.createdAt),
       });
+    });
+  }
+  return docs;
+}
+
+function buildOrganizerDocuments(profile: any): any[] {
+  const docs: any[] = [];
+  if (profile.businessLicense) {
+    docs.push({
+      id: 'business_license',
+      name: 'Business License',
+      type: 'image',
+      url: profile.businessLicense,
+      uploadedAt: formatDate(profile.createdAt),
+    });
+  }
+  if (profile.logo) {
+    docs.push({
+      id: 'company_logo',
+      name: 'Company Logo',
+      type: 'image',
+      url: profile.logo,
+      uploadedAt: formatDate(profile.createdAt),
     });
   }
   return docs;

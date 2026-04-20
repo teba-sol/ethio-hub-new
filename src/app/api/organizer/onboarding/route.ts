@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '../../../../lib/mongodb';
 import User from '../../../../models/User';
+import OrganizerProfile from '../../../../models/organizer/organizerProfile.model';
 import { jwtVerify } from 'jose';
 
 export async function GET(request: NextRequest) {
@@ -27,6 +28,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const organizerProfile = await OrganizerProfile.findOne({ userId });
+
     return new NextResponse(
       JSON.stringify({
         success: true,
@@ -36,7 +39,7 @@ export async function GET(request: NextRequest) {
           email: user.email,
           role: user.role,
           organizerStatus: user.organizerStatus,
-          organizerProfile: user.organizerProfile || {},
+          organizerProfile: organizerProfile || {},
         }
       }),
       { status: 200, headers: { 'content-type': 'application/json' } }
@@ -81,18 +84,31 @@ export async function PUT(request: NextRequest) {
       bankName,
       accountName,
       accountNumber,
-      avatar,
+      telebirrNumber,
+      chapaAccountId,
+      logo,
+      businessLicense,
     } = body;
 
     const errors: string[] = [];
     if (!organizerName || !organizerName.trim()) errors.push('Organizer name is required');
     if (!phoneNumber || !phoneNumber.trim()) errors.push('Phone number is required');
     if (!description || !description.trim()) errors.push('Description is required');
+    if (!country) errors.push('Country is required');
+    if (!region || !region.trim()) errors.push('Region is required');
+    if (!city || !city.trim()) errors.push('City is required');
     if (!address || !address.trim()) errors.push('Address is required');
     if (!paymentMethod) errors.push('Payment method is required');
-    if (!bankName || !bankName.trim()) errors.push('Bank/Wallet name is required');
-    if (!accountName || !accountName.trim()) errors.push('Account name is required');
-    if (!accountNumber || !accountNumber.trim()) errors.push('Account number is required');
+
+    if (paymentMethod === 'bank') {
+      if (!bankName || !bankName.trim()) errors.push('Bank name is required');
+      if (!accountName || !accountName.trim()) errors.push('Account name is required');
+      if (!accountNumber || !accountNumber.trim()) errors.push('Account number is required');
+    } else if (paymentMethod === 'telebirr') {
+      if (!telebirrNumber || !telebirrNumber.trim()) errors.push('Telebirr number is required');
+    } else if (paymentMethod === 'chapa') {
+      if (!chapaAccountId || !chapaAccountId.trim()) errors.push('Chapa account ID is required');
+    }
 
     if (errors.length > 0) {
       return new NextResponse(
@@ -109,63 +125,47 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const fullAddress = [address, city, region, country].filter(Boolean).join(', ');
-    const payout = paymentMethod === 'Bank Account' ? 'bank' : paymentMethod === 'Mobile Wallet' ? 'telebirr' : paymentMethod;
-
-    const updateOps: any = {
-      $set: {
-        'organizerProfile.companyName': organizerName.trim(),
-        'organizerProfile.phone': phoneNumber.trim(),
-        'organizerProfile.bio': description.trim(),
-        'organizerProfile.address': fullAddress,
-        'organizerProfile.payoutMethod': payout,
-        'organizerProfile.bankName': bankName.trim(),
-        'organizerProfile.accountHolderName': accountName.trim(),
-        'organizerProfile.accountNumber': accountNumber.trim(),
-        'organizerProfile.isVerified': false,
-        organizerStatus: 'Approved',
-      },
-      $setOnInsert: {
-        'organizerProfile.notifications.newBooking': true,
-        'organizerProfile.notifications.newReview': true,
-        'organizerProfile.notifications.payoutProcessed': true,
-        'organizerProfile.notifications.eventReminders': false,
-        'organizerProfile.notifications.emailFrequency': 'instant',
-        'organizerProfile.notifications.smsNotifications': false,
-        'organizerProfile.notifications.pushNotifications': true,
-        'organizerProfile.preferences.language': 'English',
-        'organizerProfile.preferences.currency': 'ETB',
-        'organizerProfile.preferences.timezone': 'Africa/Addis_Ababa',
-        'organizerProfile.preferences.dateFormat': 'DD/MM/YYYY',
-        'organizerProfile.preferences.defaultLandingPage': 'Overview',
-        'organizerProfile.preferences.darkMode': false,
-      },
+    const organizerProfileData = {
+      userId: new (await import('mongoose')).default.Types.ObjectId(userId),
+      companyName: organizerName.trim(),
+      phone: phoneNumber.trim(),
+      website: website?.trim() || undefined,
+      bio: description.trim(),
+      country: country || 'Ethiopia',
+      region: region.trim(),
+      city: city.trim(),
+      address: address.trim(),
+      payoutMethod: paymentMethod,
+      bankName: paymentMethod === 'bank' ? bankName?.trim() : undefined,
+      accountHolderName: paymentMethod === 'bank' ? accountName?.trim() : undefined,
+      accountNumber: paymentMethod === 'bank' ? accountNumber?.trim() : undefined,
+      telebirrNumber: paymentMethod === 'telebirr' ? telebirrNumber?.trim() : undefined,
+      chapaAccountId: paymentMethod === 'chapa' ? chapaAccountId?.trim() : undefined,
+      logo: logo || undefined,
+      businessLicense: businessLicense || undefined,
     };
 
-    if (website?.trim()) {
-      updateOps.$set['organizerProfile.website'] = website.trim();
-    }
+    const organizerProfile = await OrganizerProfile.findOneAndUpdate(
+      { userId },
+      organizerProfileData,
+      { upsert: true, new: true }
+    );
 
-    if (avatar) {
-      updateOps.$set['organizerProfile.avatar'] = avatar;
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(userId, updateOps, {
-      new: true,
-      runValidators: true,
-    }).select('-password');
+    await User.findByIdAndUpdate(userId, {
+      organizerStatus: 'Pending',
+    });
 
     return new NextResponse(
       JSON.stringify({
         success: true,
-        message: 'Profile completed successfully',
+        message: 'Profile submitted for verification',
         user: {
-          id: updatedUser._id,
-          name: updatedUser.name,
-          email: updatedUser.email,
-          role: updatedUser.role,
-          organizerStatus: updatedUser.organizerStatus,
-          organizerProfile: updatedUser.organizerProfile,
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          organizerStatus: 'Pending',
+          organizerProfile,
         }
       }),
       { status: 200, headers: { 'content-type': 'application/json' } }

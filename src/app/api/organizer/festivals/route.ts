@@ -116,7 +116,9 @@ export async function POST(request: NextRequest) {
       transportation,
       services,
       policies,
-      pricing
+      pricing,
+      verificationStatus: 'Draft',
+      status: 'Draft',
     });
 
     await newFestival.save();

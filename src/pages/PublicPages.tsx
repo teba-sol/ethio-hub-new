@@ -8,7 +8,8 @@ import {
   Truck, Globe, Ticket,
   RefreshCw, Users, Hotel, Car, Box, ShieldAlert, Award,
   CheckCircle2, Filter, Heart, CreditCard, Lock, Calendar,
-  Smartphone, X, Check, Download
+  Smartphone, X, Check, Download, User, Mail, Phone,
+  Shield, Sparkles, Maximize as MaximizeIcon, BedDouble, Truck as TruckIcon, Fuel, Settings, Gauge, CircleDollarSign
 } from 'lucide-react';
 
 const formatDate = (dateStr: string) => {
@@ -27,6 +28,7 @@ import { HotelAccommodation, RoomType, TransportOption } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { UserRole } from '../types';
+import apiClient from '../lib/apiClient';
 
 export const Homepage: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
@@ -544,26 +546,72 @@ export const ProductListingPage: React.FC = () => {
 export const FestivalListingPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("All");
+  const [festivals, setFestivals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const festivalTypes = ["All", "Religious", "Historical", "Harvest", "New Year"];
 
-  // Mock adding types to festivals for filtering demo
-  const enhancedFestivals = MOCK_FESTIVALS.map(f => {
+  useEffect(() => {
+    const fetchFestivals = async () => {
+      try {
+        const res = await fetch('/api/festivals');
+        const data = await res.json();
+        if (data.success) {
+          setFestivals(data.festivals);
+        } else {
+          setError(data.message || 'Failed to fetch festivals');
+        }
+      } catch (err) {
+        setError('An error occurred while fetching festivals');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchFestivals();
+  }, []);
+
+  const enhancedFestivals = festivals.map((f: any) => {
     let type = "Cultural";
-    if (f.name.includes("Timket") || f.name.includes("Meskel") || f.name.includes("Gena") || f.name.includes("Fasika")) type = "Religious";
-    else if (f.name.includes("Adwa")) type = "Historical";
-    else if (f.name.includes("Irreecha")) type = "Harvest";
-    else if (f.name.includes("Enkutatash")) type = "New Year";
+    if (f.name?.includes("Timket") || f.name?.includes("Meskel") || f.name?.includes("Gena") || f.name?.includes("Fasika")) type = "Religious";
+    else if (f.name?.includes("Adwa")) type = "Historical";
+    else if (f.name?.includes("Irreecha")) type = "Harvest";
+    else if (f.name?.includes("Enkutatash")) type = "New Year";
     
-    return { ...f, type };
+    return { 
+      ...f, 
+      type,
+      id: f._id,
+      locationName: f.locationName || f.location?.name || '',
+      coverImage: f.coverImage || f.gallery?.[0] || 'https://images.unsplash.com/photo-1532566086724-4c4c7713437c?q=80&w=1200&auto=format&fit=crop',
+    };
   });
 
-  const filteredFestivals = enhancedFestivals.filter(f => {
-    const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          f.locationName.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredFestivals = enhancedFestivals.filter((f: any) => {
+    const matchesSearch = f.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          f.locationName?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === "All" || f.type === selectedType;
     return matchesSearch && matchesType;
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-ethio-bg flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-secondary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-ethio-bg flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 text-lg">{error}</p>
+          <button onClick={() => window.location.reload()} className="mt-4 text-primary underline">Try Again</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-ethio-bg">
@@ -640,7 +688,7 @@ export const FestivalListingPage: React.FC = () => {
                         <h3 className="text-4xl md:text-6xl font-serif font-bold leading-tight">{filteredFestivals[0].name}</h3>
                         <p className="text-gray-300 text-lg line-clamp-2 font-light">{filteredFestivals[0].shortDescription}</p>
                         <div className="pt-4">
-                            <Link href={`/festivals/${filteredFestivals[0].id}`}>
+                            <Link href={`/event/${filteredFestivals[0].id}`}>
                                 <Button className="rounded-full px-8 py-6 text-lg font-bold uppercase tracking-widest bg-white text-primary hover:bg-secondary hover:text-primary border-none shadow-xl">
                                     View Details <ArrowRight className="ml-3 w-5 h-5" />
                                 </Button>
@@ -887,15 +935,15 @@ export const ProductDetailPage: React.FC = () => {
     setSelectedMethod(null);
   };
 
-  const processPayment = (method: 'chapa' | 'telebirr') => {
+  const processPayment = async (method: 'chapa' | 'telebirr') => {
+    // Simulate payment for both methods
     setSelectedMethod(method);
     setPaymentStep('processing');
     
-    // Simulate API call
-    setTimeout(() => {
-        setTransactionRef("TXN-" + Math.random().toString(36).substr(2, 9).toUpperCase());
-        setPaymentStep('receipt');
-    }, 2000);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    setTransactionRef(`TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`);
+    setPaymentStep('receipt');
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
@@ -1262,6 +1310,20 @@ export const FestivalDetailPage: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const [festivalData, setFestivalData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedHotel, setSelectedHotel] = useState<HotelAccommodation | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<{ hotelName: string, room: RoomType } | null>(null);
+  const [selectedTransport, setSelectedTransport] = useState<TransportOption | null>(null);
+  const [ticketCount, setTicketCount] = useState(1);
+  const [ticketType, setTicketType] = useState<'standard' | 'vip' | 'earlyBird'>('standard');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [paymentStep, setPaymentStep] = useState<'select' | 'processing' | 'receipt'>('select');
+  const [selectedMethod, setSelectedMethod] = useState<'chapa' | 'telebirr' | null>(null);
+  const [transactionRef, setTransactionRef] = useState('');
+  const [currentBooking, setCurrentBooking] = useState<any>(null);
+  const [contactInfo, setContactInfo] = useState({ fullName: '', email: '', phone: '' });
 
   const getImageUrl = (path: string | undefined | null) => {
     if (!path || path === '') return 'https://images.unsplash.com/photo-1533174072545-7a4b6dad2cf7?w=800&h=400&fit=crop';
@@ -1290,12 +1352,10 @@ export const FestivalDetailPage: React.FC = () => {
             starRating: hotel.starRating || 0,
             description: hotel.description || '',
             fullDescription: hotel.fullDescription || '',
-            policies: '',
+            policies: hotel.policies || '',
             checkInTime: hotel.checkInTime || '',
             checkOutTime: hotel.checkOutTime || '',
             facilities: hotel.facilities || [],
-            roomTypes: [],
-            gallery: hotel.gallery || [],
             rooms: (hotel.rooms || []).map((room: any, roomIndex: number) => ({
               id: room._id || room.id || `room-${roomIndex}`,
               _id: room._id,
@@ -1303,12 +1363,13 @@ export const FestivalDetailPage: React.FC = () => {
               description: room.description || '',
               capacity: room.capacity || 1,
               pricePerNight: room.pricePerNight || 0,
-              availabilityCount: room.availability || 0,
+              availability: room.availability || 0,
               image: room.image || '',
               sqm: room.sqm || 0,
               amenities: room.amenities || [],
               bedType: room.bedType || '',
             })),
+            gallery: hotel.gallery || [],
           }));
 
           setFestivalData({
@@ -1339,13 +1400,13 @@ export const FestivalDetailPage: React.FC = () => {
             })),
             foodPackages: f.services?.foodPackages || [],
             culturalServices: f.services?.culturalServices || [],
-            baseTicketPrice: f.pricing?.basePrice || 0,
-            vipTicketPrice: f.pricing?.vipPrice,
+            baseTicketPrice: f.pricing?.basePrice || 100,
+            vipTicketPrice: f.pricing?.vipPrice || 200,
             currency: f.pricing?.currency || 'ETB',
-            cancellationPolicy: f.policies?.cancellation || '',
-            bookingTerms: f.policies?.terms || '',
-            safetyRules: f.policies?.safety,
-            ageRestriction: f.policies?.ageRestriction,
+            cancellationPolicy: f.policies?.cancellation || 'Standard cancellation policy applies',
+            bookingTerms: f.policies?.terms || 'Standard terms and conditions apply',
+            safetyRules: f.policies?.safety || 'Follow all safety guidelines during the event',
+            ageRestriction: f.policies?.ageRestriction || 'All ages welcome',
             organizerId: f.organizer?._id || '',
             isVerified: f.isVerified || false,
             ticketsAvailable: 100,
@@ -1360,7 +1421,17 @@ export const FestivalDetailPage: React.FC = () => {
     if (id) fetchFestival();
   }, [id]);
 
-  const festival = festivalData || MOCK_FESTIVALS.find(f => f.id === id) || MOCK_FESTIVALS[0];
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setContactInfo({
+        fullName: user.name || '',
+        email: user.email || '',
+        phone: (user as any).touristProfile?.phone || (user as any).organizerProfile?.phone || (user as any).artisanProfile?.phone || ''
+      });
+    }
+  }, [isAuthenticated, user]);
+
+  const festival = festivalData;
   
   if (loading) {
     return (
@@ -1370,18 +1441,29 @@ export const FestivalDetailPage: React.FC = () => {
     );
   }
 
-  const [selectedHotel, setSelectedHotel] = useState<HotelAccommodation | null>(null);
-  const [selectedRoom, setSelectedRoom] = useState<{ hotelName: string, room: RoomType } | null>(null);
-  const [selectedTransport, setSelectedTransport] = useState<TransportOption | null>(null);
-  const [ticketCount, setTicketCount] = useState(1);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [paymentStep, setPaymentStep] = useState<'select' | 'processing' | 'receipt'>('select');
-  const [selectedMethod, setSelectedMethod] = useState<'chapa' | 'telebirr' | null>(null);
-  const [transactionRef, setTransactionRef] = useState('');
+  if (!festival) {
+    return (
+      <div className="min-h-screen bg-ethio-bg flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-primary">Festival Not Found</h2>
+          <p className="text-gray-500 mt-2">This festival may not be available.</p>
+          <button onClick={() => router.push('/festivals')} className="mt-4 text-primary underline">
+            Back to Festivals
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  const totalPrice = (festival.baseTicketPrice * ticketCount) + 
+  const getTicketPrice = () => {
+    switch (ticketType) {
+      case 'vip': return festival.vipTicketPrice || festival.baseTicketPrice * 2;
+      case 'earlyBird': return festival.baseTicketPrice * 0.9;
+      default: return festival.baseTicketPrice;
+    }
+  };
+
+  const totalPrice = (getTicketPrice() * ticketCount) + 
                      (selectedRoom ? selectedRoom.room.pricePerNight : 0) + 
                      (selectedTransport ? selectedTransport.price : 0);
 
@@ -1390,24 +1472,127 @@ export const FestivalDetailPage: React.FC = () => {
     setSelectedHotel(null);
   };
 
-  const handleBooking = () => {
+  const handleBooking = async () => {
     if (!isAuthenticated || user?.role !== UserRole.TOURIST) {
       setShowLoginPrompt(true);
       return;
     }
-    setShowPaymentModal(true);
-    setPaymentStep('select');
+    
+    // Check if profile is complete
+    const touristProfile = (user as any)?.touristProfile;
+    if (!touristProfile?.phone || !touristProfile?.country || !touristProfile?.nationality) {
+      alert('Please complete your profile before booking. Go to Settings to add your phone, country, and nationality.');
+      router.push('/dashboard/tourist/settings');
+      return;
+    }
+    
+    if (!contactInfo.fullName || !contactInfo.email) {
+      alert('Please ensure your contact information is complete.');
+      router.push('/dashboard/tourist/settings');
+      return;
+    }
+
+    if (!contactInfo.phone) {
+      contactInfo.phone = touristProfile?.phone || '0000000000';
+    }
+
+    setIsProcessing(true);
+    try {
+      const bookingDetails = selectedRoom || selectedTransport ? {
+        room: selectedRoom ? {
+          hotelName: selectedRoom.hotelName,
+          roomName: selectedRoom.room.name,
+          roomPrice: selectedRoom.room.pricePerNight
+        } : undefined,
+        transport: selectedTransport ? {
+          type: selectedTransport.type,
+          price: selectedTransport.price
+        } : undefined
+      } : undefined;
+
+      const response = await apiClient.post('/api/tourist/bookings', {
+        festivalId: festival.id,
+        ticketType,
+        quantity: ticketCount,
+        contactInfo,
+        bookingDetails,
+        totalPrice,
+        currency: festival.currency
+      });
+
+      console.log('Create booking response:', response);
+
+      if (response.success) {
+        setCurrentBooking(response.booking);
+        setShowPaymentModal(true);
+        setPaymentStep('select');
+      } else {
+        alert(response.message || 'Failed to create booking');
+      }
+    } catch (error: any) {
+      console.error('Booking error:', error);
+      alert(error.message || 'Failed to create booking');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const processPayment = (method: 'chapa' | 'telebirr') => {
+  const processPayment = async (method: 'chapa' | 'telebirr') => {
+    if (!currentBooking?._id) {
+      alert('No active booking found');
+      return;
+    }
+
     setSelectedMethod(method);
     setPaymentStep('processing');
     
-    // Simulate API call
-    setTimeout(() => {
-        setTransactionRef(`TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`);
-        setPaymentStep('receipt');
-    }, 2000);
+    if (method === 'chapa') {
+      // Simple simulation for testing
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        const updateResponse = await apiClient.put('/api/tourist/bookings', {
+          bookingId: currentBooking._id,
+          action: 'confirm',
+          paymentMethod: 'chapa',
+          paymentStatus: 'paid'
+        });
+
+        if (updateResponse.success) {
+          setTransactionRef(`TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`);
+          setCurrentBooking(updateResponse.booking);
+          setPaymentStep('receipt');
+        } else {
+          setPaymentStep('select');
+        }
+      } catch (error: any) {
+        console.error('Payment error:', error);
+        setPaymentStep('select');
+      }
+    } else {
+      // Telebirr - simulate for now
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        const updateResponse = await apiClient.put('/api/tourist/bookings', {
+          bookingId: currentBooking._id,
+          action: 'confirm',
+          paymentMethod: method,
+          paymentStatus: 'paid'
+        });
+
+        if (updateResponse.success) {
+          setTransactionRef(`TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`);
+          setCurrentBooking(updateResponse.booking);
+          setPaymentStep('receipt');
+        } else {
+          setPaymentStep('select');
+        }
+      } catch (error: any) {
+        console.error('Payment error:', error);
+        setPaymentStep('select');
+      }
+    }
   };
 
   return (
@@ -1549,22 +1734,137 @@ export const FestivalDetailPage: React.FC = () => {
                         </div>
                     ))}
                 </div>
-             </section>
-          </div>
+              </section>
 
-          <aside className="space-y-8">
-            <div className="bg-white p-10 rounded-[32px] shadow-lg border border-gray-100 sticky top-28">
+              {/* Services Section */}
+              {(festival.foodPackages?.length > 0 || festival.culturalServices?.length > 0) && (
+                <section className="bg-white p-10 md:p-12 rounded-[32px] shadow-sm border border-gray-100">
+                  <h2 className="text-3xl font-serif font-bold text-primary mb-10">Included Services</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {festival.foodPackages?.length > 0 && (
+                      <div className="space-y-4">
+                        <h3 className="text-xl font-bold text-primary flex items-center gap-3">
+                          <span className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                            <svg className="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          </span>
+                          Food Packages
+                        </h3>
+                        <ul className="space-y-3">
+                          {festival.foodPackages.map((item: string, idx: number) => (
+                            <li key={idx} className="flex items-center gap-3 text-gray-600">
+                              <Check className="w-4 h-4 text-green-500" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {festival.culturalServices?.length > 0 && (
+                      <div className="space-y-4">
+                        <h3 className="text-xl font-bold text-primary flex items-center gap-3">
+                          <span className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                            <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
+                          </span>
+                          Cultural Services
+                        </h3>
+                        <ul className="space-y-3">
+                          {festival.culturalServices.map((item: string, idx: number) => (
+                            <li key={idx} className="flex items-center gap-3 text-gray-600">
+                              <Check className="w-4 h-4 text-green-500" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {/* Policies Section */}
+              <section className="bg-white p-10 md:p-12 rounded-[32px] shadow-sm border border-gray-100">
+                <h2 className="text-3xl font-serif font-bold text-primary mb-10">Policies & Guidelines</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-bold text-primary flex items-center gap-3">
+                      <span className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
+                      </span>
+                      Cancellation Policy
+                    </h3>
+                    <p className="text-gray-600 leading-relaxed">{festival.cancellationPolicy}</p>
+                  </div>
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-bold text-primary flex items-center gap-3">
+                      <span className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                      </span>
+                      Safety Guidelines
+                    </h3>
+                    <p className="text-gray-600 leading-relaxed">{festival.safetyRules}</p>
+                  </div>
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-bold text-primary flex items-center gap-3">
+                      <span className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                      </span>
+                      Booking Terms
+                    </h3>
+                    <p className="text-gray-600 leading-relaxed">{festival.bookingTerms}</p>
+                  </div>
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-bold text-primary flex items-center gap-3">
+                      <span className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                      </span>
+                      Age Restriction
+                    </h3>
+                    <p className="text-gray-600 leading-relaxed">{festival.ageRestriction}</p>
+                  </div>
+                </div>
+              </section>
+           </div>
+
+<aside className="space-y-8">
+             <div className="bg-white p-10 rounded-[32px] shadow-lg border border-gray-100 sticky top-28">
                 <h3 className="text-2xl font-serif font-bold text-primary mb-8 tracking-tight">Reserve Pass</h3>
                 <div className="space-y-8">
+                    <div className="space-y-4">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ticket Type</p>
+                        <div className="grid grid-cols-3 gap-2">
+                            <button
+                                onClick={() => setTicketType('standard')}
+                                className={`p-3 rounded-xl border-2 transition-all text-center ${ticketType === 'standard' ? 'border-primary bg-primary/5' : 'border-gray-100 hover:border-gray-200'}`}
+                            >
+                                <span className="block text-xs font-bold text-primary">Standard</span>
+                                <span className="block text-[10px] text-gray-500">{festival.currency} {festival.baseTicketPrice}</span>
+                            </button>
+                            <button
+                                onClick={() => setTicketType('vip')}
+                                className={`p-3 rounded-xl border-2 transition-all text-center ${ticketType === 'vip' ? 'border-secondary bg-secondary/5' : 'border-gray-100 hover:border-gray-200'}`}
+                            >
+                                <span className="block text-xs font-bold text-primary">VIP</span>
+                                <span className="block text-[10px] text-gray-500">{festival.currency} {festival.vipTicketPrice || festival.baseTicketPrice * 2}</span>
+                            </button>
+                            <button
+                                onClick={() => setTicketType('earlyBird')}
+                                className={`p-3 rounded-xl border-2 transition-all text-center ${ticketType === 'earlyBird' ? 'border-green-500 bg-green-50' : 'border-gray-100 hover:border-gray-200'}`}
+                            >
+                                <span className="block text-xs font-bold text-primary">Early Bird</span>
+                                <span className="block text-[10px] text-gray-500">{festival.currency} {Math.round(festival.baseTicketPrice * 0.9)}</span>
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div className="flex justify-between items-center pb-8 border-b border-gray-100">
-                        <span className="text-gray-400 font-bold uppercase text-[9px] tracking-widest">Entry Access</span>
-                        <span className="text-4xl font-bold text-primary">{festival.currency} {festival.baseTicketPrice}</span>
+                        <span className="text-gray-400 font-bold uppercase text-[9px] tracking-widest">Price per Ticket</span>
+                        <span className="text-4xl font-bold text-primary">{festival.currency} {getTicketPrice()}</span>
                     </div>
                     
                     <div className="space-y-6">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Traveler Count</p>
                         <div className="flex items-center justify-between bg-ethio-bg p-4 rounded-2xl border border-gray-100">
-                            <span className="font-bold text-primary">Explorer Pass</span>
+                            <span className="font-bold text-primary">{ticketType === 'vip' ? 'VIP Experience' : ticketType === 'earlyBird' ? 'Early Bird Pass' : 'Explorer Pass'}</span>
                             <div className="flex items-center gap-4">
                                 <button onClick={() => setTicketCount(Math.max(1, ticketCount - 1))} className="w-8 h-8 rounded-full bg-white shadow-sm font-bold text-primary hover:bg-primary hover:text-white transition-all">-</button>
                                 <span className="font-bold text-primary">{ticketCount}</span>
@@ -1636,95 +1936,462 @@ export const FestivalDetailPage: React.FC = () => {
       </div>
 
       {selectedHotel && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-ethio-dark/60 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="bg-white rounded-[32px] w-full max-w-5xl max-h-[90vh] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col relative animate-in zoom-in-95 duration-500">
-                <button onClick={() => setSelectedHotel(null)} className="absolute top-4 right-4 z-20 p-2 bg-gray-100 hover:bg-red-50 hover:text-red-500 rounded-full transition-all">
-                    <X className="w-5 h-5" />
-                </button>
-                <div className="p-6 md:p-10 overflow-y-auto scrollbar-hide">
-                    <header className="mb-6">
-                        <div className="flex items-center gap-3 mb-3">
-                            <Badge variant="info" className="px-4 py-1 uppercase font-bold tracking-widest bg-primary/5 text-primary border-none text-[8px]">Accommodation</Badge>
-                            <div className="flex text-secondary">{[...Array(selectedHotel.starRating)].map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}</div>
-                        </div>
-                        <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary tracking-tight">{selectedHotel.name}</h2>
-                        <p className="text-gray-500 mt-2 flex items-center text-sm"><MapPin className="w-4 h-4 mr-2 text-secondary" /> {selectedHotel.address}</p>
-                        {selectedHotel.fullDescription && (
-                            <p className="text-gray-600 mt-4 text-sm leading-relaxed">{selectedHotel.fullDescription}</p>
-                        )}
-                        {selectedHotel.facilities && selectedHotel.facilities.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-4">
-                                {selectedHotel.facilities.map((facility, idx) => (
-                                    <span key={idx} className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full">{facility}</span>
-                                ))}
-                            </div>
-                        )}
-                        {(selectedHotel.checkInTime || selectedHotel.checkOutTime) && (
-                            <div className="flex gap-6 mt-4 text-xs text-gray-500">
-                                {selectedHotel.checkInTime && <span>Check-in: <strong className="text-gray-700">{selectedHotel.checkInTime}</strong></span>}
-                                {selectedHotel.checkOutTime && <span>Check-out: <strong className="text-gray-700">{selectedHotel.checkOutTime}</strong></span>}
-                            </div>
-                        )}
-                    </header>
-                    
-                    {selectedHotel.gallery && selectedHotel.gallery.length > 0 && (
-                        <div className="mb-8">
-                            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.4em] pb-3">Hotel Gallery</h3>
-                            <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                                {selectedHotel.gallery.map((img, idx) => (
-                                    <div key={idx} className="h-20 md:h-24 rounded-xl overflow-hidden">
-                                        <img src={getImageUrl(img)} alt="" className="w-full h-full object-cover hover:scale-110 transition-transform duration-300" />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    
-                        <div className="space-y-8">
-                            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.4em] pb-3 border-b border-gray-100">Available Rooms</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {(selectedHotel.rooms || selectedHotel.roomTypes || []).map(room => (
-                                <div key={room._id || room.name} className="bg-ethio-bg/30 p-5 rounded-2xl hover:bg-white hover:shadow-lg transition-all border border-transparent hover:border-gray-100">
-                                    <div className="flex gap-4">
-                                        <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0">
-                                            <img src={getImageUrl(room.image)} className="w-full h-full object-cover" alt={room.name} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h4 className="text-lg font-bold text-primary">{room.name}</h4>
-                                            <p className="text-xs text-gray-500">{room.bedType || 'Standard'} bed</p>
-                                            {room.description && <p className="text-xs text-gray-400 mt-1 line-clamp-2">{room.description}</p>}
-                                            <div className="flex flex-wrap gap-1.5 mt-2">
-                                                {room.sqm && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-600">{room.sqm}m²</span>}
-                                                <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-600">{room.capacity} Pax</span>
-                                                {room.availabilityCount > 0 && (
-                                                    <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded">{room.availabilityCount} Rooms Left</span>
-                                                )}
-                                                {room.amenities?.slice(0, 2).map((am, i) => (
-                                                    <span key={i} className="text-[10px] bg-primary/10 px-2 py-0.5 rounded text-primary">{am}</span>
-                                                ))}
-                                                {(room.amenities?.length || 0) > 2 && <span className="text-[10px] text-gray-400">+{room.amenities.length - 2}</span>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-                                        <div>
-                                            <span className="text-xl font-bold text-primary">{festival.currency} {room.pricePerNight}</span>
-                                            <span className="text-xs text-gray-400">/night</span>
-                                        </div>
-                                        <Button 
-                                            size="sm"
-                                            className="px-4 py-2 rounded-lg font-bold text-[10px] uppercase"
-                                            onClick={() => handleRoomSelect(selectedHotel.name, room)}
-                                        >
-                                            Select
-                                        </Button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+        <div className="fixed inset-0 z-[100] overflow-auto bg-white">
+          <div className="max-w-7xl mx-auto px-4 py-6">
+            <button 
+              onClick={() => setSelectedHotel(null)} 
+              className="flex items-center gap-2 text-gray-600 hover:text-primary transition-colors mb-4"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-sm font-medium">Back</span>
+            </button>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <div className="flex items-center gap-2 mb-2">
+                  {[...Array(selectedHotel.starRating)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                  ))}
                 </div>
+                <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 mb-3">{selectedHotel.name}</h1>
+                <div className="flex items-center gap-2 text-gray-600 mb-4">
+                  <MapPin className="w-4 h-4" />
+                  <span className="text-sm">{selectedHotel.address}</span>
+                  <a 
+                    href={`https://maps.google.com/?q=${encodeURIComponent(selectedHotel.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline text-sm ml-2"
+                  >
+                    View on map
+                  </a>
+                </div>
+
+                {selectedHotel.gallery && selectedHotel.gallery.length > 0 && (
+                  <div className="mb-6">
+                    <div className="relative rounded-2xl overflow-hidden bg-gray-900 h-[350px] md:h-[450px]">
+                      <img 
+                        src={getImageUrl(selectedHotel.gallery[0])} 
+                        alt={selectedHotel.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="grid grid-cols-5 gap-2 mt-2">
+                      {selectedHotel.gallery.slice(0, 5).map((img, idx) => (
+                        <div 
+                          key={idx}
+                          className={`relative rounded-lg overflow-hidden h-16 cursor-pointer group ${
+                            idx === 0 ? 'col-span-2 row-span-2 h-full' : ''
+                          }`}
+                        >
+                          <img 
+                            src={getImageUrl(img)} 
+                            alt=""
+                            className="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-8">
+                  <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">Description</h2>
+                  <p className="text-gray-600 leading-relaxed whitespace-pre-line">
+                    {selectedHotel.fullDescription || selectedHotel.description}
+                  </p>
+                </div>
+
+                <div className="mt-8" id="select-room">
+                  <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Select Your Room</h2>
+                  
+                  {!selectedHotel.rooms || selectedHotel.rooms.length === 0 ? (
+                    <div className="text-center py-12 bg-gray-50 rounded-2xl">
+                      <p className="text-gray-500 mb-2">No rooms available for this hotel yet.</p>
+                      <p className="text-sm text-gray-400">Please contact the organizer for room bookings.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {selectedHotel.rooms.map((room: any, idx: number) => (
+                        <div key={room._id || room.id || `room-${idx}`} className="bg-gray-50 rounded-2xl p-6">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div className="md:col-span-1">
+                              <img 
+                                src={room.image ? getImageUrl(room.image) : 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=300&fit=crop'} 
+                                alt={room.name || 'Room'}
+                                className="w-full h-40 md:h-full object-cover rounded-xl"
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <h3 className="text-xl font-bold text-gray-900 mb-2">{room.name || 'Standard Room'}</h3>
+                              <p className="text-gray-600 text-sm mb-4">{room.description}</p>
+                              <div className="flex flex-wrap gap-3">
+                                <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200">
+                                  <MaximizeIcon className="w-3.5 h-3.5" /> {room.sqm || 30} m²
+                                </span>
+                                <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200">
+                                  <Users className="w-3.5 h-3.5" /> {room.capacity || 2} Guests
+                                </span>
+                                <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200">
+                                  <BedDouble className="w-3.5 h-3.5" /> {room.bedType || 'King Size'}
+                                </span>
+                              </div>
+                              {room.amenities && room.amenities.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-4">
+                                  {room.amenities.slice(0, 4).map((am: string, i: number) => (
+                                    <span key={i} className="text-xs text-gray-600 bg-white px-2 py-1 rounded border border-gray-200">
+                                      {am}
+                                    </span>
+                                  ))}
+                                  {room.amenities.length > 4 && (
+                                    <span className="text-xs text-gray-400">+{room.amenities.length - 4} more</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <div className="md:col-span-1 flex flex-col justify-between">
+                              <div className="text-right">
+                                <div className="text-2xl font-bold text-primary">${room.pricePerNight || 0}</div>
+                                <div className="text-sm text-gray-500">/night</div>
+                              </div>
+                              {room.availability > 0 && room.availability <= 3 && (
+                                <Badge variant="warning" className="mt-2">Only {room.availability} left</Badge>
+                              )}
+                              <Button 
+                                className="w-full mt-4"
+                                onClick={() => handleRoomSelect(selectedHotel.name, room)}
+                              >
+                                Book
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-8">
+                  <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Facilities</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {(selectedHotel.facilities || []).map((facility: string, idx: number) => (
+                      <div key={idx} className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
+                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+                          <Check className="w-5 h-5" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">{facility}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-8">
+                  <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Hotel Rules - Policies</h2>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="bg-gray-50 p-6 rounded-2xl">
+                      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Check In</h3>
+                      <p className="text-2xl font-bold text-gray-900">{selectedHotel.checkInTime || '14:00'}</p>
+                    </div>
+                    <div className="bg-gray-50 p-6 rounded-2xl">
+                      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Check Out</h3>
+                      <p className="text-2xl font-bold text-gray-900">{selectedHotel.checkOutTime || '12:00'}</p>
+                    </div>
+                  </div>
+                  {selectedHotel.policies && (
+                    <p className="mt-4 text-gray-600">{selectedHotel.policies}</p>
+                  )}
+                </div>
+
+                <div className="mt-8">
+                  <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Location</h2>
+                  <div className="relative h-64 bg-gray-200 rounded-2xl overflow-hidden">
+                    <iframe 
+                      src={`https://maps.google.com/maps?q=${encodeURIComponent(selectedHotel.address)}&output=embed`}
+                      className="w-full h-full border-0"
+                      loading="lazy"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-8 bg-primary rounded-2xl p-8 text-white">
+                  <h2 className="text-2xl font-serif font-bold mb-4">Why Book With Us?</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="flex items-center gap-4">
+                      <Shield className="w-8 h-8" />
+                      <div>
+                        <h3 className="font-semibold">Best Price Guarantee</h3>
+                        <p className="text-sm text-white/70">No-hassle best price</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Users className="w-8 h-8" />
+                      <div>
+                        <h3 className="font-semibold">24/7 Support</h3>
+                        <p className="text-sm text-white/70">Customer care available</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Sparkles className="w-8 h-8" />
+                      <div>
+                        <h3 className="font-semibold">Hand-picked Hotels</h3>
+                        <p className="text-sm text-white/70">Quality accommodations</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Car className="w-8 h-8" />
+                      <div>
+                        <h3 className="font-semibold">Free Insurance</h3>
+                        <p className="text-sm text-white/70">Travel protection</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-1">
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sticky top-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-2xl font-bold text-primary">${selectedHotel.rooms?.[0]?.pricePerNight || 0}</span>
+                        <span className="text-gray-500 text-sm"> /night</span>
+                      </div>
+                      <div className="text-right text-sm text-gray-500">
+                        {selectedHotel.rooms?.[0]?.availability || 0} rooms left
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-6 border-t border-gray-100 space-y-4">
+                    <Button className="w-full py-3" onClick={() => document.getElementById('select-room')?.scrollIntoView({ behavior: 'smooth' })}>
+                      Check Availability
+                    </Button>
+                    <Button variant="outline" className="w-full py-3">
+                      Send Enquiry
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {selectedTransport && (
+        <div className="fixed inset-0 z-[100] overflow-auto bg-white">
+          <div className="max-w-7xl mx-auto px-4 py-6">
+            <button 
+              onClick={() => setSelectedTransport(null)} 
+              className="flex items-center gap-2 text-gray-600 hover:text-primary transition-colors mb-4"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-sm font-medium">Back</span>
+            </button>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <div className="flex items-center gap-3 mb-3">
+                  <Badge variant="info" className="px-4 py-1 uppercase font-bold tracking-widest bg-primary/5 text-primary border-none text-xs">Transport</Badge>
+                  <div className="flex text-gray-400">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4" />
+                    ))}
+                  </div>
+                  <span className="text-sm text-gray-500">0 reviews</span>
+                </div>
+                <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 mb-3">{selectedTransport.type}</h1>
+                <div className="flex items-center gap-2 text-gray-600 mb-4">
+                  <MapPin className="w-4 h-4" />
+                  <span className="text-sm">Addis Ababa, Ethiopia</span>
+                </div>
+
+                {selectedTransport.image && (
+                  <div className="mb-6">
+                    <div className="relative rounded-2xl overflow-hidden bg-gray-900 h-[350px] md:h-[450px]">
+                      <img 
+                        src={getImageUrl(selectedTransport.image)} 
+                        alt={selectedTransport.type}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-8">
+                  <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">Description</h2>
+                  <p className="text-gray-600 leading-relaxed whitespace-pre-line">
+                    {selectedTransport.description || `${selectedTransport.type} - Premium transport service for your travel needs. Includes professional driver, fuel, and all applicable taxes for travel within Addis Ababa.`}
+                  </p>
+                </div>
+
+                {selectedTransport.features && selectedTransport.features.length > 0 && (
+                  <div className="mt-8">
+                    <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Transport Features</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {selectedTransport.features.map((feature: string, idx: number) => (
+                        <div key={idx} className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
+                          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+                            <Check className="w-5 h-5" />
+                          </div>
+                          <span className="text-sm font-medium text-gray-700">{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-8">
+                  <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Vehicle Specifications</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-gray-50 p-4 rounded-xl text-center">
+                      <TruckIcon className="w-6 h-6 text-primary mx-auto mb-2" />
+                      <p className="text-xs text-gray-500">Type</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedTransport.type}</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-xl text-center">
+                      <Users className="w-6 h-6 text-primary mx-auto mb-2" />
+                      <p className="text-xs text-gray-500">Capacity</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedTransport.capacity || 4} Seats</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-xl text-center">
+                      <Gauge className="w-6 h-6 text-primary mx-auto mb-2" />
+                      <p className="text-xs text-gray-500">Transmission</p>
+                      <p className="text-sm font-semibold text-gray-900">Automatic</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-xl text-center">
+                      <Fuel className="w-6 h-6 text-primary mx-auto mb-2" />
+                      <p className="text-xs text-gray-500">Fuel</p>
+                      <p className="text-sm font-semibold text-gray-900">Included</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8">
+                  <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Reviews</h2>
+                  <div className="flex items-center gap-6 mb-6">
+                    <div className="text-center">
+                      <div className="text-5xl font-bold text-gray-900">0</div>
+                      <div className="text-sm text-gray-500">/5</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-semibold text-gray-900">Not rated</div>
+                      <div className="text-sm text-gray-500">From 0 review</div>
+                    </div>
+                  </div>
+                  <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-2xl">No reviews yet.</p>
+                </div>
+
+                <div className="mt-8 bg-primary rounded-2xl p-8 text-white">
+                  <h2 className="text-2xl font-serif font-bold mb-4">Why Book With Us?</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="flex items-center gap-4">
+                      <Shield className="w-8 h-8" />
+                      <div>
+                        <h3 className="font-semibold">Best Price Guarantee</h3>
+                        <p className="text-sm text-white/70">No-hassle best price</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Users className="w-8 h-8" />
+                      <div>
+                        <h3 className="font-semibold">24/7 Support</h3>
+                        <p className="text-sm text-white/70">Customer care available</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Sparkles className="w-8 h-8" />
+                      <div>
+                        <h3 className="font-semibold">Professional Drivers</h3>
+                        <p className="text-sm text-white/70">Experienced & licensed</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Car className="w-8 h-8" />
+                      <div>
+                        <h3 className="font-semibold">Free Insurance</h3>
+                        <p className="text-sm text-white/70">Travel protection</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-1">
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sticky top-6">
+                  <div className="mb-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-sm text-gray-500 line-through">${(selectedTransport.price || 0) * 1.2}</span>
+                      <Badge variant="success" className="text-xs">Save 17%</Badge>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-bold text-primary">${selectedTransport.price || 0}</span>
+                      <span className="text-gray-500">/trip</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">Pick Up Date</label>
+                      <input 
+                        type="date" 
+                        className="w-full p-3 border border-gray-200 rounded-xl text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">Number of Days</label>
+                      <input 
+                        type="number" 
+                        min="1"
+                        defaultValue="1"
+                        className="w-full p-3 border border-gray-200 rounded-xl text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-6 border-t border-gray-100 space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Transport Rate</span>
+                      <span className="font-medium">${selectedTransport.price || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Driver Fee</span>
+                      <span className="font-medium">Included</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Fuel</span>
+                      <span className="font-medium">Included</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-lg pt-3 border-t border-gray-100">
+                      <span>Total</span>
+                      <span className="text-primary">${selectedTransport.price || 0}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 space-y-3">
+                    <Button 
+                      className="w-full py-3"
+                      onClick={() => {
+                        setSelectedTransport(selectedTransport);
+                        setSelectedTransport(null);
+                      }}
+                    >
+                      Book Now
+                    </Button>
+                    <Button variant="outline" className="w-full py-3">
+                      Contact Provider
+                    </Button>
+                  </div>
+
+                  <div className="mt-6 pt-6 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 text-center">
+                      Free cancellation up to 24 hours before pickup
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1852,17 +2519,29 @@ export const FestivalDetailPage: React.FC = () => {
                             </div>
                             
                             <div className="space-y-2">
-                                <h2 className="text-2xl font-serif font-bold text-primary">Payment Successful!</h2>
-                                <p className="text-gray-500 text-sm">Your transaction has been completed.</p>
+                                <h2 className="text-2xl font-serif font-bold text-primary">Booking Confirmed!</h2>
+                                <p className="text-gray-500 text-sm">Your festival pass has been secured.</p>
                             </div>
 
                             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 text-left space-y-4 relative overflow-hidden">
                                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 to-emerald-500"></div>
                                 <div className="flex justify-between items-center pb-4 border-b border-gray-200">
-                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Receipt</span>
-                                    <span className="text-xs font-mono text-gray-500">{transactionRef}</span>
+                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Booking ID</span>
+                                    <span className="text-xs font-mono text-gray-500">{currentBooking?._id?.slice(-8).toUpperCase() || transactionRef}</span>
                                 </div>
                                 <div className="space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500">Event</span>
+                                        <span className="font-bold text-primary truncate max-w-[150px]">{festival.name}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500">Ticket Type</span>
+                                        <span className="font-bold text-primary capitalize">{currentBooking?.ticketType || ticketType}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500">Quantity</span>
+                                        <span className="font-bold text-primary">{currentBooking?.quantity || ticketCount}</span>
+                                    </div>
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-500">Amount Paid</span>
                                         <span className="font-bold text-primary">{festival.currency} {totalPrice}</span>
@@ -1883,9 +2562,15 @@ export const FestivalDetailPage: React.FC = () => {
                                     Close
                                 </Button>
                                 <Button className="w-full rounded-xl shadow-lg shadow-primary/20" leftIcon={Download}>
-                                    Download Receipt
+                                    Download Ticket
                                 </Button>
                             </div>
+                            <button 
+                                onClick={() => router.push('/dashboard/tourist/bookings')}
+                                className="text-sm text-primary font-bold hover:underline"
+                            >
+                                View all bookings →
+                            </button>
                         </div>
                     )}
                 </div>

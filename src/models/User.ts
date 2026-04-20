@@ -91,6 +91,15 @@ const UserSchema = new mongoose.Schema(
       },
     },
 
+    // Tourist Profile Fields
+    touristProfile: {
+      phone: { type: String },
+      country: { type: String },
+      nationality: { type: String },
+      dateOfBirth: { type: String },
+      profileImage: { type: String },
+    },
+
     // Password reset fields
     resetToken: { type: String, default: null },
     resetTokenExpiry: { type: Date, default: null },

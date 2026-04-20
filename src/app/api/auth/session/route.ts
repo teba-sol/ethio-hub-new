@@ -19,6 +19,8 @@ export async function GET(request: NextRequest) {
     
     await connectDB();
     const user = await User.findById(payload.userId).select('-password');
+    
+    console.log('Session user touristProfile:', user?.touristProfile);
 
     if (!user) {
       return new NextResponse(
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return new NextResponse(
+return new NextResponse(
       JSON.stringify({ 
         success: true, 
         user: { 
@@ -38,9 +40,23 @@ export async function GET(request: NextRequest) {
           artisanStatus: user.artisanStatus,
           organizerStatus: user.organizerStatus,
           organizerProfile: user.organizerProfile || null,
+          touristProfile: user.touristProfile ? {
+            phone: user.touristProfile?.phone || null,
+            country: user.touristProfile?.country || null,
+            nationality: user.touristProfile?.nationality || null,
+            dateOfBirth: user.touristProfile?.dateOfBirth || null,
+            profileImage: user.touristProfile?.profileImage || null,
+          } : null,
         } 
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { 
+        status: 200, 
+        headers: { 
+          'content-type': 'application/json',
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Pragma': 'no-cache'
+        } 
+      }
     );
 
   } catch (error) {

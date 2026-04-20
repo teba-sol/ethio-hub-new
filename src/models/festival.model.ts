@@ -28,6 +28,7 @@ export interface IHotel extends Document {
   address: string;
   description: string;
   fullDescription?: string;
+  policies?: string;
   image: string;
   checkInTime?: string;
   checkOutTime?: string;
@@ -85,6 +86,15 @@ export interface IFestival extends Document {
   gallery?: string[];
   status: 'Draft' | 'Published' | 'Cancelled';
   isVerified: boolean;
+  verificationStatus: 'Draft' | 'Pending Approval' | 'Under Review' | 'Approved' | 'Rejected';
+  submittedAt?: Date;
+  reviewedAt?: Date;
+  reviewedBy?: mongoose.Types.ObjectId;
+  rejectionReason?: string;
+  changesVersion?: number;
+  isEditedAfterApproval?: boolean;
+  reverificationRequested?: boolean;
+  lastEditedAt?: Date;
   schedule: IScheduleItem[];
   hotels: IHotel[];
   transportation: ITransportation[];
@@ -116,6 +126,14 @@ const RoomSchema: Schema = new Schema({
   amenities: [{ type: String }],                    // Room amenities
 }, { _id: true });
 
+// Food Package Schema
+const FoodPackageSchema: Schema = new Schema({
+  name: { type: String, required: true },
+  description: { type: String },
+  pricePerPerson: { type: Number, required: true },
+  items: [{ type: String }], // ["Breakfast", "Lunch", "Dinner", "Drinks"]
+}, { _id: true });
+
 // Hotel Schema with all fields
 const HotelSchema: Schema = new Schema({
   name: { type: String, required: true },
@@ -123,6 +141,7 @@ const HotelSchema: Schema = new Schema({
   address: { type: String },
   description: { type: String },
   fullDescription: { type: String },
+  policies: { type: String },
   image: { type: String },
   checkInTime: { type: String },
   checkOutTime: { type: String },
@@ -139,11 +158,12 @@ const TransportationSchema: Schema = new Schema({
   image: { type: String },
   availability: { type: Number },
   capacity: { type: Number },
+  features: [{ type: String }],
   pickupLocations: { type: String },
 });
 
 const ServicesSchema: Schema = new Schema({
-  foodPackages: [{ type: String }],
+  foodPackages: [FoodPackageSchema],
   culturalServices: [{ type: String }],
   specialAssistance: [{ type: String }],
   extras: [{ type: String }],
@@ -192,6 +212,19 @@ const FestivalSchema: Schema = new Schema(
       default: 'Draft',
     },
     isVerified: { type: Boolean, default: false },
+    verificationStatus: {
+      type: String,
+      enum: ['Draft', 'Pending Approval', 'Under Review', 'Approved', 'Rejected'],
+      default: 'Draft',
+    },
+    submittedAt: { type: Date },
+    reviewedAt: { type: Date },
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    rejectionReason: { type: String },
+    changesVersion: { type: Number, default: 0 },
+    isEditedAfterApproval: { type: Boolean, default: false },
+    reverificationRequested: { type: Boolean, default: false },
+    lastEditedAt: { type: Date },
     schedule: [ScheduleItemSchema],
     hotels: [HotelSchema],
     transportation: [TransportationSchema],

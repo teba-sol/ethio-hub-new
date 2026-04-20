@@ -21,17 +21,32 @@ export const LoginPage: React.FC = () => {
 
       if (res.success) {
         const userRole = res.user.role?.toLowerCase();
+        const organizerStatus = res.user.organizerStatus;
+        const artisanStatus = res.user.artisanStatus;
         
-        if (userRole === 'organizer' && res.user.organizerStatus === 'Not Submitted') {
-          router.push('/dashboard/organizer/onboarding');
-        } else if (userRole === 'artisan' && res.user.artisanStatus === 'Not Submitted') {
-          router.push('/dashboard/artisan/onboarding');
-        } else if (userRole === 'artisan' && res.user.artisanStatus !== 'Approved') {
-          router.push('/artisan/waiting');
+        // Organizer login redirects
+        if (userRole === 'organizer') {
+          if (organizerStatus === 'Not Submitted') {
+            router.push('/dashboard/organizer/onboarding');
+          } else if (organizerStatus === 'Pending' || organizerStatus === 'Under Review') {
+            router.push('/organizer/waiting');
+          } else if (organizerStatus === 'Rejected' || organizerStatus === 'Modification Requested') {
+            router.push('/dashboard/organizer/onboarding');
+          } else if (organizerStatus === 'Approved') {
+            router.push('/dashboard/organizer/overview');
+          }
+        }
+        // Artisan login redirects
+        else if (userRole === 'artisan') {
+          if (artisanStatus === 'Not Submitted') {
+            router.push('/dashboard/artisan/onboarding');
+          } else if (artisanStatus === 'Pending' || artisanStatus === 'Under Review') {
+            router.push('/artisan/waiting');
+          } else if (artisanStatus === 'Approved') {
+            router.push('/dashboard/artisan/overview');
+          }
         } else {
-          router.push(userRole === 'admin' ? '/dashboard/admin/overview' : 
-                      userRole === 'organizer' ? '/dashboard/organizer/overview' : 
-                      userRole === 'artisan' ? '/dashboard/artisan/overview' : '/');
+          router.push(userRole === 'admin' ? '/dashboard/admin/overview' : '/');
         }
       } else {
         alert(res.message || "Login failed. Please check your credentials.");
@@ -136,6 +151,7 @@ export const RegisterPage: React.FC = () => {
       if (res.success) {
         const userRole = res.user.role?.toLowerCase();
         
+ 
         if (userRole === 'artisan') {
           alert('Successfully registered! Please log in to complete your onboarding.');
           router.push('/login');
@@ -144,6 +160,8 @@ export const RegisterPage: React.FC = () => {
         } else {
           router.push(userRole === 'admin' ? '/dashboard/admin' : '/');
         }
+        // After registration, redirect to login
+        router.push('/login');
       } else {
         alert(res.message || "Registration failed.");
       }

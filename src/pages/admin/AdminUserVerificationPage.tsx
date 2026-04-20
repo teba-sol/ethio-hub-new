@@ -105,7 +105,7 @@ export const AdminUserVerificationPage: React.FC = () => {
     fetchStats();
   }, [fetchRequests, fetchStats]);
 
-  const handleApprove = async (id: string) => {
+  const handleApprove = async (id: string, role: 'Organizer' | 'Artisan') => {
     // Optimistic UI update
     const previousRequests = [...requests];
     setRequests(prev => prev.map(req => 
@@ -114,7 +114,11 @@ export const AdminUserVerificationPage: React.FC = () => {
     
     setActionLoading(id);
     try {
-      const res = await fetch(`/api/admin/verification/${id}/approve`, { method: 'POST' });
+      const res = await fetch(`/api/admin/verification/${id}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: role.toLowerCase() }),
+      });
       const data = await res.json();
       if (data.success) {
         setSelectedRequest(prev => prev?.id === id ? { ...prev, status: 'approved' as VerificationStatus } : prev);
@@ -127,13 +131,13 @@ export const AdminUserVerificationPage: React.FC = () => {
     } catch (error) {
       setRequests(previousRequests); // Rollback on error
       console.error('Failed to approve:', error);
-      alert('Failed to approve artisan');
+      alert('Failed to approve');
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleReject = async (id: string) => {
+  const handleReject = async (id: string, role: 'Organizer' | 'Artisan') => {
     if (!rejectionReason.trim()) return;
     
     // Optimistic UI update
@@ -147,7 +151,7 @@ export const AdminUserVerificationPage: React.FC = () => {
       const res = await fetch(`/api/admin/verification/${id}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: rejectionReason }),
+        body: JSON.stringify({ reason: rejectionReason, role: role.toLowerCase() }),
       });
       const data = await res.json();
       if (data.success) {
@@ -164,7 +168,7 @@ export const AdminUserVerificationPage: React.FC = () => {
     } catch (error) {
       setRequests(previousRequests); // Rollback on error
       console.error('Failed to reject:', error);
-      alert('Failed to reject artisan');
+      alert('Failed to reject');
     } finally {
       setActionLoading(null);
     }
@@ -640,7 +644,7 @@ export const AdminUserVerificationPage: React.FC = () => {
                       <Button 
                         className="w-full bg-emerald-500 hover:bg-emerald-600 border-emerald-500 text-white py-4"
                         leftIcon={actionLoading === selectedRequest.id ? Loader2 : CheckCircle2}
-                        onClick={() => handleApprove(selectedRequest.id)}
+                        onClick={() => handleApprove(selectedRequest.id, selectedRequest.userRole)}
                         disabled={actionLoading === selectedRequest.id}
                       >
                         {actionLoading === selectedRequest.id ? 'Approving...' : 'Approve Account'}
@@ -663,7 +667,7 @@ export const AdminUserVerificationPage: React.FC = () => {
                         variant="outline"
                         leftIcon={actionLoading === selectedRequest.id ? Loader2 : XCircle}
                         disabled={!rejectionReason || actionLoading === selectedRequest.id}
-                        onClick={() => handleReject(selectedRequest.id)}
+                        onClick={() => handleReject(selectedRequest.id, selectedRequest.userRole)}
                       >
                         {actionLoading === selectedRequest.id ? 'Rejecting...' : 'Reject Request'}
                       </Button>

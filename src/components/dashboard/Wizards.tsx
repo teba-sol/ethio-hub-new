@@ -54,7 +54,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
     hotels: [] as any[],
     transportation: [] as any[],
     services: { 
-      foodPackages: [] as string[], 
+      foodPackages: [] as any[], 
       culturalServices: [] as string[],
       specialAssistance: [] as string[],
       extras: [] as string[]
@@ -977,9 +977,167 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
               {step === 5 && (
                 <div className="space-y-12">
                   <h3 className="text-2xl font-serif font-bold text-primary">Event Services & Add-ons</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                  
+                  {/* Food & Drink Packages Section - Enhanced */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/5 text-primary rounded-lg"><Utensils className="w-5 h-5" /></div>
+                      <h4 className="font-bold text-primary">Food & Drink Packages</h4>
+                    </div>
+                    <p className="text-sm text-gray-500">Add meal packages available for this event (can also be booked with hotel rooms)</p>
+                    
+                    {(!formData.services.foodPackages || formData.services.foodPackages.length === 0) ? (
+                      <p className="text-sm text-gray-400 italic">No food packages added yet.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {(formData.services.foodPackages as any[]).map((pkg: any, pIdx: number) => (
+                          <div key={pkg.id} className="bg-ethio-bg/50 p-5 rounded-2xl border border-gray-50 relative group">
+                            <button 
+                              className="absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                              onClick={() => {
+                                const newServices = { ...formData.services };
+                                newServices.foodPackages = newServices.foodPackages.filter((_: any, i: number) => i !== pIdx);
+                                setFormData({ ...formData, services: newServices });
+                              }}
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                            <div className="space-y-3">
+                              <div className="flex gap-3">
+                                <div className="flex-1">
+                                  <label className="text-xs text-gray-500 mb-1 block">Package Name</label>
+                                  <select 
+                                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                                    value={pkg.name}
+                                    onChange={e => {
+                                      const newServices = { ...formData.services };
+                                      const name = e.target.value;
+                                      newServices.foodPackages[pIdx].name = name;
+                                      
+                                      const presets: Record<string, {desc: string, items: string[]}> = {
+                                        'Breakfast Only': { desc: 'Continental breakfast with coffee and tea', items: ['Breakfast', 'Coffee', 'Tea'] },
+                                        'Half Board': { desc: 'Breakfast and dinner included', items: ['Breakfast', 'Dinner'] },
+                                        'Full Board': { desc: 'All meals included - breakfast, lunch, and dinner', items: ['Breakfast', 'Lunch', 'Dinner'] },
+                                        'All Inclusive': { desc: 'Unlimited meals, snacks, and drinks', items: ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Drinks'] },
+                                        'Ethiopian Feast': { desc: 'Traditional Ethiopian cuisine experience', items: ['Injera', 'Wat', 'Bread', 'Coffee Ceremony'] },
+                                      };
+                                      if (presets[name]) {
+                                        newServices.foodPackages[pIdx].description = presets[name].desc;
+                                        newServices.foodPackages[pIdx].items = presets[name].items;
+                                      }
+                                      setFormData({ ...formData, services: newServices });
+                                    }}
+                                  >
+                                    <option value="">Select package...</option>
+                                    <option value="Breakfast Only">Breakfast Only</option>
+                                    <option value="Half Board">Half Board</option>
+                                    <option value="Full Board">Full Board</option>
+                                    <option value="All Inclusive">All Inclusive</option>
+                                    <option value="Ethiopian Feast">Ethiopian Feast</option>
+                                    <option value="Other">Other (Custom)</option>
+                                  </select>
+                                </div>
+                                <div className="w-28">
+                                  <label className="text-xs text-gray-500 mb-1 block">Price/Person</label>
+                                  <input 
+                                    type="number"
+                                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                                    placeholder="$0"
+                                    value={pkg.pricePerPerson || ''}
+                                    onChange={e => {
+                                      const newServices = { ...formData.services };
+                                      newServices.foodPackages[pIdx].pricePerPerson = parseInt(e.target.value) || 0;
+                                      setFormData({ ...formData, services: newServices });
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                              
+                              {pkg.name === 'Other' && (
+                                <div>
+                                  <label className="text-xs text-gray-500 mb-1 block">Custom Package Name</label>
+                                  <input 
+                                    type="text"
+                                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                                    placeholder="e.g., Traditional Coffee Ceremony"
+                                    value={pkg.customName || ''}
+                                    onChange={e => {
+                                      const newServices = { ...formData.services };
+                                      newServices.foodPackages[pIdx].name = e.target.value;
+                                      setFormData({ ...formData, services: newServices });
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              
+                              <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Description</label>
+                                <input 
+                                  type="text"
+                                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                                  placeholder="Describe what's included..."
+                                  value={pkg.description || ''}
+                                  onChange={e => {
+                                    const newServices = { ...formData.services };
+                                    newServices.foodPackages[pIdx].description = e.target.value;
+                                    setFormData({ ...formData, services: newServices });
+                                  }}
+                                />
+                              </div>
+                              
+                              <div>
+                                <label className="text-xs text-gray-500 mb-2 block">Included Items</label>
+                                <div className="flex flex-wrap gap-2">
+                                  {['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Coffee', 'Tea', 'Juices', 'Soft Drinks', 'Alcoholic Drinks', 'Injera', 'Wat', 'Bread', 'Coffee Ceremony'].map(item => (
+                                    <label key={item} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer text-xs transition-all ${(pkg.items || []).includes(item) ? 'bg-primary/10 text-primary border border-primary' : 'bg-white text-gray-500 border border-gray-200'}`}>
+                                      <input 
+                                        type="checkbox" 
+                                        className="hidden"
+                                        checked={(pkg.items || []).includes(item)}
+                                        onChange={e => {
+                                          const newServices = { ...formData.services };
+                                          const items = newServices.foodPackages[pIdx].items || [];
+                                          if (e.target.checked) {
+                                            newServices.foodPackages[pIdx].items = [...items, item];
+                                          } else {
+                                            newServices.foodPackages[pIdx].items = items.filter((i: string) => i !== item);
+                                          }
+                                          setFormData({ ...formData, services: newServices });
+                                        }}
+                                      />
+                                      <span>{item}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <button 
+                      className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-primary/90"
+                      onClick={() => {
+                        const newServices = { ...formData.services };
+                        newServices.foodPackages = newServices.foodPackages || [];
+                        newServices.foodPackages.push({
+                          id: Date.now(),
+                          name: '',
+                          description: '',
+                          pricePerPerson: 0,
+                          items: []
+                        });
+                        setFormData({ ...formData, services: newServices });
+                      }}
+                    >
+                      <Plus className="w-4 h-4" /> Add Food Package
+                    </button>
+                  </div>
+
+                  {/* Other Services - Simple List */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {[
-                      { key: 'foodPackages', label: 'Food & Drink Packages', icon: Utensils },
                       { key: 'culturalServices', label: 'Cultural Services', icon: Music },
                       { key: 'specialAssistance', label: 'Special Assistance', icon: Heart },
                       { key: 'extras', label: 'Extras & Souvenirs', icon: Box }

@@ -11,7 +11,7 @@ import {
   Utensils, Heart, Image as ImageIcon, Mail, Phone, CreditCard, QrCode,
   History, UserCheck, UserMinus, FileText, ChevronLeft, Eye,
   LayoutGrid, CalendarDays, BarChart2, MoreHorizontal, Bell, AlertTriangle, Filter, ArrowUpDown,
-  HelpCircle, Lightbulb, BarChart, Map, Clock, Camera, ZoomIn, Maximize2
+  HelpCircle, Lightbulb, BarChart, Map, Clock, Camera, ZoomIn, Maximize2, Check
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Festival, HotelAccommodation, Review } from '../../types';
@@ -77,14 +77,10 @@ const [uploadingImage, setUploadingImage] = useState(false);
 const [imageUploadType, setImageUploadType] = useState<'cover' | 'gallery'>('cover');
 const [imageIndex, setImageIndex] = useState<number | null>(null);
 
-const getImageUrl = (path: string | undefined | null, debugLabel?: string) => {
-    console.log(`[getImageUrl] ${debugLabel}:`, path);
+const getImageUrl = (path: string | undefined | null) => {
     if (!path || path === '') return 'https://images.unsplash.com/photo-1533174072545-7a4b6dad2cf7?w=800&h=400&fit=crop';
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    // Handle paths like /uploads/festivals/filename.jpg
-    // These are served from public folder
     if (path.startsWith('/uploads/')) {
-      // Get base URL - for dev it's localhost:3000
       const baseUrl = window.location.origin;
       return `${baseUrl}${path}`;
     }
@@ -92,7 +88,6 @@ const getImageUrl = (path: string | undefined | null, debugLabel?: string) => {
   };
 
   const getGalleryImageUrl = (path: string | undefined | null) => {
-    console.log('[getGalleryImageUrl] gallery item:', path);
     if (!path || path === '') return 'https://images.unsplash.com/photo-1547467132-55d7a6a5d507?w=400&h=400&fit=crop';
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
     if (path.startsWith('/uploads/')) {
@@ -165,44 +160,52 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
   fetchFestival();
 }, [eventId]);
 
-  const handleSaveChanges = async () => {
-    setSaving(true);
-    try {
-      const dataToSave = { ...editData };
+   const handleSaveChanges = async () => {
+     setSaving(true);
+     try {
+       const dataToSave = { ...editData };
 
-      // Strip incomplete array entries with empty required fields
-      if (Array.isArray(dataToSave.transportation)) {
-        dataToSave.transportation = dataToSave.transportation.filter((t: any) => t.type?.trim());
-      }
-      if (Array.isArray(dataToSave.hotels)) {
-        dataToSave.hotels = dataToSave.hotels
-          .filter((h: any) => h.name?.trim())
-          .map((h: any) => ({
-            ...h,
-            rooms: (h.rooms || []).filter((r: any) => r.name?.trim()),
-          }));
-      }
-      if (Array.isArray(dataToSave.schedule)) {
-        dataToSave.schedule = dataToSave.schedule.filter((s: any) => s.title?.trim());
-      }
+       // Strip incomplete array entries with empty required fields
+       if (Array.isArray(dataToSave.transportation)) {
+         dataToSave.transportation = dataToSave.transportation.filter((t: any) => t.type?.trim());
+       }
+       if (Array.isArray(dataToSave.hotels)) {
+          dataToSave.hotels = dataToSave.hotels
+            .filter((h: any) => h.name?.trim())
+            .map((h: any) => ({
+              ...h,
+              rooms: (h.rooms || []).filter((r: any) => r.name?.trim()),
+            }));
+        }
+       if (Array.isArray(dataToSave.schedule)) {
+         dataToSave.schedule = dataToSave.schedule.filter((s: any) => s.title?.trim());
+       }
 
-      console.log('Saving festival data:', JSON.stringify(dataToSave, null, 2));
-      const response = await apiClient.put(`/api/organizer/festivals/${eventId}`, dataToSave);
-      console.log('Save response:', response);
-      if (response.success) {
-        setFestival(response.festival || dataToSave);
-        setEditData(response.festival || dataToSave);
-        setIsEditing(false);
-        alert('Event updated successfully!');
-      } else {
-        alert(response.message || 'Failed to update event');
-      }
-    } catch (err: any) {
-      alert(err.message || 'An error occurred while saving');
-    } finally {
-      setSaving(false);
-    }
-  };
+       // If this is an approved event being edited, mark it for reverification
+       if (currentData.verificationStatus === 'Approved') {
+         dataToSave.isEditedAfterApproval = true;
+         dataToSave.verificationStatus = 'Pending Approval';
+         dataToSave.status = 'Draft';
+         dataToSave.isVerified = false;
+       }
+
+       console.log('Saving festival data:', JSON.stringify(dataToSave, null, 2));
+       const response = await apiClient.put(`/api/organizer/festivals/${eventId}`, dataToSave);
+       console.log('Save response:', response);
+       if (response.success) {
+         setFestival(response.festival || dataToSave);
+         setEditData(response.festival || dataToSave);
+         setIsEditing(false);
+         alert('Event updated successfully!');
+       } else {
+         alert(response.message || 'Failed to update event');
+       }
+     } catch (err: any) {
+       alert(err.message || 'An error occurred while saving');
+     } finally {
+       setSaving(false);
+     }
+   };
 
   const handleCancelEdit = () => {
     setEditData(JSON.parse(JSON.stringify(festival)));
@@ -345,16 +348,39 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
     </div>
   )}
 </div>
-          <div className="flex-1 space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <button onClick={onBack} className="p-2 bg-ethio-bg rounded-xl text-primary hover:bg-primary hover:text-white transition-all mr-2">
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <Badge variant="secondary" className="bg-secondary/10 text-secondary border-none">
-                {new Date(currentData.startDate) > new Date() ? 'Upcoming' : 'Live'}
-              </Badge>
-              {currentData.isVerified && <VerifiedBadge />}
-            </div>
+           <div className="flex-1 space-y-4">
+             <div className="flex flex-wrap items-center gap-3">
+               <button onClick={onBack} className="p-2 bg-ethio-bg rounded-xl text-primary hover:bg-primary hover:text-white transition-all mr-2">
+                 <ChevronLeft className="w-5 h-5" />
+               </button>
+               <Badge variant="secondary" className="bg-secondary/10 text-secondary border-none">
+                 {new Date(currentData.startDate) > new Date() ? 'Upcoming' : 'Live'}
+               </Badge>
+               {currentData.isVerified && <VerifiedBadge />}
+               {/* Verification Status Badge */}
+               <span className="px-3 py-1 rounded-full text-xs font-medium">
+                 {currentData.verificationStatus === 'Pending Approval' && (
+                   <Badge variant="outline" className="bg-primary/10 text-primary border-primary">
+                     Pending Review
+                   </Badge>
+                 )}
+                 {currentData.verificationStatus === 'Under Review' && (
+                   <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500">
+                     Under Review
+                   </Badge>
+                 )}
+                 {currentData.verificationStatus === 'Approved' && (
+                   <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500">
+                     Approved
+                   </Badge>
+                 )}
+                 {currentData.verificationStatus === 'Rejected' && (
+                   <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500">
+                     Rejected
+                   </Badge>
+                 )}
+               </span>
+             </div>
             
             {isEditing ? (
               <input
@@ -797,8 +823,14 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
             starRating: 5, 
             address: '', 
             description: '', 
+            fullDescription: '',
+            policies: '',
+            checkInTime: '14:00',
+            checkOutTime: '12:00',
+            facilities: [],
             image: '', 
-            rooms: [] 
+            gallery: [],
+            rooms: []
           })}
           className="rounded-full border-2 border-primary/20 text-primary hover:bg-primary hover:text-white transition-all duration-300"
         >
@@ -938,13 +970,22 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
 
             {/* Description */}
             {isEditing ? (
-              <textarea
-                value={hotel.description || ''}
-                onChange={(e) => handleArrayChange('hotels', idx, 'description', e.target.value)}
-                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                rows={3}
-                placeholder="Hotel description"
-              />
+              <>
+                <textarea
+                  value={hotel.description || ''}
+                  onChange={(e) => handleArrayChange('hotels', idx, 'description', e.target.value)}
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  rows={2}
+                  placeholder="Short description"
+                />
+                <textarea
+                  value={hotel.fullDescription || ''}
+                  onChange={(e) => handleArrayChange('hotels', idx, 'fullDescription', e.target.value)}
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  rows={4}
+                  placeholder="Full description (detailed info about the hotel)"
+                />
+              </>
             ) : (
               <p className="text-gray-600 leading-relaxed">{hotel.description || 'Premium accommodation with traditional Ethiopian hospitality and modern amenities.'}</p>
             )}
@@ -954,30 +995,79 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
             )}
 
             {/* Facilities */}
-            {!isEditing && hotel.facilities?.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {hotel.facilities.map((f: string, fi: number) => (
-                  <span key={fi} className="px-4 py-2 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full">{f}</span>
-                ))}
+            {isEditing ? (
+              <div className="pt-4">
+                <p className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-3">Facilities</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {['Free WiFi', 'Swimming Pool', 'Fitness Center', 'Spa & Sauna', 'Restaurant', 'Airport Shuttle', 'Free Parking', 'Room Service', 'Laundry Service', 'Meeting Rooms', 'Minibar', 'Bar'].map((facility) => (
+                    <label key={facility} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={(hotel.facilities || []).includes(facility)}
+                        onChange={(e) => {
+                          const facilities = hotel.facilities || [];
+                          if (e.target.checked) {
+                            handleArrayChange('hotels', idx, 'facilities', [...facilities, facility]);
+                          } else {
+                            handleArrayChange('hotels', idx, 'facilities', facilities.filter((f: string) => f !== facility));
+                          }
+                        }}
+                        className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
+                      />
+                      <span className="text-sm text-gray-700">{facility}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
+            ) : (
+              hotel.facilities?.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-4">
+                  {hotel.facilities.map((f: string, fi: number) => (
+                    <span key={fi} className="px-4 py-2 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full">{f}</span>
+                  ))}
+                </div>
+              )
             )}
 
             {/* Check In/Out Times */}
-            {!isEditing && (hotel.checkInTime || hotel.checkOutTime) && (
-              <div className="flex flex-wrap gap-4 pt-2">
-                {hotel.checkInTime && (
-                  <div className="bg-primary/5 px-4 py-2 rounded-xl">
-                    <span className="text-xs text-gray-500 block">Check-in</span>
-                    <strong className="text-primary text-sm">{hotel.checkInTime}</strong>
-                  </div>
-                )}
-                {hotel.checkOutTime && (
-                  <div className="bg-primary/5 px-4 py-2 rounded-xl">
-                    <span className="text-xs text-gray-500 block">Check-out</span>
-                    <strong className="text-primary text-sm">{hotel.checkOutTime}</strong>
-                  </div>
-                )}
+            {isEditing ? (
+              <div className="grid grid-cols-2 gap-4 pt-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Check In Time</p>
+                  <input
+                    type="time"
+                    value={hotel.checkInTime || '14:00'}
+                    onChange={(e) => handleArrayChange('hotels', idx, 'checkInTime', e.target.value)}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Check Out Time</p>
+                  <input
+                    type="time"
+                    value={hotel.checkOutTime || '12:00'}
+                    onChange={(e) => handleArrayChange('hotels', idx, 'checkOutTime', e.target.value)}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  />
+                </div>
               </div>
+            ) : (
+              (hotel.checkInTime || hotel.checkOutTime) && (
+                <div className="flex flex-wrap gap-4 pt-4">
+                  {hotel.checkInTime && (
+                    <div className="bg-primary/5 px-4 py-2 rounded-xl">
+                      <span className="text-xs text-gray-500 block">Check-in</span>
+                      <strong className="text-primary text-sm">{hotel.checkInTime}</strong>
+                    </div>
+                  )}
+                  {hotel.checkOutTime && (
+                    <div className="bg-primary/5 px-4 py-2 rounded-xl">
+                      <span className="text-xs text-gray-500 block">Check-out</span>
+                      <strong className="text-primary text-sm">{hotel.checkOutTime}</strong>
+                    </div>
+                  )}
+                </div>
+              )
             )}
 
             {/* Address */}
@@ -998,34 +1088,107 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
               )}
             </div>
 
-            {/* Gallery */}
-            {!isEditing && hotel.gallery && hotel.gallery.length > 0 && (
+            {/* Policies */}
+            {isEditing ? (
               <div className="pt-4">
-                <p className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-4 flex items-center gap-2">
-                  <ImageIcon className="w-4 h-4" />
-                  Photo Gallery
-                </p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {hotel.gallery.slice(0, 4).map((img: string, gi: number) => (
-                    <div key={gi} className="relative group/gallery overflow-hidden rounded-xl aspect-square">
-                      <img 
-                        src={getGalleryImageUrl(img)} 
-                        alt={`Gallery ${gi + 1}`} 
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover/gallery:scale-110"
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/gallery:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                        <ZoomIn className="w-6 h-6 text-white" />
-                      </div>
-                    </div>
-                  ))}
-                  {hotel.gallery.length > 4 && (
-                    <div className="relative rounded-xl bg-gray-900 flex items-center justify-center aspect-square">
-                      <span className="text-white text-2xl font-bold">+{hotel.gallery.length - 4}</span>
-                    </div>
-                  )}
-                </div>
+                <p className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Hotel Policies</p>
+                <textarea
+                  value={hotel.policies || ''}
+                  onChange={(e) => handleArrayChange('hotels', idx, 'policies', e.target.value)}
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  rows={3}
+                  placeholder="Cancellation policy, house rules, etc."
+                />
+              </div>
+            ) : hotel.policies && (
+              <div className="pt-4">
+                <p className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Policies</p>
+                <p className="text-sm text-gray-600">{hotel.policies}</p>
               </div>
             )}
+
+            {/* Gallery */}
+            <div className="pt-4">
+              <p className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-4 flex items-center gap-2">
+                <ImageIcon className="w-4 h-4" />
+                Photo Gallery
+              </p>
+              {isEditing ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {(hotel.gallery || []).map((img: string, gi: number) => (
+                      <div key={gi} className="relative group/gallery overflow-hidden rounded-xl aspect-square">
+                        <img 
+                          src={getGalleryImageUrl(img)} 
+                          alt={`Gallery ${gi + 1}`} 
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          onClick={() => {
+                            const newGallery = (hotel.gallery || []).filter((_: string, i: number) => i !== gi);
+                            handleArrayChange('hotels', idx, 'gallery', newGallery);
+                          }}
+                          className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover/gallery:opacity-100 transition-opacity"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    id={`hotel-gallery-${idx}`}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        try {
+                          const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                          const data = await res.json();
+                          if (data.success) {
+                            handleArrayChange('hotels', idx, 'gallery', [...(hotel.gallery || []), data.url]);
+                          }
+                        } catch (err) {
+                          console.error('Gallery upload failed:', err);
+                        }
+                      }
+                    }}
+                  />
+                  <label 
+                    htmlFor={`hotel-gallery-${idx}`}
+                    className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+                  >
+                    <Camera className="w-5 h-5 text-gray-400" />
+                    <span className="text-sm text-gray-500">Add gallery image</span>
+                  </label>
+                </div>
+              ) : (
+                hotel.gallery && hotel.gallery.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {hotel.gallery.slice(0, 4).map((img: string, gi: number) => (
+                      <div key={gi} className="relative group/gallery overflow-hidden rounded-xl aspect-square">
+                        <img 
+                          src={getGalleryImageUrl(img)} 
+                          alt={`Gallery ${gi + 1}`} 
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover/gallery:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/gallery:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                          <ZoomIn className="w-6 h-6 text-white" />
+                        </div>
+                      </div>
+                    ))}
+                    {hotel.gallery.length > 4 && (
+                      <div className="relative rounded-xl bg-gray-900 flex items-center justify-center aspect-square">
+                        <span className="text-white text-2xl font-bold">+{hotel.gallery.length - 4}</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              )}
+            </div>
           </div>
 
           {/* Rooms Section */}
@@ -1041,12 +1204,16 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   size="sm" 
                   onClick={() => {
                     const newRooms = [...(hotel.rooms || []), { 
+                      id: `room-${Date.now()}`,
                       name: '', 
+                      description: '',
                       image: '', 
                       bedType: 'King Size', 
                       capacity: 2, 
                       pricePerNight: 0, 
-                      availability: 5 
+                      availability: 5,
+                      sqm: 30,
+                      amenities: []
                     }];
                     handleArrayChange('hotels', idx, 'rooms', newRooms);
                   }}
@@ -1188,8 +1355,42 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                             <p className="font-semibold text-gray-800 text-sm">{room.capacity} Persons</p>
                           )}
                         </div>
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-1">Room Size (m²)</p>
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              value={room.sqm || 30}
+                              onChange={(e) => {
+                                const newRooms = [...hotel.rooms];
+                                newRooms[rIdx] = { ...newRooms[rIdx], sqm: parseInt(e.target.value) };
+                                handleArrayChange('hotels', idx, 'rooms', newRooms);
+                              }}
+                              className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                            />
+                          ) : (
+                            <p className="font-semibold text-gray-800 text-sm">{room.sqm || 30} m²</p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-1">Availability</p>
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              value={room.availability || 5}
+                              onChange={(e) => {
+                                const newRooms = [...hotel.rooms];
+                                newRooms[rIdx] = { ...newRooms[rIdx], availabilityCount: parseInt(e.target.value) };
+                                handleArrayChange('hotels', idx, 'rooms', newRooms);
+                              }}
+                              className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                            />
+                          ) : (
+                            <p className="font-semibold text-gray-800 text-sm">{room.availability || 5} rooms</p>
+                          )}
+                        </div>
                         <div className="col-span-2">
-                          <p className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-1">Price per Night</p>
+                          <p className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-1">Price per Night ($)</p>
                           {isEditing ? (
                             <input
                               type="number"
@@ -1202,10 +1403,55 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                               className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                             />
                           ) : (
-                            <p className="text-2xl font-bold text-secondary">ETB {room.pricePerNight.toLocaleString()}</p>
+                            <p className="text-2xl font-bold text-secondary">${room.pricePerNight.toLocaleString()}</p>
                           )}
                         </div>
                       </div>
+
+                      {isEditing && (
+                        <div className="pt-4 border-t border-gray-100">
+                          <p className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-2">Description</p>
+                          <textarea
+                            value={room.description || ''}
+                            onChange={(e) => {
+                              const newRooms = [...hotel.rooms];
+                              newRooms[rIdx] = { ...newRooms[rIdx], description: e.target.value };
+                              handleArrayChange('hotels', idx, 'rooms', newRooms);
+                            }}
+                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                            rows={2}
+                            placeholder="Room description"
+                          />
+                        </div>
+                      )}
+
+                      {isEditing && (
+                        <div className="pt-4 border-t border-gray-100">
+                          <p className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-2">Amenities</p>
+                          <div className="flex flex-wrap gap-2">
+                            {['Free WiFi', 'Air Conditioning', 'Mini Bar', 'Flat-screen TV', 'Safe', 'Coffee Machine', 'Jacuzzi', 'Bathtub', 'Balcony', 'City View'].map((amenity) => (
+                              <label key={amenity} className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={(room.amenities || []).includes(amenity)}
+                                  onChange={(e) => {
+                                    const newRooms = [...hotel.rooms];
+                                    const amenities = room.amenities || [];
+                                    if (e.target.checked) {
+                                      newRooms[rIdx] = { ...newRooms[rIdx], amenities: [...amenities, amenity] };
+                                    } else {
+                                      newRooms[rIdx] = { ...newRooms[rIdx], amenities: amenities.filter((a: string) => a !== amenity) };
+                                    }
+                                    handleArrayChange('hotels', idx, 'rooms', newRooms);
+                                  }}
+                                  className="w-3.5 h-3.5 text-primary rounded border-gray-300 focus:ring-primary"
+                                />
+                                <span className="text-xs text-gray-600">{amenity}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {!isEditing && room.sqm && (
                         <div className="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t border-gray-100">
@@ -1418,6 +1664,37 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                         <p className="text-[10px] text-gray-500">{transport.pickupLocations}</p>
                       )}
                     </div>
+
+                    <div>
+                      <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">Features</p>
+                      {isEditing ? (
+                        <div className="flex flex-wrap gap-2">
+                          {['AC', 'WiFi', 'GPS', 'USB Charging', 'Leather Seats', 'Refreshments', 'Professional Driver', 'Luggage Space'].map((feature) => (
+                            <label key={feature} className="flex items-center gap-1 text-[10px]">
+                              <input
+                                type="checkbox"
+                                checked={transport.features?.includes(feature) || false}
+                                onChange={(e) => {
+                                  const currentFeatures = transport.features || [];
+                                  const newFeatures = e.target.checked
+                                    ? [...currentFeatures, feature]
+                                    : currentFeatures.filter((f: string) => f !== feature);
+                                  handleArrayChange('transportation', idx, 'features', newFeatures);
+                                }}
+                                className="rounded"
+                              />
+                              {feature}
+                            </label>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {transport.features?.map((feature: string, i: number) => (
+                            <span key={i} className="text-[10px] bg-gray-100 px-2 py-0.5 rounded-full text-gray-600">{feature}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1433,43 +1710,106 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                 <Utensils className="w-5 h-5 text-secondary" /> Food & Cultural Packages
               </h3>
               <div className="space-y-4">
-                {(currentData.services?.foodPackages || []).map((item: string, i: number) => (
-                  <div  className="flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm relative">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={item}
-                        onChange={(e) => {
-                          const newPackages = [...(currentData.services?.foodPackages || [])];
-                          newPackages[i] = e.target.value;
-                          handleNestedChange('services', 'foodPackages', newPackages);
-                        }}
-                        className="flex-1 text-sm font-bold text-primary bg-transparent border-b border-gray-200 focus:outline-none"
-                      />
-                    ) : (
-                      <span className="text-sm font-bold text-primary">{item}</span>
+                {(currentData.services?.foodPackages || []).map((item: any, i: number) => {
+                  const pkgName = typeof item === 'string' ? item : (item.name || item.description || 'Package');
+                  const pkgId = typeof item === 'object' ? item.id : i;
+                  return (
+                  <div key={pkgId} className="bg-white p-4 rounded-2xl shadow-sm relative space-y-2">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      {isEditing ? (
+                        <select
+                          value={typeof item === 'object' ? item.name : ''}
+                          onChange={(e) => {
+                            const newPackages = [...(currentData.services?.foodPackages || [])];
+                            const name = e.target.value;
+                            const presets: Record<string, {desc: string, items: string[], price: number}> = {
+                              'Breakfast Only': { desc: 'Continental breakfast with coffee and tea', items: ['Breakfast', 'Coffee', 'Tea'], price: 20 },
+                              'Half Board': { desc: 'Breakfast and dinner included', items: ['Breakfast', 'Dinner'], price: 40 },
+                              'Full Board': { desc: 'All meals included - breakfast, lunch, and dinner', items: ['Breakfast', 'Lunch', 'Dinner'], price: 60 },
+                              'All Inclusive': { desc: 'Unlimited meals, snacks, and drinks', items: ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Drinks'], price: 80 },
+                              'Ethiopian Feast': { desc: 'Traditional Ethiopian cuisine experience', items: ['Injera', 'Wat', 'Bread', 'Coffee Ceremony'], price: 50 },
+                            };
+                            if (typeof newPackages[i] === 'object') {
+                              newPackages[i] = { 
+                                ...newPackages[i], 
+                                name: name,
+                                description: presets[name]?.desc || newPackages[i].description,
+                                items: presets[name]?.items || newPackages[i].items,
+                                pricePerPerson: presets[name]?.price || newPackages[i].pricePerPerson || 0
+                              };
+                            } else {
+                              newPackages[i] = { id: Date.now(), name, description: presets[name]?.desc || '', items: presets[name]?.items || [], pricePerPerson: presets[name]?.price || 0 };
+                            }
+                            handleNestedChange('services', 'foodPackages', newPackages);
+                          }}
+                          className="flex-1 text-sm font-bold text-primary bg-transparent border-b border-gray-200 focus:outline-none"
+                        >
+                          <option value="">Select package...</option>
+                          <option value="Breakfast Only">Breakfast Only</option>
+                          <option value="Half Board">Half Board</option>
+                          <option value="Full Board">Full Board</option>
+                          <option value="All Inclusive">All Inclusive</option>
+                          <option value="Ethiopian Feast">Ethiopian Feast</option>
+                          <option value="Other">Other (Custom)</option>
+                        </select>
+                      ) : (
+                        <span className="text-sm font-bold text-primary">{pkgName}</span>
+                      )}
+                      {isEditing && (
+                        <button
+                          onClick={() => {
+                            const newPackages = (currentData.services?.foodPackages || []).filter((_: any, idx: number) => idx !== i);
+                            handleNestedChange('services', 'foodPackages', newPackages);
+                          }}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    {/* Show price when not editing */}
+                    {(!isEditing) && (
+                      <div className="flex items-center gap-2 ml-7">
+                        {typeof item === 'object' && item.pricePerPerson > 0 && (
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                            ${item.pricePerPerson}/person
+                          </span>
+                        )}
+                        {typeof item === 'object' && item.items?.length > 0 && (
+                          <span className="text-xs text-gray-500">
+                            {item.items.join(', ')}
+                          </span>
+                        )}
+                      </div>
                     )}
-                    {isEditing && (
-                      <button
-                        onClick={() => {
-                          const newPackages = (currentData.services?.foodPackages || []).filter((_: string, idx: number) => idx !== i);
-                          handleNestedChange('services', 'foodPackages', newPackages);
-                        }}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                    {/* Show price input when editing */}
+                    {isEditing && typeof item === 'object' && (
+                      <div className="flex items-center gap-2 ml-7">
+                        <input
+                          type="number"
+                          placeholder="Price"
+                          value={item.pricePerPerson || ''}
+                          onChange={(e) => {
+                            const newPackages = [...(currentData.services?.foodPackages || [])];
+                            newPackages[i] = { ...newPackages[i], pricePerPerson: parseInt(e.target.value) || 0 };
+                            handleNestedChange('services', 'foodPackages', newPackages);
+                          }}
+                          className="text-xs bg-transparent border border-gray-200 rounded px-2 py-1 w-20"
+                        />
+                        <span className="text-xs text-gray-500">per person</span>
+                      </div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
                 {isEditing && (
                   <button
                     onClick={() => {
-                      const newPackages = [...(currentData.services?.foodPackages || []), ''];
+                      const newPackages = [...(currentData.services?.foodPackages || []), { id: Date.now(), name: 'Breakfast Only', description: 'Continental breakfast with coffee and tea', pricePerPerson: 20, items: ['Breakfast', 'Coffee', 'Tea'] }];
                       handleNestedChange('services', 'foodPackages', newPackages);
                     }}
-                    className="text-sm text-primary font-bold mt-2"
+                    className="w-full py-3 border-2 border-dashed border-primary/30 rounded-xl text-sm text-primary font-bold hover:bg-primary/5 transition-colors"
                   >
                     + Add Food Package
                   </button>
@@ -2277,9 +2617,30 @@ const MOCK_BOOKINGS = [
   }
 ];
 
-export const BookingDetailView: React.FC<{ bookingId: string; onBack: () => void }> = ({ bookingId, onBack }) => {
-  const booking = MOCK_BOOKINGS.find(b => b.id === bookingId) || MOCK_BOOKINGS[0];
+export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> = ({ booking, onBack }) => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [updating, setUpdating] = useState(false);
+
+  const handleStatusUpdate = async (newStatus: string) => {
+    if (!confirm(`Are you sure you want to ${newStatus} this booking?`)) return;
+    setUpdating(true);
+    try {
+      const response = await apiClient.put('/api/organizer/bookings', {
+        bookingId: booking._id,
+        status: newStatus
+      });
+      if (response.success) {
+        booking.status = newStatus;
+        alert(`Booking ${newStatus} successfully`);
+      } else {
+        alert(response.message || 'Failed to update booking');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error updating booking');
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
@@ -2289,7 +2650,7 @@ export const BookingDetailView: React.FC<{ bookingId: string; onBack: () => void
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div>
-            <h2 className="text-2xl font-serif font-bold text-primary">Booking {booking.id}</h2>
+            <h2 className="text-2xl font-serif font-bold text-primary">Booking #{booking._id?.slice(-8).toUpperCase()}</h2>
             <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Manage guest details and fulfillment</p>
           </div>
         </div>
@@ -2331,25 +2692,27 @@ export const BookingDetailView: React.FC<{ bookingId: string; onBack: () => void
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                   <div className="space-y-1">
                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Full Name</p>
-                    <p className="text-sm font-bold text-primary">{booking.guest.name}</p>
+                    <p className="text-sm font-bold text-primary">{booking.contactInfo?.fullName || 'N/A'}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Email Address</p>
                     <p className="text-sm font-bold text-primary flex items-center gap-2">
-                      <Mail className="w-3.5 h-3.5 text-gray-300" /> {booking.guest.email}
+                      <Mail className="w-3.5 h-3.5 text-gray-300" /> {booking.contactInfo?.email || 'N/A'}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Phone Number</p>
                     <p className="text-sm font-bold text-primary flex items-center gap-2">
-                      <Phone className="w-3.5 h-3.5 text-gray-300" /> {booking.guest.phone}
+                      <Phone className="w-3.5 h-3.5 text-gray-300" /> {booking.contactInfo?.phone || 'N/A'}
                     </p>
                   </div>
                 </div>
-                <div className="pt-4 border-t border-gray-50">
-                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Special Requests</p>
-                  <p className="text-sm text-gray-600 italic">"{booking.guest.specialRequests}"</p>
-                </div>
+                {booking.specialRequests && (
+                  <div className="pt-4 border-t border-gray-50">
+                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Special Requests</p>
+                    <p className="text-sm text-gray-600 italic">"{booking.specialRequests}"</p>
+                  </div>
+                )}
               </section>
 
               {/* Event Ticket */}
@@ -2360,254 +2723,184 @@ export const BookingDetailView: React.FC<{ bookingId: string; onBack: () => void
                 <div className="bg-ethio-bg/30 p-6 rounded-3xl border border-gray-50 flex flex-col md:flex-row justify-between gap-6">
                   <div className="space-y-4">
                     <div>
-                      <h4 className="text-xl font-serif font-bold text-primary">{booking.event.name}</h4>
+                      <h4 className="text-xl font-serif font-bold text-primary">{booking.festival?.name || 'Festival'}</h4>
                       <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
-                        Date: {booking.event.dates} <br />
-                        Time: 9:00 AM <br />
-                        Location: Gondar
+                        Date: {booking.festival?.startDate ? new Date(booking.festival.startDate).toLocaleDateString() : 'TBD'}
                       </p>
                     </div>
-                    <Badge variant="secondary" className="bg-primary text-white border-none">{booking.event.ticketType} x{booking.event.quantity}</Badge>
+                    <Badge variant="secondary" className="bg-primary text-white border-none capitalize">{booking.ticketType} x{booking.quantity}</Badge>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-right">
                     <div>
                       <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Quantity</p>
-                      <p className="text-lg font-bold text-primary">x{booking.event.quantity}</p>
+                      <p className="text-lg font-bold text-primary">x{booking.quantity}</p>
                     </div>
                     <div>
                       <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Price</p>
-                      <p className="text-lg font-bold text-primary">ETB {booking.event.pricePerTicket}</p>
+                      <p className="text-lg font-bold text-primary">ETB {booking.totalPrice / booking.quantity}</p>
                     </div>
                     <div className="col-span-2 md:col-span-1">
                       <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Subtotal</p>
-                      <p className="text-lg font-bold text-secondary">ETB {booking.event.subtotal}</p>
+                      <p className="text-lg font-bold text-secondary">ETB {booking.totalPrice}</p>
                     </div>
                   </div>
                 </div>
               </section>
 
               {/* Accommodation */}
-              <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
-                <h3 className="text-lg font-serif font-bold text-primary flex items-center gap-2">
-                  <Hotel className="w-5 h-5 text-secondary" /> Accommodation
-                </h3>
-                {booking.accommodation ? (
+              {booking.bookingDetails?.room && (
+                <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
+                  <h3 className="text-lg font-serif font-bold text-primary flex items-center gap-2">
+                    <Hotel className="w-5 h-5 text-secondary" /> Accommodation
+                  </h3>
                   <div className="space-y-6">
                     <div className="flex flex-col md:flex-row justify-between gap-6">
                       <div>
-                        <h4 className="text-xl font-serif font-bold text-primary">{booking.accommodation.hotelName}</h4>
-                        <p className="text-sm font-bold text-secondary">{booking.accommodation.roomCategory}</p>
-                      </div>
-                      <div className="flex gap-4">
-                        <div className="text-center px-4 py-2 bg-ethio-bg rounded-2xl">
-                          <p className="text-[8px] font-black uppercase text-gray-400 tracking-widest">Area</p>
-                          <p className="text-xs font-bold text-primary">{booking.accommodation.area} m²</p>
-                        </div>
-                        <div className="text-center px-4 py-2 bg-ethio-bg rounded-2xl">
-                          <p className="text-[8px] font-black uppercase text-gray-400 tracking-widest">Beds</p>
-                          <p className="text-xs font-bold text-primary">{booking.accommodation.beds}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-4 border-t border-gray-50">
-                      <div>
-                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Check-in</p>
-                        <p className="text-sm font-bold text-primary">{booking.accommodation.checkIn}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Check-out</p>
-                        <p className="text-sm font-bold text-primary">{booking.accommodation.checkOut}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Rate</p>
-                        <p className="text-sm font-bold text-primary">ETB {booking.accommodation.pricePerNight} x {booking.accommodation.nights}</p>
+                        <h4 className="text-xl font-serif font-bold text-primary">{booking.bookingDetails.room.hotelName}</h4>
+                        <p className="text-sm font-bold text-secondary">{booking.bookingDetails.room.roomName}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Subtotal</p>
-                        <p className="text-sm font-bold text-secondary">ETB {booking.accommodation.subtotal}</p>
+                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Per Night</p>
+                        <p className="text-lg font-bold text-primary">ETB {booking.bookingDetails.room.roomPrice}</p>
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="py-10 text-center bg-ethio-bg/30 rounded-3xl border border-dashed border-gray-200">
-                    <p className="text-gray-400 text-sm font-bold uppercase tracking-widest">Accommodation not included</p>
-                  </div>
-                )}
-              </section>
+                </section>
+              )}
 
-              {/* Transportation */}
-              <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
-                <h3 className="text-lg font-serif font-bold text-primary flex items-center gap-2">
-                  <Car className="w-5 h-5 text-secondary" /> Transportation
-                </h3>
-                {booking.transport ? (
-                  <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                    <div className="flex items-center gap-4">
-                      <div className="p-4 bg-ethio-bg rounded-2xl">
-                        <Car className="w-6 h-6 text-primary" />
-                      </div>
-                      <div>
-                        <h4 className="text-lg font-serif font-bold text-primary">{booking.transport.vehicleType}</h4>
-                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Pickup: {booking.transport.pickupDate}</p>
-                      </div>
+              {/* Transport */}
+              {booking.bookingDetails?.transport && (
+                <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
+                  <h3 className="text-lg font-serif font-bold text-primary flex items-center gap-2">
+                    <Car className="w-5 h-5 text-secondary" /> Transport
+                  </h3>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="text-xl font-serif font-bold text-primary">{booking.bookingDetails.transport.type}</h4>
+                      <p className="text-sm text-gray-500">Private Transfer</p>
                     </div>
-                    <div className="grid grid-cols-3 gap-8 text-right">
-                      <div>
-                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Units</p>
-                        <p className="text-sm font-bold text-primary">x{booking.transport.units}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Rate</p>
-                        <p className="text-sm font-bold text-primary">ETB {booking.transport.pricePerDay}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Subtotal</p>
-                        <p className="text-sm font-bold text-secondary">ETB {booking.transport.subtotal}</p>
-                      </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Fixed Rate</p>
+                      <p className="text-lg font-bold text-primary">ETB {booking.bookingDetails.transport.price}</p>
                     </div>
                   </div>
-                ) : (
-                  <div className="py-10 text-center bg-ethio-bg/30 rounded-3xl border border-dashed border-gray-200">
-                    <p className="text-gray-400 text-sm font-bold uppercase tracking-widest">No transport selected</p>
-                  </div>
-                )}
-              </section>
+                </section>
+              )}
             </div>
           )}
 
           {activeTab === 'payment' && (
-            <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-10 animate-in fade-in duration-500">
-              <div className="flex justify-between items-center">
-                <h3 className="text-2xl font-serif font-bold text-primary">Payment Summary</h3>
-                <Badge variant="outline" className="text-emerald-600 border-emerald-100 bg-emerald-50 px-4 py-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 mr-2" /> {booking.payment.status}
-                </Badge>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Ticket Total</span>
-                  <span className="text-primary font-bold">ETB {booking.payment.ticketTotal}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Hotel Total</span>
-                  <span className="text-primary font-bold">ETB {booking.payment.hotelTotal}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Transport Total</span>
-                  <span className="text-primary font-bold">ETB {booking.payment.transportTotal}</span>
-                </div>
-                <div className="flex justify-between text-sm text-red-500">
-                  <span className="font-bold uppercase tracking-widest text-[10px]">Discount Applied</span>
-                  <span className="font-bold">- ETB {booking.payment.discount}</span>
-                </div>
-                <div className="pt-6 border-t border-gray-100 flex justify-between items-end">
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Grand Total Paid</p>
-                    <p className="text-4xl font-serif font-bold text-primary">ETB {booking.payment.grandTotal}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Payment Method</p>
-                    <p className="text-sm font-bold text-primary flex items-center gap-2 justify-end">
-                      <CreditCard className="w-4 h-4 text-gray-300" /> {booking.payment.method}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-8 pt-10 border-t border-gray-50">
+            <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6 animate-in fade-in duration-500">
+              <h3 className="text-lg font-serif font-bold text-primary flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-secondary" /> Payment Details
+              </h3>
+              <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Transaction ID</p>
-                  <p className="text-sm font-mono text-gray-500">{booking.payment.transactionId}</p>
-                </div>
-                <div className="space-y-1 text-right">
-                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Payment Date</p>
-                  <p className="text-sm font-bold text-primary">{booking.payment.date}</p>
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Payment Status</p>
+                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold capitalize ${booking.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {booking.paymentStatus || 'pending'}
+                  </span>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Refund Status</p>
-                  <p className="text-sm font-bold text-gray-500">Not Refunded</p>
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Booking Status</p>
+                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold capitalize ${booking.status === 'confirmed' ? 'bg-green-100 text-green-700' : booking.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {booking.status}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Total Amount</p>
+                  <p className="text-lg font-bold text-primary">{booking.currency} {booking.totalPrice}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Booked On</p>
+                  <p className="text-sm font-bold text-primary">{new Date(booking.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
-            </div>
+            </section>
           )}
 
           {activeTab === 'history' && (
-            <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8 animate-in fade-in duration-500">
-              <h3 className="text-2xl font-serif font-bold text-primary">Activity Log</h3>
-              <div className="space-y-8 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-50">
-                {[
-                  { time: 'Dec 15, 2024 - 14:20', event: 'Booking created and payment confirmed', user: 'System' },
-                  { time: 'Dec 15, 2024 - 14:25', event: 'Confirmation email sent to guest', user: 'System' },
-                  { time: 'Jan 05, 2025 - 09:12', event: 'Guest requested late check-in', user: 'Sarah Jenkins' },
-                  { time: 'Jan 05, 2025 - 10:45', event: 'Late check-in approved', user: 'Organizer' },
-                ].map((log, i) => (
-                  <div  className="relative pl-12">
-                    <div className="absolute left-3 top-1.5 w-2.5 h-2.5 rounded-full bg-primary border-4 border-white shadow-sm" />
-                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">{log.time}</p>
-                    <p className="text-sm font-bold text-primary">{log.event}</p>
-                    <p className="text-xs text-gray-400">Action by: {log.user}</p>
+            <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6 animate-in fade-in duration-500">
+              <h3 className="text-lg font-serif font-bold text-primary flex items-center gap-2">
+                <History className="w-5 h-5 text-secondary" /> Activity Log
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-start gap-4 pb-4 border-b border-gray-50">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                    <Check className="w-4 h-4 text-green-600" />
                   </div>
-                ))}
+                  <div>
+                    <p className="text-sm font-bold text-primary">Booking Created</p>
+                    <p className="text-xs text-gray-400">{new Date(booking.createdAt).toLocaleString()}</p>
+                  </div>
+                </div>
+                {booking.status === 'confirmed' && (
+                  <div className="flex items-start gap-4 pb-4 border-b border-gray-50">
+                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+                      <Check className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-primary">Booking Confirmed</p>
+                      <p className="text-xs text-gray-400">Payment completed</p>
+                    </div>
+                  </div>
+                )}
+                {booking.status === 'cancelled' && (
+                  <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+                      <X className="w-4 h-4 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-primary">Booking Cancelled</p>
+                      <p className="text-xs text-gray-400">Booking was cancelled</p>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
+            </section>
           )}
         </div>
 
-        {/* Right Panel: Controls */}
-        <aside className="space-y-8">
-          <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
-            <h3 className="text-xl font-serif font-bold text-primary">Operational Controls</h3>
+        {/* Sidebar */}
+        <aside className="space-y-6">
+          <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
+            <h3 className="text-lg font-serif font-bold text-primary mb-4">Booking Actions</h3>
             <div className="space-y-3">
-              <button className="w-full flex items-center gap-4 p-4 bg-emerald-50 text-emerald-700 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-emerald-100 transition-all">
-                <UserCheck className="w-5 h-5" /> Mark as Checked-in
-              </button>
-              <button className="w-full flex items-center gap-4 p-4 bg-blue-50 text-blue-700 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-blue-100 transition-all">
-                <CheckCircle2 className="w-5 h-5" /> Mark as Attended
-              </button>
-              <button className="w-full flex items-center gap-4 p-4 bg-gray-50 text-gray-700 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-gray-100 transition-all">
-                <UserMinus className="w-5 h-5" /> Mark as No Show
-              </button>
-              <div className="h-px bg-gray-50 my-4" />
-              <button className="w-full flex items-center gap-4 p-4 bg-white border border-gray-100 text-gray-600 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all">
-                <FileText className="w-5 h-5" /> Download Invoice
-              </button>
-              <button className="w-full flex items-center gap-4 p-4 bg-white border border-gray-100 text-gray-600 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all">
-                <QrCode className="w-5 h-5" /> View QR Code
-              </button>
-              <div className="h-px bg-gray-50 my-4" />
-              <button className="w-full flex items-center gap-4 p-4 bg-red-50 text-red-600 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-red-100 transition-all">
-                <XCircle className="w-5 h-5" /> Cancel Booking
-              </button>
-              {booking.status === 'Confirmed' && (
-                <button className="w-full flex items-center gap-4 p-4 bg-red-50 text-red-600 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-red-100 transition-all">
-                  <RefreshCw className="w-5 h-5" /> Refund Booking
-                </button>
+              {booking.status === 'pending' && (
+                <>
+                  <Button className="w-full" onClick={() => handleStatusUpdate('confirmed')} disabled={updating}>
+                    {updating ? 'Processing...' : 'Confirm Booking'}
+                  </Button>
+                  <Button variant="outline" className="w-full text-red-500 border-red-200 hover:bg-red-50" onClick={() => handleStatusUpdate('cancelled')} disabled={updating}>
+                    Cancel Booking
+                  </Button>
+                </>
+              )}
+              {booking.status === 'confirmed' && (
+                <Button variant="outline" className="w-full text-red-500 border-red-200 hover:bg-red-50" onClick={() => handleStatusUpdate('cancelled')} disabled={updating}>
+                  Cancel Booking
+                </Button>
+              )}
+              {booking.status === 'cancelled' && (
+                <div className="text-center text-gray-500 text-sm">This booking has been cancelled</div>
               )}
             </div>
           </div>
-
-          <div className="bg-ethio-dark p-8 rounded-[40px] text-white shadow-2xl space-y-6">
-            <h3 className="text-xl font-serif font-bold">Quick Summary</h3>
+          
+          <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
+            <h3 className="text-lg font-serif font-bold text-primary mb-4">Quick Stats</h3>
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-400">Booking Status</span>
-                <Badge className={`border-none ${
-                    booking.status === 'Confirmed' ? 'bg-emerald-500 text-white' : 
-                    booking.status === 'Pending' ? 'bg-amber-500 text-white' :
-                    booking.status === 'Checked-in' ? 'bg-blue-500 text-white' :
-                    booking.status === 'Refunded' ? 'bg-purple-500 text-white' :
-                    booking.status === 'No-show' ? 'bg-gray-500 text-white' :
-                    'bg-red-500 text-white'
-                  }`}>{booking.status}</Badge>
+              <div className="flex justify-between">
+                <span className="text-gray-500 text-sm">Tickets</span>
+                <span className="font-bold text-primary">{booking.quantity}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-400">Payment Status</span>
-                <span className="text-xs font-bold text-emerald-400">Fully Paid</span>
+              <div className="flex justify-between">
+                <span className="text-gray-500 text-sm">Total</span>
+                <span className="font-bold text-primary">{booking.currency} {booking.totalPrice}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-400">Total Guests</span>
-                <span className="text-xs font-bold">{booking.event.quantity} Persons</span>
+              <div className="flex justify-between">
+                <span className="text-gray-500 text-sm">Guest</span>
+                <span className="font-bold text-primary">{booking.tourist?.name || 'Guest'}</span>
               </div>
             </div>
           </div>
@@ -2694,6 +2987,24 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
     setSelectedBookings(prev => 
       prev.includes(id) ? prev.filter(bId => bId !== id) : [...prev, id]
     );
+  };
+
+  const handleBookingStatusUpdate = async (bookingId: string, newStatus: string) => {
+    try {
+      const response = await apiClient.put('/api/organizer/bookings', {
+        bookingId,
+        status: newStatus
+      });
+      if (response.success) {
+        setBookings(prev => prev.map(b => 
+          b._id === bookingId ? { ...b, status: newStatus } : b
+        ));
+      } else {
+        alert(response.message || 'Failed to update booking');
+      }
+    } catch (err: any) {
+      alert(err.message || 'An error occurred');
+    }
   };
 
   const totalTickets = filteredBookings.reduce((acc, b) => acc + (b.quantity || 0), 0);
@@ -2913,52 +3224,66 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
                   />
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm font-mono font-bold text-primary">{booking.id}</span>
+                  <span className="text-sm font-mono font-bold text-primary">{booking._id?.slice(-8)}</span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm text-gray-600">{booking.bookingDate}</span>
+                  <span className="text-sm text-gray-600">{new Date(booking.createdAt).toLocaleDateString()}</span>
                 </td>
                 <td className="px-6 py-4">
                   <div>
-                    <p className="text-sm font-bold text-primary">{booking.guest.name}</p>
-                    <p className="text-xs text-gray-400">{booking.guest.email}</p>
+                    <p className="text-sm font-bold text-primary">{booking.contactInfo?.fullName || 'N/A'}</p>
+                    <p className="text-xs text-gray-400">{booking.contactInfo?.email || 'N/A'}</p>
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <p className="text-sm font-bold text-primary">{booking.event.name}</p>
+                  <p className="text-sm font-bold text-primary">{booking.festival?.name || 'N/A'}</p>
                 </td>
                 <td className="px-6 py-4">
-                  <Badge variant="secondary" className="bg-gray-100 text-gray-700 border-none">{booking.event.ticketType}</Badge>
+                  <Badge variant="secondary" className="bg-gray-100 text-gray-700 border-none capitalize">{booking.ticketType}</Badge>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm font-bold text-primary">x{booking.event.quantity}</span>
+                  <span className="text-sm font-bold text-primary">x{booking.quantity}</span>
                 </td>
                 <td className="px-6 py-4">
-                  <p className="text-sm font-bold text-secondary">ETB {booking.payment.grandTotal}</p>
+                  <p className="text-sm font-bold text-secondary">{booking.currency} {booking.totalPrice}</p>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm text-gray-600">{booking.payment.method}</span>
+                  <span className="text-sm text-gray-600 capitalize">{booking.paymentStatus}</span>
                 </td>
                 <td className="px-6 py-4">
                   <Badge variant="secondary" className={`border-none ${
-                    booking.status === 'Confirmed' ? 'bg-emerald-100 text-emerald-700' : 
-                    booking.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
-                    booking.status === 'Checked-in' ? 'bg-blue-100 text-blue-700' :
-                    booking.status === 'Refunded' ? 'bg-purple-100 text-purple-700' :
-                    booking.status === 'No-show' ? 'bg-gray-200 text-gray-700' :
-                    'bg-red-100 text-red-700'
+                    booking.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : 
+                    booking.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                    booking.status === 'completed' ? 'bg-blue-100 text-blue-700' :
+                    booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                    'bg-gray-100 text-gray-700'
                   }`}>
                     {booking.status}
                   </Badge>
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => onViewBooking(booking.id)} className="p-2 bg-white border border-gray-100 rounded-xl text-primary hover:bg-primary hover:text-white transition-all shadow-sm">
+                    <button onClick={() => onViewBooking(booking._id)} className="p-2 bg-white border border-gray-100 rounded-xl text-primary hover:bg-primary hover:text-white transition-all shadow-sm">
                       <Eye className="w-4 h-4" />
                     </button>
-                    <button className="p-2 bg-white border border-gray-100 rounded-xl text-gray-400 hover:text-primary transition-all shadow-sm">
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
+                    {booking.status === 'pending' && (
+                      <>
+                        <button 
+                          onClick={() => handleBookingStatusUpdate(booking._id, 'confirmed')}
+                          className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                          title="Confirm"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleBookingStatusUpdate(booking._id, 'cancelled')}
+                          className="p-2 bg-red-50 border border-red-200 rounded-xl text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                          title="Cancel"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -3113,9 +3438,71 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
                     <p className="flex items-center gap-2"><Calendar className="w-3 h-3 text-secondary" /> {new Date(festival.startDate).toLocaleDateString()} - {new Date(festival.endDate).toLocaleDateString()}</p>
                     <p className="flex items-center gap-2"><MapPin className="w-3 h-3 text-secondary" /> {festival.locationName}</p>
                   </div>
-                  <div className="pt-4 border-t border-gray-100 flex gap-3">
-                    <Button variant="primary" size="sm" className="flex-1" onClick={() => onManageEvent(festival._id)}>Manage</Button>
-                    <Button variant="outline" size="sm" className="flex-1">View Public</Button>
+                  <div className="pt-4 border-t border-gray-100 flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <Button variant="primary" size="sm" className="flex-1" onClick={() => onManageEvent(festival._id)}>Manage</Button>
+                      <Button variant="outline" size="sm" className="flex-1" disabled={festival.verificationStatus === 'Approved'}>View Public</Button>
+                    </div>
+                     {[(festival as any).verificationStatus === 'Draft', (festival as any).verificationStatus === 'Rejected'].includes(true) && (
+                       <Button 
+                         variant="secondary" 
+                         size="sm" 
+                         className="w-full"
+                         onClick={async (e) => {
+                           e.stopPropagation();
+                           try {
+                             const res = await fetch(`/api/organizer/festivals/${festival._id}/submit`, { method: 'POST' });
+                             const data = await res.json();
+                             if (data.success) {
+                               setFestivals(prev => prev.map(f => f._id === festival._id ? { ...f, verificationStatus: 'Pending Review', submittedAt: new Date().toISOString() } : f));
+                               alert('Event submitted for review');
+                             } else {
+                               alert(data.message || 'Failed to submit');
+                             }
+                           } catch (err) {
+                             alert('Error submitting event');
+                           }
+                         }}
+                       >
+                         {(festival as any).verificationStatus === 'Rejected' ? 'Resubmit for Review' : 'Submit for Review'}
+                       </Button>
+                     )}
+                    {(festival as any).verificationStatus === 'Pending Review' && (
+                      <div className="text-center text-xs text-amber-600 py-1 bg-amber-50 rounded-lg">
+                        Awaiting Admin Review
+                      </div>
+                    )}
+                    {festival.verificationStatus === 'Approved' && (
+                      <>
+                        <div className="text-center text-xs text-emerald-600 py-1 bg-emerald-50 rounded-lg">
+                          Published
+                        </div>
+                        {(festival as any).isEditedAfterApproval && (
+                          <div className="text-center text-xs text-amber-600 py-1 bg-amber-50 rounded-lg mt-1">
+                            Pending Re-verification
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {festival.verificationStatus === 'Rejected' && (
+                      <div className="space-y-2">
+                        <div className="p-3 bg-red-50 border border-red-100 rounded-xl">
+                          <p className="text-[10px] font-bold text-red-600 uppercase mb-1">Rejection Reason</p>
+                          <p className="text-xs text-red-700">{(festival as any).rejectionReason || 'Please edit and resubmit your event'}</p>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onManageEvent(festival._id);
+                          }}
+                        >
+                          Edit & Resubmit
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

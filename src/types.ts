@@ -84,11 +84,20 @@ export interface RoomType {
   description: string;
   capacity: number;
   pricePerNight: number;
-  availabilityCount: number;
+  availability: number;
   image: string;
   sqm: number;
   amenities: string[];
   bedType: string;
+}
+
+export interface FoodPackage {
+  id: string;
+  _id?: string;
+  name: string;
+  description: string;
+  pricePerPerson: number;
+  items: string[];
 }
 
 export interface HotelAccommodation {
@@ -103,23 +112,26 @@ export interface HotelAccommodation {
   checkInTime: string;
   checkOutTime: string;
   facilities: string[];
-  roomTypes: RoomType[];
+  rooms: RoomType[];
   gallery: string[];
-  rooms?: RoomType[];
 }
 
 export interface TransportOption {
   id: string;
   type: 'Private Car' | 'VIP SUV' | 'Shuttle Bus' | 'Luxury Coach' | 'Helicopter Transfer';
+  provider?: string;
   image: string;
   price: number;
-  availability: number;
+  availability?: number;
+  capacity?: number;
+  features?: string[];
   description: string;
-  pickupLocations: string[];
+  pickupLocations?: string[];
 }
 
 export interface Festival {
   id: string;
+  _id?: string;
   name: string;
   slug: string;
   startDate: string;
@@ -138,8 +150,9 @@ export interface Festival {
   transportation: TransportOption[];
   foodPackages: string[];
   culturalServices: string[];
-  baseTicketPrice: number;
+  baseTicketPrice?: number;
   vipTicketPrice?: number;
+  earlyBirdPrice?: number;
   currency: string;
   cancellationPolicy: string;
   bookingTerms: string;
@@ -148,6 +161,14 @@ export interface Festival {
   organizerId: string;
   isVerified: boolean;
   ticketsAvailable: number;
+  status: 'Draft' | 'Published' | 'Cancelled';
+  verificationStatus: 'Not Submitted' | 'Pending Review' | 'Under Review' | 'Approved' | 'Rejected';
+  submittedAt?: string;
+  reviewedAt?: string;
+  rejectionReason?: string;
+  isEditedAfterApproval?: boolean;
+  reverificationRequested?: boolean;
+  lastEditedAt?: string;
 }
 
 export interface Booking {

@@ -1,0 +1,289 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { connectDB } from '../../../../lib/mongodb';
+import Booking from '../../../../models/booking.model';
+import Festival from '../../../../models/festival.model';
+import mongoose from 'mongoose';
+import * as jose from 'jose';
+
+export async function GET(request: NextRequest) {
+  try {
+    await connectDB();
+
+    const token = request.cookies.get('sessionToken')?.value;
+    if (!token) {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'Authentication required' }),
+        { status: 401, headers: { 'content-type': 'application/json' } }
+      );
+    }
+
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'ethio-hub-secret-key-2025');
+    const { payload } = await jose.jwtVerify(token, secret);
+    const touristId = payload.userId as string;
+
+    if (!touristId) {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'Tourist ID not found in token' }),
+        { status: 401, headers: { 'content-type': 'application/json' } }
+      );
+    }
+
+    console.log('GET - TouristId from token:', touristId);
+
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+
+    let touristObjectId;
+    try {
+      touristObjectId = new mongoose.Types.ObjectId(touristId);
+    } catch (e) {
+      console.error('Invalid touristId format:', touristId);
+      touristObjectId = touristId;
+    }
+
+    const query: any = { tourist: touristObjectId };
+    if (status) query.status = status;
+
+    const bookings = await Booking.find(query)
+      .populate('festival', 'name startDate endDate coverImage locationName')
+      .populate('organizer', 'name')
+      .sort({ createdAt: -1 });
+
+    console.log('Fetching bookings for touristId:', touristId, 'Query:', query, 'Found:', bookings.length);
+
+    return new NextResponse(
+      JSON.stringify({ success: true, bookings }),
+      { status: 200, headers: { 'content-type': 'application/json' } }
+    );
+
+  } catch (error: any) {
+    if (error.code === 'ERR_JWT_EXPIRED' || error.code === 'ERR_JWS_INVALID') {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'Authentication failed: Invalid token' }),
+        { status: 401, headers: { 'content-type': 'application/json' } }
+      );
+    }
+    console.error('Error fetching bookings:', error);
+    return new NextResponse(
+      JSON.stringify({ success: false, message: 'Internal Server Error' }),
+      { status: 500, headers: { 'content-type': 'application/json' } }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    await connectDB();
+
+    const token = request.cookies.get('sessionToken')?.value;
+    if (!token) {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'Authentication required' }),
+        { status: 401, headers: { 'content-type': 'application/json' } }
+      );
+    }
+
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'ethio-hub-secret-key-2025');
+    const { payload } = await jose.jwtVerify(token, secret);
+    const touristId = payload.userId as string;
+
+    if (!touristId) {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'Tourist ID not found in token' }),
+        { status: 401, headers: { 'content-type': 'application/json' } }
+      );
+    }
+
+    const body = await request.json();
+    const { bookingId, action } = body;
+
+    if (!bookingId) {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'Booking ID is required' }),
+        { status: 400, headers: { 'content-type': 'application/json' } }
+      );
+    }
+
+    const booking = await Booking.findOne({ _id: bookingId, tourist: touristId });
+    if (!booking) {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'Booking not found' }),
+        { status: 404, headers: { 'content-type': 'application/json' } }
+      );
+    }
+
+    if (action === 'cancel') {
+      if (booking.status !== 'pending') {
+        return new NextResponse(
+          JSON.stringify({ success: false, message: 'Only pending bookings can be cancelled' }),
+          { status: 400, headers: { 'content-type': 'application/json' } }
+        );
+      }
+      booking.status = 'cancelled';
+      await booking.save();
+    }
+
+    if (action === 'confirm') {
+      booking.status = 'confirmed';
+      booking.paymentStatus = 'paid';
+      await booking.save();
+    }
+
+    const updatedBooking = await Booking.findById(bookingId)
+      .populate('festival', 'name startDate endDate')
+      .populate('organizer', 'name');
+
+    return new NextResponse(
+      JSON.stringify({ success: true, booking: updatedBooking }),
+      { status: 200, headers: { 'content-type': 'application/json' } }
+    );
+
+  } catch (error: any) {
+    if (error.code === 'ERR_JWT_EXPIRED' || error.code === 'ERR_JWS_INVALID') {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'Authentication failed: Invalid token' }),
+        { status: 401, headers: { 'content-type': 'application/json' } }
+      );
+    }
+    if (error.name === 'CastError') {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'Invalid Booking ID format' }),
+        { status: 400, headers: { 'content-type': 'application/json' } }
+      );
+    }
+    console.error('Error updating booking:', error);
+    return new NextResponse(
+      JSON.stringify({ success: false, message: 'Internal Server Error' }),
+      { status: 500, headers: { 'content-type': 'application/json' } }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    await connectDB();
+
+    const token = request.cookies.get('sessionToken')?.value;
+    if (!token) {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'Authentication required' }),
+        { status: 401, headers: { 'content-type': 'application/json' } }
+      );
+    }
+
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'ethio-hub-secret-key-2025');
+    const { payload } = await jose.jwtVerify(token, secret);
+    const touristId = payload.userId as string;
+
+    if (!touristId) {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'Tourist ID not found in token' }),
+        { status: 401, headers: { 'content-type': 'application/json' } }
+      );
+    }
+
+    console.log('POST - TouristId from token:', touristId, 'Attempting to create booking');
+
+    const body = await request.json();
+    console.log('POST - Request body:', body);
+    const { 
+      festivalId, 
+      ticketType, 
+      quantity, 
+      contactInfo, 
+      specialRequests,
+      bookingDetails,
+      totalPrice,
+      currency
+    } = body;
+
+    if (!festivalId || !ticketType || !quantity || !contactInfo || !totalPrice) {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'Missing required fields' }),
+        { status: 400, headers: { 'content-type': 'application/json' } }
+      );
+    }
+
+    const festival = await Festival.findById(festivalId);
+    if (!festival) {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'Festival not found' }),
+        { status: 404, headers: { 'content-type': 'application/json' } }
+      );
+    }
+
+    const bookingData: any = {
+      tourist: new mongoose.Types.ObjectId(touristId),
+      festival: new mongoose.Types.ObjectId(festivalId),
+      organizer: festival.organizer,
+      ticketType,
+      quantity,
+      totalPrice,
+      currency: currency || 'ETB',
+      status: 'pending',
+      paymentStatus: 'pending',
+      contactInfo: {
+        fullName: contactInfo.fullName,
+        email: contactInfo.email,
+        phone: contactInfo.phone || '',
+      },
+    };
+
+    if (specialRequests) {
+      bookingData.specialRequests = specialRequests;
+    }
+
+    if (bookingDetails && typeof bookingDetails === 'object') {
+      const cleanDetails: any = {};
+      if (bookingDetails.room && (bookingDetails.room.hotelName || bookingDetails.room.roomName)) {
+        cleanDetails.room = {
+          hotelName: bookingDetails.room.hotelName || '',
+          roomName: bookingDetails.room.roomName || '',
+          roomPrice: bookingDetails.room.roomPrice || 0,
+        };
+      }
+      if (bookingDetails.transport && bookingDetails.transport.type) {
+        cleanDetails.transport = {
+          type: bookingDetails.transport.type,
+          price: bookingDetails.transport.price || 0,
+        };
+      }
+      if (cleanDetails && typeof cleanDetails === 'object' && Object.keys(cleanDetails).length > 0) {
+        bookingData.bookingDetails = cleanDetails;
+      }
+    }
+
+    const booking = new Booking(bookingData);
+
+    await booking.save();
+    console.log('Created booking with touristId:', touristId, 'festivalId:', festivalId, 'bookingId:', booking._id);
+
+    const populatedBooking = await Booking.findById(booking._id)
+      .populate('festival', 'name startDate endDate coverImage locationName')
+      .populate('organizer', 'name');
+
+    return new NextResponse(
+      JSON.stringify({ success: true, booking: populatedBooking }),
+      { status: 201, headers: { 'content-type': 'application/json' } }
+    );
+
+  } catch (error: any) {
+    if (error.code === 'ERR_JWT_EXPIRED' || error.code === 'ERR_JWS_INVALID') {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'Authentication failed: Invalid token' }),
+        { status: 401, headers: { 'content-type': 'application/json' } }
+      );
+    }
+    if (error.name === 'CastError') {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'Invalid ID format' }),
+        { status: 400, headers: { 'content-type': 'application/json' } }
+      );
+    }
+    console.error('Error creating booking:', error, error.stack);
+    return new NextResponse(
+      JSON.stringify({ success: false, message: 'Internal Server Error' }),
+      { status: 500, headers: { 'content-type': 'application/json' } }
+    );
+  }
+}

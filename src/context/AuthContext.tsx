@@ -17,18 +17,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // This function will now be responsible for checking if a session is active on the server
     const checkUserSession = async () => {
       try {
-        // We will create this API route next
-        const response = await fetch('/api/auth/session');
+        const response = await fetch('/api/auth/session', { cache: 'no-store' });
         if (response.ok) {
           const data = await response.json();
-          if (data.success) {
-            // Normalize role to uppercase to match User model
+          if (data && data.success && data.user) {
             const userData = {
               ...data.user,
               role: data.user.role?.toUpperCase()
@@ -43,7 +40,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     };
 
-    checkUserSession();
+    setTimeout(checkUserSession, 100);
   }, []);
 
   const login = async (credentials: any) => {

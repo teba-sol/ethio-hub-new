@@ -52,31 +52,37 @@ export function DashboardRedirect() {
         return;
       }
       case UserRole.ARTISAN: {
-        if (
-          user.artisanStatus === "Not Submitted" ||
-          user.artisanStatus === "Pending" ||
-          user.artisanStatus === "Under Review" ||
-          user.artisanStatus === "Rejected" ||
-          user.artisanStatus === "Modification Requested"
-        ) {
-          router.replace("/dashboard/artisan/onboarding");
+        if (user.artisanStatus === 'Not Submitted') {
+          router.replace('/dashboard/artisan/onboarding');
           return;
         }
-        router.replace("/dashboard/artisan/overview");
+        if (
+          user.artisanStatus === 'Pending' ||
+          user.artisanStatus === 'Under Review' ||
+          user.artisanStatus === 'Rejected' ||
+          user.artisanStatus === 'Modification Requested'
+        ) {
+          router.replace('/artisan/waiting');
+          return;
+        }
+        router.replace('/dashboard/artisan/overview');
         return;
       }
       case UserRole.ORGANIZER: {
-        if (
-          user.organizerStatus === "Not Submitted" ||
-          user.organizerStatus === "Pending" ||
-          user.organizerStatus === "Under Review" ||
-          user.organizerStatus === "Rejected" ||
-          user.organizerStatus === "Modification Requested"
-        ) {
-          router.replace("/dashboard/organizer/onboarding");
+        if (user.organizerStatus === 'Not Submitted') {
+          router.replace('/dashboard/organizer/onboarding');
           return;
         }
-        router.replace("/dashboard/organizer/overview");
+        if (
+          user.organizerStatus === 'Pending' ||
+          user.organizerStatus === 'Under Review' ||
+          user.organizerStatus === 'Rejected' ||
+          user.organizerStatus === 'Modification Requested'
+        ) {
+          router.replace('/organizer/waiting');
+          return;
+        }
+        router.replace('/dashboard/organizer/overview');
         return;
       }
       case UserRole.TOURIST: {
