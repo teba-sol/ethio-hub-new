@@ -12,7 +12,7 @@ export const FestivalCard: React.FC<{ festival: Festival }> = ({ festival }) => 
 
   return (
     <article className="group relative h-[420px] rounded-3xl overflow-hidden shadow-md border border-white/10">
-      <Link href={`/festivals/${festival.id}`}>
+      <Link href={`/event/${festival.id}`}>
         <img 
           src={festival.coverImage} 
           alt={festival.name} 
@@ -43,7 +43,7 @@ export const FestivalCard: React.FC<{ festival: Festival }> = ({ festival }) => 
             className="px-6 rounded-xl font-bold text-[9px] uppercase tracking-widest"
             onClick={(e) => {
               e.preventDefault();
-              router.push(`/festivals/${festival.id}`);
+              router.push(`/event/${festival.id}`);
             }}
           >
             Book Experience

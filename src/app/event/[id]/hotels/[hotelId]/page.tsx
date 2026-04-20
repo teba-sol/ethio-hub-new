@@ -58,10 +58,20 @@ export default function HotelDetailPage() {
           setFestival(festivalData);
           setAllHotels(festivalData.hotels || []);
           
-          // Find the specific hotel
-          const hotelData = (festivalData.hotels || []).find((h: any) => 
-            h.id === hotelId || h._id === hotelId
-          );
+          // Find the specific hotel - normalize IDs first
+          const hotels = festivalData.hotels || [];
+          let hotelData = hotels.find((h: any) => {
+            const hId = h._id || h.id || '';
+            return hId === hotelId || hId === `hotel-${hotelId}`;
+          });
+          
+          // Fallback to index-based lookup
+          if (!hotelData) {
+            const idx = parseInt(hotelId);
+            if (!isNaN(idx) && hotels[idx]) {
+              hotelData = hotels[idx];
+            }
+          }
           
           if (hotelData) {
             setHotel(hotelData);
@@ -79,7 +89,10 @@ export default function HotelDetailPage() {
   }, [eventId, hotelId]);
 
   // Get related hotels (other hotels from the same event, excluding current)
-  const relatedHotels = allHotels.filter(h => h.id !== hotel?.id && h._id !== hotelId).slice(0, 3);
+  const relatedHotels = allHotels.filter(h => {
+    const hId = h._id || h.id || '';
+    return hId !== hotelId && hId !== `hotel-${hotelId}`;
+  }).slice(0, 3);
 
   const handleSelectRoom = (room: RoomType) => {
     if (selectedRoom?.id === room.id) {
@@ -691,10 +704,7 @@ export default function HotelDetailPage() {
                   onClick={handleContinue}
                   disabled={!selectedRoom}
                 >
-                  {selectedRoom ? 'Book Now' : 'Select a Room'}
-                </Button>
-                <Button variant="outline" className="flex-1 py-3" onClick={() => setShowEnquiryModal(true)}>
-                  Enquiry
+                  {selectedRoom ? 'Continue to Transport' : 'Select a Room'}
                 </Button>
               </div>
             </div>

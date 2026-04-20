@@ -600,7 +600,7 @@ export const FestivalListingPage: React.FC = () => {
                         <h3 className="text-4xl md:text-6xl font-serif font-bold leading-tight">{filteredFestivals[0].name}</h3>
                         <p className="text-gray-300 text-lg line-clamp-2 font-light">{filteredFestivals[0].shortDescription}</p>
                         <div className="pt-4">
-                            <Link href={`/festivals/${filteredFestivals[0].id}`}>
+                            <Link href={`/event/${filteredFestivals[0].id}`}>
                                 <Button className="rounded-full px-8 py-6 text-lg font-bold uppercase tracking-widest bg-white text-primary hover:bg-secondary hover:text-primary border-none shadow-xl">
                                     View Details <ArrowRight className="ml-3 w-5 h-5" />
                                 </Button>
