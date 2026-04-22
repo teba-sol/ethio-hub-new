@@ -13,6 +13,7 @@ import { Button } from '@/components/UI';
 import { useBooking } from '@/context/BookingContext';
 import { PriceSummary } from '@/components/booking/PriceSummary';
 import apiClient from '@/lib/apiClient';
+import { TransportOption } from '@/types';
 
 export default function TransportDetailPage() {
   const params = useParams();
@@ -34,6 +35,12 @@ export default function TransportDetailPage() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
+  const normalizeTransport = (transportData: any, index: number): TransportOption & { displayId: number } => ({
+    ...transportData,
+    id: transportData._id || transportData.id || `transport-${index}`,
+    displayId: index,
+  });
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -43,7 +50,9 @@ export default function TransportDetailPage() {
         if (festivalData) {
           setFestival(festivalData);
           
-          const transports = festivalData.transportation || [];
+          const transports = (festivalData.transportation || []).map((item: any, index: number) =>
+            normalizeTransport(item, index)
+          );
           setAllTransports(transports);
           
           const selected = transports[transportIndex] || transports[0];
@@ -64,8 +73,10 @@ export default function TransportDetailPage() {
     fetchData();
   }, [eventId, transportIndex]);
 
+  const isCurrentTransportSelected = !!selectedTransport && selectedTransport.id === transport?.id;
+
   const handleSelect = () => {
-    if (selectedTransport?.id === transport?.id) {
+    if (isCurrentTransportSelected) {
       setSelectedTransport(null);
     } else if (transport) {
       setSelectedTransport(transport);
@@ -270,9 +281,9 @@ export default function TransportDetailPage() {
                 <Button 
                   className="w-full py-3" 
                   onClick={handleSelect}
-                  variant={selectedTransport?.id === transport.id ? 'outline' : 'primary'}
+                  variant={isCurrentTransportSelected ? 'outline' : 'primary'}
                 >
-                  {selectedTransport?.id === transport.id ? 'Remove Selection' : 'Select This Car'}
+                  {isCurrentTransportSelected ? 'Remove Selection' : 'Select This Car'}
                 </Button>
 
                 <Button 

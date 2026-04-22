@@ -40,6 +40,7 @@ export default function TransportPage() {
         const rawTransport = festivalData?.transportation || [];
         const mapped = rawTransport.map((t: any, idx: number) => ({
           ...t,
+          id: t._id || t.id || `transport-${idx}`,
           displayId: idx,
         }));
         
@@ -91,9 +92,9 @@ export default function TransportPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
             {transports.length === 0 ? (
-              <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
+              <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 md:col-span-2">
                 <h3 className="text-xl font-bold text-gray-700 mb-2">No Transport Available</h3>
                 <p className="text-gray-500 mb-4">
                   This event has no transport options listed. You can skip this step.
@@ -106,18 +107,18 @@ export default function TransportPage() {
                 </button>
               </div>
             ) : (
-              transports.map((transport, index) => (
+              transports.map((transport) => (
                 <Link
                   key={transport.displayId}
                   href={`/event/${eventId}/transport/${transport.displayId}`}
-                  className={`block bg-white rounded-2xl overflow-hidden border transition-all hover:border-gray-200 hover:shadow-lg ${
+                  className={`block h-full bg-white rounded-2xl overflow-hidden border transition-all hover:border-gray-200 hover:shadow-lg ${
                     selectedTransport?.id === transport.id 
                       ? 'border-primary shadow-lg' 
                       : 'border-gray-100'
                   }`}
                 >
-                  <div className="flex">
-                    <div className="w-48 h-40 flex-shrink-0 relative group">
+                  <div className="flex flex-col">
+                    <div className="w-full h-56 flex-shrink-0 relative group">
                       <img 
                         src={transport.image || 'https://images.unsplash.com/photo-1449966308865-2d33e1d7a7a3?w=400&h=300&fit=crop'} 
                         alt={transport.type}
@@ -139,8 +140,38 @@ export default function TransportPage() {
                           <span className="text-gray-500 text-sm">/day</span>
                         </div>
                       </div>
+
+                      {transport.description && (
+                        <p className="mt-3 text-sm leading-relaxed text-gray-500 line-clamp-3">
+                          {transport.description}
+                        </p>
+                      )}
+
+                      <div className="mt-5">
+                        <h4 className="text-sm font-bold uppercase tracking-wide text-gray-700 mb-3">
+                          Vehicle Specifications
+                        </h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="rounded-xl bg-gray-50 p-3">
+                            <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">Type</p>
+                            <p className="text-sm font-semibold text-gray-800">{transport.type}</p>
+                          </div>
+                          <div className="rounded-xl bg-gray-50 p-3">
+                            <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">Seats</p>
+                            <p className="text-sm font-semibold text-gray-800">{transport.capacity || 5}</p>
+                          </div>
+                          <div className="rounded-xl bg-gray-50 p-3">
+                            <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">Fuel</p>
+                            <p className="text-sm font-semibold text-gray-800">Petrol/Diesel</p>
+                          </div>
+                          <div className="rounded-xl bg-gray-50 p-3">
+                            <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">Transmission</p>
+                            <p className="text-sm font-semibold text-gray-800">Automatic</p>
+                          </div>
+                        </div>
+                      </div>
                       
-                      <div className="flex items-center gap-4 mt-3 text-gray-500 text-sm">
+                      <div className="flex items-center gap-4 mt-4 text-gray-500 text-sm">
                         {transport.capacity && (
                           <div className="flex items-center gap-1">
                             <Users className="w-4 h-4" />
@@ -160,24 +191,27 @@ export default function TransportPage() {
             
             <button
               onClick={() => router.push(`/event/${eventId}/tickets`)}
-              className="w-full mt-4 py-3 text-center text-gray-500 text-sm hover:text-primary"
+              className="w-full mt-4 py-3 text-center text-gray-500 text-sm hover:text-primary md:col-span-2"
             >
               Skip transport selection →
             </button>
           </div>
 
+              {/* <PriceSummary eventId={eventId} /> 
           <div className="lg:col-span-1">
             <div className="sticky top-24">
-              <PriceSummary eventId={eventId} />
-              
               <button
                 onClick={handleContinue}
                 className="w-full mt-4 py-4 rounded-xl font-bold text-lg bg-primary text-white hover:bg-primary/90"
               >
                 Continue to Tickets
               </button>
-            </div>
-          </div>
+                </div>
+          </div>*/
+              }
+              
+              
+          
         </div>
       </div>
     </div>

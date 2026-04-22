@@ -124,15 +124,6 @@ export const PriceSummary: React.FC<PriceSummaryProps> = ({ eventId }) => {
         </div>
       </div>
       
-      {/* Continue Button */}
-      <div className="p-6 pt-0">
-        <a 
-          href={`/event/${eventId}/checkout`}
-          className="block w-full py-4 bg-primary text-white text-center rounded-xl font-bold hover:bg-primary/90 transition-colors"
-        >
-          Continue to Checkout
-        </a>
-      </div>
     </div>
   );
 };

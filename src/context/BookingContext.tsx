@@ -30,6 +30,7 @@ interface BookingContextType {
     addFoodPackage: (pkg: FoodPackage) => void;
     removeFoodPackage: (pkgId: string) => void;
     toggleFoodPackage: (pkg: FoodPackage) => void;
+  selectFoodPackage: (pkg: FoodPackage) => void;
   
   // Transport
   selectedTransport: TransportOption | null;
@@ -67,7 +68,7 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [selectedRoom, setSelectedRoom] = useState<RoomType | null>(null);
   const [checkIn, setCheckIn] = useState<Date | null>(null);
   const [checkOut, setCheckOut] = useState<Date | null>(null);
-  const [guests, setGuests] = useState(1);
+  const [guests, setGuests] = useState(0);
   const [selectedFoodPackages, setSelectedFoodPackages] = useState<FoodPackage[]>([]);
   
   // Transport
@@ -120,10 +121,7 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
   
   const addFoodPackage = (pkg: FoodPackage) => {
-    setSelectedFoodPackages(prev => {
-      if (prev.find(p => p.id === pkg.id)) return prev;
-      return [...prev, pkg];
-    });
+    setSelectedFoodPackages([pkg]);
   };
   
   const removeFoodPackage = (pkgId: string) => {
@@ -134,8 +132,12 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
     if (selectedFoodPackages.find(p => p.id === pkg.id)) {
       removeFoodPackage(pkg.id);
     } else {
-      addFoodPackage(pkg);
+      setSelectedFoodPackages([pkg]);
     }
+  };
+  
+  const selectFoodPackage = (pkg: FoodPackage) => {
+    setSelectedFoodPackages([pkg]);
   };
   
   // Clear all selections
@@ -145,7 +147,7 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
     setSelectedRoom(null);
     setCheckIn(null);
     setCheckOut(null);
-    setGuests(1);
+    setGuests(0);
     setSelectedFoodPackages([]);
     setSelectedTransport(null);
     setTransportDays(1);
@@ -172,6 +174,7 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
       addFoodPackage,
       removeFoodPackage,
       toggleFoodPackage,
+      selectFoodPackage,
       selectedTransport,
       setSelectedTransport,
       transportDays,

@@ -22,7 +22,7 @@ export default function HotelsPage() {
   const router = useRouter();
   const eventId = params?.id as string;
   
-  const { setEvent } = useBooking();
+  const { setEvent, setSelectedHotel, setSelectedRoom } = useBooking();
   
   const [festival, setFestival] = useState<Festival | null>(null);
   const [hotels, setHotels] = useState<HotelAccommodation[]>([]);
@@ -392,6 +392,19 @@ export default function HotelsPage() {
                   Clear filters
                 </button>
               </div>
+            )}
+
+            {filteredHotels.length > 0 && (
+              <button
+                onClick={() => {
+                  setSelectedHotel(null);
+                  setSelectedRoom(null);
+                  router.push(`/event/${eventId}/transport`);
+                }}
+                className="w-full mt-6 py-3 text-center text-gray-500 text-sm hover:text-primary border border-gray-200 rounded-xl"
+              >
+                Skip hotel selection →
+              </button>
             )}
           </div>
         </div>

@@ -7,13 +7,13 @@ import {
   ArrowLeft, MapPin, Star, Wifi, Car, Coffee as CoffeeIcon, Dumbbell, Waves, 
   Utensils, Sparkles, Check, X, ChevronLeft, ChevronRight, Users, Maximize,
   BedDouble, Calendar, ChevronDown, Minus, Plus, ExternalLink, Facebook, Twitter,
+  AlertCircle,
   Linkedin, Mail, Shield, Image as ImageIcon
 } from 'lucide-react';
 import { Button } from '@/components/UI';
 import { useBooking } from '@/context/BookingContext';
-import { PriceSummary } from '@/components/booking/PriceSummary';
 import apiClient from '@/lib/apiClient';
-import { Festival, HotelAccommodation, RoomType, FoodPackage } from '@/types';
+import { Festival, HotelAccommodation, RoomType } from '@/types';
 
 export default function HotelDetailPage() {
   const params = useParams();
@@ -22,7 +22,6 @@ export default function HotelDetailPage() {
   const hotelId = params?.hotelId as string;
   
   const { 
-    selectedHotel, 
     setSelectedHotel,
     selectedRoom,
     setSelectedRoom,
@@ -33,7 +32,7 @@ export default function HotelDetailPage() {
     guests,
     setGuests,
     selectedFoodPackages,
-    toggleFoodPackage,
+    selectFoodPackage,
     clearFoodPackages
   } = useBooking();
   
@@ -47,6 +46,22 @@ export default function HotelDetailPage() {
   const [showGuestSelector, setShowGuestSelector] = useState(false);
   const [showEnquiryModal, setShowEnquiryModal] = useState(false);
   const [enquiryMessage, setEnquiryMessage] = useState('');
+  const [guestSelectionConfirmed, setGuestSelectionConfirmed] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  const normalizeHotel = (hotelData: any, hotelIndex = 0): HotelAccommodation => ({
+    ...hotelData,
+    id: hotelData._id || hotelData.id || `hotel-${hotelIndex}`,
+    rooms: (hotelData.rooms || []).map((room: any, roomIndex: number) => ({
+      ...room,
+      id: room._id || room.id || `room-${hotelIndex}-${roomIndex}`,
+    })),
+  });
+
+  useEffect(() => {
+    setSelectedRoom(null);
+    clearFoodPackages();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,20 +71,23 @@ export default function HotelDetailPage() {
         
         if (festivalData) {
           setFestival(festivalData);
-          setAllHotels(festivalData.hotels || []);
+          const normalizedHotels = (festivalData.hotels || []).map((hotel: any, index: number) =>
+            normalizeHotel(hotel, index)
+          );
+
+          setAllHotels(normalizedHotels);
           
           // Find the specific hotel - normalize IDs first
-          const hotels = festivalData.hotels || [];
-          let hotelData = hotels.find((h: any) => {
-            const hId = h._id || h.id || '';
+          let hotelData = normalizedHotels.find((h: any) => {
+            const hId = h.id || '';
             return hId === hotelId || hId === `hotel-${hotelId}`;
           });
           
           // Fallback to index-based lookup
           if (!hotelData) {
             const idx = parseInt(hotelId);
-            if (!isNaN(idx) && hotels[idx]) {
-              hotelData = hotels[idx];
+            if (!isNaN(idx) && normalizedHotels[idx]) {
+              hotelData = normalizedHotels[idx];
             }
           }
           
@@ -102,10 +120,19 @@ export default function HotelDetailPage() {
     }
   };
 
-  const handleContinue = () => {
-    if (selectedRoom) {
-      router.push(`/event/${eventId}/transport`);
+  const handleContinue = (destination: 'transport' | 'tickets') => {
+    if (!selectedRoom) return;
+
+    if (missingSelections.length > 0) {
+      setValidationErrors(missingSelections);
+      return;
     }
+
+    router.push(
+      destination === 'transport'
+        ? `/event/${eventId}/transport`
+        : `/event/${eventId}/tickets`
+    );
   };
 
   const formatShortDate = (date: Date | null) => {
@@ -120,6 +147,45 @@ export default function HotelDetailPage() {
   };
 
   const gallery = hotel?.gallery?.length ? hotel.gallery : hotel?.image ? [hotel.image] : [];
+  const foodPackages = (((festival as any)?.services?.foodPackages || []) as any[]).map((pkg, index) => ({
+    ...pkg,
+    id: pkg._id || pkg.id || `food-package-${index}`,
+  }));
+  const requiresFoodPackage = foodPackages.length > 0;
+  const missingSelections = [
+    !selectedRoom ? 'Room selection' : null,
+    !checkIn ? 'Check-in date' : null,
+    !checkOut ? 'Check-out date' : null,
+    !guestSelectionConfirmed ? 'Guest selection' : null,
+    requiresFoodPackage && selectedFoodPackages.length === 0 ? 'Food & Drink package' : null,
+  ].filter(Boolean) as string[];
+
+  useEffect(() => {
+    setValidationErrors((prev) => (prev.length > 0 ? [] : prev));
+  }, [selectedRoom, checkIn, checkOut, guestSelectionConfirmed, selectedFoodPackages.length]);
+
+  const renderValidationNotice = () => {
+    if (validationErrors.length === 0) return null;
+
+    return (
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-700 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-semibold text-amber-900">Complete your booking details before continuing</p>
+            <p className="text-sm text-amber-800 mt-1">
+              Please review the following item{validationErrors.length > 1 ? 's' : ''}:
+            </p>
+            <ul className="mt-2 space-y-1 list-disc list-inside text-sm text-amber-800">
+              {validationErrors.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -346,20 +412,20 @@ export default function HotelDetailPage() {
             </div>
 
             {/* Food & Drink Packages Section - from Event Services */}
-            {(festival as any)?.services?.foodPackages && (festival as any).services.foodPackages.length > 0 && (
+            {foodPackages.length > 0 && (
               <div>
                 <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Food & Drink Packages</h2>
                 <p className="text-gray-500 text-sm mb-4">Enhance your stay with our meal packages available for this event</p>
                 
                 <div className="space-y-3">
-                  {(festival as any).services.foodPackages.map((pkg: any) => {
+                  {foodPackages.map((pkg: any) => {
                     const isSelected = selectedFoodPackages.some(p => p.id === pkg.id);
                     const totalPrice = pkg.pricePerPerson * guests;
                     
                     return (
                       <div
                         key={pkg.id}
-                        onClick={() => toggleFoodPackage(pkg)}
+                        onClick={() => selectFoodPackage(pkg)}
                         className={`cursor-pointer rounded-xl p-5 border-2 transition-all ${
                           isSelected 
                             ? 'border-primary bg-primary/5' 
@@ -403,6 +469,27 @@ export default function HotelDetailPage() {
                 </div>
               </div>
             )}
+
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              {renderValidationNotice()}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Button 
+                  className={`w-full py-3 ${validationErrors.length > 0 ? 'mt-4' : ''}`}
+                  onClick={() => handleContinue('transport')}
+                  disabled={!selectedRoom}
+                >
+                  {selectedRoom ? 'Continue to Transport' : 'Select a Room'}
+                </Button>
+                <Button
+                  className={`w-full py-3 ${validationErrors.length > 0 ? 'mt-4' : ''}`}
+                  onClick={() => handleContinue('tickets')}
+                  disabled={!selectedRoom}
+                  variant="outline"
+                >
+                  Continue Without Transport
+                </Button>
+              </div>
+            </div>
 
             {/* Facilities Section */}
             {hotel.facilities && hotel.facilities.length > 0 && (
@@ -631,14 +718,20 @@ export default function HotelDetailPage() {
                       </div>
                       <div className="flex items-center gap-3">
                         <button 
-                          onClick={() => setGuests(Math.max(1, guests - 1))}
+                          onClick={() => {
+                            setGuestSelectionConfirmed(true);
+                            setGuests(Math.max(0, guests - 1));
+                          }}
                           className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center"
                         >
                           <Minus className="w-4 h-4" />
                         </button>
                         <span className="w-6 text-center font-medium">{guests}</span>
                         <button 
-                          onClick={() => setGuests(Math.min(10, guests + 1))}
+                          onClick={() => {
+                            setGuestSelectionConfirmed(true);
+                            setGuests(Math.min(10, guests + 1));
+                          }}
                           className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center"
                         >
                           <Plus className="w-4 h-4" />
@@ -698,13 +791,22 @@ export default function HotelDetailPage() {
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-6">
+              <div className="space-y-3">
+                {renderValidationNotice()}
                 <Button 
-                  className="flex-1 py-3" 
-                  onClick={handleContinue}
+                  className={`w-full py-3 ${validationErrors.length > 0 ? 'mt-4' : ''}`}
+                  onClick={() => handleContinue('transport')}
                   disabled={!selectedRoom}
                 >
                   {selectedRoom ? 'Continue to Transport' : 'Select a Room'}
+                </Button>
+                <Button
+                  className="w-full py-3"
+                  onClick={() => handleContinue('tickets')}
+                  disabled={!selectedRoom}
+                  variant="outline"
+                >
+                  Continue Without Transport
                 </Button>
               </div>
             </div>
