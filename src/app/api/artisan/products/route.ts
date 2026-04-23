@@ -138,6 +138,7 @@ export async function POST(req: Request) {
       deliveryTime,
       shippingFee,
       status: productStatus,
+      verificationStatus: productStatus === 'Published' ? 'Pending' : undefined,
     });
 
     return NextResponse.json(

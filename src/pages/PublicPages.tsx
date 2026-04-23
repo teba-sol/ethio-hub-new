@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { 
   ArrowRight, Star, MapPin, 
   Search, ShieldCheck, ChevronRight,
@@ -31,19 +31,57 @@ import { UserRole } from '../types';
 import apiClient from '../lib/apiClient';
 
 export const Homepage: React.FC = () => {
-  // Filter Products
-  const filteredProducts = MOCK_PRODUCTS;
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // New Arrivals (Mock: take last 5)
-  const newArrivals = [...MOCK_PRODUCTS].reverse().slice(0, 5);
-  
-  // Top Rated (Mock: sort by rating)
-  const topRated = [...MOCK_PRODUCTS].sort((a, b) => b.rating - a.rating).slice(0, 5);
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch('/api/public/products');
+        const data = await res.json();
+        if (data.products) {
+          const mappedProducts = data.products.map((p: any) => ({
+            id: p._id,
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            discountPrice: p.discountPrice,
+            category: p.category,
+            artisanId: p.artisanId?._id || p.artisanId,
+            artisanName: p.artisanId?.name || 'Unknown Artisan',
+            images: p.images && p.images.length > 0 ? p.images : ['/placeholder-product.jpg'],
+            isVerified: p.verificationStatus === 'Approved',
+            rating: 4.5,
+            stock: p.stock,
+            material: p.material,
+            isHandmade: true,
+            productionTime: p.deliveryTime,
+            shippingCost: Number(p.shippingFee) || 0,
+            culturalStory: '',
+            status: p.verificationStatus,
+            sku: p.sku,
+            shippingLocations: [],
+            estimatedDelivery: p.deliveryTime,
+            returnPolicy: '',
+            currency: 'ETB'
+          }));
+          setProducts(mappedProducts);
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setProducts(MOCK_PRODUCTS);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
 
-  // Filter Festivals
+  const filteredProducts = products;
+  const newArrivals = [...products].reverse().slice(0, 5);
+  const topRated = [...products].sort((a, b) => b.rating - a.rating).slice(0, 5);
+
   const filteredFestivals = MOCK_FESTIVALS;
-
-  // Split Festivals (Mock logic since dates are past)
   const liveEvents = filteredFestivals.slice(0, 1);
   const upcomingEvents = filteredFestivals.slice(1);
 
@@ -121,7 +159,7 @@ export const Homepage: React.FC = () => {
               </div>
               <Link href="/products"><Button variant="ghost" className="text-primary font-bold text-sm group p-0 hover:bg-transparent">View All Artifacts <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" /></Button></Link>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {filteredProducts.slice(0, 8).map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           </div>
@@ -315,14 +353,64 @@ export const AboutPage: React.FC = () => (
 );
 
 export const ProductListingPage: React.FC = () => {
+  const searchParams = useSearchParams();
+  const artisanParam = searchParams?.get('artisan');
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [showFilters, setShowFilters] = useState(false);
-  
-  // Extract categories
-  const categories = ["All", ...Array.from(new Set(MOCK_PRODUCTS.map(p => p.category)))];
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = MOCK_PRODUCTS.filter(p => {
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const categoryParam = selectedCategory !== 'All' ? `&category=${selectedCategory}` : '';
+        const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
+        const artisanParamStr = artisanParam ? `&artisanId=${artisanParam}` : '';
+        const res = await fetch(`/api/public/products?${categoryParam}${searchParam}${artisanParamStr}`);
+        const data = await res.json();
+        if (data.products) {
+          const mappedProducts = data.products.map((p: any) => ({
+            id: p._id,
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            discountPrice: p.discountPrice,
+            category: p.category,
+            artisanId: p.artisanId?._id || p.artisanId,
+            artisanName: p.artisanId?.name || 'Unknown Artisan',
+            images: p.images && p.images.length > 0 ? p.images : ['/placeholder-product.jpg'],
+            isVerified: p.verificationStatus === 'Approved',
+            rating: 4.5,
+            stock: p.stock,
+            material: p.material,
+            isHandmade: true,
+            productionTime: p.deliveryTime,
+            shippingCost: Number(p.shippingFee) || 0,
+            culturalStory: '',
+            status: p.verificationStatus,
+            sku: p.sku,
+            shippingLocations: [],
+            estimatedDelivery: p.deliveryTime,
+            returnPolicy: '',
+            currency: 'ETB'
+          }));
+          setProducts(mappedProducts);
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setProducts(MOCK_PRODUCTS);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, [selectedCategory, searchTerm, artisanParam]);
+
+  const categories = ["All", ...Array.from(new Set(products.map(p => p.category)))];
+
+  const filtered = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           p.category.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === "All" || p.category === selectedCategory;
@@ -435,7 +523,7 @@ export const ProductListingPage: React.FC = () => {
             </div>
             
             {filtered.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                   {filtered.map(p => <ProductCard key={p.id} product={p} />)}
                 </div>
             ) : (
@@ -765,19 +853,69 @@ export const ProductDetailPage: React.FC = () => {
   const { addToCart } = useCart();
   const { user, isAuthenticated } = useAuth();
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const product = MOCK_PRODUCTS.find(p => p.id === id) || MOCK_PRODUCTS[0];
-  const [activeImg, setActiveImg] = useState(product.images[0]);
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeImg, setActiveImg] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [culturalStory, setCulturalStory] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'select' | 'processing' | 'receipt'>('select');
   const [selectedMethod, setSelectedMethod] = useState<'chapa' | 'telebirr' | null>(null);
   const [transactionRef, setTransactionRef] = useState("");
-  
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!id) return;
+      try {
+        const res = await fetch(`/api/public/products/${id}`);
+        const data = await res.json();
+        if (data.product) {
+          const p = data.product;
+          const mapped = {
+            id: p._id,
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            discountPrice: p.discountPrice,
+            category: p.category,
+            artisanId: p.artisanId?._id || p.artisanId,
+            artisanName: p.artisanId?.name || 'Unknown Artisan',
+            images: p.images && p.images.length > 0 ? p.images : ['/placeholder-product.jpg'],
+            isVerified: p.verificationStatus === 'Approved',
+            rating: 4.5,
+            stock: p.stock,
+            material: p.material,
+            isHandmade: true,
+            productionTime: p.deliveryTime,
+            shippingCost: Number(p.shippingFee) || 0,
+            culturalStory: '',
+            status: p.verificationStatus,
+            sku: p.sku,
+            shippingLocations: [],
+            estimatedDelivery: p.deliveryTime,
+            returnPolicy: '',
+            currency: 'ETB',
+            region: p.region,
+            careInstructions: p.careInstructions,
+            handmadeBy: p.handmadeBy,
+          };
+          setProduct(mapped);
+          setActiveImg(mapped.images[0]);
+          getCulturalStory(mapped.name).then(setCulturalStory);
+        }
+      } catch (error) {
+        console.error('Error fetching product:', error);
+        setProduct(MOCK_PRODUCTS.find(p => p.id === id) || MOCK_PRODUCTS[0]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProduct();
+  }, [id]);
+
   useEffect(() => { 
-    if (product) {
+    if (product && product.images && product.images.length > 0) {
         setActiveImg(product.images[0]);
-        getCulturalStory(product.name).then(setCulturalStory); 
     }
   }, [product]);
   
@@ -808,6 +946,8 @@ export const ProductDetailPage: React.FC = () => {
     setPaymentStep('receipt');
   };
 
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
+  
   if (!product) return <div>Product not found</div>;
 
   return (
