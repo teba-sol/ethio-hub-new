@@ -178,7 +178,7 @@ export const TouristBookingsView: React.FC = () => {
                 <div className="flex justify-between items-end mt-4">
                   <div className="text-sm font-medium text-gray-600">
                     <span className="text-primary font-bold">{booking.quantity}</span> Ticket(s) • 
-                    <span className="text-primary font-bold ml-1">{booking.currency} {booking.totalPrice}</span>
+                    <span className="text-primary font-bold ml-1">ETB {booking.totalPrice}</span>
                     <span className="ml-2 text-xs bg-gray-100 px-2 py-0.5 rounded-full capitalize">{booking.ticketType}</span>
                   </div>
                   <Button size="sm" variant="outline" onClick={() => setSelectedBooking(booking)}>View Details</Button>
@@ -247,9 +247,19 @@ export const TouristBookingsView: React.FC = () => {
                 </div>
               )}
               
-              <div className="flex justify-between items-center border-t pt-4">
-                <span className="text-gray-500">Total Amount</span>
-                <span className="font-bold text-2xl text-primary">{selectedBooking.currency} {selectedBooking.totalPrice}</span>
+              <div className="border-t pt-4 space-y-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500">Subtotal</span>
+                  <span className="font-medium">ETB {(selectedBooking.totalPrice - (selectedBooking.platformFee || 0)).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500">Service Fee</span>
+                  <span className="font-medium">ETB {(selectedBooking.platformFee || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center font-bold text-lg">
+                  <span className="text-primary">Total Amount</span>
+                  <span className="text-primary">ETB {selectedBooking.totalPrice.toFixed(2)}</span>
+                </div>
               </div>
               
               <div className="flex justify-between text-xs text-gray-400">

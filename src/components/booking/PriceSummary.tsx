@@ -33,6 +33,7 @@ export const PriceSummary: React.FC<PriceSummaryProps> = ({ eventId }) => {
   
   const grandTotal = getGrandTotal();
   const foodPackageTotal = getFoodPackageTotal();
+  const serviceFee = !ticketSelection ? 0 : Math.round(getTicketTotal() * 0.05 * 100) / 100;
   
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -115,12 +116,23 @@ export const PriceSummary: React.FC<PriceSummaryProps> = ({ eventId }) => {
           <div className="text-sm text-gray-400">Optional transport</div>
         )}
         
+        {/* Service Fee */}
+        {serviceFee > 0 && (
+          <div className="flex justify-between text-sm text-green-600">
+            <span>Service Fee (5%)</span>
+            <span>+${serviceFee.toFixed(2)}</span>
+          </div>
+        )}
+        
         {/* Divider */}
         <div className="border-t border-gray-200 pt-4">
           <div className="flex justify-between items-center">
             <span className="text-lg font-bold text-gray-900">Total</span>
-            <span className="text-2xl font-bold text-primary">${grandTotal}</span>
+            <span className="text-2xl font-bold text-primary">${grandTotal.toFixed(2)}</span>
           </div>
+          {serviceFee > 0 && (
+            <p className="text-xs text-gray-400 mt-1">Includes 5% service fee</p>
+          )}
         </div>
       </div>
       

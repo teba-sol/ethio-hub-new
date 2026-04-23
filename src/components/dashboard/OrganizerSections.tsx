@@ -2245,7 +2245,10 @@ export const OrganizerOverview: React.FC = () => {
   
   const activeListings = analytics?.festivals?.published || festivals.length;
   const totalAttendees = analytics?.bookings?.confirmed || 0;
-  const totalRevenue = analytics?.revenue?.total || 0;
+  // Split payment breakdown
+  const grossRevenue = analytics?.revenue?.gross || 0;
+  const platformFee = analytics?.revenue?.platformFee || 0;
+  const netEarnings = analytics?.revenue?.net || grossRevenue;
   
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) return `ETB ${(amount / 1000000).toFixed(1)}M`;
@@ -2300,16 +2303,21 @@ export const OrganizerOverview: React.FC = () => {
           </button>
        </div>
 
-       {/* Stats Grid */}
-       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[
+{/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+         {[
           { label: 'Active Listings', val: activeListings.toString(), icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
           { label: 'Global Attendees', val: formatNumber(totalAttendees), icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Aggregate Revenue', val: formatCurrency(totalRevenue), icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50' },
+          { label: 'Net Earnings (10% fee)', val: formatCurrency(netEarnings), icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50', tooltip: `Gross: ${formatCurrency(grossRevenue)} | Platform Fee: ${formatCurrency(platformFee)}` },
         ].map((stat, i) => (
-          <div key={`stat-${i}`} className="bg-white p-8 rounded-3xl border border-gray-100 flex items-center justify-between shadow-sm">
+          <div key={`stat-${i}`} className="bg-white p-8 rounded-3xl border border-gray-100 flex items-center justify-between shadow-sm relative group">
             <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{stat.label}</p><p className="text-2xl font-bold text-primary">{stat.val}</p></div>
             <div className={`p-4 ${stat.bg} rounded-[20px]`}><stat.icon className={`w-6 h-6 ${stat.color}`} /></div>
+            {stat.tooltip && (
+              <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs p-2 rounded whitespace-nowrap z-50">
+                {stat.tooltip}
+              </div>
+            )}
           </div>
         ))}
          <div className="bg-white p-8 rounded-3xl border border-gray-100 flex flex-col justify-between relative overflow-hidden shadow-sm">
@@ -2782,6 +2790,27 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
                     <div className="text-right">
                       <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Fixed Rate</p>
                       <p className="text-lg font-bold text-primary">ETB {booking.bookingDetails.transport.price}</p>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Fee Breakdown */}
+              {booking.status === 'confirmed' && (
+                <section className="bg-emerald-50 p-8 rounded-[40px] border border-emerald-100 space-y-4">
+                  <h3 className="text-lg font-serif font-bold text-emerald-800">Your Earnings Breakdown</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-white p-4 rounded-2xl">
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Gross Amount</p>
+                      <p className="text-xl font-bold text-primary">ETB {booking.totalPrice}</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-2xl">
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Platform Fee ({booking.commissionPercent || 10}%)</p>
+                      <p className="text-xl font-bold text-red-500">- ETB {booking.platformFee || 0}</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-2xl">
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">You Receive</p>
+                      <p className="text-xl font-bold text-emerald-600">ETB {booking.organizerAmount || (booking.totalPrice - (booking.platformFee || 0))}</p>
                     </div>
                   </div>
                 </section>

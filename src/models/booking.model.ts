@@ -30,6 +30,13 @@ export interface IBooking extends Document {
       price: number;
     };
   };
+  // Split payment fields
+  platformFee: number;        // EthioHub's commission from organizer (10%)
+  organizerAmount: number;    // Amount organizer gets
+  commissionPercent: number;  // Commission percentage used (10%)
+  touristServiceFee: number; // EthioHub's service fee from tourist (5%)
+  touristFeePercent: number; // Tourist service fee percentage (5%)
+  hasHotelBooking: boolean;  // True if hotel booking (exempt from fees)
   bookedAt: Date;
   updatedAt: Date;
 }
@@ -106,6 +113,31 @@ const BookingSchema: Schema = new Schema(
         type: { type: String },
         price: { type: Number },
       },
+    },
+    // Split payment fields
+    platformFee: {
+      type: Number,
+      default: 0,
+    },
+    organizerAmount: {
+      type: Number,
+      default: 0,
+    },
+    commissionPercent: {
+      type: Number,
+      default: 10, // Default 10%
+    },
+    touristServiceFee: {
+      type: Number,
+      default: 0,
+    },
+    touristFeePercent: {
+      type: Number,
+      default: 5, // Default 5%
+    },
+    hasHotelBooking: {
+      type: Boolean,
+      default: false,
     },
   },
   {

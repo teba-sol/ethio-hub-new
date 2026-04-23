@@ -123,9 +123,37 @@ export async function PUT(request: NextRequest) {
       await booking.save();
     }
 
-    if (action === 'confirm') {
+if (action === 'confirm') {
       booking.status = 'confirmed';
       booking.paymentStatus = 'paid';
+      if (body.paymentMethod) {
+        booking.paymentMethod = body.paymentMethod;
+        booking.paymentDate = new Date();
+      }
+      
+      // Calculate split payment
+      const hasHotel = booking.bookingDetails?.room?.hotelName ? true : false;
+      booking.hasHotelBooking = hasHotel;
+      
+      if (hasHotel) {
+        // Hotel bookings - no fees
+        booking.platformFee = 0;
+        booking.organizerAmount = booking.totalPrice;
+        booking.commissionPercent = 0;
+        booking.touristServiceFee = 0;
+        booking.touristFeePercent = 0;
+      } else {
+        // Festival tickets & products - both fees apply
+        // Tourist pays 5% service fee on top
+        booking.touristFeePercent = 5;
+        booking.touristServiceFee = Math.round(booking.totalPrice * 0.05 * 100) / 100;
+        
+        // Organizer pays 10% commission (deducted from their share)
+        booking.commissionPercent = 10;
+        booking.platformFee = Math.round(booking.totalPrice * 0.10 * 100) / 100;
+        booking.organizerAmount = Math.round(booking.totalPrice * 0.90 * 100) / 100;
+      }
+      
       await booking.save();
     }
 
@@ -194,7 +222,9 @@ export async function POST(request: NextRequest) {
       specialRequests,
       bookingDetails,
       totalPrice,
-      currency
+      currency,
+      hasHotelBooking,
+      touristServiceFee
     } = body;
 
     if (!festivalId || !ticketType || !quantity || !contactInfo || !totalPrice) {
@@ -251,6 +281,29 @@ export async function POST(request: NextRequest) {
       if (cleanDetails && typeof cleanDetails === 'object' && Object.keys(cleanDetails).length > 0) {
         bookingData.bookingDetails = cleanDetails;
       }
+    }
+
+    // Calculate split payment
+    // Tourist service fee: 5% on tickets only (always)
+    // Platform commission: 10% on organizer amount (always, unless hotel-only with no tickets)
+    const hasTickets = ticketType && quantity;
+    const hasHotelRoom = bookingData.bookingDetails?.room?.hotelName ? true : (hasHotelBooking || false);
+    bookingData.hasHotelBooking = hasHotelRoom;
+    
+    if (!hasTickets) {
+      // No tickets - no fees at all
+      bookingData.platformFee = 0;
+      bookingData.organizerAmount = bookingData.totalPrice;
+      bookingData.commissionPercent = 0;
+      bookingData.touristServiceFee = 0;
+      bookingData.touristFeePercent = 0;
+    } else {
+      // Has tickets - 10% platform fee + 5% tourist service fee
+      bookingData.commissionPercent = 10;
+      bookingData.platformFee = Math.round(bookingData.totalPrice * 0.10 * 100) / 100;
+      bookingData.organizerAmount = Math.round(bookingData.totalPrice * 0.90 * 100) / 100;
+      bookingData.touristFeePercent = 5;
+      bookingData.touristServiceFee = touristServiceFee || Math.round(bookingData.totalPrice * 0.05 * 100) / 100;
     }
 
     const booking = new Booking(bookingData);
