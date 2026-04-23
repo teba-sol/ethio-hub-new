@@ -817,16 +817,16 @@ export const AdminEventsPage: React.FC = () => {
                   <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
                     <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                       <Shield className="w-4 h-4" /> Services & Policies
-                    </h3>
-                    <div className="space-y-6">
-                       <div>
-                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Included Services</p>
-                         <div className="flex flex-wrap gap-2">
-                           {Array.isArray((event.services || {}).foodPackages) ? ((event.services || {}).foodPackages || []).map((s, i) => (
-                             <span key={`food-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
-                               {s}
-                             </span>
-                           )) : []}
+</h3>
+                     <div className="space-y-6">
+                        <div>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Included Services</p>
+                          <div className="flex flex-wrap gap-2">
+                            {Array.isArray((event.services || {}).foodPackages) ? ((event.services || {}).foodPackages || []).map((s: any, i: number) => (
+                              <span key={`food-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                                {typeof s === 'string' ? s : (s?.name || s?.description || 'Package')}
+                              </span>
+                            )) : []}
                            {Array.isArray((event.services || {}).culturalServices) ? ((event.services || {}).culturalServices || []).map((s, i) => (
                              <span key={`cultural-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
                                {s}

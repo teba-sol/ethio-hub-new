@@ -28,12 +28,11 @@ export async function GET(request: NextRequest) {
       festival: { $in: festivalIds }
     });
 
-    const grossSales = bookings
-      .filter(b => b.paymentStatus === 'paid')
-      .reduce((sum, b) => sum + b.totalPrice, 0);
-
+    const paidBookings = bookings.filter(b => b.paymentStatus === 'paid');
+    
+    const grossSales = paidBookings.reduce((sum, b) => sum + b.totalPrice, 0);
+    const commission = paidBookings.reduce((sum, b) => sum + (b.platformFee || 0), 0);
     const commissionRate = 0.10;
-    const commission = grossSales * commissionRate;
 
     const refunds = bookings
       .filter(b => b.paymentStatus === 'refunded')
@@ -53,11 +52,10 @@ export async function GET(request: NextRequest) {
           organizer: organizerId 
         });
 
-        const eventGross = eventBookings
-          .filter(b => b.paymentStatus === 'paid')
-          .reduce((sum, b) => sum + b.totalPrice, 0);
-
-        const eventCommission = eventGross * commissionRate;
+        const eventPaidBookings = eventBookings.filter(b => b.paymentStatus === 'paid');
+        const eventGross = eventPaidBookings.reduce((sum, b) => sum + b.totalPrice, 0);
+        const eventCommission = eventPaidBookings.reduce((sum, b) => sum + (b.platformFee || 0), 0);
+        
         const eventRefunds = eventBookings
           .filter(b => b.paymentStatus === 'refunded')
           .reduce((sum, b) => sum + b.totalPrice, 0);
@@ -95,14 +93,13 @@ export async function GET(request: NextRequest) {
       revenueByMonth[month] = { gross: 0, net: 0 };
     });
 
-    bookings.forEach(b => {
-      if (b.paymentStatus === 'paid') {
-        const monthIndex = new Date(b.createdAt).getMonth();
-        const monthName = allMonths[monthIndex];
-        if (revenueByMonth[monthName]) {
-          revenueByMonth[monthName].gross += b.totalPrice;
-          revenueByMonth[monthName].net += b.totalPrice * (1 - commissionRate);
-        }
+    paidBookings.forEach(b => {
+      const monthIndex = new Date(b.createdAt).getMonth();
+      const monthName = allMonths[monthIndex];
+      if (revenueByMonth[monthName]) {
+        revenueByMonth[monthName].gross += b.totalPrice;
+        const fee = b.platformFee || (b.totalPrice * commissionRate);
+        revenueByMonth[monthName].net += b.totalPrice - fee;
       }
     });
 
