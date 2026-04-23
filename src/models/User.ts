@@ -24,6 +24,22 @@ const UserSchema = new mongoose.Schema(
       default: "tourist"
     },
 
+    status: {
+      type: String,
+      enum: ["Active", "Suspended", "Banned", "Deleted"],
+      default: "Active"
+    },
+
+    phone: {
+      type: String,
+      default: null
+    },
+
+    lastLogin: {
+      type: Date,
+      default: null
+    },
+
     artisanStatus: {
       type: String,
       enum: ["Not Submitted", "Pending", "Under Review", "Approved", "Rejected", "Modification Requested"],
@@ -92,6 +108,13 @@ const UserSchema = new mongoose.Schema(
     timestamps: true
   }
 );
+
+UserSchema.index({ role: 1, status: 1 });
+UserSchema.index({ artisanStatus: 1 });
+UserSchema.index({ organizerStatus: 1 });
+UserSchema.index({ status: 1 });
+UserSchema.index({ createdAt: -1 });
+UserSchema.index({ email: 1 });
 
 const User =
   mongoose.models.User || mongoose.model("User", UserSchema);

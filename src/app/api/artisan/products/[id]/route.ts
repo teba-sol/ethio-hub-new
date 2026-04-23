@@ -131,6 +131,10 @@ export async function PUT(
     if (shippingFee !== undefined) product.shippingFee = shippingFee;
     if (status !== undefined) {
       product.status = status === 'Publish' ? 'Published' : status;
+      if (product.status === 'Published' && product.verificationStatus === 'Rejected') {
+        product.verificationStatus = 'Pending';
+        product.rejectionReason = undefined;
+      }
     }
 
     await product.save();

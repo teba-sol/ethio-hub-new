@@ -125,25 +125,7 @@ export default function TicketsPage() {
           <h1 className="text-4xl font-serif font-bold text-primary mb-4">
             Select Your Tickets
           </h1>
-          <div className="flex items-center gap-4 text-gray-500">
-            <Users className="w-5 h-5" />
-            <span>How many guests?</span>
-            <div className="flex items-center gap-2 ml-4">
-              <button
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center font-bold"
-              >
-                -
-              </button>
-              <span className="w-12 text-center font-bold">{quantity}</span>
-              <button
-                onClick={() => setQuantity(quantity + 1)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center font-bold"
-              >
-                +
-              </button>
-            </div>
-          </div>
+          
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

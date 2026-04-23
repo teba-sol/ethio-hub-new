@@ -20,6 +20,8 @@ export interface IProduct extends Document {
   deliveryTime: string;
   shippingFee: string;
   status: 'Draft' | 'Published' | 'Archived';
+  verificationStatus: 'Pending' | 'Approved' | 'Rejected';
+  rejectionReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -98,6 +100,14 @@ const ProductSchema = new Schema<IProduct>(
       type: String,
       enum: ['Draft', 'Published', 'Archived'],
       default: 'Draft',
+    },
+    verificationStatus: {
+      type: String,
+      enum: ['Pending', 'Approved', 'Rejected'],
+      default: 'Pending',
+    },
+    rejectionReason: {
+      type: String,
     },
   },
   {
