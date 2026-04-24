@@ -12,7 +12,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { 
-      bookingId, 
+      bookingId,
+      orderId,
       amount, 
       currency = 'ETB',
       email,
@@ -22,9 +23,9 @@ export async function POST(request: NextRequest) {
       description
     } = body;
 
-    console.log('Chapa payment request:', { bookingId, amount, currency });
+    console.log('Chapa payment request:', { bookingId, orderId, amount, currency });
 
-    if (!bookingId || !amount || typeof amount !== 'number' || amount <= 0) {
+    if ((!bookingId && !orderId) || !amount || typeof amount !== 'number' || amount <= 0) {
       return NextResponse.json(
         { success: false, message: 'Missing required fields' },
         { status: 400 }
@@ -49,9 +50,11 @@ export async function POST(request: NextRequest) {
       phone_number: phone || '0912345678',
       tx_ref: txRef,
       callback_url: `${FRONTEND_URL}/api/payment/chapa/callback`,
-      return_url: `${FRONTEND_URL}/payment/success?tx_ref=${txRef}`,
+      return_url: `${FRONTEND_URL}/api/payment/chapa/return?tx_ref=${txRef}`,
       metadata: {
-        bookingId: bookingId,
+        bookingId: bookingId || undefined,
+        orderId: orderId || undefined,
+        type: bookingId ? 'booking' : 'order',
       },
     };
 
@@ -71,14 +74,22 @@ export async function POST(request: NextRequest) {
 
     if (data.status === 'success' && data.data?.checkout_url) {
       try {
-        await Booking.findByIdAndUpdate(bookingId, {
-          paymentRef: txRef,
-          paymentStatus: 'pending',
-        });
+        if (bookingId) {
+          await Booking.findByIdAndUpdate(bookingId, {
+            paymentRef: txRef,
+            paymentStatus: 'pending',
+          });
+        } else if (orderId) {
+          const Order = (await import('@/models/order.model')).default;
+          await Order.findByIdAndUpdate(orderId, {
+            paymentRef: txRef,
+            paymentStatus: 'pending',
+          });
+        }
       } catch (dbError) {
-        console.log('Booking update skipped (model may not exist):', dbError);
+        console.log('Payment ref update skipped:', dbError);
       }
-
+      
       return NextResponse.json({
         success: true,
         checkoutUrl: data.data.checkout_url,

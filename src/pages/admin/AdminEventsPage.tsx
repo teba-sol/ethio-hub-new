@@ -822,26 +822,26 @@ export const AdminEventsPage: React.FC = () => {
                        <div>
                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Included Services</p>
                          <div className="flex flex-wrap gap-2">
-                           {Array.isArray((event.services || {}).foodPackages) ? ((event.services || {}).foodPackages || []).map((s, i) => (
-                             <span key={`food-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
-                               {s}
-                             </span>
-                           )) : []}
-                           {Array.isArray((event.services || {}).culturalServices) ? ((event.services || {}).culturalServices || []).map((s, i) => (
-                             <span key={`cultural-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
-                               {s}
-                             </span>
-                           )) : []}
-                           {Array.isArray((event.services || {}).specialAssistance) ? ((event.services || {}).specialAssistance || []).map((s, i) => (
-                             <span key={`special-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
-                               {s}
-                             </span>
-                           )) : []}
-                           {Array.isArray((event.services || {}).extras) ? ((event.services || {}).extras || []).map((s, i) => (
-                             <span key={`extra-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
-                               {s}
-                             </span>
-                           )) : []}
+{Array.isArray((event as any).services?.foodPackages) ? ((event as any).services.foodPackages || []).map((s: any, i: number) => (
+                              <span key={`food-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                                {s.name || s}
+                              </span>
+                            )) : []}
+                       {(((event as any).services?.culturalServices as any[]) || []).map((s: any, i: number) => (
+                              <span key={`cultural-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                                {s}
+                              </span>
+                            ))}
+                           {(((event as any).services?.specialAssistance as any[]) || []).map((s: any, i: number) => (
+                              <span key={`special-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                                {s}
+                              </span>
+                            ))}
+                           {(((event as any).services?.extras as any[]) || []).map((s: any, i: number) => (
+                              <span key={`extra-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                                {s}
+                              </span>
+                            ))}
                          </div>
                        </div>
                       <div>

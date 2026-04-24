@@ -292,16 +292,16 @@ export default function EventPage() {
                         Included Services
                       </h3>
                       <ul className="space-y-3">
-                        {festival.foodPackages?.map((item: string, idx: number) => (
+                        {festival.foodPackages?.map((item: any, idx: number) => (
                           <li key={idx} className="flex items-center gap-3 text-gray-600">
                             <Check className="w-4 h-4 text-green-500" />
-                            {item}
+                            {item.name || item}
                           </li>
                         ))}
-                        {festival.culturalServices?.map((item: string, idx: number) => (
+                        {festival.culturalServices?.map((item: any, idx: number) => (
                           <li key={idx} className="flex items-center gap-3 text-gray-600">
                             <Music className="w-4 h-4 text-purple-500" />
-                            {item}
+                            {item.name || item}
                           </li>
                         ))}
                       </ul>

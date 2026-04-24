@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Booking from '@/models/booking.model';
+import Order from '@/models/order.model';
 
 const CHAPA_BASE_URL = process.env.CHAPA_BASE_URL || 'https://api.chapa.co/v1';
 const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY;
@@ -31,15 +32,31 @@ export async function GET(request: NextRequest) {
 
     if (data.status === 'success') {
       const updateData = data.data || {};
-      await Booking.findOneAndUpdate(
-        { paymentRef: txRef },
-        { 
-          paymentStatus: 'paid',
-          paymentDate: new Date(),
-          status: 'confirmed',
-        },
-        { new: true }
-      );
+      const metadata = updateData.metadata || {};
+      
+      if (metadata.type === 'order') {
+        // Update Order
+        await Order.findOneAndUpdate(
+          { paymentRef: txRef },
+          { 
+            paymentStatus: 'paid',
+            paymentDate: new Date(),
+            status: 'confirmed',
+          },
+          { new: true }
+        );
+      } else {
+        // Update Booking (default)
+        await Booking.findOneAndUpdate(
+          { paymentRef: txRef },
+          { 
+            paymentStatus: 'paid',
+            paymentDate: new Date(),
+            status: 'confirmed',
+          },
+          { new: true }
+        );
+      }
 
       return NextResponse.redirect(new URL(`/payment/success?tx_ref=${txRef}&status=success`, request.url));
     }
@@ -61,15 +78,28 @@ export async function POST(request: NextRequest) {
     
     if (status === 'success' && tx_ref) {
       await connectDB();
-      await Booking.findOneAndUpdate(
+      
+      // Try to find and update Booking first
+      const booking = await Booking.findOneAndUpdate(
         { paymentRef: tx_ref },
         { 
           paymentStatus: 'paid',
           paymentDate: new Date(),
         }
       );
+      
+      // If not found in Booking, try Order
+      if (!booking) {
+        await Order.findOneAndUpdate(
+          { paymentRef: tx_ref },
+          { 
+            paymentStatus: 'paid',
+            paymentDate: new Date(),
+          }
+        );
+      }
     }
-
+    
     return NextResponse.json({ received: true });
   } catch (error: any) {
     console.error('Chapa webhook error:', error);

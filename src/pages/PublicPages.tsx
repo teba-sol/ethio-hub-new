@@ -926,13 +926,11 @@ export const ProductDetailPage: React.FC = () => {
   };
 
   const handleBuyNow = () => {
-    if (!isAuthenticated || user?.role !== UserRole.TOURIST) {
+    if (!isAuthenticated || user?.role?.toLowerCase() !== UserRole.TOURIST) {
       setShowLoginPrompt(true);
       return;
     }
-    setShowPaymentModal(true);
-    setPaymentStep('select');
-    setSelectedMethod(null);
+    router.push(`/products/${id}/checkout?quantity=${quantity}`);
   };
 
   const processPayment = async (method: 'chapa' | 'telebirr') => {
@@ -1473,7 +1471,7 @@ export const FestivalDetailPage: React.FC = () => {
   };
 
   const handleBooking = async () => {
-    if (!isAuthenticated || user?.role !== UserRole.TOURIST) {
+    if (!isAuthenticated || user?.role?.toLowerCase() !== UserRole.TOURIST) {
       setShowLoginPrompt(true);
       return;
     }
