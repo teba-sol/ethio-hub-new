@@ -3,9 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Car, Users, Check } from 'lucide-react';
+import { ArrowLeft, Car, Users, TrendingUp, AlertCircle, Maximize2 } from 'lucide-react';
 import { useBooking } from '@/context/BookingContext';
-import { PriceSummary } from '@/components/booking/PriceSummary';
 import apiClient from '@/lib/apiClient';
 import { Festival, TransportOption } from '@/types';
 
@@ -13,37 +12,28 @@ export default function TransportPage() {
   const params = useParams();
   const router = useRouter();
   const eventId = params?.id as string;
-  
-  const { 
-    setEvent, 
-    selectedTransport, 
-    setSelectedTransport,
-    transportDays,
-    setTransportDays
-  } = useBooking();
-  
+
+  const { selectedTransport, transportDays, setTransportDays } = useBooking();
+
   const [festival, setFestival] = useState<Festival | null>(null);
-  const [transports, setTransports] = useState<any[]>([]);
+  const [transports, setTransports] = useState<TransportOption[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const festRes = await apiClient.get(`/api/festivals/${eventId}`);
+        const [festRes, availabilityRes] = await Promise.all([
+          apiClient.get(`/api/festivals/${eventId}`),
+          apiClient.get(`/api/festivals/${eventId}/availability`),
+        ]);
+
         const festivalData = festRes?.festival || festRes;
-        
-        if (festivalData) {
-          setFestival(festivalData);
-          setEvent(festivalData);
-        }
-        
-        const rawTransport = festivalData?.transportation || [];
-        const mapped = rawTransport.map((t: any, idx: number) => ({
+        if (festivalData) setFestival(festivalData);
+
+        const mapped = ((availabilityRes?.transportation || festivalData?.transportation) || []).map((t: any, idx: number) => ({
           ...t,
           id: t._id || t.id || `transport-${idx}`,
-          displayId: idx,
         }));
-        
         setTransports(mapped);
       } catch (e) {
         console.error('Error:', e);
@@ -51,13 +41,11 @@ export default function TransportPage() {
         setLoading(false);
       }
     };
-    
+
     fetchData();
   }, [eventId]);
 
-  const handleContinue = () => {
-    router.push(`/event/${eventId}/tickets`);
-  };
+  const handleContinue = () => router.push(`/event/${eventId}/tickets`);
 
   if (loading) {
     return (
@@ -67,14 +55,19 @@ export default function TransportPage() {
     );
   }
 
+  const currentTransport = selectedTransport && transports.find((t) => t.id === selectedTransport.id);
+  const firstTransport = transports[0];
+  const displayedRemaining =
+    currentTransport?.remaining ??
+    currentTransport?.availability ??
+    firstTransport?.remaining ??
+    firstTransport?.availability;
+
   return (
     <div className="min-h-screen bg-ethio-bg">
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <button 
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-500 hover:text-primary"
-          >
+          <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-500 hover:text-primary">
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>
           </button>
@@ -83,12 +76,8 @@ export default function TransportPage() {
 
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="mb-12">
-          <h1 className="text-4xl font-serif font-bold text-primary mb-4">
-            Select Transportation
-          </h1>
-          <p className="text-gray-500 text-lg">
-            Choose transport for your journey to {festival?.locationName}
-          </p>
+          <h1 className="text-4xl font-serif font-bold text-primary mb-4">Select Transportation</h1>
+          <p className="text-gray-500 text-lg">Choose transport for your journey</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -96,122 +85,205 @@ export default function TransportPage() {
             {transports.length === 0 ? (
               <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 md:col-span-2">
                 <h3 className="text-xl font-bold text-gray-700 mb-2">No Transport Available</h3>
-                <p className="text-gray-500 mb-4">
-                  This event has no transport options listed. You can skip this step.
-                </p>
+                <p className="text-gray-500 mb-4">This event has no transport options listed.</p>
                 <button
                   onClick={() => router.push(`/event/${eventId}/tickets`)}
                   className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-primary/90"
                 >
-                  Continue to Tickets →
+                  Continue to Tickets
                 </button>
               </div>
             ) : (
-              transports.map((transport) => (
-                <Link
-                  key={transport.displayId}
-                  href={`/event/${eventId}/transport/${transport.displayId}`}
-                  className={`block h-full bg-white rounded-2xl overflow-hidden border transition-all hover:border-gray-200 hover:shadow-lg ${
-                    selectedTransport?.id === transport.id 
-                      ? 'border-primary shadow-lg' 
-                      : 'border-gray-100'
-                  }`}
-                >
-                  <div className="flex flex-col">
-                    <div className="w-full h-56 flex-shrink-0 relative group">
-                      <img 
-                        src={transport.image || 'https://images.unsplash.com/photo-1449966308865-2d33e1d7a7a3?w=400&h=300&fit=crop'} 
-                        alt={transport.type}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-                    
-                    <div className="flex-1 p-5">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="text-lg font-bold text-primary">{transport.type}</h3>
-                          {transport.provider && (
-                            <p className="text-gray-500 text-sm">{transport.provider}</p>
-                          )}
-                        </div>
-                        
-                        <div className="text-right">
-                          <span className="text-2xl font-bold text-primary">${transport.price}</span>
-                          <span className="text-gray-500 text-sm">/day</span>
-                        </div>
-                      </div>
+              transports.map((transport) => {
+                const remainingUnits = transport.remaining ?? transport.availability ?? 0;
+                const isSoldOut = remainingUnits <= 0;
+                const isLowStock = remainingUnits > 0 && remainingUnits <= 3;
 
-                      {transport.description && (
-                        <p className="mt-3 text-sm leading-relaxed text-gray-500 line-clamp-3">
-                          {transport.description}
-                        </p>
-                      )}
-
-                      <div className="mt-5">
-                        <h4 className="text-sm font-bold uppercase tracking-wide text-gray-700 mb-3">
-                          Vehicle Specifications
-                        </h4>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="rounded-xl bg-gray-50 p-3">
-                            <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">Type</p>
-                            <p className="text-sm font-semibold text-gray-800">{transport.type}</p>
+                return (
+                  <Link
+                    key={transport.id}
+                    href={`/event/${eventId}/transport/${transport.id}`}
+                    className={`block h-full bg-white rounded-2xl overflow-hidden border transition-all ${
+                      isSoldOut
+                        ? 'border-red-100 opacity-80'
+                        : selectedTransport?.id === transport.id
+                          ? 'border-primary shadow-lg hover:border-primary'
+                          : 'border-gray-100 hover:border-gray-200 hover:shadow-lg'
+                    }`}
+                  >
+                    <div className="flex flex-col">
+                      <div className="w-full h-56 flex-shrink-0 relative group">
+                        <img
+                          src={transport.image || 'https://images.unsplash.com/photo-1449966308865-2d33e1d7a7a3?w=400&h=300&fit=crop'}
+                          alt={transport.type}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                      <div className="flex-1 p-5">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="text-lg font-bold text-primary">{transport.type}</h3>
+                            {transport.provider && <p className="text-gray-500 text-sm">{transport.provider}</p>}
                           </div>
-                          <div className="rounded-xl bg-gray-50 p-3">
-                            <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">Seats</p>
-                            <p className="text-sm font-semibold text-gray-800">{transport.capacity || 5}</p>
-                          </div>
-                          <div className="rounded-xl bg-gray-50 p-3">
-                            <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">Fuel</p>
-                            <p className="text-sm font-semibold text-gray-800">Petrol/Diesel</p>
-                          </div>
-                          <div className="rounded-xl bg-gray-50 p-3">
-                            <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">Transmission</p>
-                            <p className="text-sm font-semibold text-gray-800">Automatic</p>
+                          <div className="text-right">
+                            <span className="text-2xl font-bold text-primary">${transport.price}</span>
+                            <span className="text-gray-500 text-sm">/day</span>
                           </div>
                         </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-4 mt-4 text-gray-500 text-sm">
-                        {transport.capacity && (
-                          <div className="flex items-center gap-1">
-                            <Users className="w-4 h-4" />
-                            {transport.capacity} seats
-                          </div>
+                        {transport.description && (
+                          <p className="mt-3 text-sm leading-relaxed text-gray-500 line-clamp-3">{transport.description}</p>
                         )}
+                        <div className="mt-5">
+                          <h4 className="text-sm font-bold uppercase tracking-wide text-gray-700 mb-3">Vehicle Specifications</h4>
+                          <div className="grid grid-cols-3 gap-4">
+                            <div
+                              className={`rounded-xl p-3 border ${
+                                isSoldOut
+                                  ? 'bg-red-50 border-red-100'
+                                  : isLowStock
+                                    ? 'bg-amber-50 border-amber-100'
+                                    : 'bg-emerald-50 border-emerald-100'
+                              }`}
+                            >
+                              <TrendingUp
+                                className={`w-6 h-6 mb-2 ${
+                                  isSoldOut ? 'text-red-600' : isLowStock ? 'text-amber-600' : 'text-emerald-600'
+                                }`}
+                              />
+                              <h3
+                                className={`font-bold ${
+                                  isSoldOut ? 'text-red-700' : isLowStock ? 'text-amber-700' : 'text-emerald-700'
+                                }`}
+                              >
+                                {remainingUnits}
+                              </h3>
+                              <p
+                                className={`text-sm ${
+                                  isSoldOut ? 'text-red-700' : isLowStock ? 'text-amber-700' : 'text-emerald-700'
+                                }`}
+                              >
+                                {isSoldOut ? 'Sold Out' : isLowStock ? 'Limited Units' : 'Available Units'}
+                              </p>
+                            </div>
+                            <div className="rounded-xl bg-gray-50 p-3">
+                              <Car className="w-6 h-6 text-gray-400 mb-2" />
+                              <h3 className="font-bold text-gray-900">{transport.type}</h3>
+                              <p className="text-sm text-gray-500">Vehicle Type</p>
+                            </div>
+                            <div className="rounded-xl bg-gray-50 p-3">
+                              <Users className="w-6 h-6 text-gray-400 mb-2" />
+                              <h3 className="font-bold text-gray-900">{transport.capacity || 5}</h3>
+                              <p className="text-sm text-gray-500">Passenger Capacity</p>
+                            </div>
+                            <div className="rounded-xl bg-gray-50 p-3">
+                              <AlertCircle className="w-6 h-6 text-gray-400 mb-2" />
+                              <h3 className="font-bold text-gray-900">Petrol/Diesel</h3>
+                              <p className="text-sm text-gray-500">Fuel Type</p>
+                            </div>
+                            <div className="rounded-xl bg-gray-50 p-3">
+                              <Maximize2 className="w-6 h-6 text-gray-400 mb-2" />
+                              <h3 className="font-bold text-gray-900">Automatic</h3>
+                              <p className="text-sm text-gray-500">Transmission</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="border-t border-gray-100 p-4 bg-gray-50">
+                          <span className={`font-medium ${isSoldOut ? 'text-red-600' : 'text-primary'}`}>
+                            {isSoldOut ? 'Sold out' : 'View Full Details'}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="border-t border-gray-100 p-4 bg-gray-50">
-                    <span className="text-primary font-medium">View Full Details →</span>
-                  </div>
-                </Link>
-              ))
+                  </Link>
+                );
+              })
             )}
-            
             <button
               onClick={() => router.push(`/event/${eventId}/tickets`)}
               className="w-full mt-4 py-3 text-center text-gray-500 text-sm hover:text-primary md:col-span-2"
             >
-              Skip transport selection →
+              Skip transport selection
             </button>
           </div>
 
-              {/* <PriceSummary eventId={eventId} /> 
           <div className="lg:col-span-1">
-            <div className="sticky top-24">
-              <button
-                onClick={handleContinue}
-                className="w-full mt-4 py-4 rounded-xl font-bold text-lg bg-primary text-white hover:bg-primary/90"
-              >
-                Continue to Tickets
-              </button>
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sticky top-6">
+              <div className="space-y-6">
+                <div className="text-center mb-6">
+                  <p className="text-sm text-gray-500">Starting from</p>
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-4xl font-bold text-primary">
+                      {currentTransport ? currentTransport.price : firstTransport?.price}
+                    </span>
+                    <span className="text-gray-500">/day</span>
+                  </div>
                 </div>
-          </div>*/
-              }
-              
-              
-          
+                <div className="text-center">
+                  <p className="text-sm text-gray-500">Available Units</p>
+                  <p
+                    className={`text-3xl font-bold ${
+                      displayedRemaining === 0
+                        ? 'text-red-600'
+                        : (displayedRemaining ?? 0) <= 3
+                          ? 'text-amber-600'
+                          : 'text-gray-900'
+                    }`}
+                  >
+                    {displayedRemaining ?? 'Not set'}
+                    {displayedRemaining === 0 && <span className="ml-2 text-xs bg-red-100 px-2 py-1 rounded">Sold Out</span>}
+                  </p>
+                  <div className="mt-3">
+                    {(displayedRemaining ?? 0) === 0 && (
+                      <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">
+                        Sold Out
+                      </span>
+                    )}
+                    {(displayedRemaining ?? 0) > 0 && (displayedRemaining ?? 0) <= 3 && (
+                      <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
+                        Limited Availability: {(displayedRemaining ?? 0)} units left
+                      </span>
+                    )}
+                    {(displayedRemaining ?? 0) > 3 && (
+                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
+                        Available: {(displayedRemaining ?? 0)} units
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Number of Days</label>
+                  <select
+                    value={transportDays}
+                    onChange={(e) => setTransportDays(parseInt(e.target.value))}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                      <option key={num} value={num}>
+                        {num} {num === 1 ? 'day' : 'days'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-xl">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-gray-600">$ {(currentTransport?.price || firstTransport?.price) || 0} x {transportDays} days</span>
+                    <span className="font-bold text-gray-900">$ {(currentTransport?.price || firstTransport?.price || 0) * transportDays}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                    <span className="font-medium text-gray-900">Total</span>
+                    <span className="text-xl font-bold text-primary">$ {(currentTransport?.price || firstTransport?.price || 0) * transportDays}</span>
+                  </div>
+                </div>
+                <button
+                  className="w-full py-3 text-center rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+                  onClick={handleContinue}
+                >
+                  Continue to Tickets
+                </button>
+                <p className="text-center text-xs text-gray-500">Free cancellation up to 24h before pickup</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

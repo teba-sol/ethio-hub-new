@@ -386,6 +386,18 @@ const UserMenu: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
 
+  const getDashboardHomePath = () => {
+    if (!user) return "/login";
+    const role = user.role.toLowerCase();
+    const dashboardHomeByRole: Record<string, string> = {
+      tourist: "/dashboard/tourist/settings",
+      organizer: "/dashboard/organizer/overview",
+      artisan: "/dashboard/artisan/overview",
+      admin: "/dashboard/admin/overview",
+    };
+    return dashboardHomeByRole[role] || "/dashboard";
+  };
+
   const getDashboardPath = (path: string) => {
     if (!user) return "#";
     const role = user.role.toLowerCase();
@@ -395,11 +407,7 @@ const UserMenu: React.FC = () => {
   return (
     <div className="relative group z-50 mr-4">
       <Link
-        href={
-          isAuthenticated
-            ? `/dashboard/${user?.role.toLowerCase()}/overview`
-            : "/login"
-        }
+        href={isAuthenticated ? getDashboardHomePath() : "/login"}
         className="flex items-center gap-2 hover:bg-gray-50 px-3 py-2 rounded-full transition-all"
       >
         <UserIcon className="w-6 h-6 text-gray-700" />

@@ -4,6 +4,57 @@ import { connectDB } from '../../../../lib/mongodb';
 import Festival from '../../../../models/festival.model';
 import * as jose from 'jose';
 
+const isMissing = (value: any) => value === undefined || value === null || value === '';
+
+const validateCreateAvailability = (hotels: any, transportation: any) => {
+  const issues: string[] = [];
+
+  if (!Array.isArray(hotels) || hotels.length === 0) {
+    issues.push('At least one hotel with at least one room is required.');
+  }
+
+  let roomCount = 0;
+  if (Array.isArray(hotels)) {
+    hotels.forEach((hotel: any, hotelIndex: number) => {
+      const hotelLabel = String(hotel?.name || '').trim() || `Hotel ${hotelIndex + 1}`;
+      const rooms = Array.isArray(hotel?.rooms) ? hotel.rooms : [];
+      roomCount += rooms.length;
+
+      rooms.forEach((room: any, roomIndex: number) => {
+        const roomLabel = String(room?.name || '').trim() || `Room ${roomIndex + 1}`;
+        const availability = Number(room?.availability);
+
+        if (isMissing(room?.availability) || Number.isNaN(availability)) {
+          issues.push(`${hotelLabel} - ${roomLabel}: room availability must be numeric.`);
+        } else if (availability <= 0) {
+          issues.push(`${hotelLabel} - ${roomLabel}: room availability must be greater than 0.`);
+        }
+      });
+    });
+  }
+
+  if (roomCount === 0) {
+    issues.push('At least one hotel room is required.');
+  }
+
+  if (!Array.isArray(transportation) || transportation.length === 0) {
+    issues.push('At least one transportation option is required.');
+  } else {
+    transportation.forEach((transport: any, transportIndex: number) => {
+      const transportLabel = String(transport?.type || '').trim() || `Transport ${transportIndex + 1}`;
+      const availability = Number(transport?.availability);
+
+      if (isMissing(transport?.availability) || Number.isNaN(availability)) {
+        issues.push(`${transportLabel}: car availability must be numeric.`);
+      } else if (availability <= 0) {
+        issues.push(`${transportLabel}: car availability must be greater than 0.`);
+      }
+    });
+  }
+
+  return issues;
+};
+
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
@@ -97,6 +148,18 @@ export async function POST(request: NextRequest) {
     if (!name || !shortDescription || !fullDescription || !startDate || !endDate || !location || !location.name) {
       return new NextResponse(
         JSON.stringify({ success: false, message: 'Missing required fields' }),
+        { status: 400, headers: { 'content-type': 'application/json' } }
+      );
+    }
+
+    const availabilityIssues = validateCreateAvailability(hotels, transportation);
+    if (availabilityIssues.length > 0) {
+      return new NextResponse(
+        JSON.stringify({
+          success: false,
+          message: `Validation failed: ${availabilityIssues.join(' ')}`,
+          issues: availabilityIssues,
+        }),
         { status: 400, headers: { 'content-type': 'application/json' } }
       );
     }

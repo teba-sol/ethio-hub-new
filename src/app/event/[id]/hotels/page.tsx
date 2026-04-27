@@ -38,7 +38,10 @@ export default function HotelsPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const festRes = await apiClient.get(`/api/festivals/${eventId}`);
+        const [festRes, availabilityRes] = await Promise.all([
+          apiClient.get(`/api/festivals/${eventId}`),
+          apiClient.get(`/api/festivals/${eventId}/availability`),
+        ]);
         const festivalData = festRes?.festival || festRes;
         
         if (festivalData) {
@@ -46,7 +49,7 @@ export default function HotelsPage() {
           setEvent(festivalData);
         }
         
-        const hotelsData = festivalData?.hotels || [];
+        const hotelsData = availabilityRes?.hotels || festivalData?.hotels || [];
         
         const normalizedHotels = hotelsData.map((hotel: any, index: number) => ({
           ...hotel,
@@ -307,12 +310,21 @@ export default function HotelsPage() {
 
             {filteredHotels.map((hotel) => {
               const minPrice = hotel.rooms?.[0]?.pricePerNight || 0;
+              const totalRemaining = (hotel.rooms || []).reduce(
+                (sum, room) => sum + (room.remaining ?? room.availability ?? 0),
+                0
+              );
+              const isSoldOut = totalRemaining <= 0;
               
               return (
                 <Link 
                   key={hotel.id}
                   href={`/event/${eventId}/hotels/${hotel.id}`}
-                  className="block bg-white rounded-2xl overflow-hidden border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all"
+                  className={`block bg-white rounded-2xl overflow-hidden border transition-all ${
+                    isSoldOut
+                      ? 'border-red-100 opacity-80'
+                      : 'border-gray-100 hover:border-gray-200 hover:shadow-lg'
+                  }`}
                 >
                   <div className="flex flex-col md:flex-row">
                     <div className="w-full md:w-64 h-48 md:h-auto flex-shrink-0 relative group">
@@ -351,6 +363,21 @@ export default function HotelsPage() {
                           </span>
                           <span className="text-gray-500 text-sm">/night</span>
                           <p className="text-xs text-gray-400 mt-1">from</p>
+                          <div className="mt-2">
+                            {isSoldOut ? (
+                              <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">
+                                Sold out
+                              </span>
+                            ) : totalRemaining <= 3 ? (
+                              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
+                                Only {totalRemaining} room{totalRemaining === 1 ? '' : 's'} left
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+                                {totalRemaining} rooms available
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       

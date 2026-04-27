@@ -89,6 +89,10 @@ export interface RoomType {
   sqm: number;
   amenities: string[];
   bedType: string;
+  initialAvailability?: number;
+  bookedCount?: number;
+  remaining?: number;
+  isSoldOut?: boolean;
 }
 
 export interface FoodPackage {
@@ -118,6 +122,7 @@ export interface HotelAccommodation {
 
 export interface TransportOption {
   id: string;
+  _id?: string;
   type: 'Private Car' | 'VIP SUV' | 'Shuttle Bus' | 'Luxury Coach' | 'Helicopter Transfer';
   provider?: string;
   image: string;
@@ -127,6 +132,10 @@ export interface TransportOption {
   features?: string[];
   description: string;
   pickupLocations?: string[];
+  initialAvailability?: number;
+  bookedCount?: number;
+  remaining?: number;
+  isSoldOut?: boolean;
 }
 
 export interface Festival {

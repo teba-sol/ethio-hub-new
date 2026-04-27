@@ -4,6 +4,19 @@ import Booking from '../../../../models/booking.model';
 import Festival from '../../../../models/festival.model';
 import mongoose from 'mongoose';
 import * as jose from 'jose';
+import { attachAvailabilityToFestival, findRoomAvailability, findTransportAvailability } from '../../../../lib/festivalAvailability';
+
+const EARLY_BIRD_WINDOW_HOURS = Number(process.env.EARLY_BIRD_WINDOW_HOURS || 5);
+
+const getEarlyBirdExpiry = (festival: any) => {
+  const postedAtRaw = festival?.createdAt || festival?.submittedAt;
+  if (!postedAtRaw) return null;
+
+  const postedAt = new Date(postedAtRaw);
+  if (Number.isNaN(postedAt.getTime())) return null;
+
+  return new Date(postedAt.getTime() + EARLY_BIRD_WINDOW_HOURS * 60 * 60 * 1000);
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -113,9 +126,9 @@ export async function PUT(request: NextRequest) {
     }
 
     if (action === 'cancel') {
-      if (booking.status !== 'pending') {
+      if (!['pending', 'confirmed'].includes(booking.status)) {
         return new NextResponse(
-          JSON.stringify({ success: false, message: 'Only pending bookings can be cancelled' }),
+          JSON.stringify({ success: false, message: 'Only pending or confirmed bookings can be cancelled' }),
           { status: 400, headers: { 'content-type': 'application/json' } }
         );
       }
@@ -124,6 +137,55 @@ export async function PUT(request: NextRequest) {
     }
 
 if (action === 'confirm') {
+      if (booking.status === 'confirmed' || booking.status === 'completed') {
+        const existingBooking = await Booking.findById(bookingId)
+          .populate('festival', 'name startDate endDate')
+          .populate('organizer', 'name');
+
+        return new NextResponse(
+          JSON.stringify({ success: true, booking: existingBooking }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        );
+      }
+
+      if (booking.status === 'cancelled') {
+        return new NextResponse(
+          JSON.stringify({ success: false, message: 'Cancelled bookings cannot be confirmed' }),
+          { status: 400, headers: { 'content-type': 'application/json' } }
+        );
+      }
+
+      const festival = await Festival.findById(booking.festival);
+      if (!festival) {
+        return new NextResponse(
+          JSON.stringify({ success: false, message: 'Festival not found for this booking' }),
+          { status: 404, headers: { 'content-type': 'application/json' } }
+        );
+      }
+
+      const confirmedBookings = await Booking.find({
+        festival: booking.festival,
+        status: { $in: ['confirmed', 'completed'] },
+      }).lean();
+
+      const festivalWithAvailability = attachAvailabilityToFestival(festival, confirmedBookings);
+      const selectedRoomAvailability = findRoomAvailability(festivalWithAvailability, booking.bookingDetails?.room);
+      const selectedTransportAvailability = findTransportAvailability(festivalWithAvailability, booking.bookingDetails?.transport);
+
+      if (booking.bookingDetails?.room && (!selectedRoomAvailability || selectedRoomAvailability.remaining <= 0)) {
+        return new NextResponse(
+          JSON.stringify({ success: false, message: 'The selected room is no longer available' }),
+          { status: 409, headers: { 'content-type': 'application/json' } }
+        );
+      }
+
+      if (booking.bookingDetails?.transport && (!selectedTransportAvailability || selectedTransportAvailability.remaining <= 0)) {
+        return new NextResponse(
+          JSON.stringify({ success: false, message: 'The selected car is no longer available' }),
+          { status: 409, headers: { 'content-type': 'application/json' } }
+        );
+      }
+
       booking.status = 'confirmed';
       booking.paymentStatus = 'paid';
       if (body.paymentMethod) {
@@ -242,6 +304,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (ticketType === 'earlyBird') {
+      const earlyBirdExpiresAt = getEarlyBirdExpiry(festival);
+      if (!earlyBirdExpiresAt || new Date() > earlyBirdExpiresAt) {
+        return new NextResponse(
+          JSON.stringify({
+            success: false,
+            message: `Early Bird tickets are no longer available. This offer expires ${EARLY_BIRD_WINDOW_HOURS} hours after event posting.`,
+          }),
+          { status: 409, headers: { 'content-type': 'application/json' } }
+        );
+      }
+    }
+
     const bookingData: any = {
       tourist: new mongoose.Types.ObjectId(touristId),
       festival: new mongoose.Types.ObjectId(festivalId),
@@ -267,6 +342,8 @@ export async function POST(request: NextRequest) {
       const cleanDetails: any = {};
       if (bookingDetails.room && (bookingDetails.room.hotelName || bookingDetails.room.roomName)) {
         cleanDetails.room = {
+          hotelId: bookingDetails.room.hotelId || '',
+          roomId: bookingDetails.room.roomId || '',
           hotelName: bookingDetails.room.hotelName || '',
           roomName: bookingDetails.room.roomName || '',
           roomPrice: bookingDetails.room.roomPrice || 0,
@@ -274,6 +351,7 @@ export async function POST(request: NextRequest) {
       }
       if (bookingDetails.transport && bookingDetails.transport.type) {
         cleanDetails.transport = {
+          transportId: bookingDetails.transport.transportId || '',
           type: bookingDetails.transport.type,
           price: bookingDetails.transport.price || 0,
         };

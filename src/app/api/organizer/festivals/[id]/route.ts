@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '../../../../../lib/mongodb';
 import Festival from '../../../../../models/festival.model';
+import Booking from '../../../../../models/booking.model';
 import * as jose from 'jose';
+import { attachAvailabilityToFestival } from '../../../../../lib/festivalAvailability';
 
 export async function GET(request: NextRequest) {
   let id: string | undefined;
@@ -30,7 +32,14 @@ export async function GET(request: NextRequest) {
       return new NextResponse(JSON.stringify({ success: false, message: 'Festival not found or you do not have permission to view it.' }), { status: 404 });
     }
 
-    return new NextResponse(JSON.stringify({ success: true, festival }), { status: 200 });
+    const confirmedBookings = await Booking.find({
+      festival: id,
+      status: { $in: ['confirmed', 'completed'] },
+    }).lean();
+
+    const festivalWithAvailability = attachAvailabilityToFestival(festival, confirmedBookings);
+
+    return new NextResponse(JSON.stringify({ success: true, festival: festivalWithAvailability }), { status: 200 });
 
   } catch (error: any) {
     console.error(`Error fetching festival by ID: ${id}`, error);
@@ -71,6 +80,23 @@ export async function PUT(request: NextRequest) {
     const isApprovedEvent = existingFestival.verificationStatus === 'Approved';
     
     let normalUpdate = { ...body };
+
+    if (Array.isArray(normalUpdate.hotels)) {
+      normalUpdate.hotels = normalUpdate.hotels.map((hotel: any) => ({
+        ...hotel,
+        rooms: (hotel.rooms || []).map((room: any) => {
+          const { initialAvailability, bookedCount, remaining, isSoldOut, ...cleanRoom } = room;
+          return cleanRoom;
+        }),
+      }));
+    }
+
+    if (Array.isArray(normalUpdate.transportation)) {
+      normalUpdate.transportation = normalUpdate.transportation.map((transport: any) => {
+        const { initialAvailability, bookedCount, remaining, isSoldOut, ...cleanTransport } = transport;
+        return cleanTransport;
+      });
+    }
 
     if (isApprovedEvent) {
       normalUpdate.lastEditedAt = new Date();

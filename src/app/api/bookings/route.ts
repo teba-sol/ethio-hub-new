@@ -4,6 +4,18 @@ import Booking from '../../../../models/booking.model';
 import Festival from '../../../../models/festival.model';
 import * as jose from 'jose';
 
+const EARLY_BIRD_WINDOW_HOURS = Number(process.env.EARLY_BIRD_WINDOW_HOURS || 5);
+
+const getEarlyBirdExpiry = (festival: any) => {
+  const postedAtRaw = festival?.createdAt || festival?.submittedAt;
+  if (!postedAtRaw) return null;
+
+  const postedAt = new Date(postedAtRaw);
+  if (Number.isNaN(postedAt.getTime())) return null;
+
+  return new Date(postedAt.getTime() + EARLY_BIRD_WINDOW_HOURS * 60 * 60 * 1000);
+};
+
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
@@ -50,6 +62,19 @@ export async function POST(request: NextRequest) {
         JSON.stringify({ success: false, message: 'Festival is not available for booking' }),
         { status: 400, headers: { 'content-type': 'application/json' } }
       );
+    }
+
+    if (ticketType === 'earlyBird') {
+      const earlyBirdExpiresAt = getEarlyBirdExpiry(festival);
+      if (!earlyBirdExpiresAt || new Date() > earlyBirdExpiresAt) {
+        return new NextResponse(
+          JSON.stringify({
+            success: false,
+            message: `Early Bird tickets are no longer available. This offer expires ${EARLY_BIRD_WINDOW_HOURS} hours after event posting.`,
+          }),
+          { status: 409, headers: { 'content-type': 'application/json' } }
+        );
+      }
     }
 
     let unitPrice = festival.pricing?.basePrice || 0;

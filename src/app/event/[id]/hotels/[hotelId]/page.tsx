@@ -66,12 +66,15 @@ export default function HotelDetailPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const festRes = await apiClient.get(`/api/festivals/${eventId}`);
+        const [festRes, availabilityRes] = await Promise.all([
+          apiClient.get(`/api/festivals/${eventId}`),
+          apiClient.get(`/api/festivals/${eventId}/availability`),
+        ]);
         const festivalData = festRes?.festival || festRes;
         
         if (festivalData) {
           setFestival(festivalData);
-          const normalizedHotels = (festivalData.hotels || []).map((hotel: any, index: number) =>
+          const normalizedHotels = ((availabilityRes?.hotels || festivalData.hotels) || []).map((hotel: any, index: number) =>
             normalizeHotel(hotel, index)
           );
 
@@ -113,6 +116,10 @@ export default function HotelDetailPage() {
   }).slice(0, 3);
 
   const handleSelectRoom = (room: RoomType) => {
+    if ((room.remaining ?? room.availability ?? 0) <= 0) {
+      return;
+    }
+
     if (selectedRoom?.id === room.id) {
       setSelectedRoom(null);
     } else {
@@ -339,12 +346,18 @@ export default function HotelDetailPage() {
               <div className="space-y-4">
                 {(hotel.rooms || []).map((room) => {
                   const isSelected = selectedRoom?.id === room.id;
+                  const remainingRooms = room.remaining ?? room.availability ?? 0;
+                  const isSoldOut = remainingRooms <= 0;
                   return (
                     <div 
                       key={room.id}
                       onClick={() => handleSelectRoom(room)}
-                      className={`cursor-pointer bg-gray-50 rounded-2xl p-6 border-2 transition-all ${
-                        isSelected ? 'border-primary bg-primary/5' : 'border-transparent hover:border-gray-200'
+                      className={`bg-gray-50 rounded-2xl p-6 border-2 transition-all ${
+                        isSoldOut
+                          ? 'cursor-not-allowed border-red-100 opacity-70'
+                          : isSelected
+                            ? 'cursor-pointer border-primary bg-primary/5'
+                            : 'cursor-pointer border-transparent hover:border-gray-200'
                       }`}
                     >
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -387,9 +400,17 @@ export default function HotelDetailPage() {
                             <div className="text-2xl font-bold text-primary">${room.pricePerNight}</div>
                             <div className="text-sm text-gray-500">/night</div>
                           </div>
-                          {room.availability > 0 && room.availability <= 3 && (
+                          {isSoldOut ? (
+                            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-2">
+                              Sold out
+                            </span>
+                          ) : remainingRooms <= 3 ? (
                             <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full mt-2">
-                              Only {room.availability} left
+                              Only {remainingRooms} left
+                            </span>
+                          ) : (
+                            <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full mt-2">
+                              {remainingRooms} rooms available
                             </span>
                           )}
                           {isSelected && (
@@ -786,7 +807,7 @@ export default function HotelDetailPage() {
                     <span className="text-gray-500 text-sm"> /night</span>
                   </div>
                   <div className="text-right text-sm text-gray-500">
-                    {selectedRoom?.availability || hotel.rooms?.[0]?.availability || 0} rooms left
+                    {selectedRoom?.remaining ?? selectedRoom?.availability ?? hotel.rooms?.[0]?.remaining ?? hotel.rooms?.[0]?.availability ?? 0} rooms left
                   </div>
                 </div>
               </div>

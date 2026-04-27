@@ -167,15 +167,41 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
 
        // Strip incomplete array entries with empty required fields
        if (Array.isArray(dataToSave.transportation)) {
-         dataToSave.transportation = dataToSave.transportation.filter((t: any) => t.type?.trim());
+         dataToSave.transportation = dataToSave.transportation
+           .filter((t: any) => t.type?.trim())
+           .map((t: any) => ({
+             ...t,
+             type: String(t?.type || '').trim(),
+             capacity: Number.isFinite(Number(t?.capacity)) ? Number(t.capacity) : 0,
+             price: Number.isFinite(Number(t?.price)) ? Number(t.price) : 0,
+             availability: Number.isFinite(Number(t?.availability)) ? Number(t.availability) : 0,
+             description: String(t?.description || '').trim(),
+             pickupLocations: String(t?.pickupLocations || '').trim(),
+           }));
        }
        if (Array.isArray(dataToSave.hotels)) {
           dataToSave.hotels = dataToSave.hotels
             .filter((h: any) => h.name?.trim())
-            .map((h: any) => ({
-              ...h,
-              rooms: (h.rooms || []).filter((r: any) => r.name?.trim()),
-            }));
+            .map((h: any) => {
+              const sourceRooms = Array.isArray(h.rooms) ? h.rooms : [];
+              const normalizedRooms = sourceRooms
+                .filter((r: any) => hasMeaningfulRoomData(r))
+                .map((r: any, roomIndex: number) => ({
+                  ...r,
+                  name: String(r?.name || '').trim() || `Room ${roomIndex + 1}`,
+                  bedType: String(r?.bedType || '').trim() || 'King Size',
+                  capacity: Number.isFinite(Number(r?.capacity)) ? Number(r.capacity) : 2,
+                  pricePerNight: Number.isFinite(Number(r?.pricePerNight)) ? Number(r.pricePerNight) : 0,
+                  availability: Number.isFinite(Number(r?.availability)) ? Number(r.availability) : 0,
+                  sqm: Number.isFinite(Number(r?.sqm)) ? Number(r.sqm) : 30,
+                  amenities: Array.isArray(r?.amenities) ? r.amenities : [],
+                }));
+
+              return {
+                ...h,
+                rooms: normalizedRooms,
+              };
+            });
         }
        if (Array.isArray(dataToSave.schedule)) {
          dataToSave.schedule = dataToSave.schedule.filter((s: any) => s.title?.trim());
@@ -243,6 +269,28 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
       ...prev,
       [parent]: prev[parent].filter((_: any, i: number) => i !== index)
     }));
+  };
+
+  const parseNumberInput = (value: string, fallback = 0) => {
+    if (value.trim() === '') return fallback;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
+  const hasMeaningfulRoomData = (room: any) => {
+    if (!room || typeof room !== 'object') return false;
+
+    const textFields = ['name', 'description', 'image', 'bedType'];
+    const hasText = textFields.some((field) => String(room[field] || '').trim().length > 0);
+
+    const numericFields = ['capacity', 'pricePerNight', 'availability', 'sqm'];
+    const hasNumeric = numericFields.some((field) => {
+      const value = Number(room[field]);
+      return Number.isFinite(value) && value > 0;
+    });
+
+    const hasAmenities = Array.isArray(room.amenities) && room.amenities.length > 0;
+    return hasText || hasNumeric || hasAmenities;
   };
 
   const handleDeleteEvent = async () => {
@@ -746,7 +794,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                       <input
                         type="number"
                         value={day.day}
-                        onChange={(e) => handleArrayChange('schedule', idx, 'day', parseInt(e.target.value))}
+                        onChange={(e) => handleArrayChange('schedule', idx, 'day', parseNumberInput(e.target.value))}
                         className="text-2xl font-serif font-bold bg-transparent text-white text-center w-12"
                       />
                     ) : (
@@ -943,7 +991,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                     <input
                       type="number"
                       value={hotel.starRating}
-                      onChange={(e) => handleArrayChange('hotels', idx, 'starRating', parseInt(e.target.value))}
+                      onChange={(e) => handleArrayChange('hotels', idx, 'starRating', parseNumberInput(e.target.value))}
                       className="w-24 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                       min={1}
                       max={5}
@@ -1283,7 +1331,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                           />
                           <div className="absolute top-3 right-3">
                             <Badge className="bg-white/95 backdrop-blur-sm text-primary text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg">
-                              {room.availability} left
+                              {room.remaining ?? room.availability ?? 0} left
                             </Badge>
                           </div>
                         </>
@@ -1346,7 +1394,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                               value={room.capacity}
                               onChange={(e) => {
                                 const newRooms = [...hotel.rooms];
-                                newRooms[rIdx] = { ...newRooms[rIdx], capacity: parseInt(e.target.value) };
+                                newRooms[rIdx] = { ...newRooms[rIdx], capacity: parseNumberInput(e.target.value) };
                                 handleArrayChange('hotels', idx, 'rooms', newRooms);
                               }}
                               className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
@@ -1363,7 +1411,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                               value={room.sqm || 30}
                               onChange={(e) => {
                                 const newRooms = [...hotel.rooms];
-                                newRooms[rIdx] = { ...newRooms[rIdx], sqm: parseInt(e.target.value) };
+                                newRooms[rIdx] = { ...newRooms[rIdx], sqm: parseNumberInput(e.target.value) };
                                 handleArrayChange('hotels', idx, 'rooms', newRooms);
                               }}
                               className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
@@ -1377,16 +1425,23 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                           {isEditing ? (
                             <input
                               type="number"
-                              value={room.availability || 5}
+                              value={room.availability ?? ''}
                               onChange={(e) => {
                                 const newRooms = [...hotel.rooms];
-                                newRooms[rIdx] = { ...newRooms[rIdx], availabilityCount: parseInt(e.target.value) };
+                                newRooms[rIdx] = { ...newRooms[rIdx], availability: parseNumberInput(e.target.value) };
                                 handleArrayChange('hotels', idx, 'rooms', newRooms);
                               }}
                               className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                             />
                           ) : (
-                            <p className="font-semibold text-gray-800 text-sm">{room.availability || 5} rooms</p>
+                            <div className="space-y-1">
+                              <p className="font-semibold text-gray-800 text-sm">
+                                {room.remaining ?? room.availability ?? 0} remaining
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {room.initialAvailability ?? room.availability ?? 0} total, {room.bookedCount ?? 0} booked
+                              </p>
+                            </div>
                           )}
                         </div>
                         <div className="col-span-2">
@@ -1394,10 +1449,10 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                           {isEditing ? (
                             <input
                               type="number"
-                              value={room.pricePerNight}
+                              value={Number.isFinite(Number(room.pricePerNight)) ? Number(room.pricePerNight) : 0}
                               onChange={(e) => {
                                 const newRooms = [...hotel.rooms];
-                                newRooms[rIdx] = { ...newRooms[rIdx], pricePerNight: parseInt(e.target.value) };
+                                newRooms[rIdx] = { ...newRooms[rIdx], pricePerNight: parseNumberInput(e.target.value) };
                                 handleArrayChange('hotels', idx, 'rooms', newRooms);
                               }}
                               className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
@@ -1599,12 +1654,12 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                         <input
                           type="number"
                           value={transport.availability}
-                          onChange={(e) => handleArrayChange('transportation', idx, 'availability', parseInt(e.target.value))}
+                          onChange={(e) => handleArrayChange('transportation', idx, 'availability', parseNumberInput(e.target.value))}
                           className="w-20 p-1 bg-gray-50 border border-gray-200 rounded-lg text-xs"
                         />
                       ) : (
                         <Badge variant="outline" className="text-emerald-600 border-emerald-100 bg-emerald-50">
-                          {transport.availability} Units
+                          {transport.remaining ?? transport.availability ?? 0} Units
                         </Badge>
                       )}
                     </div>
@@ -1628,11 +1683,16 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                           <input
                             type="number"
                             value={transport.capacity}
-                            onChange={(e) => handleArrayChange('transportation', idx, 'capacity', parseInt(e.target.value))}
+                            onChange={(e) => handleArrayChange('transportation', idx, 'capacity', parseNumberInput(e.target.value))}
                             className="w-full p-1 bg-gray-50 border border-gray-200 rounded-lg text-xs"
                           />
                         ) : (
-                          <p className="font-bold text-primary">{transport.capacity} Passengers</p>
+                          <div className="space-y-1">
+                            <p className="font-bold text-primary">{transport.capacity} Passengers</p>
+                            <p className="text-[10px] text-gray-500">
+                              {transport.initialAvailability ?? transport.availability ?? 0} total, {transport.bookedCount ?? 0} booked
+                            </p>
+                          </div>
                         )}
                       </div>
                       <div>
@@ -1641,7 +1701,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                           <input
                             type="number"
                             value={transport.price}
-                            onChange={(e) => handleArrayChange('transportation', idx, 'price', parseInt(e.target.value))}
+                            onChange={(e) => handleArrayChange('transportation', idx, 'price', parseNumberInput(e.target.value))}
                             className="w-full p-1 bg-gray-50 border border-gray-200 rounded-lg text-xs"
                           />
                         ) : (
@@ -1792,7 +1852,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                           value={item.pricePerPerson || ''}
                           onChange={(e) => {
                             const newPackages = [...(currentData.services?.foodPackages || [])];
-                            newPackages[i] = { ...newPackages[i], pricePerPerson: parseInt(e.target.value) || 0 };
+                            newPackages[i] = { ...newPackages[i], pricePerPerson: parseNumberInput(e.target.value) };
                             handleNestedChange('services', 'foodPackages', newPackages);
                           }}
                           className="text-xs bg-transparent border border-gray-200 rounded px-2 py-1 w-20"
@@ -2058,7 +2118,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   <input
                     type="number"
                     value={currentData.pricing?.basePrice || 0}
-                    onChange={(e) => handleNestedChange('pricing', 'basePrice', parseInt(e.target.value))}
+                    onChange={(e) => handleNestedChange('pricing', 'basePrice', parseNumberInput(e.target.value))}
                     className="text-5xl font-serif font-bold bg-transparent border-b border-white/30 text-white w-full"
                   />
                 ) : (
@@ -2082,7 +2142,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   <input
                     type="number"
                     value={currentData.pricing?.vipPrice || 0}
-                    onChange={(e) => handleNestedChange('pricing', 'vipPrice', parseInt(e.target.value))}
+                    onChange={(e) => handleNestedChange('pricing', 'vipPrice', parseNumberInput(e.target.value))}
                     className="text-5xl font-serif font-bold bg-transparent border-b border-white/30 text-white w-full"
                   />
                 ) : (
@@ -2124,7 +2184,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                       <input
                         type="number"
                         value={currentData.pricing?.earlyBird || 0}
-                        onChange={(e) => handleNestedChange('pricing', 'earlyBird', parseInt(e.target.value))}
+                        onChange={(e) => handleNestedChange('pricing', 'earlyBird', parseNumberInput(e.target.value))}
                         className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                       />
                     ) : (
@@ -2138,7 +2198,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                       <input
                         type="number"
                         value={currentData.pricing?.groupDiscount || 0}
-                        onChange={(e) => handleNestedChange('pricing', 'groupDiscount', parseInt(e.target.value))}
+                        onChange={(e) => handleNestedChange('pricing', 'groupDiscount', parseNumberInput(e.target.value))}
                         className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                       />
                     ) : (

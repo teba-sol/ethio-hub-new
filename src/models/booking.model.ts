@@ -21,11 +21,14 @@ export interface IBooking extends Document {
   specialRequests?: string;
   bookingDetails?: {
     room?: {
+      hotelId?: string;
+      roomId?: string;
       hotelName: string;
       roomName: string;
       roomPrice: number;
     };
     transport?: {
+      transportId?: string;
       type: string;
       price: number;
     };
@@ -105,11 +108,14 @@ const BookingSchema: Schema = new Schema(
     },
     bookingDetails: {
       room: {
+        hotelId: { type: String },
+        roomId: { type: String },
         hotelName: { type: String },
         roomName: { type: String },
         roomPrice: { type: Number },
       },
       transport: {
+        transportId: { type: String },
         type: { type: String },
         price: { type: Number },
       },

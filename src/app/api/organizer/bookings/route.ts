@@ -3,6 +3,7 @@ import { connectDB } from '../../../../lib/mongodb';
 import Booking from '../../../../models/booking.model';
 import Festival from '../../../../models/festival.model';
 import * as jose from 'jose';
+import { attachAvailabilityToFestival, findRoomAvailability, findTransportAvailability } from '../../../../lib/festivalAvailability';
 
 export async function GET(request: NextRequest) {
   try {
@@ -103,6 +104,39 @@ export async function PUT(request: NextRequest) {
 
     const updateData: any = {};
     if (status && ['pending', 'confirmed', 'cancelled', 'completed'].includes(status)) {
+      if (status === 'confirmed' && booking.status !== 'confirmed' && booking.status !== 'completed') {
+        const festival = await Festival.findById(booking.festival);
+        if (!festival) {
+          return new NextResponse(
+            JSON.stringify({ success: false, message: 'Festival not found for this booking' }),
+            { status: 404, headers: { 'content-type': 'application/json' } }
+          );
+        }
+
+        const confirmedBookings = await Booking.find({
+          festival: booking.festival,
+          status: { $in: ['confirmed', 'completed'] },
+        }).lean();
+
+        const festivalWithAvailability = attachAvailabilityToFestival(festival, confirmedBookings);
+        const selectedRoomAvailability = findRoomAvailability(festivalWithAvailability, booking.bookingDetails?.room);
+        const selectedTransportAvailability = findTransportAvailability(festivalWithAvailability, booking.bookingDetails?.transport);
+
+        if (booking.bookingDetails?.room && (!selectedRoomAvailability || selectedRoomAvailability.remaining <= 0)) {
+          return new NextResponse(
+            JSON.stringify({ success: false, message: 'The selected room is no longer available' }),
+            { status: 409, headers: { 'content-type': 'application/json' } }
+          );
+        }
+
+        if (booking.bookingDetails?.transport && (!selectedTransportAvailability || selectedTransportAvailability.remaining <= 0)) {
+          return new NextResponse(
+            JSON.stringify({ success: false, message: 'The selected car is no longer available' }),
+            { status: 409, headers: { 'content-type': 'application/json' } }
+          );
+        }
+      }
+
       updateData.status = status;
     }
     if (paymentStatus && ['pending', 'paid', 'refunded'].includes(paymentStatus)) {

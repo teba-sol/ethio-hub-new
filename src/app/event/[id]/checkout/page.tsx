@@ -15,6 +15,7 @@ export default function CheckoutPage() {
   const { user, isAuthenticated } = useAuth();
   const {
     ticketSelection,
+    selectedHotel,
     selectedRoom,
     checkIn,
     checkOut,
@@ -60,6 +61,24 @@ export default function CheckoutPage() {
         currency: 'USD',
         hasHotelBooking: hasHotel,
         touristServiceFee: serviceFee,
+        bookingDetails: {
+          ...(selectedRoom ? {
+            room: {
+              hotelId: selectedHotel?._id || selectedHotel?.id || '',
+              roomId: selectedRoom._id || selectedRoom.id,
+              hotelName: selectedHotel?.name || '',
+              roomName: selectedRoom.name,
+              roomPrice: selectedRoom.pricePerNight,
+            },
+          } : {}),
+          ...(selectedTransport ? {
+            transport: {
+              transportId: selectedTransport._id || selectedTransport.id,
+              type: selectedTransport.type,
+              price: selectedTransport.price,
+            },
+          } : {}),
+        },
         contactInfo: {
           fullName: user?.name || 'Guest',
           email: user?.email || 'guest@email.com',
@@ -104,7 +123,7 @@ export default function CheckoutPage() {
           if (data.success) {
             // Mark booking as paid immediately (before redirect)
             try {
-              await fetch('/api/tourist/bookings', {
+              const confirmResponse = await fetch('/api/tourist/bookings', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -114,6 +133,12 @@ export default function CheckoutPage() {
                   paymentStatus: 'paid'
                 }),
               });
+              const confirmData = await confirmResponse.json();
+              if (!confirmResponse.ok || !confirmData.success) {
+                alert(confirmData.message || 'The selected room or car is no longer available.');
+                setLoading(false);
+                return;
+              }
               console.log('Booking confirmed as paid');
             } catch (e) {
               console.log('Confirm error:', e);

@@ -11,6 +11,7 @@ interface AuthContextType {
   logout: () => void;
   register: (userData: any) => Promise<any>;
   updateUser: (data: Partial<User>) => void;
+  setAuthenticatedUser: (data: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -77,10 +78,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(prev => prev ? { ...prev, ...data } : null);
   };
 
+  const setAuthenticatedUser = (data: User) => {
+    setUser(data);
+  };
+
   const register = async (userData: any) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch('/api/auth/register/request-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
@@ -89,16 +94,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!response.ok) {
         throw new Error(data.message || 'Registration failed');
       }
-      // After successful registration, we now log the user in to set the session cookie
-      const loginResponse = await login({ email: userData.email, password: userData.password });
-      return loginResponse;
+      return data;
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, loading, login, logout, register, updateUser }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        loading,
+        login,
+        logout,
+        register,
+        updateUser,
+        setAuthenticatedUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

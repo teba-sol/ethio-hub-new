@@ -10,6 +10,8 @@ interface TicketCardProps {
   benefits: string[];
   isSelected: boolean;
   onSelect: () => void;
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
 export const TicketCard: React.FC<TicketCardProps> = ({ 
@@ -18,7 +20,9 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   price, 
   benefits, 
   isSelected, 
-  onSelect 
+  onSelect,
+  disabled = false,
+  disabledReason
 }) => {
   const variants = {
     vip: {
@@ -63,11 +67,13 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   
   return (
     <div 
-      onClick={onSelect}
-      className={`relative rounded-2xl overflow-hidden border-2 transition-all duration-300 cursor-pointer ${
-        isSelected 
+      onClick={disabled ? undefined : onSelect}
+      className={`relative rounded-2xl overflow-hidden border-2 transition-all duration-300 ${
+        disabled
+          ? 'cursor-not-allowed border-gray-200 opacity-70'
+          : isSelected 
           ? variant.selectedClass
-          : 'border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-1'
+          : 'border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-1 cursor-pointer'
       }`}
     >
       <div className={`h-1.5 w-full ${variant.accentClass}`} />
@@ -106,14 +112,19 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         
         {/* Select Button */}
         <button
+          type="button"
+          disabled={disabled}
           className={`w-full mt-6 py-4 rounded-xl font-bold transition-colors ${
-            isSelected 
-              ? variant.buttonClass
+            disabled
+              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
               : variant.buttonClass
           }`}
         >
-          {isSelected ? 'Selected' : 'Select Ticket'}
+          {disabled ? 'Unavailable' : isSelected ? 'Selected' : 'Select Ticket'}
         </button>
+        {disabled && disabledReason && (
+          <p className="mt-3 text-xs font-medium text-red-600">{disabledReason}</p>
+        )}
       </div>
     </div>
   );
