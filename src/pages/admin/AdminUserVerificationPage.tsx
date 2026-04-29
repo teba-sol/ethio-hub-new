@@ -5,6 +5,18 @@ import {
   ChevronRight, Calendar, Mail, Phone, History, Check, Ban, Loader2
 } from 'lucide-react';
 import { Button, Badge, Input } from '../../components/UI';
+import { useLanguage } from '@/context/LanguageContext';
+
+// --- Helpers ---
+const getString = (val: any): string => {
+  if (typeof val === 'string') return val;
+  if (val && typeof val === 'object') {
+    if (val.en) return String(val.en);
+    if (val.am) return String(val.am);
+    return '';
+  }
+  return String(val || '');
+};
 
 // --- Types ---
 type VerificationStatus = 'not_submitted' | 'submitted' | 'under_review' | 'approved' | 'rejected' | 'modification_requested';
@@ -54,8 +66,10 @@ interface VerificationStats {
 }
 
 export const AdminUserVerificationPage: React.FC = () => {
-  const [filterStatus, setFilterStatus] = useState<string>('All');
-  const [filterRole, setFilterRole] = useState<string>('All');
+  const { t } = useLanguage();
+  const [requests, setRequests] = useState<VerificationRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -200,8 +214,8 @@ export const AdminUserVerificationPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-serif font-bold text-gray-800">User Verification</h1>
-          <p className="text-gray-500 text-sm">Review and verify artisan and organizer accounts.</p>
+          <h1 className="text-3xl font-serif font-bold text-gray-800">{t("admin.userVerifications")}</h1>
+          <p className="text-gray-500 text-sm">{t("admin.userVerificationDesc")}</p>
         </div>
       </div>
 
@@ -387,16 +401,16 @@ export const AdminUserVerificationPage: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold overflow-hidden">
-                          {req.userAvatar ? (
-                            <img src={req.userAvatar} alt={req.userName} className="w-full h-full object-cover" />
-                          ) : (
-                            req.userName.charAt(0)
-                          )}
+                           {req.userAvatar ? (
+                             <img src={req.userAvatar} alt={getString(req.userName)} className="w-full h-full object-cover" />
+                           ) : (
+                             getString(req.userName).charAt(0)
+                           )}
                         </div>
-                        <div>
-                          <p className="font-bold text-gray-800">{req.userName}</p>
-                          <p className="text-xs text-gray-500">{req.userEmail}</p>
-                        </div>
+                         <div>
+                           <p className="font-bold text-gray-800">{getString(req.userName)}</p>
+                           <p className="text-xs text-gray-500">{req.userEmail}</p>
+                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -438,15 +452,15 @@ export const AdminUserVerificationPage: React.FC = () => {
             {/* Modal Header */}
             <div className="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xl overflow-hidden">
-                  {selectedRequest.userAvatar ? (
-                    <img src={selectedRequest.userAvatar} alt={selectedRequest.userName} className="w-full h-full object-cover" />
-                  ) : (
-                    selectedRequest.userName.charAt(0)
-                  )}
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-800">{selectedRequest.userName}</h2>
+                 <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xl overflow-hidden">
+                   {selectedRequest.userAvatar ? (
+                     <img src={selectedRequest.userAvatar} alt={getString(selectedRequest.userName)} className="w-full h-full object-cover" />
+                   ) : (
+                     getString(selectedRequest.userName).charAt(0)
+                   )}
+                 </div>
+                 <div>
+                   <h2 className="text-2xl font-bold text-gray-800">{getString(selectedRequest.userName)}</h2>
                   <p className="text-sm text-gray-500">Verification Request: {selectedRequest.id}</p>
                 </div>
               </div>

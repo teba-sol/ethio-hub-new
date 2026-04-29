@@ -7,6 +7,18 @@ import {
 } from 'lucide-react';
 import { Button, Badge, Input } from '../../components/UI';
 
+// --- Helpers ---
+const getString = (val: any): string => {
+  if (typeof val === 'string') return val;
+  if (val && typeof val === 'object') {
+    if (val.en) return String(val.en);
+    if (val.am) return String(val.am);
+    return '';
+  }
+  return String(val || '');
+};
+
+// --- Types ---
 type VerificationStatus = 'Pending' | 'Approved' | 'Rejected';
 
 interface ArtisanProfile {
@@ -290,15 +302,15 @@ export const AdminProductsPage: React.FC = () => {
                 {artisan && (
                   <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
                     <h3 className="font-bold text-gray-800 mb-4">Artisan Profile</h3>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-lg">
-                        {artisan.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm text-gray-800">{artisan.name}</p>
-                        <p className="text-[10px] text-gray-500 truncate max-w-[150px]">{artisan.email}</p>
-                      </div>
-                    </div>
+                     <div className="flex items-center gap-3 mb-4">
+                       <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-lg">
+                         {getString(artisan.name).charAt(0)}
+                       </div>
+                       <div>
+                         <p className="font-bold text-sm text-gray-800">{getString(artisan.name)}</p>
+                         <p className="text-[10px] text-gray-500 truncate max-w-[150px]">{artisan.email}</p>
+                       </div>
+                     </div>
                   </div>
                 )}
               </div>
@@ -517,13 +529,13 @@ export const AdminProductsPage: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 font-medium text-gray-700">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-indigo-50 rounded-full flex items-center justify-center text-[10px] font-bold text-indigo-600">
-                        {product.artisanId?.name?.charAt(0) || '?'}
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-800">{product.artisanId?.name || 'Unknown'}</p>
-                        <p className="text-[10px] text-gray-400">{product.artisanId?.email || ''}</p>
-                      </div>
+                       <div className="w-6 h-6 bg-indigo-50 rounded-full flex items-center justify-center text-[10px] font-bold text-indigo-600">
+                         {getString(product.artisanId?.name)?.charAt(0) || '?'}
+                       </div>
+                       <div>
+                         <p className="font-bold text-gray-800">{getString(product.artisanId?.name || 'Unknown')}</p>
+                         <p className="text-[10px] text-gray-400">{product.artisanId?.email || ''}</p>
+                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
