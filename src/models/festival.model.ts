@@ -4,30 +4,42 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IScheduleItem extends Document {
   day: number;
   title: string;
+  title_en: string;
+  title_am: string;
   activities: string;
   performers: string[];
 }
 
 // SIMPLIFIED: Room interface - only what you need
 export interface IRoom extends Document {
-  name: string;           // Room Name
+  name: string;           // Room Name (for backward compatibility)
+  name_en: string;
+  name_am: string;
   image?: string;         // Room Image URL
   bedType: string;        // Bed Type (e.g., "King Size")
   capacity: number;       // Capacity (number of people)
   pricePerNight: number;  // Price per night
   availability: number;   // Number of rooms available
-  description?: string;    // Room description
+  description?: string;    // Room description (for backward compatibility)
+  description_en?: string;
+  description_am?: string;
   sqm?: number;           // Room size in square meters
   amenities?: string[];    // Room amenities (WiFi, AC, etc.)
 }
 
 // Hotel interface with simplified rooms
 export interface IHotel extends Document {
-  name: string;
+  name: string; // for backward compatibility
+  name_en: string;
+  name_am: string;
   starRating: number;
   address: string;
-  description: string;
-  fullDescription?: string;
+  description: string; // for backward compatibility
+  description_en?: string;
+  description_am?: string;
+  fullDescription?: string; // for backward compatibility
+  fullDescription_en?: string;
+  fullDescription_am?: string;
   policies?: string;
   image: string;
   checkInTime?: string;
@@ -38,10 +50,14 @@ export interface IHotel extends Document {
 }
 
 export interface ITransportation extends Document {
-  type: string;
+  type: string; // for backward compatibility
+  type_en: string;
+  type_am: string;
   provider: string;
   price: number;
-  description: string;
+  description: string; // for backward compatibility
+  description_en?: string;
+  description_am?: string;
   image?: string;
   availability?: number;
   capacity?: number;
@@ -71,13 +87,21 @@ export interface IPricing {
 }
 
 export interface IFestival extends Document {
-  name: string;
-  shortDescription: string;
-  fullDescription: string;
+  name: string; // for backward compatibility
+  name_en: string;
+  name_am: string;
+  shortDescription: string; // for backward compatibility
+  shortDescription_en: string;
+  shortDescription_am: string;
+  fullDescription: string; // for backward compatibility
+  fullDescription_en: string;
+  fullDescription_am: string;
   startDate: Date;
   endDate: Date;
   location: {
-    name: string;
+    name: string; // for backward compatibility
+    name_en: string;
+    name_am: string;
     address?: string;
     coordinates?: { lat?: number; lng?: number };
   };
@@ -109,6 +133,8 @@ export interface IFestival extends Document {
 const ScheduleItemSchema: Schema = new Schema({
   day: { type: Number, required: true },
   title: { type: String, required: true },
+  title_en: { type: String, required: true },
+  title_am: { type: String, required: true },
   activities: { type: String },
   performers: [{ type: String }],
 });
@@ -116,12 +142,16 @@ const ScheduleItemSchema: Schema = new Schema({
 // SIMPLIFIED: Room Schema - with all fields
 const RoomSchema: Schema = new Schema({
   name: { type: String, required: true },           // Room Name
+  name_en: { type: String, required: true },
+  name_am: { type: String, required: true },
   image: { type: String },                           // Room Image URL
   bedType: { type: String, default: 'King Size' },   // Bed Type
   capacity: { type: Number, default: 2 }, // Capacity
   pricePerNight: { type: Number },   // Price/Night
   availability: { type: Number, default: 5 }, // Availability count
   description: { type: String },                    // Room description
+  description_en: { type: String },
+  description_am: { type: String },
   sqm: { type: Number },                            // Room size in sqm
   amenities: [{ type: String }],                    // Room amenities
 }, { _id: true });
@@ -129,7 +159,11 @@ const RoomSchema: Schema = new Schema({
 // Food Package Schema
 const FoodPackageSchema: Schema = new Schema({
   name: { type: String, required: true },
+  name_en: { type: String, required: true },
+  name_am: { type: String, required: true },
   description: { type: String },
+  description_en: { type: String },
+  description_am: { type: String },
   pricePerPerson: { type: Number, required: true },
   items: [{ type: String }], // ["Breakfast", "Lunch", "Dinner", "Drinks"]
 }, { _id: true });
@@ -137,10 +171,16 @@ const FoodPackageSchema: Schema = new Schema({
 // Hotel Schema with all fields
 const HotelSchema: Schema = new Schema({
   name: { type: String, required: true },
+  name_en: { type: String, required: true },
+  name_am: { type: String, required: true },
   starRating: { type: Number },
   address: { type: String },
   description: { type: String },
+  description_en: { type: String },
+  description_am: { type: String },
   fullDescription: { type: String },
+  fullDescription_en: { type: String },
+  fullDescription_am: { type: String },
   policies: { type: String },
   image: { type: String },
   checkInTime: { type: String },
@@ -152,9 +192,13 @@ const HotelSchema: Schema = new Schema({
 
 const TransportationSchema: Schema = new Schema({
   type: { type: String, required: true },
+  type_en: { type: String, required: true },
+  type_am: { type: String, required: true },
   provider: { type: String },
   price: { type: Number },
   description: { type: String },
+  description_en: { type: String },
+  description_am: { type: String },
   image: { type: String },
   availability: { type: Number },
   capacity: { type: Number },
@@ -186,13 +230,21 @@ const PricingSchema: Schema = new Schema({
 
 const FestivalSchema: Schema = new Schema(
   {
-  name: { type: String },
+    name: { type: String },
+    name_en: { type: String, required: true },
+    name_am: { type: String, required: true },
     shortDescription: { type: String, required: true },
+    shortDescription_en: { type: String, required: true },
+    shortDescription_am: { type: String, required: true },
     fullDescription: { type: String, required: true },
+    fullDescription_en: { type: String, required: true },
+    fullDescription_am: { type: String, required: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     location: {
   name: { type: String },
+      name_en: { type: String, required: true },
+      name_am: { type: String, required: true },
       address: { type: String },
       coordinates: {
         lat: { type: Number },

@@ -69,6 +69,7 @@ export const AdminUserVerificationPage: React.FC = () => {
   const { t } = useLanguage();
   const [requests, setRequests] = useState<VerificationRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterRole, setFilterRole] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
@@ -76,9 +77,7 @@ export const AdminUserVerificationPage: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<VerificationRequest | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectionModal, setShowRejectionModal] = useState(false);
-  const [requests, setRequests] = useState<VerificationRequest[]>([]);
   const [stats, setStats] = useState<VerificationStats>({ pending: 0, underReview: 0, approved: 0, rejected: 0 });
-  const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -200,13 +199,19 @@ export const AdminUserVerificationPage: React.FC = () => {
   });
 
   const StatusBadge = ({ status }: { status: VerificationStatus }) => {
-    switch (status) {
-      case 'approved': return <Badge variant="success">Approved</Badge>;
-      case 'rejected': return <Badge variant="error">Rejected</Badge>;
-      case 'submitted': return <Badge variant="warning">Pending</Badge>;
-      case 'under_review': return <Badge variant="info">Under Review</Badge>;
-      default: return <Badge variant="secondary">{status}</Badge>;
-    }
+    const statusKey = `admin.status.${status === 'not_submitted' ? 'statusNotSubmitted' : 
+      status === 'submitted' ? 'statusSubmitted' :
+      status === 'under_review' ? 'statusUnderReview' :
+      status === 'approved' ? 'statusApproved' :
+      status === 'rejected' ? 'statusRejected' : 'statusModificationRequested'}`;
+    
+    const variant = 
+      status === 'approved' ? 'success' :
+      status === 'rejected' ? 'error' :
+      status === 'submitted' ? 'warning' :
+      status === 'under_review' ? 'info' : 'secondary';
+    
+    return <Badge variant={variant}>{t(statusKey)}</Badge>;
   };
 
   return (
@@ -229,7 +234,7 @@ export const AdminUserVerificationPage: React.FC = () => {
             <Badge variant="warning">Pending</Badge>
           </div>
           <h3 className="text-2xl font-bold text-gray-800">{stats.pending}</h3>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Pending Requests</p>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t("admin.pendingRequests")}</p>
         </div>
         <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm">
           <div className="flex justify-between items-start mb-4">
@@ -239,7 +244,7 @@ export const AdminUserVerificationPage: React.FC = () => {
             <Badge variant="success">Active</Badge>
           </div>
           <h3 className="text-2xl font-bold text-gray-800">{stats.approved}</h3>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Approved Users</p>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t("admin.approvedUsers")}</p>
         </div>
         <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm">
           <div className="flex justify-between items-start mb-4">
@@ -249,7 +254,7 @@ export const AdminUserVerificationPage: React.FC = () => {
             <Badge variant="error">Action Needed</Badge>
           </div>
           <h3 className="text-2xl font-bold text-gray-800">{stats.rejected}</h3>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Rejected Requests</p>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t("admin.rejectedRequests")}</p>
         </div>
         <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm">
           <div className="flex justify-between items-start mb-4">
@@ -259,7 +264,7 @@ export const AdminUserVerificationPage: React.FC = () => {
             <Badge variant="info">Reviewing</Badge>
           </div>
           <h3 className="text-2xl font-bold text-gray-800">{stats.underReview}</h3>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Under Review</p>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t("admin.underReview")}</p>
         </div>
       </div>
 
@@ -270,33 +275,33 @@ export const AdminUserVerificationPage: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input 
               type="text" 
-              placeholder="Search by name or email..." 
+              placeholder={t("common.search") + "..."}
               className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/20"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           <div className="flex flex-wrap gap-2">
-            <select 
-              className="px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 border-none cursor-pointer"
-              value={filterRole}
-              onChange={(e) => setFilterRole(e.target.value)}
-            >
-              <option value="All">All Roles</option>
-              <option value="Organizer">Organizer</option>
-              <option value="Artisan">Artisan</option>
-            </select>
-            <select 
-              className="px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 border-none cursor-pointer"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="All">All Status</option>
-              <option value="Submitted">Pending</option>
-              <option value="Under Review">Under Review</option>
-              <option value="Approved">Approved</option>
-              <option value="Rejected">Rejected</option>
-            </select>
+             <select 
+               className="px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 border-none cursor-pointer"
+               value={filterRole}
+               onChange={(e) => setFilterRole(e.target.value)}
+             >
+               <option value="All">{t("common.all")}</option>
+               <option value="Organizer">Organizer</option>
+               <option value="Artisan">Artisan</option>
+             </select>
+             <select 
+               className="px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 border-none cursor-pointer"
+               value={filterStatus}
+               onChange={(e) => setFilterStatus(e.target.value)}
+             >
+               <option value="All">{t("admin.allStatus")}</option>
+               <option value="Submitted">{t("status.statusSubmitted")}</option>
+               <option value="Under Review">{t("status.statusUnderReview")}</option>
+               <option value="Approved">{t("status.statusApproved")}</option>
+               <option value="Rejected">{t("status.statusRejected")}</option>
+             </select>
             <div className="relative">
               <Button 
                 variant={dateRange.start || dateRange.end ? "primary" : "outline"} 
@@ -340,30 +345,31 @@ export const AdminUserVerificationPage: React.FC = () => {
         </div>
         
         <div className="flex gap-2 border-t border-gray-50 pt-4 overflow-x-auto">
-          {['All Requests', 'Organizer Requests', 'Artisan Requests', 'Pending', 'Approved', 'Rejected'].map(tab => (
+          {[
+            { key: 'allRequests', role: 'All', status: 'All' },
+            { key: 'organizerRequests', role: 'Organizer', status: 'All' },
+            { key: 'artisanRequests', role: 'Artisan', status: 'All' },
+            { key: 'pending', role: 'All', status: 'Submitted' },
+            { key: 'approved', role: 'All', status: 'Approved' },
+            { key: 'rejected', role: 'All', status: 'Rejected' }
+          ].map(tab => (
             <button
-              key={tab}
+              key={tab.key}
               onClick={() => {
-                if (tab.includes('Organizer')) setFilterRole('Organizer');
-                else if (tab.includes('Artisan')) setFilterRole('Artisan');
-                else setFilterRole('All');
-
-                if (tab === 'Pending') setFilterStatus('Submitted');
-                else if (tab === 'Approved') setFilterStatus('Approved');
-                else if (tab === 'Rejected') setFilterStatus('Rejected');
-                else setFilterStatus('All');
+                setFilterRole(tab.role);
+                setFilterStatus(tab.status);
               }}
               className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                (tab === 'All Requests' && filterStatus === 'All' && filterRole === 'All') ||
-                (tab === 'Organizer Requests' && filterRole === 'Organizer') ||
-                (tab === 'Artisan Requests' && filterRole === 'Artisan') ||
-                (tab === 'Pending' && filterStatus === 'Submitted') ||
-                (tab === 'Approved' && filterStatus === 'Approved') ||
-                (tab === 'Rejected' && filterStatus === 'Rejected')
+                (tab.key === 'allRequests' && filterStatus === 'All' && filterRole === 'All') ||
+                (tab.key === 'organizerRequests' && filterRole === 'Organizer') ||
+                (tab.key === 'artisanRequests' && filterRole === 'Artisan') ||
+                (tab.key === 'pending' && filterStatus === 'Submitted') ||
+                (tab.key === 'approved' && filterStatus === 'Approved') ||
+                (tab.key === 'rejected' && filterStatus === 'Rejected')
                 ? 'bg-primary text-white shadow-md' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
               }`}
             >
-              {tab}
+              {t(`admin.quickFilters.${tab.key}`)}
             </button>
           ))}
         </div>
@@ -372,28 +378,28 @@ export const AdminUserVerificationPage: React.FC = () => {
       {/* Table */}
       <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <span className="ml-3 text-gray-500">Loading verification requests...</span>
-          </div>
+           <div className="flex items-center justify-center py-20">
+             <Loader2 className="w-8 h-8 animate-spin text-primary" />
+             <span className="ml-3 text-gray-500">{t('admin.loadingVerificationRequests')}</span>
+           </div>
         ) : filteredRequests.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <ShieldCheck className="w-12 h-12 text-gray-300 mb-4" />
-            <p className="text-gray-500 font-medium">No verification requests found</p>
-            <p className="text-gray-400 text-sm">Try adjusting your filters</p>
-          </div>
+           <div className="flex flex-col items-center justify-center py-20">
+             <ShieldCheck className="w-12 h-12 text-gray-300 mb-4" />
+             <p className="text-gray-500 font-medium">{t('admin.noVerificationRequests')}</p>
+             <p className="text-gray-400 text-sm">{t('admin.tryAdjustingFilters')}</p>
+           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
-                <tr className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  <th className="px-6 py-4">User</th>
-                  <th className="px-6 py-4">Business</th>
-                  <th className="px-6 py-4">Submitted On</th>
-                  <th className="px-6 py-4">Documents</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
-                </tr>
+                 <tr className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                   <th className="px-6 py-4">{t("admin.userVerifications")}</th>
+                   <th className="px-6 py-4">{t("admin.businessInfo")}</th>
+                   <th className="px-6 py-4">{t("admin.submittedOn")}</th>
+                   <th className="px-6 py-4">{t("admin.documents")}</th>
+                   <th className="px-6 py-4">{t("admin.status")}</th>
+                   <th className="px-6 py-4 text-right">{t("admin.actions")}</th>
+                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filteredRequests.map((req) => (
@@ -413,28 +419,28 @@ export const AdminUserVerificationPage: React.FC = () => {
                          </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <p className="font-medium text-gray-700">{req.businessName || 'N/A'}</p>
-                      <p className="text-xs text-gray-500">{req.category || ''}</p>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">{req.submittedAt}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1 text-gray-500">
-                        <FileText className="w-4 h-4" />
-                        <span>{req.documents.length} files</span>
-                      </div>
-                    </td>
+                     <td className="px-6 py-4">
+                       <p className="font-medium text-gray-700">{getString(req.businessName || 'N/A')}</p>
+                       <p className="text-xs text-gray-500">{getString(req.category || '')}</p>
+                     </td>
+                     <td className="px-6 py-4 text-gray-600">{req.submittedAt}</td>
+                     <td className="px-6 py-4">
+                       <div className="flex items-center gap-1 text-gray-500">
+                         <FileText className="w-4 h-4" />
+                         <span>{req.documents?.length || 0} {t("documents.files")}</span>
+                       </div>
+                     </td>
                     <td className="px-6 py-4">
                       <StatusBadge status={req.status} />
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
+                      <Button
+                        size="sm"
+                        variant="outline"
                         onClick={() => setSelectedRequest(req)}
                         className="group-hover:bg-primary group-hover:text-white transition-all"
                       >
-                        Review
+                        {t('admin.review')}
                       </Button>
                     </td>
                   </tr>
@@ -461,7 +467,7 @@ export const AdminUserVerificationPage: React.FC = () => {
                  </div>
                  <div>
                    <h2 className="text-2xl font-bold text-gray-800">{getString(selectedRequest.userName)}</h2>
-                  <p className="text-sm text-gray-500">Verification Request: {selectedRequest.id}</p>
+                  <p className="text-sm text-gray-500">{t('admin.verificationRequest')}: {selectedRequest.id}</p>
                 </div>
               </div>
               <button 
@@ -478,80 +484,80 @@ export const AdminUserVerificationPage: React.FC = () => {
                 {/* User Info Section */}
                 <section>
                   <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <User className="w-5 h-5 text-primary" /> User Information
+                    <User className="w-5 h-5 text-primary" /> {t('admin.userInformation')}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
                     <div className="space-y-1">
-                      <p className="text-xs font-bold text-gray-400 uppercase">Email</p>
-                      <p className="text-sm font-medium text-gray-700 flex items-center gap-2"><Mail className="w-4 h-4" /> {selectedRequest.userEmail}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs font-bold text-gray-400 uppercase">Phone</p>
-                      <p className="text-sm font-medium text-gray-700 flex items-center gap-2"><Phone className="w-4 h-4" /> {selectedRequest.userPhone}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs font-bold text-gray-400 uppercase">Business Name</p>
-                      <p className="text-sm font-medium text-gray-700">{selectedRequest.businessName || 'N/A'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs font-bold text-gray-400 uppercase">Category</p>
-                      <p className="text-sm font-medium text-gray-700">{selectedRequest.category || 'N/A'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs font-bold text-gray-400 uppercase">Region</p>
-                      <p className="text-sm font-medium text-gray-700">{selectedRequest.region || 'N/A'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs font-bold text-gray-400 uppercase">City</p>
-                      <p className="text-sm font-medium text-gray-700">{selectedRequest.city || 'N/A'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs font-bold text-gray-400 uppercase">Registration Date</p>
-                      <p className="text-sm font-medium text-gray-700">{selectedRequest.registrationDate}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs font-bold text-gray-400 uppercase">Submitted At</p>
-                      <p className="text-sm font-medium text-gray-700">{selectedRequest.submittedAt}</p>
-                    </div>
-                    <div className="md:col-span-2 space-y-2">
-                      <div className="flex justify-between items-center">
-                        <p className="text-xs font-bold text-gray-400 uppercase">Profile Completion</p>
-                        <span className="text-xs font-bold text-primary">{selectedRequest.profileCompletion}%</span>
+                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.email')}</p>
+                        <p className="text-sm font-medium text-gray-700 flex items-center gap-2"><Mail className="w-4 h-4" /> {selectedRequest.userEmail}</p>
                       </div>
-                      <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
-                        <div className="bg-primary h-full transition-all duration-500" style={{ width: `${selectedRequest.profileCompletion}%` }}></div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.phone')}</p>
+                        <p className="text-sm font-medium text-gray-700 flex items-center gap-2"><Phone className="w-4 h-4" /> {selectedRequest.userPhone}</p>
                       </div>
-                    </div>
-                    {selectedRequest.artisanProfile?.bio && (
-                      <div className="md:col-span-2 space-y-1">
-                        <p className="text-xs font-bold text-gray-400 uppercase">Bio</p>
-                        <p className="text-sm font-medium text-gray-700">{selectedRequest.artisanProfile.bio}</p>
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.businessName')}</p>
+                        <p className="text-sm font-medium text-gray-700">{selectedRequest.businessName || 'N/A'}</p>
                       </div>
-                    )}
-                    {selectedRequest.artisanProfile?.address && (
-                      <div className="md:col-span-2 space-y-1">
-                        <p className="text-xs font-bold text-gray-400 uppercase">Address</p>
-                        <p className="text-sm font-medium text-gray-700">{selectedRequest.artisanProfile.address}</p>
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.category')}</p>
+                        <p className="text-sm font-medium text-gray-700">{selectedRequest.category || 'N/A'}</p>
                       </div>
-                    )}
-                    {selectedRequest.artisanProfile?.bankName && (
-                      <div className="md:col-span-2 space-y-1">
-                        <p className="text-xs font-bold text-gray-400 uppercase">Payment Info</p>
-                        <p className="text-sm font-medium text-gray-700">
-                          {selectedRequest.artisanProfile.bankName} - {selectedRequest.artisanProfile.accountName} ({selectedRequest.artisanProfile.accountNumber})
-                        </p>
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.region')}</p>
+                        <p className="text-sm font-medium text-gray-700">{selectedRequest.region || 'N/A'}</p>
                       </div>
-                    )}
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.city')}</p>
+                        <p className="text-sm font-medium text-gray-700">{selectedRequest.city || 'N/A'}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.registrationDate')}</p>
+                        <p className="text-sm font-medium text-gray-700">{selectedRequest.registrationDate}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.submittedOn')}</p>
+                        <p className="text-sm font-medium text-gray-700">{selectedRequest.submittedAt}</p>
+                      </div>
+                      <div className="md:col-span-2 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.profileCompletion')}</p>
+                          <span className="text-xs font-bold text-primary">{selectedRequest.profileCompletion}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+                          <div className="bg-primary h-full transition-all duration-500" style={{ width: `${selectedRequest.profileCompletion}%` }}></div>
+                        </div>
+                      </div>
+                      {selectedRequest.artisanProfile?.bio && (
+                        <div className="md:col-span-2 space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.bio')}</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.artisanProfile.bio}</p>
+                        </div>
+                      )}
+                      {selectedRequest.artisanProfile?.address && (
+                        <div className="md:col-span-2 space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.address')}</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.artisanProfile.address}</p>
+                        </div>
+                      )}
+                      {selectedRequest.artisanProfile?.bankName && (
+                        <div className="md:col-span-2 space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.paymentInfo')}</p>
+                          <p className="text-sm font-medium text-gray-700">
+                            {selectedRequest.artisanProfile.bankName} - {selectedRequest.artisanProfile.accountName} ({selectedRequest.artisanProfile.accountNumber})
+                          </p>
+                        </div>
+                      )}
                   </div>
                 </section>
 
                 {/* Documents Section */}
                 <section>
                   <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-primary" /> Submitted Documents
+                    <FileText className="w-5 h-5 text-primary" /> {t('admin.submittedDocuments')}
                   </h3>
                   {selectedRequest.documents.length === 0 ? (
-                    <p className="text-gray-500 text-sm text-center py-8">No documents uploaded</p>
+                     <p className="text-gray-500 text-sm text-center py-8">{t('admin.noDocumentsUploaded')}</p>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {selectedRequest.documents.map((doc) => (
@@ -571,7 +577,7 @@ export const AdminUserVerificationPage: React.FC = () => {
                           <div className="p-4 flex justify-between items-center">
                             <div>
                               <p className="font-bold text-gray-800 text-sm">{doc.name}</p>
-                              <p className="text-[10px] text-gray-400">Uploaded on {doc.uploadedAt}</p>
+                              <p className="text-[10px] text-gray-400">{t('admin.uploadedOn')} {doc.uploadedAt}</p>
                             </div>
                           </div>
                         </div>
@@ -586,7 +592,7 @@ export const AdminUserVerificationPage: React.FC = () => {
                 {/* Timeline Section */}
                 <section className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
                   <h3 className="text-sm font-bold text-gray-800 mb-6 flex items-center gap-2 uppercase tracking-wider">
-                    <History className="w-4 h-4" /> Verification Timeline
+                    <History className="w-4 h-4" /> {t('admin.verificationTimeline')}
                   </h3>
                   <div className="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-gray-200">
                     <div className="relative pl-8">
@@ -594,7 +600,7 @@ export const AdminUserVerificationPage: React.FC = () => {
                         <div className="w-2 h-2 rounded-full bg-gray-400"></div>
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-gray-800">Account Created</p>
+                        <p className="text-sm font-bold text-gray-800">{t('admin.accountCreated')}</p>
                         <p className="text-xs text-gray-500">{selectedRequest.registrationDate}</p>
                       </div>
                     </div>
@@ -603,7 +609,7 @@ export const AdminUserVerificationPage: React.FC = () => {
                         <div className="w-2 h-2 rounded-full bg-primary"></div>
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-gray-800">Documents Submitted</p>
+                        <p className="text-sm font-bold text-gray-800">{t('admin.documentsSubmitted')}</p>
                         <p className="text-xs text-gray-500">{selectedRequest.submittedAt}</p>
                       </div>
                     </div>
@@ -613,8 +619,8 @@ export const AdminUserVerificationPage: React.FC = () => {
                           <Check className="w-3 h-3 text-emerald-500" />
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-emerald-700">Approved</p>
-                          <p className="text-xs text-gray-500">Artisan can now access dashboard</p>
+                          <p className="text-sm font-bold text-emerald-700">{t('admin.approvedStatus')}</p>
+                          <p className="text-xs text-gray-500">{t('admin.fullDashboardAccess')}</p>
                         </div>
                       </div>
                     )}
@@ -624,7 +630,7 @@ export const AdminUserVerificationPage: React.FC = () => {
                           <Ban className="w-3 h-3 text-red-500" />
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-red-700">Rejected</p>
+                          <p className="text-sm font-bold text-red-700">{t('admin.rejectedStatus')}</p>
                           {selectedRequest.rejectionReason && (
                             <p className="text-xs text-gray-600 mt-1 bg-white p-2 rounded border border-gray-100 italic">"{selectedRequest.rejectionReason}"</p>
                           )}
@@ -637,12 +643,12 @@ export const AdminUserVerificationPage: React.FC = () => {
                 {/* Decision Panel */}
                 <section className="bg-white p-6 rounded-2xl border border-gray-200 shadow-lg space-y-6">
                   <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                    <ShieldCheck className="w-5 h-5 text-primary" /> Decision Panel
+                    <ShieldCheck className="w-5 h-5 text-primary" /> {t('admin.decisionPanel')}
                   </h3>
                   
                   {selectedRequest.status === 'rejected' && selectedRequest.rejectionReason && (
                     <div className="p-4 bg-red-50 border border-red-100 rounded-xl">
-                      <p className="text-xs font-bold text-red-700 mb-1">Previous Rejection Reason:</p>
+                      <p className="text-xs font-bold text-red-700 mb-1">{t('admin.previousRejectionReason')}:</p>
                       <p className="text-xs text-red-600 italic">"{selectedRequest.rejectionReason}"</p>
                     </div>
                   )}
@@ -650,46 +656,46 @@ export const AdminUserVerificationPage: React.FC = () => {
                   {selectedRequest.status === 'approved' ? (
                     <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-center">
                       <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                      <p className="text-sm font-bold text-emerald-700">This artisan is approved</p>
-                      <p className="text-xs text-emerald-600 mt-1">They have full access to their dashboard</p>
+                      <p className="text-sm font-bold text-emerald-700">{t('admin.thisArtisanIsApproved')}</p>
+                      <p className="text-xs text-emerald-600 mt-1">{t('admin.fullDashboardAccess')}</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <Button 
+                      <Button
                         className="w-full bg-emerald-500 hover:bg-emerald-600 border-emerald-500 text-white py-4"
                         leftIcon={actionLoading === selectedRequest.id ? Loader2 : CheckCircle2}
                         onClick={() => handleApprove(selectedRequest.id, selectedRequest.userRole)}
                         disabled={actionLoading === selectedRequest.id}
                       >
-                        {actionLoading === selectedRequest.id ? 'Approving...' : 'Approve Account'}
+                        {actionLoading === selectedRequest.id ? t('admin.loadingVerificationRequests') : t('admin.approveAccount')}
                       </Button>
-                      
+
                       <div className="h-px bg-gray-100 my-4"></div>
-                      
+
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-500 uppercase">Rejection Reason (Required)</label>
-                        <textarea 
+                        <label className="text-xs font-bold text-gray-500 uppercase">{t('admin.rejectionReason')} ({t('common.required')})</label>
+                        <textarea
                           className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-red-500/20 outline-none min-h-[100px]"
-                          placeholder="Explain why the request is being rejected..."
+                          placeholder={t('admin.rejectionReasonRequiredText')}
                           value={rejectionReason}
                           onChange={(e) => setRejectionReason(e.target.value)}
                         />
                       </div>
-                      
-                      <Button 
+
+                      <Button
                         className="w-full bg-red-500 hover:bg-red-600 border-red-500 text-white"
                         variant="outline"
                         leftIcon={actionLoading === selectedRequest.id ? Loader2 : XCircle}
                         disabled={!rejectionReason || actionLoading === selectedRequest.id}
                         onClick={() => handleReject(selectedRequest.id, selectedRequest.userRole)}
                       >
-                        {actionLoading === selectedRequest.id ? 'Rejecting...' : 'Reject Request'}
+                        {actionLoading === selectedRequest.id ? t('admin.loadingVerificationRequests') : t('admin.rejectRequest')}
                       </Button>
                     </div>
                   )}
-                  
+
                   <p className="text-[10px] text-gray-400 text-center">
-                    Approving will automatically enable artisan features and grant dashboard access.
+                    {t('admin.approvingWillEnable')}
                   </p>
                 </section>
               </div>

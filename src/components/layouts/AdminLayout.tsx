@@ -9,6 +9,8 @@ import {
   ChevronDown, ChevronUp, Briefcase, ShoppingBag, Calendar, Menu, X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { LanguageToggle } from '../LanguageToggle';
 
 interface MenuItem {
   path?: string;
@@ -22,26 +24,27 @@ interface MenuItem {
 
 export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const pathname = usePathname();
   const router = useRouter();
   const [showNotifications, setShowNotifications] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const notifications = [
-    { id: 1, title: 'New Registration', message: 'John Doe registered as Organizer', time: '2 mins ago', type: 'registration', icon: UserPlus, color: 'text-blue-500', bg: 'bg-blue-50' },
-    { id: 2, title: 'New Registration', message: 'Sara Crafts registered as Artisan', time: '1 hour ago', type: 'registration', icon: UserPlus, color: 'text-blue-500', bg: 'bg-blue-50' },
-    { id: 3, title: 'System Alert', message: 'Server load is high (85%)', time: '3 hours ago', type: 'system', icon: Info, color: 'text-amber-500', bg: 'bg-amber-50' },
+    { id: 1, title: t('admin.newRegistration'), message: 'John Doe registered as Organizer', time: '2 mins ago', type: 'registration', icon: UserPlus, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { id: 2, title: t('admin.newRegistration'), message: 'Sara Crafts registered as Artisan', time: '1 hour ago', type: 'registration', icon: UserPlus, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { id: 3, title: t('admin.systemAlert'), message: 'Server load is high (85%)', time: '3 hours ago', type: 'system', icon: Info, color: 'text-amber-500', bg: 'bg-amber-50' },
   ];
 
   const menuItems: MenuItem[] = [
-    { path: '/dashboard/admin/overview', name: 'Dashboard', icon: LayoutDashboard },
-    { path: '/dashboard/admin/users', name: 'User Management', icon: Users },
-    { path: '/dashboard/admin/verification-moderation', name: 'Verification & Moderation', icon: ShieldCheck },
-    { path: '/dashboard/admin/management', name: 'Management', icon: Briefcase },
-    { path: '/dashboard/admin/revenue', name: 'Revenue & Commission', icon: DollarSign },
-    { path: '/dashboard/admin/reports', name: 'Reports & Moderation', icon: Flag },
-    { path: '/dashboard/admin/logs', name: 'System Logs', icon: FileText },
-    { path: '/dashboard/admin/settings', name: 'Settings', icon: Settings },
+    { path: '/dashboard/admin/overview', name: t('admin.dashboard'), icon: LayoutDashboard },
+    { path: '/dashboard/admin/users', name: t('admin.userManagement'), icon: Users },
+    { path: '/dashboard/admin/verification-moderation', name: t('admin.verificationAndModeration'), icon: ShieldCheck },
+    { path: '/dashboard/admin/management', name: t('admin.management'), icon: Briefcase },
+    { path: '/dashboard/admin/revenue', name: t('admin.revenueAndCommission'), icon: DollarSign },
+    { path: '/dashboard/admin/reports', name: t('admin.reportsAndModeration'), icon: Flag },
+    { path: '/dashboard/admin/logs', name: t('admin.systemLogs'), icon: FileText },
+    { path: '/dashboard/admin/settings', name: t('admin.settings'), icon: Settings },
   ];
 
   const getCurrentPageName = () => {
@@ -75,7 +78,7 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <ShieldAlert className="w-5 h-5 text-white" />
             </div>
-            <span className="text-lg font-bold font-serif tracking-wide">Admin Panel</span>
+            <span className="text-lg font-bold font-serif tracking-wide">{t('admin.adminPanel')}</span>
           </div>
           <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden text-gray-400 hover:text-white">
             <X className="w-5 h-5" />
@@ -83,7 +86,7 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
         </div>
         
         <div className="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
-          <p className="px-4 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Main Menu</p>
+          <p className="px-4 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{t('admin.mainMenu')}</p>
           {menuItems.map(item => (
             <div key={item.name || item.path}>
               {item.isExpandable ? (
@@ -144,12 +147,12 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
               <p className="text-xs text-gray-500 truncate">{user?.email || 'admin@ethiocraft.com'}</p>
             </div>
           </div>
-          <button 
-            onClick={logout} 
-            className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl font-bold text-xs transition-all"
-          >
-            <LogOut className="w-4 h-4" /><span>Sign Out</span>
-          </button>
+            <button
+              onClick={logout}
+              className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl font-bold text-xs transition-all"
+            >
+              <LogOut className="w-4 h-4" /><span>{t('admin.signOut')}</span>
+            </button>
         </div>
       </aside>
       
@@ -170,15 +173,15 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
           <div className="flex items-center space-x-4 md:space-x-6">
             <div className="relative w-64 hidden md:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="Search users, events, logs..." 
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" 
+              <input
+                type="text"
+                placeholder={t('admin.searchPlaceholder')}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
             </div>
-            
+
             <div className="relative">
-              <button 
+              <button
                 onClick={() => setShowNotifications(!showNotifications)}
                 className={`p-2 relative bg-gray-50 rounded-xl transition-colors ${showNotifications ? 'text-primary bg-primary/5' : 'text-gray-500 hover:text-primary hover:bg-primary/5'}`}
               >
@@ -191,13 +194,13 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
                   <div className="fixed inset-0 z-10" onClick={() => setShowNotifications(false)}></div>
                   <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-20 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="p-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
-                      <h3 className="font-bold text-gray-800 text-sm">Notifications</h3>
-                      <button className="text-[10px] font-bold text-primary hover:underline">Mark all as read</button>
+                      <h3 className="font-bold text-gray-800 text-sm">{t('admin.notifications')}</h3>
+                      <button className="text-[10px] font-bold text-primary hover:underline">{t('admin.markAllRead')}</button>
                     </div>
                     <div className="max-h-[400px] overflow-y-auto">
                       {notifications.map((n) => (
-                        <div 
-                          key={n.id} 
+                        <div
+                          key={n.id}
                           onClick={() => {
                             if (n.type === 'registration') router.push('/dashboard/admin/verification');
                             setShowNotifications(false);
@@ -216,12 +219,14 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
                       ))}
                     </div>
                     <div className="p-3 text-center border-t border-gray-50">
-                      <button className="text-xs font-bold text-gray-500 hover:text-primary transition-colors">View All Notifications</button>
+                      <button className="text-xs font-bold text-gray-500 hover:text-primary transition-colors">{t('admin.viewAllNotifications')}</button>
                     </div>
                   </div>
                 </>
               )}
             </div>
+
+            <LanguageToggle />
           </div>
         </nav>
         

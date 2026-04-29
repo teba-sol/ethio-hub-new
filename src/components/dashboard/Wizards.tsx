@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  X, ChevronLeft, ChevronRight, Image as ImageIcon, Camera, 
+import {
+  X, ChevronLeft, ChevronRight, Image as ImageIcon, Camera,
   MapPin, Search, RefreshCw, Plus, Ticket, Star, Hotel, Car,
   Box, DollarSign, CheckCircle2, Trash2, Calendar, Clock,
   Users, Shield, Info, Eye, Save, Globe, Map as MapIcon,
@@ -11,9 +11,11 @@ import { Festival, HotelAccommodation, TransportOption, RoomType } from '../../t
 import { motion, AnimatePresence } from 'motion/react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
+import { useAutoTranslate } from '../../hooks/useAutoTranslate';
+import { BilingualInput } from '../BilingualInput';
 
-const MapPickerModal = dynamic(() => import('../MapPickerModal'), { 
-  ssr: false 
+const MapPickerModal = dynamic(() => import('../MapPickerModal'), {
+  ssr: false
 });
 
 import apiClient from '../../lib/apiClient';
@@ -37,28 +39,35 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
   const [step, setStep] = useState(1);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    core: { 
-      name: '', 
-      slug: '', 
-      startDate: '', 
-      endDate: '', 
-      locationName: '', 
-      address: '', 
-      shortDescription: '', 
-      fullDescription: '', 
-      coverImage: 'https://picsum.photos/seed/ethio-cover/1920/1080', 
+    core: {
+      name_en: '',
+      name_am: '',
+      slug: '',
+      startDate: '',
+      endDate: '',
+      locationName_en: '',
+      locationName_am: '',
+      address: '',
+      shortDescription_en: '',
+      shortDescription_am: '',
+      fullDescription_en: '',
+      fullDescription_am: '',
+      coverImage: 'https://picsum.photos/seed/ethio-cover/1920/1080',
       gallery: [] as string[],
       coordinates: { lat: 9.0333, lng: 38.7500 }
     },
-    schedule: [{ day: 1, title: '', activities: '', performers: [] as string[] }],
+    schedule: [{ day: 1, title_en: '', title_am: '', activities: '', performers: [] as string[] }],
     hotels: [{
       id: Date.now(),
-      name: '',
+      name_en: '',
+      name_am: '',
       image: '',
       starRating: 5,
       address: '',
-      description: '',
-      fullDescription: '',
+      description_en: '',
+      description_am: '',
+      fullDescription_en: '',
+      fullDescription_am: '',
       policies: '',
       checkInTime: '15:00',
       checkOutTime: '12:00',
@@ -66,8 +75,10 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
       gallery: [] as string[],
       rooms: [{
         id: Date.now() + 1,
-        name: '',
-        description: '',
+        name_en: '',
+        name_am: '',
+        description_en: '',
+        description_am: '',
         capacity: 2,
         pricePerNight: 100,
         availability: 5,
@@ -79,40 +90,66 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
     }] as any[],
     transportation: [{
       id: Date.now() + 2,
-      type: 'Private Car',
+      type_en: 'Private Car',
+      type_am: '',
       capacity: 4,
       price: 50,
       availability: 5,
-      description: '',
+      description_en: '',
+      description_am: '',
       image: '',
       pickupLocations: '',
     }] as any[],
-    services: { 
-      foodPackages: [] as any[], 
+    services: {
+      foodPackages: [] as any[],
       culturalServices: [] as string[],
       specialAssistance: [] as string[],
       extras: [] as string[]
     },
-    policies: { 
-      cancellation: '', 
-      terms: '', 
-      safety: '', 
-      ageRestriction: '' 
+    policies: {
+      cancellation: '',
+      terms: '',
+      safety: '',
+      ageRestriction: ''
     },
-    pricing: { 
-      basePrice: 0, 
-      vipPrice: 0, 
-      currency: 'USD', 
-      earlyBird: 0, 
-      groupDiscount: 0 
+    pricing: {
+      basePrice: 0,
+      vipPrice: 0,
+      currency: 'USD',
+      earlyBird: 0,
+      groupDiscount: 0
     }
   });
 
-  // Auto-generate slug
+  // Auto-generate slug from English name
   useEffect(() => {
-    const slug = formData.core.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+    const slug = formData.core.name_en.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
     setFormData(prev => ({ ...prev, core: { ...prev.core, slug } }));
-  }, [formData.core.name]);
+  }, [formData.core.name_en]);
+
+  // Auto-translate English to Amharic
+  const { translatedText: nameAm } = useAutoTranslate(formData.core.name_en, 'en', 'am');
+  const { translatedText: shortDescAm } = useAutoTranslate(formData.core.shortDescription_en, 'en', 'am');
+  const { translatedText: fullDescAm } = useAutoTranslate(formData.core.fullDescription_en, 'en', 'am');
+
+  // Update Amharic fields when translation completes
+  useEffect(() => {
+    if (nameAm && nameAm !== formData.core.name_am) {
+      setFormData(prev => ({ ...prev, core: { ...prev.core, name_am: nameAm } }));
+    }
+  }, [nameAm]);
+
+  useEffect(() => {
+    if (shortDescAm && shortDescAm !== formData.core.shortDescription_am) {
+      setFormData(prev => ({ ...prev, core: { ...prev.core, shortDescription_am: shortDescAm } }));
+    }
+  }, [shortDescAm]);
+
+  useEffect(() => {
+    if (fullDescAm && fullDescAm !== formData.core.fullDescription_am) {
+      setFormData(prev => ({ ...prev, core: { ...prev.core, fullDescription_am: fullDescAm } }));
+    }
+  }, [fullDescAm]);
 
   const nextStep = () => setStep(s => Math.min(s + 1, 8));
   const prevStep = () => setStep(s => Math.max(s - 1, 1));
@@ -229,12 +266,16 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
 
   const handlePublish = async () => {
     const requiredFields = {
-      name: formData.core.name,
-      shortDescription: formData.core.shortDescription,
-      fullDescription: formData.core.fullDescription,
+      name_en: formData.core.name_en,
+      name_am: formData.core.name_am,
+      shortDescription_en: formData.core.shortDescription_en,
+      shortDescription_am: formData.core.shortDescription_am,
+      fullDescription_en: formData.core.fullDescription_en,
+      fullDescription_am: formData.core.fullDescription_am,
       startDate: formData.core.startDate,
       endDate: formData.core.endDate,
-      locationName: formData.core.locationName,
+      locationName_en: formData.core.locationName_en,
+      locationName_am: formData.core.locationName_am,
     };
 
     const missingFields = Object.entries(requiredFields)
@@ -254,13 +295,17 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
 
     try {
       const response = await apiClient.post('/api/organizer/festivals', {
-        name: formData.core.name,
-        shortDescription: formData.core.shortDescription,
-        fullDescription: formData.core.fullDescription,
+        name_en: formData.core.name_en,
+        name_am: formData.core.name_am,
+        shortDescription_en: formData.core.shortDescription_en,
+        shortDescription_am: formData.core.shortDescription_am,
+        fullDescription_en: formData.core.fullDescription_en,
+        fullDescription_am: formData.core.fullDescription_am,
         startDate: formData.core.startDate,
         endDate: formData.core.endDate,
         location: {
-          name: formData.core.locationName,
+          name_en: formData.core.locationName_en,
+          name_am: formData.core.locationName_am,
           address: formData.core.address,
           coordinates: formData.core.coordinates,
         },
@@ -328,176 +373,10 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
           <div>
             <h2 className="text-3xl font-serif font-bold text-primary">Create New Festival</h2>
             <p className="text-gray-400 text-sm">Share Ethiopia's vibrant heritage with the world.</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <Button variant="outline" leftIcon={Save}>Save Draft</Button>
-          <Button onClick={handlePublish} disabled={step !== 8}>Publish Festival</Button>
-        </div>
-      </header>
-
-      {renderStepIndicator()}
-
-      <div className="bg-white p-12 rounded-[48px] border border-gray-100 shadow-xl min-h-[600px] flex flex-col">
-        <div className="flex-1">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={step}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              {/* Step 1: Core Information */}
-              {step === 1 && (
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-16">
-                  <div className="lg:col-span-3 space-y-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Input 
-                        label="Festival Name *" 
-                        placeholder="e.g. Timket 2025"
-                        value={formData.core.name} 
-                        onChange={e => setFormData({...formData, core: {...formData.core, name: e.target.value}})} 
-                      />
-                      <Input 
-                        label="Slug" 
-                        value={formData.core.slug} 
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Input 
-                        label="Start Date *" 
-                        type="date" 
-                        value={formData.core.startDate} 
-                        onChange={e => setFormData({...formData, core: {...formData.core, startDate: e.target.value}})} 
-                      />
-                      <Input 
-                        label="End Date *" 
-                        type="date" 
-                        value={formData.core.endDate} 
-                        onChange={e => setFormData({...formData, core: {...formData.core, endDate: e.target.value}})} 
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Input 
-                        label="Location Name *" 
-                        placeholder="e.g. Gondar, Ethiopia"
-                        value={formData.core.locationName} 
-                        onChange={e => setFormData({...formData, core: {...formData.core, locationName: e.target.value}})} 
-                      />
-                      <Input 
-                        label="Address" 
-                        placeholder="e.g. Fasil Ghebbi"
-                        value={formData.core.address} 
-                        onChange={e => setFormData({...formData, core: {...formData.core, address: e.target.value}})} 
-                      />
-                    </div>
-                    <div 
-                      onClick={() => setIsMapModalOpen(true)}
-                      className="bg-ethio-bg h-48 rounded-3xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center text-gray-400 space-y-2 group hover:border-secondary transition-colors cursor-pointer relative overflow-hidden"
-                    >
-                      <div className="absolute inset-0 opacity-20">
-                        <img src="https://picsum.photos/seed/map/800/400" className="w-full h-full object-cover" alt="" />
-                      </div>
-                      <div className="relative z-10 flex flex-col items-center">
-                        <MapPin className="w-8 h-8 group-hover:text-secondary transition-colors" />
-                        <span className="text-xs font-bold uppercase tracking-widest">Click to open Map Picker</span>
-                        <p className="text-[10px]">Lat: {formData.core.coordinates.lat.toFixed(4)}, Lng: {formData.core.coordinates.lng.toFixed(4)}</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Short Description *</label>
-                      <textarea 
-                        className="w-full h-24 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
-                        placeholder="Brief summary for listing cards..."
-                        value={formData.core.shortDescription} 
-                        onChange={e => setFormData({...formData, core: {...formData.core, shortDescription: e.target.value}})} 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Full Description *</label>
-                      <textarea 
-                        className="w-full h-48 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
-                        placeholder="Detailed story and information..."
-                        value={formData.core.fullDescription} 
-                        onChange={e => setFormData({...formData, core: {...formData.core, fullDescription: e.target.value}})} 
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="p-8 border-2 border-dashed border-gray-100 rounded-[32px] text-center hover:border-primary/20 transition-colors cursor-pointer">
-                        <input type="file" className="hidden" id="cover-image-upload" onChange={e => e.target.files && handleFileUpload(e.target.files[0], true)} />
-                        <label htmlFor="cover-image-upload" className="cursor-pointer">
-                          <Camera className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-                          <p className="text-xs font-bold text-gray-400">Upload Cover Image</p>
-                        </label>
-                      </div>
-                      <div className="p-8 border-2 border-dashed border-gray-100 rounded-[32px] text-center hover:border-primary/20 transition-colors cursor-pointer">
-                        <input type="file" className="hidden" id="gallery-upload" multiple onChange={e => e.target.files && Array.from(e.target.files).forEach(file => handleFileUpload(file))} />
-                        <label htmlFor="gallery-upload" className="cursor-pointer">
-                          <ImageIcon className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-                          <p className="text-xs font-bold text-gray-400">Upload Gallery Photos</p>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="lg:col-span-2">
-                    <div className="sticky top-8">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-4 block">Live Preview</label>
-                      <div className="space-y-4">
-                        <div className="bg-white rounded-[40px] overflow-hidden shadow-2xl border border-gray-100 group">
-                          <div className="relative h-64 overflow-hidden">
-                            <img src={formData.core.coverImage} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="" />
-                            <div className="absolute top-6 left-6">
-                              <Badge variant="info" className="backdrop-blur-md bg-white/80">Live Event</Badge>
-                            </div>
-                          </div>
-                          <div className="p-8 space-y-4">
-                            <h4 className="text-2xl font-serif font-bold text-primary">{formData.core.name || 'Festival Title'}</h4>
-                            <div className="flex items-center text-gray-400 text-xs gap-4">
-                              <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {formData.core.startDate || 'Date'}</span>
-                              <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {formData.core.locationName || 'Location'}</span>
-                            </div>
-                            <p className="text-gray-500 text-sm line-clamp-2">{formData.core.shortDescription || 'Your festival description will appear here...'}</p>
-                            <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
-                              <span className="text-primary font-bold">From ${formData.pricing.basePrice}</span>
-                              <Button size="sm">View Details</Button>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="bg-white rounded-[28px] border border-gray-100 p-4 shadow-sm">
-                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3">Gallery Preview</p>
-                          {formData.core.gallery.length === 0 ? (
-                            <p className="text-xs text-gray-400">No gallery photos uploaded yet.</p>
-                          ) : (
-                            <div className="flex gap-3 overflow-x-auto pb-1">
-                              {formData.core.gallery.map((image, index) => (
-                                <div
-                                  key={`${image}-${index}`}
-                                  className="w-24 h-24 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 flex-shrink-0"
-                                >
-                                  <img
-                                    src={image}
-                                    alt={`Gallery ${index + 1}`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          <p className="text-[10px] text-gray-400 mt-2">
-                            {formData.core.gallery.length} photo{formData.core.gallery.length === 1 ? '' : 's'} uploaded
-                          </p>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
-              )}
-
+               )}
+              
               {/* Step 2: Schedule */}
               {step === 2 && (
                 <div className="space-y-8">

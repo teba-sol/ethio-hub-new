@@ -195,32 +195,25 @@ const CartDrawer: React.FC = () => {
                  {t("cart.choosePayment")}
                </p>
 
-               <button
-                 onClick={() => setSelectedPayment("chapa")}
-                 className={`w-full p-4 rounded-xl border-2 flex items-center justify-between transition-all ${selectedPayment === "chapa" ? "border-primary bg-primary/5" : "border-gray-100 hover:border-gray-200"}`}
-               >
-                 <div className="flex items-center gap-3">
-                   <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold text-xs">
-                     CH
-                   </div>
-                   <div className="text-left">
-                     <p className="font-bold text-primary">{t("cart.chapa")}</p>
-                     <p className="text-xs text-gray-400">
-                       {t("cart.payWithCardBank")}
-                     </p>
-                   </div>
-                 </div>
-                   <div className="text-left">
-                     <p className="font-bold text-primary">{t("cart.chapa")}</p>
-                     <p className="text-xs text-gray-400">
-                       {t("cart.payWithCardBank")}
-                     </p>
-                   </div>
-                 </div>
-                {selectedPayment === "chapa" && (
-                  <div className="w-4 h-4 bg-primary rounded-full" />
-                )}
-              </button>
+                <button
+                  onClick={() => setSelectedPayment("chapa")}
+                  className={`w-full p-4 rounded-xl border-2 flex items-center justify-between transition-all ${selectedPayment === "chapa" ? "border-primary bg-primary/5" : "border-gray-100 hover:border-gray-200"}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold text-xs">
+                      CH
+                    </div>
+                    <div className="text-left">
+                      <p className="font-bold text-primary">{t("cart.chapa")}</p>
+                      <p className="text-xs text-gray-400">
+                        {t("cart.payWithCardBank")}
+                      </p>
+                    </div>
+                  </div>
+                  {selectedPayment === "chapa" && (
+                    <div className="w-4 h-4 bg-primary rounded-full" />
+                  )}
+                </button>
 
                <button
                  onClick={() => setSelectedPayment("telebirr")}
