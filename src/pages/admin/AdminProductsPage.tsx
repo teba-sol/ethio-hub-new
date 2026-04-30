@@ -7,11 +7,17 @@ import {
 } from 'lucide-react';
 import { Button, Badge, Input } from '../../components/UI';
 import { useLanguage } from '@/context/LanguageContext';
+import { getLocalizedText } from '@/utils/getLocalizedText';
 
 // --- Helpers ---
-const getString = (val: any): string => {
+const getString = (val: any, language?: string): string => {
   if (typeof val === 'string') return val;
   if (val && typeof val === 'object') {
+    if (language) {
+      const localized = getLocalizedText(val, 'name', language as any) ||
+                        getLocalizedText(val, 'description', language as any);
+      if (localized) return localized;
+    }
     if (val.en) return String(val.en);
     if (val.am) return String(val.am);
     return '';

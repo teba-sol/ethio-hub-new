@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { Button, Badge } from './UI';
 import { HotelAccommodation, RoomType } from '../types';
+import { useLanguage } from '../context/LanguageContext';
+import { getLocalizedText } from '../utils/getLocalizedText';
 
 interface HotelDetailPageProps {
   hotel: HotelAccommodation;
@@ -16,6 +18,7 @@ interface HotelDetailPageProps {
 
 export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookRoom }) => {
   const router = useRouter();
+  const { language } = useLanguage();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [checkIn, setCheckIn] = useState<Date | null>(null);
@@ -28,6 +31,11 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [showEnquiryModal, setShowEnquiryModal] = useState(false);
   const [enquiryMessage, setEnquiryMessage] = useState('');
+
+  const hotelName = getLocalizedText(hotel as any, 'name', language);
+  const hotelDescription = getLocalizedText(hotel as any, 'description', language) || 
+    getLocalizedText(hotel as any, 'fullDescription', language);
+  const hotelAddress = (hotel as any).address || '';
 
   const handleCheckAvailability = () => {
     const el = document.getElementById('select-room');
@@ -80,12 +88,12 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
                 <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
               ))}
             </div>
-            <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 mb-3">{hotel.name}</h1>
+            <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 mb-3">{hotelName}</h1>
             <div className="flex items-center gap-2 text-gray-600 mb-4">
               <MapPin className="w-4 h-4" />
-              <span className="text-sm">{hotel.address}</span>
+              <span className="text-sm">{hotelAddress}</span>
               <a 
-                href={`https://maps.google.com/?q=${encodeURIComponent(hotel.address)}`}
+                href={`https://maps.google.com/?q=${encodeURIComponent(hotelAddress)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline text-sm ml-2"
@@ -100,8 +108,8 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
           <div className="lg:col-span-2">
             <div className="relative rounded-2xl overflow-hidden bg-gray-900 h-[400px] md:h-[500px]">
               <img 
-                src={hotel.gallery?.[activeImageIndex] || hotel.image} 
-                alt={hotel.name}
+                src={(hotel.gallery?.[activeImageIndex] || hotel.image) as string} 
+                alt={hotelName}
                 className="w-full h-full object-cover cursor-pointer"
                 onClick={() => setLightboxOpen(true)}
               />
@@ -165,7 +173,7 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
             <div className="mt-8">
               <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">Description</h2>
               <p className="text-gray-600 leading-relaxed whitespace-pre-line">
-                {hotel.fullDescription || hotel.description}
+                {hotelDescription}
               </p>
             </div>
 
@@ -174,8 +182,11 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
               
               <div className="grid grid-cols-1 gap-6">
                 {(hotel.rooms || []).map((room, idx) => {
-                  const roomId = room.id || `room-${idx}`;
-                  const isSelected = selectedRoom?.id === room.id;
+                  const roomId = (room as any).id || `room-${idx}`;
+                  const isSelected = selectedRoom?.id === (room as any).id;
+                  const roomName = getLocalizedText(room as any, 'name', language);
+                  const roomDesc = getLocalizedText(room as any, 'description', language);
+                  
                   return (
                     <div 
                       key={roomId} 
@@ -187,8 +198,8 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div className="md:col-span-1 relative">
                           <img 
-                            src={room.image || 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=300&fit=crop'} 
-                            alt={room.name}
+                            src={(room as any).image || 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=300&fit=crop'} 
+                            alt={roomName}
                             className="w-full h-48 md:h-full object-cover rounded-xl"
                           />
                           {isSelected && (
@@ -198,39 +209,39 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
                           )}
                         </div>
                         <div className="md:col-span-2">
-                          <h3 className="text-xl font-bold text-gray-900 mb-2">{room.name}</h3>
-                          <p className="text-gray-600 text-sm mb-4">{room.description}</p>
+                          <h3 className="text-xl font-bold text-gray-900 mb-2">{roomName}</h3>
+                          <p className="text-gray-600 text-sm mb-4">{roomDesc}</p>
                           <div className="flex flex-wrap gap-3">
                             <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200">
-                              <Maximize className="w-3.5 h-3.5" /> {room.sqm || 30} m²
+                              <Maximize className="w-3.5 h-3.5" /> {(room as any).sqm || 30} m²
                             </span>
                             <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200">
-                              <Users className="w-3.5 h-3.5" /> {room.capacity || 2} Guests
+                              <Users className="w-3.5 h-3.5" /> {(room as any).capacity || 2} Guests
                             </span>
                             <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200">
-                              <BedDouble className="w-3.5 h-3.5" /> {room.bedType || 'King Size'}
+                              <BedDouble className="w-3.5 h-3.5" /> {(room as any).bedType || 'King Size'}
                             </span>
                           </div>
-                          {room.amenities && room.amenities.length > 0 && (
+                          {(room as any).amenities && (room as any).amenities.length > 0 && (
                             <div className="flex flex-wrap gap-2 mt-4">
-                              {room.amenities.slice(0, 4).map((amenity, idx) => (
+                              {(room as any).amenities.slice(0, 4).map((amenity: string, idx: number) => (
                                 <span key={idx} className="text-xs text-gray-600 bg-white px-2 py-1 rounded border border-gray-200">
                                   {amenity}
                                 </span>
                               ))}
-                              {room.amenities.length > 4 && (
-                                <span className="text-xs text-gray-400">+{room.amenities.length - 4} more</span>
+                              {(room as any).amenities.length > 4 && (
+                                <span className="text-xs text-gray-400">+{(room as any).amenities.length - 4} more</span>
                               )}
                             </div>
                           )}
                         </div>
                         <div className="md:col-span-1 flex flex-col justify-between">
                           <div className="text-right">
-                            <div className="text-2xl font-bold text-primary">${room.pricePerNight}</div>
+                            <div className="text-2xl font-bold text-primary">${(room as any).pricePerNight || 100}</div>
                             <div className="text-sm text-gray-500">/night</div>
                           </div>
-                          {room.availability > 0 && room.availability <= 3 && (
-                            <Badge variant="warning" className="mt-2">Only {room.availability} left</Badge>
+                          {(room as any).availability > 0 && (room as any).availability <= 3 && (
+                            <Badge variant="warning" className="mt-2">Only {(room as any).availability} left</Badge>
                           )}
                           <div className="mt-4">
                             {isSelected ? (
@@ -274,15 +285,15 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
               <div className="grid grid-cols-2 gap-6">
                 <div className="bg-gray-50 p-6 rounded-2xl">
                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Check In</h3>
-                  <p className="text-2xl font-bold text-gray-900">{hotel.checkInTime || '14:00'}</p>
+                  <p className="text-2xl font-bold text-gray-900">{(hotel as any).checkInTime || '14:00'}</p>
                 </div>
                 <div className="bg-gray-50 p-6 rounded-2xl">
                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Check Out</h3>
-                  <p className="text-2xl font-bold text-gray-900">{hotel.checkOutTime || '12:00'}</p>
+                  <p className="text-2xl font-bold text-gray-900">{(hotel as any).checkOutTime || '12:00'}</p>
                 </div>
               </div>
-              {hotel.policies && (
-                <p className="mt-4 text-gray-600">{hotel.policies}</p>
+              {(hotel as any).policies && (
+                <p className="mt-4 text-gray-600">{(hotel as any).policies}</p>
               )}
             </div>
 
@@ -290,7 +301,7 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
               <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Location</h2>
               <div className="relative h-64 bg-gray-200 rounded-2xl overflow-hidden">
                 <iframe 
-                  src={`https://maps.google.com/maps?q=${encodeURIComponent(hotel.address)}&output=embed`}
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(hotelAddress)}&output=embed`}
                   className="w-full h-full border-0"
                   loading="lazy"
                 />
@@ -481,9 +492,9 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
                 {selectedRoom ? (
                   <div className="bg-primary/5 rounded-xl p-4 mb-4">
                     <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Selected Room</p>
-                    <p className="font-bold text-primary">{selectedRoom.name}</p>
+                    <p className="font-bold text-primary">{(selectedRoom as any).name}</p>
                     <div className="flex items-center justify-between mt-2">
-                      <span className="text-xl font-bold text-primary">${selectedRoom.pricePerNight}</span>
+                      <span className="text-xl font-bold text-primary">${(selectedRoom as any).pricePerNight || 0}</span>
                       <span className="text-sm text-gray-500">/night</span>
                     </div>
                   </div>
@@ -494,11 +505,11 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
                 )}
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-2xl font-bold text-primary">${selectedRoom?.pricePerNight || hotel.rooms?.[0]?.pricePerNight || 0}</span>
+                    <span className="text-2xl font-bold text-primary">${(selectedRoom?.pricePerNight || (hotel.rooms?.[0] as any)?.pricePerNight || 0)}</span>
                     <span className="text-gray-500 text-sm"> /night</span>
                   </div>
                   <div className="text-right text-sm text-gray-500">
-                    {selectedRoom?.availability || hotel.rooms?.[0]?.availability || 0} rooms left
+                    {(selectedRoom as any)?.availability || (hotel.rooms?.[0] as any)?.availability || 0} rooms left
                   </div>
                 </div>
               </div>
@@ -541,7 +552,7 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
             <ChevronRight className="w-8 h-8" />
           </button>
           <img 
-            src={hotel.gallery?.[activeImageIndex]} 
+            src={(hotel.gallery?.[activeImageIndex]) as string} 
             alt=""
             className="max-h-[90vh] max-w-[90vw] object-contain"
           />

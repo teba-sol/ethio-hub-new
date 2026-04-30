@@ -27,8 +27,12 @@ export async function GET(req: Request) {
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
+        { name_en: { $regex: search, $options: 'i' } },
+        { name_am: { $regex: search, $options: 'i' } },
         { category: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
+        { description_en: { $regex: search, $options: 'i' } },
+        { description_am: { $regex: search, $options: 'i' } },
       ];
     }
 

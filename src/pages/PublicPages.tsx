@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { 
-  ArrowRight, Star, MapPin, 
+import {
+  ArrowRight, Star, MapPin,
   Search, ShieldCheck, ChevronRight,
   Clock, ShoppingCart, ArrowLeft,
   Truck, Globe, Ticket,
@@ -11,6 +11,7 @@ import {
   Smartphone, X, Check, Download, User, Mail, Phone,
   Shield, Sparkles, Maximize as MaximizeIcon, BedDouble, Truck as TruckIcon, Fuel, Settings, Gauge, CircleDollarSign
 } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -29,8 +30,10 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { UserRole } from '../types';
 import apiClient from '../lib/apiClient';
+import { useContentLanguage } from '@/hooks/useContentLanguage';
 
 export const Homepage: React.FC = () => {
+  const { t } = useLanguage();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,7 +46,11 @@ export const Homepage: React.FC = () => {
           const mappedProducts = data.products.map((p: any) => ({
             id: p._id,
             name: p.name,
+            name_en: p.name_en || p.name,
+            name_am: p.name_am || p.name,
             description: p.description,
+            description_en: p.description_en || p.description,
+            description_am: p.description_am || p.description,
             price: p.price,
             discountPrice: p.discountPrice,
             category: p.category,
@@ -94,9 +101,11 @@ export const Homepage: React.FC = () => {
         </div>
         <div className="relative z-10 max-w-7xl mx-auto px-6 text-white w-full text-center">
           <div className="max-w-3xl mx-auto space-y-8 animate-in zoom-in duration-700">
-            <Badge variant="info" className="py-2 px-6 bg-secondary text-primary border-none uppercase tracking-[0.2em] font-bold text-[10px]">Unified Cultural Platform</Badge>
-            <h1 className="text-4xl sm:text-5xl md:text-7xl font-serif font-bold leading-tight tracking-tight">Discover the Heart of <br /> <span className="text-secondary italic">Ethiopian Heritage.</span></h1>
-            
+            <Badge variant="info" className="py-2 px-6 bg-secondary text-primary border-none uppercase tracking-[0.2em] font-bold text-[10px]">{t("home.unifiedPlatform")}</Badge>
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-serif font-bold leading-tight tracking-tight">{t("home.discoverHeart")} <br /> <span className="text-secondary italic">{t("home.ethiopianHeritage")}</span></h1>
+            <p className="text-gray-200 text-lg leading-relaxed font-light max-w-2xl mx-auto">
+              {t("home.experienceSoul")} {t("home.fromVibrant")} {t("home.secureSpot")}
+            </p>
           </div>
         </div>
       </section>
@@ -105,10 +114,10 @@ export const Homepage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
-              { label: 'Verified Artisans', value: '1,200+', icon: Award },
-              { label: 'Annual Festivals', value: '18+', icon: Calendar },
-              { label: 'Global Shipments', value: '45k+', icon: Globe },
-              { label: 'Heritage Score', value: '100%', icon: ShieldCheck },
+              { label: t("home.verifiedArtisans"), value: '1,200+', icon: Award },
+              { label: t("home.annualFestivals"), value: '18+', icon: Calendar },
+              { label: t("home.globalShipments"), value: '45k+', icon: Globe },
+              { label: t("home.heritageScore"), value: '100%', icon: ShieldCheck },
             ].map((stat, i) => (
               <div key={i} className="flex flex-col items-center text-center space-y-1">
                 <div className="p-3 bg-ethio-bg rounded-2xl mb-2"><stat.icon className="w-5 h-5 text-secondary" /></div>
@@ -127,10 +136,10 @@ export const Homepage: React.FC = () => {
               <div className="space-y-2 animate-in slide-in-from-left duration-700">
                 <div className="flex items-center gap-2 mb-2">
                   <Star className="w-5 h-5 text-secondary fill-current" />
-                  <span className="text-xs font-bold uppercase tracking-widest text-secondary">Community Favorites</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-secondary">{t("home.communityFavorites")}</span>
                 </div>
-                <h2 className="text-4xl font-serif font-bold text-primary tracking-tight">Top Rated Collections</h2>
-                <p className="text-gray-500 max-w-lg text-lg font-light">Highly acclaimed pieces loved by our global community.</p>
+                <h2 className="text-4xl font-serif font-bold text-primary tracking-tight">{t("home.topRatedCollections")}</h2>
+                <p className="text-gray-500 max-w-lg text-lg font-light">{t("home.highlyAcclaimed")}</p>
               </div>
               <Link href="/products" className="self-start md:self-auto">
                 <Button variant="ghost" className="text-primary font-bold text-sm group p-0 hover:bg-transparent">
@@ -154,8 +163,8 @@ export const Homepage: React.FC = () => {
           <div className="max-w-7xl mx-auto px-6">
             <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
               <div className="space-y-2">
-                <h2 className="text-4xl font-serif font-bold text-primary tracking-tight">Master Artisan Catalog</h2>
-                <p className="text-gray-500 max-w-lg text-lg font-light">Direct trade pieces hand-selected for authenticity and quality.</p>
+                <h2 className="text-4xl font-serif font-bold text-primary tracking-tight">{t("home.masterArtisanCatalog")}</h2>
+                <p className="text-gray-500 max-w-lg text-lg font-light">{t("home.directTrade")}</p>
               </div>
               <Link href="/products"><Button variant="ghost" className="text-primary font-bold text-sm group p-0 hover:bg-transparent">View All Artifacts <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" /></Button></Link>
             </div>
@@ -211,7 +220,7 @@ export const Homepage: React.FC = () => {
       <section className="py-12 md:py-24 bg-ethio-dark text-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-serif font-bold mb-4">Why Choose EthioCraft Hub?</h2>
+            <h2 className="text-3xl font-serif font-bold mb-4">{t("home.whyChooseUs")}</h2>
             <div className="w-24 h-1 bg-secondary mx-auto rounded-full"></div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -219,32 +228,32 @@ export const Homepage: React.FC = () => {
               <div className="w-14 h-14 bg-secondary/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <ShieldCheck className="w-7 h-7 text-secondary" />
               </div>
-              <h3 className="text-xl font-bold mb-3">Verified Organizers</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">Every event organizer is vetted by the Ministry of Tourism for authenticity.</p>
+              <h3 className="text-xl font-bold mb-3">{t("home.verifiedOrganizers")}</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">{t("home.verifiedOrganizersDesc")}</p>
             </div>
             
             <div className="bg-white/5 p-8 rounded-3xl border border-white/10 hover:bg-white/10 transition-colors group">
               <div className="w-14 h-14 bg-secondary/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <CreditCard className="w-7 h-7 text-secondary" />
               </div>
-              <h3 className="text-xl font-bold mb-3">Secure Payment</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">Seamless transactions via Telebirr and Chapa with buyer protection.</p>
+              <h3 className="text-xl font-bold mb-3">{t("home.securePayment")}</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">{t("home.securePaymentDesc")}</p>
             </div>
             
             <div className="bg-white/5 p-8 rounded-3xl border border-white/10 hover:bg-white/10 transition-colors group">
               <div className="w-14 h-14 bg-secondary/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Award className="w-7 h-7 text-secondary" />
               </div>
-              <h3 className="text-xl font-bold mb-3">Authentic Handmade</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">Direct from master artisans, preserving centuries of craftsmanship.</p>
+              <h3 className="text-xl font-bold mb-3">{t("home.authenticHandmade")}</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">{t("home.authenticHandmadeDesc")}</p>
             </div>
             
             <div className="bg-white/5 p-8 rounded-3xl border border-white/10 hover:bg-white/10 transition-colors group">
               <div className="w-14 h-14 bg-secondary/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <RefreshCw className="w-7 h-7 text-secondary" />
               </div>
-              <h3 className="text-xl font-bold mb-3">Easy Refund Policy</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">Worry-free shopping with our transparent return and refund process.</p>
+              <h3 className="text-xl font-bold mb-3">{t("home.easyRefund")}</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">{t("home.easyRefundDesc")}</p>
             </div>
           </div>
         </div>
@@ -253,7 +262,9 @@ export const Homepage: React.FC = () => {
   );
 };
 
-export const AboutPage: React.FC = () => (
+export const AboutPage: React.FC = () => {
+  const { t } = useLanguage();
+  return (
   <div className="min-h-screen bg-white">
     {/* Hero Section */}
     <div className="relative py-32 bg-ethio-dark overflow-hidden">
@@ -263,9 +274,9 @@ export const AboutPage: React.FC = () => (
         </div>
         <div className="max-w-7xl mx-auto px-6 relative z-10">
             <div className="max-w-3xl space-y-8">
-                <Badge className="w-fit bg-secondary text-primary border-none">Professional Mission</Badge>
-                <h1 className="text-5xl md:text-7xl font-serif font-bold text-white leading-tight tracking-tight">Digital Innovation in <br/><span className="text-secondary italic">Cultural Commerce.</span></h1>
-                <p className="text-xl text-gray-300 font-light leading-relaxed max-w-2xl">Ethio-Craft Hub serves as the official digital infrastructure for the preservation and trade of Ethiopian cultural assets, aligned with national tourism strategies for 2025.</p>
+                <Badge className="w-fit bg-secondary text-primary border-none">{t("home.professionalMission")}</Badge>
+                <h1 className="text-5xl md:text-7xl font-serif font-bold text-white leading-tight tracking-tight">{t("home.digitalInnovationPrefix")} <br/><span className="text-secondary italic">{t("home.digitalInnovationSuffix")}</span></h1>
+                <p className="text-xl text-gray-300 font-light leading-relaxed max-w-2xl">{t("home.digitalInnovationDesc")}</p>
             </div>
         </div>
     </div>
@@ -275,18 +286,18 @@ export const AboutPage: React.FC = () => (
         <div className="max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-24">
                 <div className="space-y-8">
-                    <h2 className="text-4xl font-serif font-bold text-primary">Bridging Tradition & Technology</h2>
+                    <h2 className="text-4xl font-serif font-bold text-primary">{t("home.bridgingTradition")}</h2>
                     <p className="text-lg text-gray-500 leading-relaxed font-light">
-                        We are building the bridge between Ethiopia's master artisans and the global marketplace. By leveraging secure digital payments and verified logistics, we eliminate intermediaries and ensure that the true value of heritage craftsmanship goes back to the creators.
+                        {t("home.bridgingTraditionDesc")}
                     </p>
                     <div className="flex gap-4 pt-4">
                         <div className="flex-1 p-6 bg-ethio-bg rounded-2xl border border-gray-100">
                             <h3 className="font-bold text-primary text-xl mb-2">1,200+</h3>
-                            <p className="text-xs text-gray-500 uppercase tracking-widest">Artisans Empowered</p>
+                            <p className="text-xs text-gray-500 uppercase tracking-widest">{t("home.artisansEmpowered")}</p>
                         </div>
                         <div className="flex-1 p-6 bg-ethio-bg rounded-2xl border border-gray-100">
                             <h3 className="font-bold text-primary text-xl mb-2">$2.4M</h3>
-                            <p className="text-xs text-gray-500 uppercase tracking-widest">Direct Revenue Generated</p>
+                            <p className="text-xs text-gray-500 uppercase tracking-widest">{t("home.directRevenueGenerated")}</p>
                         </div>
                     </div>
                 </div>
@@ -294,7 +305,7 @@ export const AboutPage: React.FC = () => (
                     <img src="https://images.unsplash.com/photo-1493246507139-91e8fad9978e?q=80&w=2070&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-1000" alt="Artisan at work" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 text-white">
-                        <p className="font-serif text-2xl italic">"Preserving our soul, one artifact at a time."</p>
+                        <p className="font-serif text-2xl italic">{t("home.preservingSoul")}</p>
                     </div>
                 </div>
             </div>
@@ -304,22 +315,22 @@ export const AboutPage: React.FC = () => (
                     <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform">
                         <ShieldCheck className="w-7 h-7 text-secondary" />
                     </div>
-                    <h3 className="text-xl font-bold text-primary mb-4">Authenticity Guaranteed</h3>
-                    <p className="text-gray-500 leading-relaxed text-sm">Every item is vetted by our heritage council. We trace the lineage of each artifact to ensure it meets the Ministry of Tourism's standards.</p>
+                    <h3 className="text-xl font-bold text-primary mb-4">{t("home.authenticityGuaranteed")}</h3>
+                    <p className="text-gray-500 leading-relaxed text-sm">{t("home.authenticityGuaranteedDesc")}</p>
                 </div>
                 <div className="p-8 rounded-[32px] bg-ethio-bg border border-gray-100 hover:shadow-lg transition-all group">
                     <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform">
                         <Users className="w-7 h-7 text-secondary" />
                     </div>
-                    <h3 className="text-xl font-bold text-primary mb-4">Community First</h3>
-                    <p className="text-gray-500 leading-relaxed text-sm">We are a collective. 5% of all platform fees are reinvested into artisan training programs and digital literacy workshops.</p>
+                    <h3 className="text-xl font-bold text-primary mb-4">{t("home.communityFirst")}</h3>
+                    <p className="text-gray-500 leading-relaxed text-sm">{t("home.communityFirstDesc")}</p>
                 </div>
                 <div className="p-8 rounded-[32px] bg-ethio-bg border border-gray-100 hover:shadow-lg transition-all group">
                     <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform">
                         <Globe className="w-7 h-7 text-secondary" />
                     </div>
-                    <h3 className="text-xl font-bold text-primary mb-4">Global Reach</h3>
-                    <p className="text-gray-500 leading-relaxed text-sm">From Addis Ababa to New York, we handle the complex logistics of international art trade, making Ethiopian culture accessible to the world.</p>
+                    <h3 className="text-xl font-bold text-primary mb-4">{t("home.globalReach")}</h3>
+                    <p className="text-gray-500 leading-relaxed text-sm">{t("home.globalReachDesc")}</p>
                 </div>
             </div>
         </div>
@@ -328,14 +339,14 @@ export const AboutPage: React.FC = () => (
     {/* Team / Leadership */}
     <div className="py-24 bg-gray-50 border-t border-gray-100">
         <div className="max-w-7xl mx-auto px-6 text-center">
-            <Badge className="mb-6 mx-auto bg-white border-gray-200">Our Leadership</Badge>
-            <h2 className="text-4xl font-serif font-bold text-primary mb-16">Guided by Industry Experts</h2>
+            <Badge className="mb-6 mx-auto bg-white border-gray-200">{t("home.leadership")}</Badge>
+            <h2 className="text-4xl font-serif font-bold text-primary mb-16">{t("home.guidedByExperts")}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                 {[
-                    { name: "Dr. Abebe Kebede", role: "Director of Heritage", img: "https://images.unsplash.com/photo-1531384441138-2736e62e0919?q=80&w=1974&auto=format&fit=crop" },
-                    { name: "Sara Tadesse", role: "Head of Artisan Relations", img: "https://images.unsplash.com/photo-1589156280159-27698a70f29e?q=80&w=1972&auto=format&fit=crop" },
-                    { name: "Dawit Haile", role: "Lead Tech Architect", img: "https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?q=80&w=1935&auto=format&fit=crop" },
-                    { name: "Marta Girma", role: "Global Logistics", img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=1976&auto=format&fit=crop" }
+                    { name: "Dr. Abebe Kebede", role: t("home.directorHeritage"), img: "https://images.unsplash.com/photo-1531384441138-2736e62e0919?q=80&w=1974&auto=format&fit=crop" },
+                    { name: "Sara Tadesse", role: t("home.headArtisanRelations"), img: "https://images.unsplash.com/photo-1589156280159-27698a70f29e?q=80&w=1972&auto=format&fit=crop" },
+                    { name: "Dawit Haile", role: t("home.leadTechArchitect"), img: "https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?q=80&w=1935&auto=format&fit=crop" },
+                    { name: "Marta Girma", role: t("home.globalLogistics"), img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=1976&auto=format&fit=crop" }
                 ].map((member, i) => (
                     <div key={i} className="group">
                         <div className="relative overflow-hidden rounded-[32px] mb-6 aspect-[3/4]">
@@ -351,10 +362,13 @@ export const AboutPage: React.FC = () => (
     </div>
   </div>
 );
+};
 
 export const ProductListingPage: React.FC = () => {
   const searchParams = useSearchParams();
   const artisanParam = searchParams?.get('artisan');
+  const { t } = useLanguage();
+  const { getLocalizedField } = useContentLanguage();
   
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -374,7 +388,11 @@ export const ProductListingPage: React.FC = () => {
           const mappedProducts = data.products.map((p: any) => ({
             id: p._id,
             name: p.name,
+            name_en: p.name_en || p.name,
+            name_am: p.name_am || p.name,
             description: p.description,
+            description_en: p.description_en || p.description,
+            description_am: p.description_am || p.description,
             price: p.price,
             discountPrice: p.discountPrice,
             category: p.category,
@@ -411,7 +429,8 @@ export const ProductListingPage: React.FC = () => {
   const categories = ["All", ...Array.from(new Set(products.map(p => p.category)))];
 
   const filtered = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const localizedName = getLocalizedField(p, 'name');
+    const matchesSearch = localizedName.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           p.category.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === "All" || p.category === selectedCategory;
     return matchesSearch && matchesCategory;
@@ -422,10 +441,10 @@ export const ProductListingPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-           <div className="text-center md:text-left">
-              <h1 className="text-3xl font-serif font-bold text-primary">Marketplace</h1>
-              <p className="text-gray-500 mt-1">Discover authentic Ethiopian artifacts</p>
-           </div>
+            <div className="text-center md:text-left">
+               <h1 className="text-3xl font-serif font-bold text-primary">{t("home.marketplace")}</h1>
+               <p className="text-gray-500 mt-1">{t("home.discoverArtifacts")}</p>
+            </div>
            
            {/* Search Bar */}
            <div className="relative w-full md:w-96">
@@ -442,12 +461,12 @@ export const ProductListingPage: React.FC = () => {
 
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Mobile Filter Toggle */}
-          <button 
-            className="lg:hidden w-full flex items-center justify-center gap-2 bg-white p-4 rounded-xl border border-gray-100 font-bold text-primary shadow-sm"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter className="w-4 h-4" /> {showFilters ? 'Hide Filters' : 'Show Filters'}
-          </button>
+           <button 
+             className="lg:hidden w-full flex items-center justify-center gap-2 bg-white p-4 rounded-xl border border-gray-100 font-bold text-primary shadow-sm"
+             onClick={() => setShowFilters(!showFilters)}
+           >
+             <Filter className="w-4 h-4" /> {showFilters ? t("home.hideFilters") : t("home.showFilters")}
+           </button>
 
           {/* Sidebar Filters */}
           <aside className={`w-full lg:w-64 flex-shrink-0 ${showFilters ? 'block' : 'hidden lg:block'}`}>
@@ -531,9 +550,9 @@ export const ProductListingPage: React.FC = () => {
                     <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Search className="w-8 h-8 text-gray-300" />
                     </div>
-                    <h3 className="text-lg font-bold text-primary">No products found</h3>
-                    <p className="text-gray-500 mt-1">Try adjusting your search or filters</p>
-                    <button onClick={() => {setSearchTerm(""); setSelectedCategory("All");}} className="mt-6 px-6 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">Clear all filters</button>
+                    <h3 className="text-lg font-bold text-primary">{t("home.noProductsFound")}</h3>
+                    <p className="text-gray-500 mt-1">{t("home.tryAdjustingSearch")}</p>
+                    <button onClick={() => {setSearchTerm(""); setSelectedCategory("All");}} className="mt-6 px-6 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">{t("home.clearAllFilters")}</button>
                 </div>
             )}
           </div>
@@ -546,6 +565,8 @@ export const ProductListingPage: React.FC = () => {
 export const FestivalListingPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("All");
+  const { t } = useLanguage();
+  const { getLocalizedField } = useContentLanguage();
   const [festivals, setFestivals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -583,13 +604,17 @@ export const FestivalListingPage: React.FC = () => {
       type,
       id: f._id,
       locationName: f.locationName || f.location?.name || '',
+      locationName_en: f.locationName_en || f.location?.name_en || f.location?.name || '',
+      locationName_am: f.locationName_am || f.location?.name_am || f.location?.name || '',
       coverImage: f.coverImage || f.gallery?.[0] || 'https://images.unsplash.com/photo-1532566086724-4c4c7713437c?q=80&w=1200&auto=format&fit=crop',
     };
   });
 
   const filteredFestivals = enhancedFestivals.filter((f: any) => {
-    const matchesSearch = f.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          f.locationName?.toLowerCase().includes(searchTerm.toLowerCase());
+    const localizedName = getLocalizedField(f, 'name');
+    const localizedLocation = getLocalizedField(f, 'locationName');
+    const matchesSearch = localizedName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          localizedLocation.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === "All" || f.type === selectedType;
     return matchesSearch && matchesType;
   });
@@ -626,13 +651,13 @@ export const FestivalListingPage: React.FC = () => {
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-ethio-bg"></div>
         </div>
         <div className="relative z-10 text-center max-w-4xl mx-auto px-6 space-y-6 animate-in zoom-in duration-700">
-          <Badge variant="warning" className="mx-auto bg-secondary text-primary border-none uppercase tracking-[0.2em] font-bold">Official Holiday Directory</Badge>
+          <Badge variant="warning" className="mx-auto bg-secondary text-primary border-none uppercase tracking-[0.2em] font-bold">{t("festival.hero.badge")}</Badge>
           <h1 className="text-5xl md:text-7xl font-serif font-bold text-white leading-tight">
-            Experience the Sacred <br/>
-            <span className="text-secondary italic">Traditions of Ethiopia</span>
+            {t("festival.hero.titleLine1")} <br/>
+            <span className="text-secondary italic">{t("festival.hero.titleLine2")}</span>
           </h1>
           <p className="text-xl text-gray-200 font-light max-w-2xl mx-auto leading-relaxed">
-            Join millions in celebrating Ethiopia's ancient religious festivals, historical commemorations, and vibrant cultural holidays.
+            {t("festival.hero.description")}
           </p>
         </div>
       </div>
@@ -643,13 +668,13 @@ export const FestivalListingPage: React.FC = () => {
           <div className="flex flex-col md:flex-row gap-6 items-center justify-between">
             <div className="relative w-full md:w-96">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="Search festivals or locations..." 
-                className="w-full pl-12 pr-4 py-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-primary/20 transition-all"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+               <input 
+                 type="text" 
+                 placeholder={t("festival.searchPlaceholder")} 
+                 className="w-full pl-12 pr-4 py-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-primary/20 transition-all"
+                 value={searchTerm}
+                 onChange={(e) => setSearchTerm(e.target.value)}
+               />
             </div>
             
             <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto scrollbar-hide">
@@ -663,7 +688,7 @@ export const FestivalListingPage: React.FC = () => {
                       : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
                   }`}
                 >
-                  {type}
+                  {type === 'All' ? t('common.all') : t('festival.types.' + type.toLowerCase().replace(/\s+/g, ''))}
                 </button>
               ))}
             </div>
@@ -675,22 +700,22 @@ export const FestivalListingPage: React.FC = () => {
             <div className="mb-20">
                 <div className="flex items-center gap-4 mb-8">
                     <div className="w-12 h-1 bg-secondary rounded-full"></div>
-                    <h2 className="text-3xl font-serif font-bold text-primary">Featured Celebration</h2>
+                    <h2 className="text-3xl font-serif font-bold text-primary">{t("festival.featured.heading")}</h2>
                 </div>
                 <div className="relative rounded-[40px] overflow-hidden group h-[500px] shadow-2xl">
-                    <img src={filteredFestivals[0].coverImage} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" alt={filteredFestivals[0].name} />
+                    <img src={filteredFestivals[0].coverImage} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" alt={getLocalizedField(filteredFestivals[0], 'name')} />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-0 left-0 p-10 md:p-16 w-full md:w-2/3 text-white space-y-6">
                         <div className="flex gap-4">
-                            <Badge className="bg-secondary text-primary border-none">Trending Now</Badge>
-                            <Badge className="bg-white/20 backdrop-blur border-none text-white"><MapPin className="w-3 h-3 mr-2" /> {filteredFestivals[0].locationName}</Badge>
+                            <Badge className="bg-secondary text-primary border-none">{t("festival.featured.badge")}</Badge>
+                            <Badge className="bg-white/20 backdrop-blur border-none text-white"><MapPin className="w-3 h-3 mr-2" /> {getLocalizedField(filteredFestivals[0], 'locationName')}</Badge>
                         </div>
-                        <h3 className="text-4xl md:text-6xl font-serif font-bold leading-tight">{filteredFestivals[0].name}</h3>
-                        <p className="text-gray-300 text-lg line-clamp-2 font-light">{filteredFestivals[0].shortDescription}</p>
+                        <h3 className="text-4xl md:text-6xl font-serif font-bold leading-tight">{getLocalizedField(filteredFestivals[0], 'name')}</h3>
+                        <p className="text-gray-300 text-lg line-clamp-2 font-light">{getLocalizedField(filteredFestivals[0], 'shortDescription')}</p>
                         <div className="pt-4">
                             <Link href={`/event/${filteredFestivals[0].id}`}>
                                 <Button className="rounded-full px-8 py-6 text-lg font-bold uppercase tracking-widest bg-white text-primary hover:bg-secondary hover:text-primary border-none shadow-xl">
-                                    View Details <ArrowRight className="ml-3 w-5 h-5" />
+                                    {t("festival.viewDetails")} <ArrowRight className="ml-3 w-5 h-5" />
                                 </Button>
                             </Link>
                         </div>
@@ -703,7 +728,7 @@ export const FestivalListingPage: React.FC = () => {
         <div className="space-y-8">
             <div className="flex items-center justify-between">
                 <h2 className="text-3xl font-serif font-bold text-primary">
-                    {searchTerm || selectedType !== "All" ? `Search Results (${filteredFestivals.length})` : "Upcoming Events"}
+                    {searchTerm || selectedType !== "All" ? t("festival.searchResults") + ` (${filteredFestivals.length})` : t("home.upcomingEvents")}
                 </h2>
             </div>
             
@@ -718,14 +743,14 @@ export const FestivalListingPage: React.FC = () => {
                     <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
                         <Calendar className="w-10 h-10 text-gray-300" />
                     </div>
-                    <h3 className="text-2xl font-bold text-primary mb-2">No festivals found</h3>
-                    <p className="text-gray-500">Try adjusting your search or filters to find what you're looking for.</p>
-                    <button 
-                        onClick={() => {setSearchTerm(""); setSelectedType("All");}}
-                        className="mt-8 text-secondary font-bold hover:underline uppercase tracking-widest text-sm"
-                    >
-                        Clear All Filters
-                    </button>
+                    <h3 className="text-2xl font-bold text-primary mb-2">{t("festival.empty.title")}</h3>
+                    <p className="text-gray-500">{t("festival.empty.message")}</p>
+                        <button 
+                            onClick={() => {setSearchTerm(""); setSelectedType("All");}}
+                            className="mt-8 text-secondary font-bold hover:underline uppercase tracking-widest text-sm"
+                        >
+                            {t("home.clearAllFilters")}
+                        </button>
                 </div>
             )}
         </div>
@@ -735,6 +760,7 @@ export const FestivalListingPage: React.FC = () => {
 };
 
 const ReviewItem: React.FC<{ review: any }> = ({ review }) => {
+  const { t } = useLanguage();
   const [isHelpful, setIsHelpful] = useState(false);
   const [isReported, setIsReported] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -752,7 +778,7 @@ const ReviewItem: React.FC<{ review: any }> = ({ review }) => {
                 {review.user.charAt(0)}
             </div>
             <span className="font-bold text-sm text-primary">{review.user}</span>
-            {review.verified && <span className="text-[10px] text-green-600 font-bold uppercase tracking-wider ml-2">Verified Purchase</span>}
+            {review.verified && <span className="text-[10px] text-green-600 font-bold uppercase tracking-wider ml-2">{t("reviews.verifiedPurchase")}</span>}
         </div>
         <div className="flex items-center gap-2 mb-3">
             <div className="flex text-secondary">
@@ -762,14 +788,14 @@ const ReviewItem: React.FC<{ review: any }> = ({ review }) => {
             </div>
             <span className="text-xs font-bold text-primary">{review.title}</span>
         </div>
-        <p className="text-sm text-gray-500 mb-2">Reviewed on {review.date}</p>
+        <p className="text-sm text-gray-500 mb-2">{t("reviews.reviewedOn")} {review.date}</p>
         <p className="text-gray-600 text-sm leading-relaxed mb-4">{review.content}</p>
         <div className="flex items-center gap-4">
             <button 
                 onClick={() => setIsHelpful(!isHelpful)}
                 className={`text-xs font-medium transition-colors ${isHelpful ? 'text-green-600' : 'text-gray-400 hover:text-primary'}`}
             >
-                {isHelpful ? 'Thank you for your feedback' : 'Helpful'}
+                {isHelpful ? t('reviews.thankFeedback') : t('reviews.helpful')}
             </button>
             <div className="h-3 w-px bg-gray-200"></div>
             <button 
@@ -779,7 +805,7 @@ const ReviewItem: React.FC<{ review: any }> = ({ review }) => {
                 className={`text-xs font-medium transition-colors ${isReported ? 'text-red-500 cursor-default' : 'text-gray-400 hover:text-red-500'}`}
                 disabled={isReported}
             >
-                {isReported ? 'Reported' : 'Report'}
+                {isReported ? t('reviews.reported') : t('reviews.report')}
             </button>
         </div>
 
@@ -788,19 +814,19 @@ const ReviewItem: React.FC<{ review: any }> = ({ review }) => {
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
                 <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                     <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                        <h3 className="font-bold text-lg text-primary">Report this review</h3>
+                        <h3 className="font-bold text-lg text-primary">{t("reviews.reportTitle")}</h3>
                         <button onClick={() => setShowReportModal(false)} className="text-gray-400 hover:text-gray-600">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
                     <div className="p-6 space-y-6">
-                        <p className="font-bold text-primary">Optional: Why are you reporting this?</p>
+                        <p className="font-bold text-primary">{t("reviews.optionalReason")}</p>
                         <div className="space-y-3">
                             {[
-                                { value: "off_topic", label: "Off topic", desc: "Not about the product" },
-                                { value: "inappropriate", label: "Inappropriate", desc: "Disrespectful, hateful, obscene" },
-                                { value: "fake", label: "Fake", desc: "Paid for, inauthentic" },
-                                { value: "other", label: "Other", desc: "Something else" }
+                              { value: "off_topic", label: t("reviews.reasons.offTopic.label"), desc: t("reviews.reasons.offTopic.desc") },
+                              { value: "inappropriate", label: t("reviews.reasons.inappropriate.label"), desc: t("reviews.reasons.inappropriate.desc") },
+                              { value: "fake", label: t("reviews.reasons.fake.label"), desc: t("reviews.reasons.fake.desc") },
+                              { value: "other", label: t("reviews.reasons.other.label"), desc: t("reviews.reasons.other.desc") }
                             ].map((option) => (
                                 <label key={option.value} className="flex items-start gap-3 cursor-pointer group">
                                     <div className="relative flex items-center mt-0.5">
@@ -821,7 +847,7 @@ const ReviewItem: React.FC<{ review: any }> = ({ review }) => {
                             ))}
                         </div>
                         <p className="text-xs text-gray-500 leading-relaxed">
-                            We’ll check if this review meets our community guidelines. If it doesn’t, we’ll remove it.
+                            {t("reviews.guidelineNote")}
                         </p>
                     </div>
                     <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
@@ -829,15 +855,15 @@ const ReviewItem: React.FC<{ review: any }> = ({ review }) => {
                             onClick={() => setShowReportModal(false)}
                             className="px-4 py-2 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-200 transition-colors"
                         >
-                            Cancel
+                            {t("reviews.cancel")}
                         </button>
-                        <button 
-                            onClick={handleReportSubmit}
-                            disabled={!reportReason}
-                            className="px-6 py-2 rounded-lg text-sm font-bold text-white bg-primary hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
-                        >
-                            Submit
-                        </button>
+                                <button 
+                                    onClick={handleReportSubmit}
+                                    disabled={!reportReason}
+                                    className="px-6 py-2 rounded-lg text-sm font-bold text-white bg-primary hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
+                                >
+                                    {t("reviews.submit")}
+                                </button>
                     </div>
                 </div>
             </div>
@@ -851,6 +877,7 @@ export const ProductDetailPage: React.FC = () => {
   const id = Array.isArray((params as any)?.id) ? (params as any).id[0] : (params as any)?.id;
   const router = useRouter();
   const { addToCart } = useCart();
+  const { getLocalizedField } = useContentLanguage();
   const { user, isAuthenticated } = useAuth();
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [product, setProduct] = useState<any>(null);
@@ -874,7 +901,11 @@ export const ProductDetailPage: React.FC = () => {
           const mapped = {
             id: p._id,
             name: p.name,
+            name_en: p.name_en || p.name,
+            name_am: p.name_am || p.name,
             description: p.description,
+            description_en: p.description_en || p.description,
+            description_am: p.description_am || p.description,
             price: p.price,
             discountPrice: p.discountPrice,
             category: p.category,
@@ -947,13 +978,13 @@ export const ProductDetailPage: React.FC = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             bookingId: product._id,
-            amount: totalPrice,
+            amount: product.price * quantity,
             currency: 'ETB',
             email: user?.email || 'guest@email.com',
             firstName: user?.name?.split(' ')[0] || 'Guest',
             lastName: user?.name?.split(' ')[1] || 'User',
             phone: '0912345678',
-            description: `Product: ${product.name}`,
+            description: `Product: ${productName}`,
           }),
         });
         
@@ -1008,6 +1039,9 @@ export const ProductDetailPage: React.FC = () => {
   
   if (!product) return <div>Product not found</div>;
 
+  const productName = getLocalizedField(product, 'name');
+  const productDescription = getLocalizedField(product, 'description');
+
   return (
     <div className="min-h-screen bg-white py-12">
       <div className="max-w-7xl mx-auto px-6">
@@ -1019,7 +1053,7 @@ export const ProductDetailPage: React.FC = () => {
           {/* Image Gallery */}
           <div className="space-y-6">
             <div className="aspect-[4/5] rounded-[32px] overflow-hidden bg-ethio-bg border border-gray-100 shadow-sm group relative">
-                <img src={activeImg} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={product.name} />
+                <img src={activeImg} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={productName} />
                 {product.isVerified && <div className="absolute bottom-6 left-6"><VerifiedBadge /></div>}
             </div>
             <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
@@ -1093,7 +1127,7 @@ export const ProductDetailPage: React.FC = () => {
                 </div>
             </div>
 
-            <h1 className="text-4xl md:text-5xl font-serif font-bold text-primary mb-4 leading-tight">{product.name}</h1>
+            <h1 className="text-4xl md:text-5xl font-serif font-bold text-primary mb-4 leading-tight">{productName}</h1>
             
             <div className="flex items-center gap-2 mb-8">
                 <span className="text-sm text-gray-500">Crafted by</span>
@@ -1105,7 +1139,7 @@ export const ProductDetailPage: React.FC = () => {
             </div>
 
             <p className="text-lg text-gray-600 leading-relaxed font-light mb-10 border-l-4 border-secondary pl-6">
-                {product.description}
+                {productDescription}
             </p>
 
             {/* Actions */}
@@ -1253,7 +1287,7 @@ export const ProductDetailPage: React.FC = () => {
                             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-4">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-500">Product</span>
-                                    <span className="font-bold text-primary truncate max-w-[200px]">{product.name}</span>
+                                    <span className="font-bold text-primary truncate max-w-[200px]">{productName}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-500">Quantity</span>
@@ -1366,6 +1400,7 @@ export const FestivalDetailPage: React.FC = () => {
   const id = Array.isArray((params as any)?.id) ? (params as any).id[0] : (params as any)?.id;
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
+  const { getLocalizedField } = useContentLanguage();
   const [festivalData, setFestivalData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedHotel, setSelectedHotel] = useState<HotelAccommodation | null>(null);
@@ -1405,11 +1440,17 @@ export const FestivalDetailPage: React.FC = () => {
           const transformedHotels = (f.hotels || []).map((hotel: any, index: number) => ({
             id: hotel._id || hotel.id || `hotel-${index}`,
             name: hotel.name || '',
+            name_en: hotel.name_en || hotel.name || '',
+            name_am: hotel.name_am || hotel.name || '',
             image: hotel.image || '',
             address: hotel.address || '',
             starRating: hotel.starRating || 0,
             description: hotel.description || '',
+            description_en: hotel.description_en || hotel.description || '',
+            description_am: hotel.description_am || hotel.description || '',
             fullDescription: hotel.fullDescription || '',
+            fullDescription_en: hotel.fullDescription_en || hotel.fullDescription || '',
+            fullDescription_am: hotel.fullDescription_am || hotel.fullDescription || '',
             policies: hotel.policies || '',
             checkInTime: hotel.checkInTime || '',
             checkOutTime: hotel.checkOutTime || '',
@@ -1418,7 +1459,11 @@ export const FestivalDetailPage: React.FC = () => {
               id: room._id || room.id || `room-${roomIndex}`,
               _id: room._id,
               name: room.name || '',
+              name_en: room.name_en || room.name || '',
+              name_am: room.name_am || room.name || '',
               description: room.description || '',
+              description_en: room.description_en || room.description || '',
+              description_am: room.description_am || room.description || '',
               capacity: room.capacity || 1,
               pricePerNight: room.pricePerNight || 0,
               availability: room.availability || 0,
@@ -1433,14 +1478,22 @@ export const FestivalDetailPage: React.FC = () => {
           setFestivalData({
             id: f._id,
             name: f.name,
+            name_en: f.name_en || f.name,
+            name_am: f.name_am || f.name,
             slug: f.name?.toLowerCase().replace(/\s+/g, '-') || '',
             startDate: f.startDate,
             endDate: f.endDate,
             locationName: f.location?.name || '',
+            locationName_en: f.location?.name_en || f.location?.name || '',
+            locationName_am: f.location?.name_am || f.location?.name || '',
             address: f.location?.address || '',
             coordinates: f.location?.coordinates || { lat: 0, lng: 0 },
             shortDescription: f.shortDescription,
+            shortDescription_en: f.shortDescription_en || f.shortDescription,
+            shortDescription_am: f.shortDescription_am || f.shortDescription,
             fullDescription: f.fullDescription,
+            fullDescription_en: f.fullDescription_en || f.fullDescription,
+            fullDescription_am: f.fullDescription_am || f.fullDescription,
             coverImage: f.coverImage || '',
             gallery: f.gallery || [],
             schedule: f.schedule || [],
@@ -1450,10 +1503,14 @@ export const FestivalDetailPage: React.FC = () => {
             transportation: (f.transportation || []).map((transport: any, index: number) => ({
               id: transport._id || transport.id || `transport-${index}`,
               type: transport.type || 'Private Car',
+              type_en: transport.type_en || transport.type || 'Private Car',
+              type_am: transport.type_am || transport.type || 'Private Car',
               image: transport.image || '',
               price: transport.price || 0,
               availability: transport.availability || 0,
               description: transport.description || '',
+              description_en: transport.description_en || transport.description || '',
+              description_am: transport.description_am || transport.description || '',
               pickupLocations: transport.pickupLocations || [],
             })),
             foodPackages: f.services?.foodPackages || [],
@@ -1524,6 +1581,9 @@ export const FestivalDetailPage: React.FC = () => {
   const totalPrice = (getTicketPrice() * ticketCount) + 
                      (selectedRoom ? selectedRoom.room.pricePerNight : 0) + 
                      (selectedTransport ? selectedTransport.price : 0);
+  const festivalName = getLocalizedField(festival, 'name');
+  const festivalLocationName = getLocalizedField(festival, 'locationName');
+  const festivalFullDescription = getLocalizedField(festival, 'fullDescription');
 
   const handleRoomSelect = (hotelName: string, room: RoomType) => {
     setSelectedRoom({ hotelName, room });
@@ -1559,11 +1619,11 @@ export const FestivalDetailPage: React.FC = () => {
       const bookingDetails = selectedRoom || selectedTransport ? {
         room: selectedRoom ? {
           hotelName: selectedRoom.hotelName,
-          roomName: selectedRoom.room.name,
+          roomName: getLocalizedField(selectedRoom.room, 'name'),
           roomPrice: selectedRoom.room.pricePerNight
         } : undefined,
         transport: selectedTransport ? {
-          type: selectedTransport.type,
+          type: getLocalizedField(selectedTransport, 'type'),
           price: selectedTransport.price
         } : undefined
       } : undefined;
@@ -1615,10 +1675,10 @@ export const FestivalDetailPage: React.FC = () => {
             amount: totalPrice,
             currency: festival?.currency || 'ETB',
             email: contactInfo?.email || 'guest@email.com',
-            firstName: contactInfo?.name?.split(' ')[0] || 'Guest',
-            lastName: contactInfo?.name?.split(' ')[1] || 'User',
+            firstName: contactInfo?.fullName?.split(' ')[0] || 'Guest',
+            lastName: contactInfo?.fullName?.split(' ').slice(1).join(' ') || 'User',
             phone: contactInfo?.phone || '0912345678',
-            description: `Festival: ${festival?.name}`,
+            description: `Festival: ${festivalName}`,
           }),
         });
         
@@ -1686,16 +1746,16 @@ export const FestivalDetailPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-ethio-bg">
       <div className="relative h-[65vh] min-h-[450px] flex items-end overflow-hidden">
-        <img src={festival.coverImage} className="absolute inset-0 w-full h-full object-cover scale-105" alt={festival.name} />
+        <img src={festival.coverImage} className="absolute inset-0 w-full h-full object-cover scale-105" alt={festivalName} />
         <div className="absolute inset-0 bg-gradient-to-t from-ethio-dark via-ethio-dark/30 to-transparent" />
         <div className="relative z-10 max-w-7xl mx-auto px-6 w-full pb-16 text-white text-center md:text-left">
             <button onClick={() => router.back()} className="absolute top-[-200px] left-0 text-white/80 hover:text-white flex items-center gap-2 font-bold text-[10px] uppercase tracking-widest backdrop-blur-md bg-white/10 px-4 py-2 rounded-full transition-all hover:bg-white/20">
                 <ArrowLeft className="w-4 h-4" /> Back to Events
             </button>
             <Badge variant="warning" className="mb-6 px-6 py-2 uppercase font-bold tracking-widest bg-secondary text-primary border-none shadow-lg text-[10px]">Vetted Heritage Experience</Badge>
-            <h1 className="text-5xl md:text-7xl font-serif font-bold mb-6 tracking-tight leading-tight">{festival.name}</h1>
+            <h1 className="text-5xl md:text-7xl font-serif font-bold mb-6 tracking-tight leading-tight">{festivalName}</h1>
             <div className="flex flex-wrap gap-8 justify-center md:justify-start font-bold uppercase tracking-widest text-[9px]">
-                <span className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full"><MapPin className="text-secondary w-3.5 h-3.5" /> {festival.locationName}</span>
+                <span className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full"><MapPin className="text-secondary w-3.5 h-3.5" /> {festivalLocationName}</span>
                 <span className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full"><Calendar className="text-secondary w-3.5 h-3.5" /> {formatDate(festival.startDate)} — {formatDate(festival.endDate)}</span>
                 <span className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full"><Users className="text-secondary w-3.5 h-3.5" /> {festival.ticketsAvailable} Spots Left</span>
             </div>
@@ -1707,7 +1767,7 @@ export const FestivalDetailPage: React.FC = () => {
           <div className="lg:col-span-2 space-y-12">
              <section className="bg-white p-10 md:p-12 rounded-[32px] shadow-sm border border-gray-100">
                 <h2 className="text-3xl font-serif font-bold text-primary mb-6">Program Overview</h2>
-                <p className="text-xl text-gray-500 font-light leading-relaxed mb-12">{festival.fullDescription}</p>
+                <p className="text-xl text-gray-500 font-light leading-relaxed mb-12">{festivalFullDescription}</p>
                 
                 {/* Location Map */}
                 <div className="mb-12 rounded-[24px] overflow-hidden border border-gray-100 shadow-sm h-[400px] relative group">
@@ -1718,7 +1778,7 @@ export const FestivalDetailPage: React.FC = () => {
                         scrolling="no" 
                         marginHeight={0} 
                         marginWidth={0} 
-                        src={`https://maps.google.com/maps?q=${encodeURIComponent(festival.locationName)}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
+                        src={`https://maps.google.com/maps?q=${encodeURIComponent(festivalLocationName)}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
                         className="w-full h-full grayscale group-hover:grayscale-0 transition-all duration-700"
                     ></iframe>
                     <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest text-primary shadow-sm flex items-center gap-2">
@@ -1732,13 +1792,16 @@ export const FestivalDetailPage: React.FC = () => {
                         <p className="text-gray-500 text-center py-8">No accommodations available for this festival.</p>
                     ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {festival.hotels.map((hotel: any) => (
-                            <div key={hotel.id} className={`bg-ethio-bg rounded-[24px] overflow-hidden border group shadow-sm hover:shadow-md transition-all cursor-pointer ${selectedRoom?.hotelName === hotel.name ? 'border-secondary ring-2 ring-secondary/20' : 'border-gray-100'}`} onClick={() => setSelectedHotel(hotel)}>
+                        {festival.hotels.map((hotel: any) => {
+                          const hotelName = getLocalizedField(hotel, 'name');
+                          const hotelDescription = getLocalizedField(hotel, 'description');
+                          return (
+                            <div key={hotel.id} className={`bg-ethio-bg rounded-[24px] overflow-hidden border group shadow-sm hover:shadow-md transition-all cursor-pointer ${selectedRoom?.hotelName === hotelName ? 'border-secondary ring-2 ring-secondary/20' : 'border-gray-100'}`} onClick={() => setSelectedHotel(hotel)}>
                                 <div className="h-48 overflow-hidden relative">
-                                    <img src={getImageUrl(hotel.image)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={hotel.name} />
+                                    <img src={getImageUrl(hotel.image)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={hotelName} />
                                     <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
                                     <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest text-primary">
-                                        {selectedRoom?.hotelName === hotel.name ? 'Selected' : 'View Rooms'}
+                                        {selectedRoom?.hotelName === hotelName ? 'Selected' : 'View Rooms'}
                                     </div>
                                     {hotel.gallery && hotel.gallery.length > 0 && (
                                         <div className="absolute top-4 left-4 flex gap-1">
@@ -1753,10 +1816,10 @@ export const FestivalDetailPage: React.FC = () => {
                                 </div>
                                 <div className="p-6 space-y-4">
                                     <div className="flex justify-between items-center">
-                                        <h4 className="font-bold text-lg text-primary">{hotel.name}</h4>
+                                        <h4 className="font-bold text-lg text-primary">{hotelName}</h4>
                                         <div className="flex text-secondary items-center"><Star className="w-3.5 h-3.5 fill-current" /> <span className="text-xs font-bold ml-1">{hotel.starRating}</span></div>
                                     </div>
-                                    <p className="text-[11px] text-gray-400 line-clamp-2 leading-relaxed">{hotel.description}</p>
+                                    <p className="text-[11px] text-gray-400 line-clamp-2 leading-relaxed">{hotelDescription}</p>
                                     {hotel.facilities && hotel.facilities.length > 0 && (
                                         <div className="flex flex-wrap gap-1.5">
                                             {hotel.facilities.slice(0, 4).map((facility: any, idx: number) => (
@@ -1765,12 +1828,13 @@ export const FestivalDetailPage: React.FC = () => {
                                             {hotel.facilities.length > 4 && <span className="text-[8px] text-gray-400">+{hotel.facilities.length - 4} more</span>}
                                         </div>
                                     )}
-                                    <Button variant="outline" className={`w-full rounded-xl py-3 font-bold text-[9px] uppercase tracking-widest ${selectedRoom?.hotelName === hotel.name ? 'bg-secondary text-white border-secondary' : 'border-secondary text-secondary hover:bg-secondary hover:text-white'}`}>
-                                        {selectedRoom?.hotelName === hotel.name ? 'Room Selected' : 'Select Room & Dates'}
+                                    <Button variant="outline" className={`w-full rounded-xl py-3 font-bold text-[9px] uppercase tracking-widest ${selectedRoom?.hotelName === hotelName ? 'bg-secondary text-white border-secondary' : 'border-secondary text-secondary hover:bg-secondary hover:text-white'}`}>
+                                        {selectedRoom?.hotelName === hotelName ? 'Room Selected' : 'Select Room & Dates'}
                                     </Button>
                                 </div>
                             </div>
-                        ))}
+                          );
+                        })}
                     </div>
                     )}
                 </div>
@@ -1778,14 +1842,17 @@ export const FestivalDetailPage: React.FC = () => {
                 <div className="space-y-8 mt-16">
                     <h3 className="text-2xl font-serif font-bold text-primary flex items-center gap-4"><Car className="text-secondary w-8 h-8" /> Ground Transport Options</h3>
                     <div className="space-y-4">
-                        {festival.transportation.map(car => (
+                        {festival.transportation.map(car => {
+                          const transportType = getLocalizedField(car, 'type');
+                          const transportDescription = getLocalizedField(car, 'description');
+                          return (
                             <div key={car.id} className={`flex flex-col sm:flex-row items-center gap-8 p-6 bg-ethio-bg rounded-[24px] border group transition-all hover:bg-white hover:shadow-md ${selectedTransport?.id === car.id ? 'border-secondary ring-2 ring-secondary/20 bg-white shadow-md' : 'border-gray-100'}`}>
                                 <div className="w-full sm:w-44 h-32 rounded-2xl overflow-hidden shadow-sm">
-                                    <img src={getImageUrl(car.image)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={car.type} />
+                                    <img src={getImageUrl(car.image)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={transportType} />
                                 </div>
                                 <div className="flex-1 text-center sm:text-left space-y-2">
-                                    <h4 className="font-bold text-primary text-xl">{car.type}</h4>
-                                    <p className="text-[11px] text-gray-400 leading-relaxed font-light">{car.description}</p>
+                                    <h4 className="font-bold text-primary text-xl">{transportType}</h4>
+                                    <p className="text-[11px] text-gray-400 leading-relaxed font-light">{transportDescription}</p>
                                     <div className="flex flex-wrap gap-3 justify-center sm:justify-start pt-2">
                                         <Badge variant="info" className="text-[8px] px-3 py-1 font-bold">Organizer Endorsed</Badge>
                                     </div>
@@ -1801,7 +1868,8 @@ export const FestivalDetailPage: React.FC = () => {
                                     </Button>
                                 </div>
                             </div>
-                        ))}
+                          );
+                        })}
                     </div>
                 </div>
              </section>
@@ -1969,7 +2037,7 @@ export const FestivalDetailPage: React.FC = () => {
                             </div>
                             <div className="bg-ethio-bg p-4 rounded-2xl border border-gray-100">
                                 <p className="font-bold text-primary text-sm mb-1">{selectedRoom.hotelName}</p>
-                                <p className="text-xs text-gray-500 mb-2">{selectedRoom.room.name}</p>
+                                <p className="text-xs text-gray-500 mb-2">{getLocalizedField(selectedRoom.room, 'name')}</p>
                                 <div className="flex justify-between items-center border-t border-gray-200 pt-2 mt-2">
                                     <span className="text-[10px] text-gray-400">Per Night</span>
                                     <span className="font-bold text-primary">{festival.currency} {selectedRoom.room.pricePerNight}</span>
@@ -1985,7 +2053,7 @@ export const FestivalDetailPage: React.FC = () => {
                                 <button onClick={() => setSelectedTransport(null)} className="text-[9px] text-red-500 font-bold uppercase hover:underline">Remove</button>
                             </div>
                             <div className="bg-ethio-bg p-4 rounded-2xl border border-gray-100">
-                                <p className="font-bold text-primary text-sm mb-1">{selectedTransport.type}</p>
+                                <p className="font-bold text-primary text-sm mb-1">{getLocalizedField(selectedTransport, 'type')}</p>
                                 <p className="text-xs text-gray-500 mb-2">Private Transfer</p>
                                 <div className="flex justify-between items-center border-t border-gray-200 pt-2 mt-2">
                                     <span className="text-[10px] text-gray-400">Fixed Rate</span>
@@ -2041,7 +2109,7 @@ export const FestivalDetailPage: React.FC = () => {
                     <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                   ))}
                 </div>
-                <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 mb-3">{selectedHotel.name}</h1>
+                <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 mb-3">{getLocalizedField(selectedHotel, 'name')}</h1>
                 <div className="flex items-center gap-2 text-gray-600 mb-4">
                   <MapPin className="w-4 h-4" />
                   <span className="text-sm">{selectedHotel.address}</span>
@@ -2060,7 +2128,7 @@ export const FestivalDetailPage: React.FC = () => {
                     <div className="relative rounded-2xl overflow-hidden bg-gray-900 h-[350px] md:h-[450px]">
                       <img 
                         src={getImageUrl(selectedHotel.gallery[0])} 
-                        alt={selectedHotel.name}
+                        alt={getLocalizedField(selectedHotel, 'name')}
                         className="w-full h-full object-cover"
                       />
                     </div>
@@ -2086,7 +2154,7 @@ export const FestivalDetailPage: React.FC = () => {
                 <div className="mt-8">
                   <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">Description</h2>
                   <p className="text-gray-600 leading-relaxed whitespace-pre-line">
-                    {selectedHotel.fullDescription || selectedHotel.description}
+                    {getLocalizedField(selectedHotel, 'fullDescription') || getLocalizedField(selectedHotel, 'description')}
                   </p>
                 </div>
 
@@ -2100,19 +2168,22 @@ export const FestivalDetailPage: React.FC = () => {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {selectedHotel.rooms.map((room: any, idx: number) => (
+                      {selectedHotel.rooms.map((room: any, idx: number) => {
+                        const roomName = getLocalizedField(room, 'name') || 'Standard Room';
+                        const roomDescription = getLocalizedField(room, 'description');
+                        return (
                         <div key={room._id || room.id || `room-${idx}`} className="bg-gray-50 rounded-2xl p-6">
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <div className="md:col-span-1">
                               <img 
                                 src={room.image ? getImageUrl(room.image) : 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=300&fit=crop'} 
-                                alt={room.name || 'Room'}
+                                alt={roomName}
                                 className="w-full h-40 md:h-full object-cover rounded-xl"
                               />
                             </div>
                             <div className="md:col-span-2">
-                              <h3 className="text-xl font-bold text-gray-900 mb-2">{room.name || 'Standard Room'}</h3>
-                              <p className="text-gray-600 text-sm mb-4">{room.description}</p>
+                              <h3 className="text-xl font-bold text-gray-900 mb-2">{roomName}</h3>
+                              <p className="text-gray-600 text-sm mb-4">{roomDescription}</p>
                               <div className="flex flex-wrap gap-3">
                                 <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200">
                                   <MaximizeIcon className="w-3.5 h-3.5" /> {room.sqm || 30} m²
@@ -2130,26 +2201,7 @@ export const FestivalDetailPage: React.FC = () => {
                                     <span key={i} className="text-xs text-gray-600 bg-white px-2 py-1 rounded border border-gray-200">
                                       {am}
                                     </span>
-))}
-                    {festival.services?.foodPackages?.length > 0 && (
-                      <div className="space-y-4">
-                        <h3 className="text-xl font-bold text-primary flex items-center gap-3">
-                          <span className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                            <svg className="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                          </span>
-                          Food Packages
-                        </h3>
-                        <ul className="space-y-3">
-                          {festival.services.foodPackages.map((item: any, idx: number) => (
-                            <li key={idx} className="flex items-center gap-3 text-gray-600">
-                              <Check className="w-4 h-4 text-green-500" />
-                              {typeof item === 'string' ? item : (item.name || item.description || 'Package')}
-                              {item.pricePerPerson > 0 && <span className="text-xs text-orange-600">(${item.pricePerPerson}/person)</span>}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                                  ))}
                                 </div>
                               )}
                             </div>
@@ -2163,14 +2215,15 @@ export const FestivalDetailPage: React.FC = () => {
                               )}
                               <Button 
                                 className="w-full mt-4"
-                                onClick={() => handleRoomSelect(selectedHotel.name, room)}
+                                onClick={() => handleRoomSelect(getLocalizedField(selectedHotel, 'name'), room)}
                               >
                                 Book
                               </Button>
                             </div>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -2547,7 +2600,7 @@ export const FestivalDetailPage: React.FC = () => {
                             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-4">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-500">Event</span>
-                                    <span className="font-bold text-primary truncate max-w-[200px]">{festival.name}</span>
+                                    <span className="font-bold text-primary truncate max-w-[200px]">{festivalName}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-500">Tickets</span>
@@ -2562,7 +2615,7 @@ export const FestivalDetailPage: React.FC = () => {
                                 {selectedTransport && (
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-500">Transport</span>
-                                        <span className="font-bold text-primary truncate max-w-[150px]">{selectedTransport.type}</span>
+                                        <span className="font-bold text-primary truncate max-w-[150px]">{getLocalizedField(selectedTransport, 'type')}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between text-lg font-bold border-t border-gray-200 pt-4 mt-2">
@@ -2636,7 +2689,7 @@ export const FestivalDetailPage: React.FC = () => {
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-500">Event</span>
-                                        <span className="font-bold text-primary truncate max-w-[150px]">{festival.name}</span>
+                                        <span className="font-bold text-primary truncate max-w-[150px]">{festivalName}</span>
                                     </div>
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-500">Ticket Type</span>

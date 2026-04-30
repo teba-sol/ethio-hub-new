@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { LanguageToggle } from '../LanguageToggle';
 
 interface MenuItem {
   path?: string;
@@ -226,9 +225,8 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
               )}
             </div>
 
-            <LanguageToggle />
-          </div>
-        </nav>
+           </div>
+         </nav>
         
         <main className="flex-1 p-8 overflow-y-auto bg-[#F4F4F9]">
           <div className="max-w-[1600px] mx-auto animate-in fade-in duration-500">

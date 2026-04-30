@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  X, ChevronLeft, ChevronRight, Image as ImageIcon, Camera,
+import { 
+  X, ChevronLeft, ChevronRight, Image as ImageIcon, Camera, 
   MapPin, Search, RefreshCw, Plus, Ticket, Star, Hotel, Car,
   Box, DollarSign, CheckCircle2, Trash2, Calendar, Clock,
   Users, Shield, Info, Eye, Save, Globe, Map as MapIcon,
@@ -11,11 +11,9 @@ import { Festival, HotelAccommodation, TransportOption, RoomType } from '../../t
 import { motion, AnimatePresence } from 'motion/react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { useAutoTranslate } from '../../hooks/useAutoTranslate';
-import { BilingualInput } from '../BilingualInput';
 
-const MapPickerModal = dynamic(() => import('../MapPickerModal'), {
-  ssr: false
+const MapPickerModal = dynamic(() => import('../MapPickerModal'), { 
+  ssr: false 
 });
 
 import apiClient from '../../lib/apiClient';
@@ -39,117 +37,48 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
   const [step, setStep] = useState(1);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    core: {
-      name_en: '',
-      name_am: '',
-      slug: '',
-      startDate: '',
-      endDate: '',
-      locationName_en: '',
-      locationName_am: '',
-      address: '',
-      shortDescription_en: '',
-      shortDescription_am: '',
-      fullDescription_en: '',
-      fullDescription_am: '',
-      coverImage: 'https://picsum.photos/seed/ethio-cover/1920/1080',
+    core: { 
+      name: '', 
+      slug: '', 
+      startDate: '', 
+      endDate: '', 
+      locationName: '', 
+      address: '', 
+      shortDescription: '', 
+      fullDescription: '', 
+      coverImage: 'https://picsum.photos/seed/ethio-cover/1920/1080', 
       gallery: [] as string[],
       coordinates: { lat: 9.0333, lng: 38.7500 }
     },
-    schedule: [{ day: 1, title_en: '', title_am: '', activities: '', performers: [] as string[] }],
-    hotels: [{
-      id: Date.now(),
-      name_en: '',
-      name_am: '',
-      image: '',
-      starRating: 5,
-      address: '',
-      description_en: '',
-      description_am: '',
-      fullDescription_en: '',
-      fullDescription_am: '',
-      policies: '',
-      checkInTime: '15:00',
-      checkOutTime: '12:00',
-      facilities: [] as string[],
-      gallery: [] as string[],
-      rooms: [{
-        id: Date.now() + 1,
-        name_en: '',
-        name_am: '',
-        description_en: '',
-        description_am: '',
-        capacity: 2,
-        pricePerNight: 100,
-        availability: 5,
-        image: '',
-        sqm: 30,
-        amenities: [] as string[],
-        bedType: '',
-      }],
-    }] as any[],
-    transportation: [{
-      id: Date.now() + 2,
-      type_en: 'Private Car',
-      type_am: '',
-      capacity: 4,
-      price: 50,
-      availability: 5,
-      description_en: '',
-      description_am: '',
-      image: '',
-      pickupLocations: '',
-    }] as any[],
-    services: {
-      foodPackages: [] as any[],
+    schedule: [{ day: 1, title: '', activities: '', performers: [] as string[] }],
+    hotels: [] as any[],
+    transportation: [] as any[],
+    services: { 
+      foodPackages: [] as any[], 
       culturalServices: [] as string[],
       specialAssistance: [] as string[],
       extras: [] as string[]
     },
-    policies: {
-      cancellation: '',
-      terms: '',
-      safety: '',
-      ageRestriction: ''
+    policies: { 
+      cancellation: '', 
+      terms: '', 
+      safety: '', 
+      ageRestriction: '' 
     },
-    pricing: {
-      basePrice: 0,
-      vipPrice: 0,
-      currency: 'USD',
-      earlyBird: 0,
-      groupDiscount: 0
+    pricing: { 
+      basePrice: 0, 
+      vipPrice: 0, 
+      currency: 'USD', 
+      earlyBird: 0, 
+      groupDiscount: 0 
     }
   });
 
-  // Auto-generate slug from English name
+  // Auto-generate slug
   useEffect(() => {
-    const slug = formData.core.name_en.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+    const slug = formData.core.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
     setFormData(prev => ({ ...prev, core: { ...prev.core, slug } }));
-  }, [formData.core.name_en]);
-
-  // Auto-translate English to Amharic
-  const { translatedText: nameAm } = useAutoTranslate(formData.core.name_en, 'en', 'am');
-  const { translatedText: shortDescAm } = useAutoTranslate(formData.core.shortDescription_en, 'en', 'am');
-  const { translatedText: fullDescAm } = useAutoTranslate(formData.core.fullDescription_en, 'en', 'am');
-
-  // Update Amharic fields when translation completes
-  useEffect(() => {
-    if (nameAm && nameAm !== formData.core.name_am) {
-      setFormData(prev => ({ ...prev, core: { ...prev.core, name_am: nameAm } }));
-    }
-  }, [nameAm]);
-
-  useEffect(() => {
-    if (shortDescAm && shortDescAm !== formData.core.shortDescription_am) {
-      setFormData(prev => ({ ...prev, core: { ...prev.core, shortDescription_am: shortDescAm } }));
-    }
-  }, [shortDescAm]);
-
-  useEffect(() => {
-    if (fullDescAm && fullDescAm !== formData.core.fullDescription_am) {
-      setFormData(prev => ({ ...prev, core: { ...prev.core, fullDescription_am: fullDescAm } }));
-    }
-  }, [fullDescAm]);
+  }, [formData.core.name]);
 
   const nextStep = () => setStep(s => Math.min(s + 1, 8));
   const prevStep = () => setStep(s => Math.max(s - 1, 1));
@@ -181,101 +110,14 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
     }
   };
 
-  const parseNumberOrDefault = (value: unknown, fallback = 0) => {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : fallback;
-  };
-
-  const sanitizeAndValidateForPublish = () => {
-    const errors: string[] = [];
-
-    const normalizedHotels = (formData.hotels || [])
-      .map((hotel: any, hotelIndex: number) => {
-        const rooms = (hotel.rooms || []).map((room: any, roomIndex: number) => {
-          const availabilityRaw = room?.availability;
-          const availability = Number(availabilityRaw);
-          const roomLabel = room?.name?.trim() || `Room ${roomIndex + 1}`;
-          const hotelLabel = hotel?.name?.trim() || `Hotel ${hotelIndex + 1}`;
-
-          if (availabilityRaw === '' || availabilityRaw === undefined || availabilityRaw === null || Number.isNaN(availability)) {
-            errors.push(`${hotelLabel} - ${roomLabel}: room availability is required and must be a number.`);
-          } else if (availability <= 0) {
-            errors.push(`${hotelLabel} - ${roomLabel}: room availability must be greater than 0.`);
-          }
-
-          return {
-            ...room,
-            name: roomLabel,
-            bedType: String(room?.bedType || '').trim() || 'King Size',
-            capacity: parseNumberOrDefault(room?.capacity, 2),
-            pricePerNight: parseNumberOrDefault(room?.pricePerNight, 0),
-            availability: Number.isFinite(availability) ? availability : 0,
-            sqm: parseNumberOrDefault(room?.sqm, 30),
-            amenities: Array.isArray(room?.amenities) ? room.amenities : [],
-          };
-        });
-
-        return {
-          ...hotel,
-          name: String(hotel?.name || '').trim(),
-          address: String(hotel?.address || '').trim(),
-          rooms,
-        };
-      })
-      .filter((hotel: any) => hotel.name || hotel.rooms.length > 0);
-
-    const hotelsWithRooms = normalizedHotels.filter((hotel: any) => hotel.rooms.length > 0);
-    if (hotelsWithRooms.length === 0) {
-      errors.push('Add at least one hotel with at least one room before publishing.');
-    }
-
-    const normalizedTransportation = (formData.transportation || [])
-      .map((transport: any, transportIndex: number) => {
-        const availabilityRaw = transport?.availability;
-        const availability = Number(availabilityRaw);
-        const transportLabel = transport?.type?.trim() || `Transport ${transportIndex + 1}`;
-
-        if (availabilityRaw === '' || availabilityRaw === undefined || availabilityRaw === null || Number.isNaN(availability)) {
-          errors.push(`${transportLabel}: car availability is required and must be a number.`);
-        } else if (availability <= 0) {
-          errors.push(`${transportLabel}: car availability must be greater than 0.`);
-        }
-
-        return {
-          ...transport,
-          type: String(transport?.type || '').trim(),
-          capacity: parseNumberOrDefault(transport?.capacity, 4),
-          price: parseNumberOrDefault(transport?.price, 0),
-          availability: Number.isFinite(availability) ? availability : 0,
-          description: String(transport?.description || '').trim(),
-          pickupLocations: String(transport?.pickupLocations || '').trim(),
-        };
-      })
-      .filter((transport: any) => transport.type);
-
-    if (normalizedTransportation.length === 0) {
-      errors.push('Add at least one transportation option before publishing.');
-    }
-
-    return {
-      errors,
-      sanitizedHotels: hotelsWithRooms,
-      sanitizedTransportation: normalizedTransportation,
-    };
-  };
-
   const handlePublish = async () => {
     const requiredFields = {
-      name_en: formData.core.name_en,
-      name_am: formData.core.name_am,
-      shortDescription_en: formData.core.shortDescription_en,
-      shortDescription_am: formData.core.shortDescription_am,
-      fullDescription_en: formData.core.fullDescription_en,
-      fullDescription_am: formData.core.fullDescription_am,
+      name: formData.core.name,
+      shortDescription: formData.core.shortDescription,
+      fullDescription: formData.core.fullDescription,
       startDate: formData.core.startDate,
       endDate: formData.core.endDate,
-      locationName_en: formData.core.locationName_en,
-      locationName_am: formData.core.locationName_am,
+      locationName: formData.core.locationName,
     };
 
     const missingFields = Object.entries(requiredFields)
@@ -287,33 +129,23 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
       return;
     }
 
-    const { errors, sanitizedHotels, sanitizedTransportation } = sanitizeAndValidateForPublish();
-    if (errors.length > 0) {
-      alert(`Please fix these issues before publishing:\n- ${errors.join('\n- ')}`);
-      return;
-    }
-
     try {
       const response = await apiClient.post('/api/organizer/festivals', {
-        name_en: formData.core.name_en,
-        name_am: formData.core.name_am,
-        shortDescription_en: formData.core.shortDescription_en,
-        shortDescription_am: formData.core.shortDescription_am,
-        fullDescription_en: formData.core.fullDescription_en,
-        fullDescription_am: formData.core.fullDescription_am,
+        name: formData.core.name,
+        shortDescription: formData.core.shortDescription,
+        fullDescription: formData.core.fullDescription,
         startDate: formData.core.startDate,
         endDate: formData.core.endDate,
         location: {
-          name_en: formData.core.locationName_en,
-          name_am: formData.core.locationName_am,
+          name: formData.core.locationName,
           address: formData.core.address,
           coordinates: formData.core.coordinates,
         },
         coverImage: formData.core.coverImage,
         gallery: formData.core.gallery,
         schedule: formData.schedule,
-        hotels: sanitizedHotels,
-        transportation: sanitizedTransportation,
+        hotels: formData.hotels,
+        transportation: formData.transportation,
         services: formData.services,
         policies: formData.policies,
         pricing: formData.pricing,
@@ -373,10 +205,147 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
           <div>
             <h2 className="text-3xl font-serif font-bold text-primary">Create New Festival</h2>
             <p className="text-gray-400 text-sm">Share Ethiopia's vibrant heritage with the world.</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <Button variant="outline" leftIcon={Save}>Save Draft</Button>
+          <Button onClick={handlePublish} disabled={step !== 8}>Publish Festival</Button>
+        </div>
+      </header>
+
+      {renderStepIndicator()}
+
+      <div className="bg-white p-12 rounded-[48px] border border-gray-100 shadow-xl min-h-[600px] flex flex-col">
+        <div className="flex-1">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              {/* Step 1: Core Information */}
+              {step === 1 && (
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-16">
+                  <div className="lg:col-span-3 space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Input 
+                        label="Festival Name *" 
+                        placeholder="e.g. Timket 2025"
+                        value={formData.core.name} 
+                        onChange={e => setFormData({...formData, core: {...formData.core, name: e.target.value}})} 
+                      />
+                      <Input 
+                        label="Slug" 
+                        value={formData.core.slug} 
+                        readOnly
+                        className="bg-gray-50"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Input 
+                        label="Start Date *" 
+                        type="date" 
+                        value={formData.core.startDate} 
+                        onChange={e => setFormData({...formData, core: {...formData.core, startDate: e.target.value}})} 
+                      />
+                      <Input 
+                        label="End Date *" 
+                        type="date" 
+                        value={formData.core.endDate} 
+                        onChange={e => setFormData({...formData, core: {...formData.core, endDate: e.target.value}})} 
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Input 
+                        label="Location Name *" 
+                        placeholder="e.g. Gondar, Ethiopia"
+                        value={formData.core.locationName} 
+                        onChange={e => setFormData({...formData, core: {...formData.core, locationName: e.target.value}})} 
+                      />
+                      <Input 
+                        label="Address" 
+                        placeholder="e.g. Fasil Ghebbi"
+                        value={formData.core.address} 
+                        onChange={e => setFormData({...formData, core: {...formData.core, address: e.target.value}})} 
+                      />
+                    </div>
+                    <div 
+                      onClick={() => setIsMapModalOpen(true)}
+                      className="bg-ethio-bg h-48 rounded-3xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center text-gray-400 space-y-2 group hover:border-secondary transition-colors cursor-pointer relative overflow-hidden"
+                    >
+                      <div className="absolute inset-0 opacity-20">
+                        <img src="https://picsum.photos/seed/map/800/400" className="w-full h-full object-cover" alt="" />
+                      </div>
+                      <div className="relative z-10 flex flex-col items-center">
+                        <MapPin className="w-8 h-8 group-hover:text-secondary transition-colors" />
+                        <span className="text-xs font-bold uppercase tracking-widest">Click to open Map Picker</span>
+                        <p className="text-[10px]">Lat: {formData.core.coordinates.lat.toFixed(4)}, Lng: {formData.core.coordinates.lng.toFixed(4)}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Short Description *</label>
+                      <textarea 
+                        className="w-full h-24 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
+                        placeholder="Brief summary for listing cards..."
+                        value={formData.core.shortDescription} 
+                        onChange={e => setFormData({...formData, core: {...formData.core, shortDescription: e.target.value}})} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Full Description *</label>
+                      <textarea 
+                        className="w-full h-48 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
+                        placeholder="Detailed story and information..."
+                        value={formData.core.fullDescription} 
+                        onChange={e => setFormData({...formData, core: {...formData.core, fullDescription: e.target.value}})} 
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="p-8 border-2 border-dashed border-gray-100 rounded-[32px] text-center hover:border-primary/20 transition-colors cursor-pointer">
+                        <input type="file" className="hidden" id="cover-image-upload" onChange={e => e.target.files && handleFileUpload(e.target.files[0], true)} />
+                        <label htmlFor="cover-image-upload" className="cursor-pointer">
+                          <Camera className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                          <p className="text-xs font-bold text-gray-400">Upload Cover Image</p>
+                        </label>
+                      </div>
+                      <div className="p-8 border-2 border-dashed border-gray-100 rounded-[32px] text-center hover:border-primary/20 transition-colors cursor-pointer">
+                        <input type="file" className="hidden" id="gallery-upload" multiple onChange={e => e.target.files && Array.from(e.target.files).forEach(file => handleFileUpload(file))} />
+                        <label htmlFor="gallery-upload" className="cursor-pointer">
+                          <ImageIcon className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                          <p className="text-xs font-bold text-gray-400">Upload Gallery Photos</p>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="lg:col-span-2">
+                    <div className="sticky top-8">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-4 block">Live Preview</label>
+                      <div className="bg-white rounded-[40px] overflow-hidden shadow-2xl border border-gray-100 group">
+                        <div className="relative h-64 overflow-hidden">
+                          <img src={formData.core.coverImage} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="" />
+                          <div className="absolute top-6 left-6"><Badge variant="info" className="backdrop-blur-md bg-white/80">Live Event</Badge></div>
+                        </div>
+                        <div className="p-8 space-y-4">
+                          <h4 className="text-2xl font-serif font-bold text-primary">{formData.core.name || 'Festival Title'}</h4>
+                          <div className="flex items-center text-gray-400 text-xs gap-4">
+                            <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {formData.core.startDate || 'Date'}</span>
+                            <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {formData.core.locationName || 'Location'}</span>
+                          </div>
+                          <p className="text-gray-500 text-sm line-clamp-2">{formData.core.shortDescription || 'Your festival description will appear here...'}</p>
+                          <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
+                            <span className="text-primary font-bold">From ${formData.pricing.basePrice}</span>
+                            <Button size="sm">View Details</Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-               )}
-              
+              )}
+
               {/* Step 2: Schedule */}
               {step === 2 && (
                 <div className="space-y-8">
@@ -491,9 +460,6 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                       Add Hotel
                     </Button>
                   </div>
-                  <p className="text-xs text-gray-500 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
-                    Room availability is required and must be greater than 0 before publishing.
-                  </p>
                   <div className="space-y-12">
                     {formData.hotels.map((hotel, hIdx) => (
                       <div key={hotel.id} className="bg-white border border-gray-100 rounded-[40px] p-10 shadow-sm space-y-8">
@@ -812,18 +778,6 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                         setFormData({ ...formData, hotels: newHotels });
                                       }}
                                     />
-                                    <Input
-                                      label="Room Availability"
-                                      type="number"
-                                      className="bg-white"
-                                      value={room.availability ?? ''}
-                                      onChange={e => {
-                                        const newHotels = [...formData.hotels];
-                                        const value = e.target.value;
-                                        newHotels[hIdx].rooms[rIdx].availability = value === '' ? '' : Number(value);
-                                        setFormData({ ...formData, hotels: newHotels });
-                                      }}
-                                    />
                                   </div>
                                   <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Room Description</label>
@@ -892,9 +846,6 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                       Add Vehicle
                     </Button>
                   </div>
-                  <p className="text-xs text-gray-500 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
-                    Vehicle availability is required and must be greater than 0 before publishing.
-                  </p>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {formData.transportation.map((car, idx) => (
                       <div key={car.id} className="bg-white border border-gray-100 rounded-[40px] p-8 shadow-sm relative group">
@@ -986,8 +937,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                             value={car.availability}
                             onChange={e => {
                               const newTrans = [...formData.transportation];
-                              const value = e.target.value;
-                              newTrans[idx].availability = value === '' ? '' : Number(value);
+                              newTrans[idx].availability = parseInt(e.target.value);
                               setFormData({ ...formData, transportation: newTrans });
                             }}
                           />

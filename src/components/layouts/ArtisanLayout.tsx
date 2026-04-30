@@ -6,24 +6,27 @@ import {
   BarChart3, Package, ShoppingCart, LogOut, Bell, Search, DollarSign, MessageSquare, PieChart, Settings, Menu, X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { LanguageToggle } from '../LanguageToggle';
 
 export const ArtisanLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const menuItems = [
-    { path: '/dashboard/artisan/overview', name: 'Dashboard', icon: BarChart3 },
-    { path: '/dashboard/artisan/products', name: 'Products', icon: Package },
-    { path: '/dashboard/artisan/orders', name: 'Orders', icon: ShoppingCart },
-    { path: '/dashboard/artisan/revenue', name: 'Revenue', icon: DollarSign },
-    { path: '/dashboard/artisan/reviews', name: 'Reviews', icon: MessageSquare },
-    { path: '/dashboard/artisan/analytics', name: 'Analytics', icon: PieChart },
-    { path: '/dashboard/artisan/settings', name: 'Settings', icon: Settings },
+    { path: '/dashboard/artisan/overview', nameKey: 'dashboard.overview', icon: BarChart3 },
+    { path: '/dashboard/artisan/products', nameKey: 'dashboard.products', icon: Package },
+    { path: '/dashboard/artisan/orders', nameKey: 'dashboard.orders', icon: ShoppingCart },
+    { path: '/dashboard/artisan/revenue', nameKey: 'dashboard.revenue', icon: DollarSign },
+    { path: '/dashboard/artisan/reviews', nameKey: 'dashboard.reviews', icon: MessageSquare },
+    { path: '/dashboard/artisan/analytics', nameKey: 'dashboard.analytics', icon: PieChart },
+    { path: '/dashboard/artisan/settings', nameKey: 'dashboard.settings', icon: Settings },
   ];
 
   const notifications = [
-    { id: 1, type: 'order', message: 'New order #ORD-7782 received', time: '2m ago' },
+    { id: 1, type: 'order', message: t('dashboard.myOrders') + ' #ORD-7782 received', time: '2m ago' },
     { id: 2, type: 'review', message: '5-star review on "Woven Basket"', time: '1h ago' },
     { id: 3, type: 'stock', message: 'Low stock alert: Coffee Set (2 left)', time: '3h ago' },
     { id: 4, type: 'payout', message: 'Weekly payout of ETB 12,500 processed', time: '1d ago' },
@@ -61,13 +64,13 @@ export const ArtisanLayout: React.FC<{ children?: React.ReactNode }> = ({ childr
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all font-semibold text-sm ${pathname === item.path ? 'bg-primary text-white' : 'text-gray-500 hover:bg-ethio-bg'}`}
               >
-                <item.icon className="w-4 h-4" /><span>{item.name}</span>
+                <item.icon className="w-4 h-4" /><span>{t(item.nameKey)}</span>
               </Link>
             ))}
           </div>
           <div className="p-4 border-t border-gray-50">
             <button onClick={logout} className="w-full flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-red-500 font-semibold text-sm transition-colors">
-              <LogOut className="w-4 h-4" /><span>Logout</span>
+              <LogOut className="w-4 h-4" /><span>{t('header.signOut')}</span>
             </button>
           </div>
         </aside>
@@ -88,7 +91,7 @@ export const ArtisanLayout: React.FC<{ children?: React.ReactNode }> = ({ childr
               </span>
               <div className="relative w-96 hidden md:block">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input type="text" placeholder="Search..." className="w-full bg-ethio-bg border-none rounded-xl py-2 pl-10 pr-4 text-xs focus:ring-1 focus:ring-primary/20 transition-all" />
+                <input type="text" placeholder={t('admin.searchPlaceholder')} className="w-full bg-ethio-bg border-none rounded-xl py-2 pl-10 pr-4 text-xs focus:ring-1 focus:ring-primary/20 transition-all" />
               </div>
             </div>
             <div className="flex items-center space-x-4 md:space-x-6">
@@ -100,24 +103,26 @@ export const ArtisanLayout: React.FC<{ children?: React.ReactNode }> = ({ childr
                 {/* Notification Dropdown */}
                 <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 p-4 hidden group-hover:block z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="flex justify-between items-center mb-3">
-                    <h4 className="font-bold text-primary text-sm">Notifications</h4>
-                    <button className="text-[10px] font-bold text-secondary hover:underline">Mark all as read</button>
+                    <h4 className="font-bold text-primary text-sm">{t('admin.notifications')}</h4>
+                    <button className="text-[10px] font-bold text-secondary hover:underline">{t('admin.markAllRead')}</button>
                   </div>
                   <div className="space-y-3">
                     {notifications.map(n => (
                       <div key={n.id} className="flex gap-3 items-start p-2 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer">
                         <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${n.type === 'order' ? 'bg-blue-500' : n.type === 'review' ? 'bg-amber-500' : n.type === 'stock' ? 'bg-red-500' : 'bg-emerald-500'}`}></div>
-                        <div>
-                          <p className="text-xs font-bold text-primary">{n.message}</p>
-                          <p className="text-[10px] text-gray-400">{n.time}</p>
+                          <div>
+                            <p className="text-xs font-bold text-primary">{n.message}</p>
+                            <p className="text-[10px] text-gray-400">{n.time}</p>
+                          </div>
                         </div>
-                      </div>
                     ))}
                   </div>
                 </div>
               </div>
+              <LanguageToggle />
+
               <div className="flex items-center space-x-3 pl-6 border-l border-gray-100">
-                <div className="text-right"><p className="text-xs font-bold text-primary">{user?.name}</p><p className="text-[10px] text-gray-400 uppercase font-bold">{user?.role}</p></div>
+                <div className="text-right"><p className="text-xs font-bold text-primary">{user?.name}</p><p className="text-[10px] text-gray-400 uppercase font-bold">{t('nav.dashboard')}</p></div>
                 <img src={user?.profileImage} className="w-9 h-9 rounded-full object-cover border border-gray-100 shadow-sm" alt="" />
               </div>
             </div>

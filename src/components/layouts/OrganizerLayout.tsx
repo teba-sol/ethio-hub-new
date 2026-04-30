@@ -7,22 +7,25 @@ import {
   Calendar, CreditCard, Star, PieChart, Settings, CheckCircle, Menu, X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { LanguageToggle } from '../LanguageToggle';
 
 export const OrganizerLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const isOnboarding = pathname === '/dashboard/organizer/onboarding';
 
   const menuItems = [
-    { path: '/dashboard/organizer/overview', name: 'Dashboard', icon: BarChart3 },
-    { path: '/dashboard/organizer/festivals', name: 'My Events', icon: Calendar },
-    { path: '/dashboard/organizer/bookings', name: 'Bookings', icon: Ticket },
-    { path: '/dashboard/organizer/revenue', name: 'Revenue', icon: CreditCard },
-    { path: '/dashboard/organizer/reviews', name: 'Reviews', icon: Star },
-    { path: '/dashboard/organizer/analytics', name: 'Analytics', icon: PieChart },
-    { path: '/dashboard/organizer/settings', name: 'Settings', icon: Settings },
+    { path: '/dashboard/organizer/overview', nameKey: 'dashboard.overview', icon: BarChart3 },
+    { path: '/dashboard/organizer/festivals', nameKey: 'dashboard.myEvents', icon: Calendar },
+    { path: '/dashboard/organizer/bookings', nameKey: 'dashboard.bookings', icon: Ticket },
+    { path: '/dashboard/organizer/revenue', nameKey: 'dashboard.revenue', icon: CreditCard },
+    { path: '/dashboard/organizer/reviews', nameKey: 'dashboard.reviews', icon: Star },
+    { path: '/dashboard/organizer/analytics', nameKey: 'dashboard.analytics', icon: PieChart },
+    { path: '/dashboard/organizer/settings', nameKey: 'dashboard.settings', icon: Settings },
   ];
 
   if (isOnboarding) {
@@ -73,14 +76,14 @@ export const OrganizerLayout: React.FC<{ children?: React.ReactNode }> = ({ chil
               }`}
             >
               <item.icon className={`w-5 h-5 ${pathname === item.path ? 'text-white' : 'text-gray-400'}`} />
-              <span>{item.name}</span>
+              <span>{t(item.nameKey)}</span>
             </Link>
           ))}
         </div>
         <div className="p-6 border-t border-gray-50">
           <button onClick={logout} className="w-full flex items-center space-x-4 px-6 py-4 text-gray-400 hover:text-red-500 font-semibold text-sm transition-colors">
             <LogOut className="w-5 h-5" />
-            <span>Logout</span>
+            <span>{t('header.signOut')}</span>
           </button>
         </div>
       </aside>
@@ -102,7 +105,7 @@ export const OrganizerLayout: React.FC<{ children?: React.ReactNode }> = ({ chil
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input 
                 type="text" 
-                placeholder="Search artifacts, trips..." 
+                placeholder={t('admin.searchPlaceholder')}
                 className="w-full bg-ethio-bg border-none rounded-2xl py-3 pl-12 pr-4 text-xs focus:ring-2 focus:ring-primary/10 transition-all" 
               />
             </div>
@@ -111,7 +114,7 @@ export const OrganizerLayout: React.FC<{ children?: React.ReactNode }> = ({ chil
           <div className="flex items-center space-x-6">
             <div className="hidden md:flex items-center space-x-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-full border border-emerald-100">
               <CheckCircle className="w-4 h-4" />
-              <span className="text-[10px] font-bold uppercase tracking-wider">Official Partner</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider">{t('dashboard.approved')}</span>
             </div>
             
             <div className="relative group">
@@ -123,12 +126,12 @@ export const OrganizerLayout: React.FC<{ children?: React.ReactNode }> = ({ chil
               {/* Notification Dropdown */}
               <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 p-4 hidden group-hover:block z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="flex justify-between items-center mb-3">
-                  <h4 className="font-bold text-primary text-sm">Notifications</h4>
-                  <button className="text-[10px] font-bold text-secondary hover:underline">Mark all as read</button>
+                  <h4 className="font-bold text-primary text-sm">{t('admin.notifications')}</h4>
+                  <button className="text-[10px] font-bold text-secondary hover:underline">{t('admin.markAllRead')}</button>
                 </div>
                 <div className="space-y-3">
                   {[
-                    { id: 1, type: 'booking', message: 'New booking from Sarah J.', time: '2m ago' },
+                    { id: 1, type: 'booking', message: t('dashboard.myBookings') + ': Sarah J.', time: '2m ago' },
                     { id: 2, type: 'review', message: '5-star review on Timket 2025', time: '1h ago' },
                     { id: 3, type: 'payout', message: 'Payout of ETB 45,000 processed', time: '1d ago' },
                   ].map(n => (
@@ -144,10 +147,12 @@ export const OrganizerLayout: React.FC<{ children?: React.ReactNode }> = ({ chil
               </div>
             </div>
             
+            <LanguageToggle />
+
             <div className="flex items-center space-x-4 pl-6 border-l border-gray-100">
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-bold text-primary">{user?.name}</p>
-                <p className="text-[9px] text-gray-400 uppercase font-black tracking-tighter">Organizer</p>
+                <p className="text-[9px] text-gray-400 uppercase font-black tracking-tighter">{t('nav.dashboard')}</p>
               </div>
               <img 
                 src={user?.profileImage || 'https://picsum.photos/seed/user/100/100'} 

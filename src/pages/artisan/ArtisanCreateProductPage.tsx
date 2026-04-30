@@ -6,13 +6,18 @@ import {
   AlertCircle, ChevronLeft, Plus
 } from 'lucide-react';
 import { Button, Input, Badge } from '../../components/UI';
+import { DualLanguageField } from '../../components/BilingualInput';
 
 export const ArtisanCreateProductPage: React.FC = () => {
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: '',
+    name_en: '',
+    name_am: '',
     images: [] as string[],
     description: '',
+    description_en: '',
+    description_am: '',
     material: '',
     handmadeBy: '',
     region: '',
@@ -54,7 +59,7 @@ export const ArtisanCreateProductPage: React.FC = () => {
 
    const handleSubmit = async (status: 'Draft' | 'Publish') => {
      // Validate required fields
-     if (!formData.name || previewImages.length === 0 || !formData.description || !formData.price || !formData.stock || !formData.category || !formData.deliveryTime || !formData.shippingFee) {
+     if (!formData.name_en.trim() || !formData.name_am.trim() || previewImages.length === 0 || !formData.description_en.trim() || !formData.description_am.trim() || !formData.price || !formData.stock || !formData.category || !formData.deliveryTime || !formData.shippingFee) {
        alert('Please fill in all required fields marked with *');
        return;
      }
@@ -69,8 +74,12 @@ export const ArtisanCreateProductPage: React.FC = () => {
        }
 
        const productData = {
-         name: formData.name,
-         description: formData.description,
+         name: formData.name_en,
+         name_en: formData.name_en,
+         name_am: formData.name_am,
+         description: formData.description_en,
+         description_en: formData.description_en,
+         description_am: formData.description_am,
          price: parseFloat(formData.price),
          images: previewImages,
          category: formData.category,
@@ -144,11 +153,14 @@ export const ArtisanCreateProductPage: React.FC = () => {
               <h2 className="text-xl font-bold text-primary">Basic Information</h2>
             </div>
             
-            <Input 
-              label="Product Name *" 
-              placeholder="e.g. Handwoven Dorze Cotton Scarf"
-              value={formData.name}
-              onChange={e => setFormData({...formData, name: e.target.value})}
+            <DualLanguageField
+              label="Product Name"
+              englishValue={formData.name_en}
+              amharicValue={formData.name_am}
+              onEnglishChange={value => setFormData({...formData, name: value, name_en: value})}
+              onAmharicChange={value => setFormData({...formData, name_am: value})}
+              englishPlaceholder="e.g. Handwoven Dorze Cotton Scarf"
+              amharicPlaceholder="e.g. በእጅ የተሸመነ የዶርዜ ጥጥ ሻርፕ"
             />
 
             <div className="space-y-3">
@@ -177,12 +189,16 @@ export const ArtisanCreateProductPage: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Description *</label>
-              <textarea 
-                className="w-full h-40 p-4 bg-gray-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10 transition-all"
-                placeholder="Describe the material, cultural background, and handmade process..."
-                value={formData.description}
-                onChange={e => setFormData({...formData, description: e.target.value})}
+              <DualLanguageField
+                label="Description"
+                englishValue={formData.description_en}
+                amharicValue={formData.description_am}
+                onEnglishChange={value => setFormData({...formData, description: value, description_en: value})}
+                onAmharicChange={value => setFormData({...formData, description_am: value})}
+                textarea
+                rows={6}
+                englishPlaceholder="Describe the material, cultural background, and handmade process..."
+                amharicPlaceholder="ቁሳቁሱን፣ ባህላዊ ታሪኩን እና የእጅ ስራ ሂደቱን ይግለጹ..."
               />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input 

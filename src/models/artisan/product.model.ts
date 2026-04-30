@@ -3,8 +3,12 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export interface IProduct extends Document {
   artisanId: mongoose.Types.ObjectId;
   name: string;
+  name_en: string;
+  name_am: string;
   images: string[];
   description: string;
+  description_en: string;
+  description_am: string;
   material?: string;
   handmadeBy?: string;
   region?: string;
@@ -39,11 +43,29 @@ const ProductSchema = new Schema<IProduct>(
       required: true,
       trim: true,
     },
+    name_en: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    name_am: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     images: {
       type: [String],
       default: [],
     },
     description: {
+      type: String,
+      required: true,
+    },
+    description_en: {
+      type: String,
+      required: true,
+    },
+    description_am: {
       type: String,
       required: true,
     },

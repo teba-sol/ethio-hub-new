@@ -2,34 +2,50 @@
 import React from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 
-interface BilingualInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface BilingualInputProps {
   label?: string;
-  name_en: string;
-  name_am: string;
-  value_en: string;
-  value_am: string;
-  onChange_en: (value: string) => void;
-  onChange_am: (value: string) => void;
+  name: string;
+  value: string;
+  onChange: (value: string) => void;
+  otherValue?: string;
   textarea?: boolean;
   rows?: number;
+  className?: string;
+  required?: boolean;
+  placeholder?: string;
+}
+
+interface DualLanguageFieldProps {
+  label: string;
+  englishValue: string;
+  amharicValue: string;
+  onEnglishChange: (value: string) => void;
+  onAmharicChange: (value: string) => void;
+  textarea?: boolean;
+  rows?: number;
+  required?: boolean;
+  englishPlaceholder?: string;
+  amharicPlaceholder?: string;
+  className?: string;
 }
 
 export const BilingualInput: React.FC<BilingualInputProps> = ({
   label,
-  name_en,
-  name_am,
-  value_en,
-  value_am,
-  onChange_en,
-  onChange_am,
+  name,
+  value,
+  onChange,
+  otherValue,
   textarea = false,
   rows = 3,
   className = '',
-  ...props
+  required = false,
+  placeholder,
 }) => {
   const { language } = useLanguage();
 
-  const isAmharic = language === 'am';
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    onChange(e.target.value);
+  };
 
   return (
     <div className={`flex flex-col space-y-1 w-full ${className}`}>
@@ -39,63 +55,85 @@ export const BilingualInput: React.FC<BilingualInputProps> = ({
         </label>
       )}
 
-      <div className="space-y-3">
-        {/* English Input */}
-        <div className={`transition-all ${isAmharic ? 'opacity-60' : ''}`}>
-          <label className="text-[10px] font-bold text-gray-400 ml-1">
-            English {!isAmharic && <span className="text-red-500">*</span>}
-          </label>
-          {textarea ? (
-            <textarea
-              value={value_en}
-              onChange={(e) => onChange_en(e.target.value)}
-              rows={rows}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-              placeholder={`Enter ${name_en} in English...`}
-              required={!isAmharic}
-              {...props as any}
-            />
-          ) : (
-            <input
-              type="text"
-              value={value_en}
-              onChange={(e) => onChange_en(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-              placeholder={`Enter ${name_en} in English...`}
-              required={!isAmharic}
-              {...props}
-            />
-          )}
-        </div>
+      <div>
+        <label className="text-[10px] font-bold text-gray-400 ml-1">
+          {language === 'en' ? 'English' : 'አማርኛ'} {required && <span className="text-red-500">*</span>}
+        </label>
+        {textarea ? (
+          <textarea
+            value={value}
+            onChange={handleChange}
+            rows={rows}
+            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+            placeholder={placeholder || (language === 'en' ? 'Enter in English...' : 'አማርኛ ያስገቡ...')}
+            required={required}
+            dir="ltr"
+          />
+        ) : (
+          <input
+            type="text"
+            value={value}
+            onChange={handleChange}
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+            placeholder={placeholder || (language === 'en' ? 'Enter in English...' : 'አማርኛ ያስገቡ...')}
+            required={required}
+            dir="ltr"
+          />
+        )}
+      </div>
+    </div>
+  );
+};
 
-        {/* Amharic Input */}
-        <div className={`transition-all ${!isAmharic ? 'opacity-60' : ''}`}>
-          <label className="text-[10px] font-bold text-gray-400 ml-1">
-            አማሪች {isAmharic && <span className="text-red-500">*</span>}
-          </label>
-          {textarea ? (
-            <textarea
-              value={value_am}
-              onChange={(e) => onChange_am(e.target.value)}
-              rows={rows}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-              placeholder={`${name_am} በማሪ ይግሉ...`}
-              required={isAmharic}
-              dir="auto"
-              {...props as any}
-            />
-          ) : (
-            <input
-              type="text"
-              value={value_am}
-              onChange={(e) => onChange_am(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-              placeholder={`${name_am} በማሪ ይግሉ...`}
-              required={isAmharic}
-              dir="auto"
-              {...props}
-            />
-          )}
+export const DualLanguageField: React.FC<DualLanguageFieldProps> = ({
+  label,
+  englishValue,
+  amharicValue,
+  onEnglishChange,
+  onAmharicChange,
+  textarea = false,
+  rows = 3,
+  required = true,
+  englishPlaceholder = 'Enter English version...',
+  amharicPlaceholder = 'Enter Amharic version...',
+  className = '',
+}) => {
+  const baseClass = 'w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all';
+  const Field = textarea ? 'textarea' : 'input';
+
+  return (
+    <div className={`space-y-3 ${className}`}>
+      <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-700">
+            English
+          </span>
+          <Field
+            {...(textarea ? { rows } : { type: 'text' })}
+            value={englishValue}
+            onChange={(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onEnglishChange(event.target.value)}
+            className={baseClass}
+            placeholder={englishPlaceholder}
+            required={required}
+            dir="ltr"
+          />
+        </div>
+        <div className="space-y-2">
+          <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-700">
+            Amharic
+          </span>
+          <Field
+            {...(textarea ? { rows } : { type: 'text' })}
+            value={amharicValue}
+            onChange={(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onAmharicChange(event.target.value)}
+            className={baseClass}
+            placeholder={amharicPlaceholder}
+            required={required}
+            dir="auto"
+          />
         </div>
       </div>
     </div>

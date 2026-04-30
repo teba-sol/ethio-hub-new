@@ -4,18 +4,27 @@ import { useRouter } from 'next/navigation';
 import { Calendar as CalIcon, MapPin } from 'lucide-react';
 import { Button } from './UI';
 import { Festival } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { getLocalizedText } from '../utils/getLocalizedText';
 
 export const FestivalCard: React.FC<{ festival: Festival }> = ({ festival }) => {
   const { user } = useAuth();
   const router = useRouter();
+  const { language } = useLanguage();
+
+  const name = getLocalizedText(festival, 'name', language);
+  const shortDesc = getLocalizedText(festival, 'shortDescription', language);
+  const locationName = getLocalizedText(festival as any, 'locationName' as any, language) || 
+    (festival as any).location?.name_en || (festival as any).location?.name_am || 
+    (festival as any).location?.name || '';
 
   return (
     <article className="group relative h-[420px] rounded-3xl overflow-hidden shadow-md border border-white/10">
       <Link href={`/event/${festival.id}`}>
         <img 
           src={festival.coverImage} 
-          alt={festival.name} 
+          alt={name} 
           className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" 
         />
         <div className="absolute inset-0 bg-gradient-to-t from-ethio-dark via-ethio-dark/20 to-transparent" />
@@ -26,11 +35,11 @@ export const FestivalCard: React.FC<{ festival: Festival }> = ({ festival }) => 
           <span>{new Date(festival.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
           <span>•</span>
           <MapPin className="w-4 h-4" />
-          <span>{festival.locationName.split(',')[0]}</span>
+          <span>{locationName.split(',')[0]}</span>
         </div>
-        <h3 className="text-3xl font-serif font-bold mb-3 tracking-tight">{festival.name}</h3>
+        <h3 className="text-3xl font-serif font-bold mb-3 tracking-tight">{name}</h3>
         <p className="text-gray-200 text-xs line-clamp-2 mb-6 font-light max-w-sm opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-2 group-hover:translate-y-0">
-          {festival.shortDescription}
+          {shortDesc}
         </p>
         <div className="flex items-center justify-between pt-4 border-t border-white/10">
           <div className="flex flex-col">

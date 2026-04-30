@@ -4,24 +4,40 @@ import {
   MapPin, Calendar, Clock, User, DollarSign, FileText, 
   Shield, AlertTriangle, MoreVertical, ChevronDown, 
   CreditCard, Flag, History, Download, Ban, Check,
-  LayoutGrid
+  LayoutGrid,
 } from 'lucide-react';
 import { Button, Badge, Input } from '../../components/UI';
 import { useLanguage } from '@/context/LanguageContext';
+import { getLocalizedText } from '@/utils/getLocalizedText';
 
 // --- Helpers ---
-const getString = (val: any): string => {
+const getString = (val: any, language?: string): string => {
   if (typeof val === 'string') return val;
+  if (typeof val === 'number' || typeof val === 'boolean') return String(val);
   if (val && typeof val === 'object') {
+    if (language) {
+      const localized = getLocalizedText(val, 'name', language as any) || 
+                     getLocalizedText(val, 'title', language as any) ||
+                     getLocalizedText(val, 'description', language as any);
+      if (localized) return localized;
+    }
     if (val.en) return String(val.en);
     if (val.am) return String(val.am);
+    if (val.name_en) return String(val.name_en);
+    if (val.name) return getString(val.name);
+    if (val.title_en) return String(val.title_en);
+    if (val.title) return getString(val.title);
+    if (val.description_en) return String(val.description_en);
+    if (val.description) return getString(val.description);
+    if (val.type_en) return String(val.type_en);
+    if (val.type) return getString(val.type);
     return '';
   }
   return String(val || '');
 };
 
 // --- Types ---
-type VerificationStatus = 'Not Submitted' | 'Pending Review' | 'Under Review' | 'Approved' | 'Rejected';
+type VerificationStatus = 'Not Submitted' | 'Pending Approval' | 'Under Review' | 'Approved' | 'Rejected';
 type AccountStatus = 'Active' | 'Suspended' | 'Deleted';
 
 interface VerificationDocument {
@@ -166,14 +182,14 @@ const MOCK_EVENTS: Event[] = Array.from({ length: 8 }).map((_, i) => ({
     accountName: i % 3 === 0 ? 'Addis Events PLC' : 'Cultural Heritage Tours'
   },
   submittedAt: new Date(Date.now() - i * 3600000 * 5).toLocaleString(),
-  status: i === 0 ? 'Pending Review' : i % 3 === 0 ? 'Approved' : i % 4 === 0 ? 'Under Review' : 'Rejected',
+  status: i === 0 ? 'Pending Approval' : i % 3 === 0 ? 'Approved' : i % 4 === 0 ? 'Under Review' : 'Rejected',
   documents: [
     { id: 'D1', name: 'Business License', type: 'License', url: '#', thumbnail: 'https://picsum.photos/seed/doc1/100/100', expiryDate: '2026-12-31', uploadedAt: '2025-10-20' },
     { id: 'D2', name: 'Event Permit', type: 'Permit', url: '#', thumbnail: 'https://picsum.photos/seed/doc2/100/100', uploadedAt: '2025-10-20' }
   ],
   riskBadges: i === 1 ? ['New Organizer', 'High Capacity'] : i === 3 ? ['High Ticket Price'] : [],
   verificationHistory: [
-    { date: '2025-10-20 10:00 AM', action: 'Pending Review', by: 'System' }
+    { date: '2025-10-20 10:00 AM', action: 'Pending Approval', by: 'System' }
   ],
   reviewedAt: i % 3 === 0 ? '2025-10-21 02:00 PM' : undefined,
   reviewedBy: i % 3 === 0 ? 'Admin Sarah' : undefined
@@ -246,6 +262,38 @@ export const AdminEventsPage: React.FC = () => {
     }
   };
 
+  const handleStartReview = async (event: any) => {
+    const isPendingApproval = ['pending_approval', 'Pending Approval'].includes(event.verificationStatus || event.status);
+    if (!isPendingApproval) {
+      setViewEvent(event);
+      return;
+    }
+
+    const previousEvents = [...events];
+    setEvents(prev => prev.map(ev =>
+      ev.id === event.id ? { ...ev, verificationStatus: 'under_review', status: 'under_review' } : ev
+    ));
+
+    setActionLoading(event.id);
+    try {
+      const res = await fetch(`/api/admin/events/${event.id}/start-review`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setViewEvent({ ...event, verificationStatus: 'under_review', status: 'under_review' });
+        fetchEvents();
+      } else {
+        setEvents(previousEvents);
+        alert(data.message || 'Failed to start review');
+      }
+    } catch (error) {
+      setEvents(previousEvents);
+      console.error('Failed to start review:', error);
+      alert('Failed to start review');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleReject = async (id: string) => {
     if (!rejectionReason.trim()) return;
     
@@ -281,7 +329,7 @@ export const AdminEventsPage: React.FC = () => {
 
   const filteredEvents = events.filter((event: any) => {
      const statusMap: Record<string, string> = {
-         'pending_approval': 'Pending Review',
+       'pending_approval': 'Pending Approval',
        'under_review': 'Under Review',
        'approved': 'Approved',
        'rejected': 'Rejected',
@@ -411,7 +459,7 @@ export const AdminEventsPage: React.FC = () => {
                   <span className="text-xs font-bold text-gray-500">Unverified</span>
                 }
                 <span className={`text-xs px-2 py-0.5 rounded-full ${organizer.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                  {organizer.status}
+                  {getString(organizer.status)}
                 </span>
               </div>
             </div>
@@ -423,7 +471,7 @@ export const AdminEventsPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 bg-gray-50 rounded-xl">
               <p className="text-xs text-gray-500 uppercase font-bold">Past Events</p>
-              <p className="text-xl font-bold text-gray-800">{organizer.pastEvents}</p>
+              <p className="text-xl font-bold text-gray-800">{getString(organizer.pastEvents)}</p>
             </div>
             <div className="p-3 bg-gray-50 rounded-xl">
               <p className="text-xs text-gray-500 uppercase font-bold">Total Revenue</p>
@@ -432,13 +480,13 @@ export const AdminEventsPage: React.FC = () => {
             <div className="p-3 bg-gray-50 rounded-xl">
               <p className="text-xs text-gray-500 uppercase font-bold">Cancel Rate</p>
               <p className={`text-xl font-bold ${parseInt(organizer.cancellationRate) > 10 ? 'text-red-600' : 'text-emerald-600'}`}>
-                {organizer.cancellationRate}
+                {getString(organizer.cancellationRate)}
               </p>
             </div>
             <div className="p-3 bg-gray-50 rounded-xl">
               <p className="text-xs text-gray-500 uppercase font-bold">Reports</p>
               <p className={`text-xl font-bold ${organizer.reportHistory > 0 ? 'text-red-600' : 'text-gray-800'}`}>
-                {organizer.reportHistory}
+                {getString(organizer.reportHistory)}
               </p>
             </div>
           </div>
@@ -538,7 +586,7 @@ export const AdminEventsPage: React.FC = () => {
            <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
              <div className="flex justify-between text-sm mb-1">
                <span className="text-emerald-800 font-medium">{t("admin.commissionRate")}:</span>
-               <span className="font-bold text-emerald-900">{event.commissionRate}%</span>
+               <span className="font-bold text-emerald-900">{getString(event.commissionRate)}%</span>
              </div>
              <div className="flex justify-between text-sm">
                <span className="text-emerald-800 font-medium">{t("admin.estimatedCommission")}:</span>
@@ -572,7 +620,18 @@ export const AdminEventsPage: React.FC = () => {
 
   const EventDetailsModal = ({ event, onClose }: { event: Event; onClose: () => void }) => {
     const statusSteps = ['pendingApproval', 'underReview', 'published'];
-    const currentStepIndex = statusSteps.indexOf(event.status === 'Rejected' ? 'underReview' : (event.status === 'Approved' ? 'published' : event.status as any));
+    const normalizedStatus = ((event as any).verificationStatus || event.status) as string;
+    const stepStatusMap: Record<string, string> = {
+      pending_approval: 'pendingApproval',
+      'Pending Approval': 'pendingApproval',
+      under_review: 'underReview',
+      'Under Review': 'underReview',
+      approved: 'published',
+      Approved: 'published',
+      rejected: 'underReview',
+      Rejected: 'underReview',
+    };
+    const currentStepIndex = Math.max(0, statusSteps.indexOf(stepStatusMap[normalizedStatus] || 'pendingApproval'));
 
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -581,7 +640,7 @@ export const AdminEventsPage: React.FC = () => {
           <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white z-10">
             <div>
               <h2 className="text-2xl font-bold text-gray-800">{t("events.eventDetails")}</h2>
-              <p className="text-sm text-gray-500">ID: {event.id} • Submitted: {event.submittedAt}</p>
+              <p className="text-sm text-gray-500">ID: {getString(event.id)} • Submitted: {getString(event.submittedAt)}</p>
             </div>
             <div className="flex gap-2">
         {['pending_approval', 'under_review'].includes((event as any).verificationStatus || event.status) && (
@@ -605,14 +664,14 @@ export const AdminEventsPage: React.FC = () => {
                   <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-bold text-red-700">{t("admin.rejectionReason")}</p>
-                    <p className="text-xs text-red-600 mt-1">{(event as any).rejectionReason}</p>
+                    <p className="text-xs text-red-600 mt-1">{getString((event as any).rejectionReason)}</p>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Re-verification Banner */}
-            {(event as any).isEditedAfterApproval && (event as any).verificationStatus === 'Pending Review' && (
+            {(event as any).isEditedAfterApproval && ['Pending Approval', 'pending_approval'].includes((event as any).verificationStatus) && (
               <div className="mb-6 p-4 bg-amber-50 border border-amber-100 rounded-2xl">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
@@ -703,7 +762,7 @@ export const AdminEventsPage: React.FC = () => {
                      <div>
                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t("events.capacity")}</p>
                        <p className="text-sm font-bold text-gray-800 flex items-center gap-1">
-                         <Shield className="w-3.5 h-3.5 text-primary" /> {event.capacity}
+                         <Shield className="w-3.5 h-3.5 text-primary" /> {getString(event.capacity)}
                        </p>
                      </div>
                   </div>
@@ -718,8 +777,8 @@ export const AdminEventsPage: React.FC = () => {
                     <div className="space-y-4">
                       {event.schedule.map((item, i) => (
                         <div key={i} className="flex justify-between items-center p-3 hover:bg-gray-50 rounded-xl transition-colors border border-transparent hover:border-gray-100">
-                          <span className="text-xs font-bold text-primary">{item.time}</span>
-                          <span className="text-xs text-gray-700 font-medium">{item.activity}</span>
+                          <span className="text-xs font-bold text-primary">{getString(item.time || item.day)}</span>
+                          <span className="text-xs text-gray-700 font-medium">{getString(item.activity || item.title || item.title_en)}</span>
                         </div>
                       ))}
                     </div>
@@ -734,10 +793,10 @@ export const AdminEventsPage: React.FC = () => {
                        {Array.isArray(event.hotels) ? event.hotels.map((h, i) => (
                              <div key={i} className="text-xs flex justify-between items-center p-2 bg-gray-50 rounded-lg">
                                <div>
-                                 <p className="font-bold text-gray-800">{h.name}</p>
-                                 <p className="text-[10px] text-gray-500">{h.distance}</p>
+                                 <p className="font-bold text-gray-800">{getString(h.name || h.name_en)}</p>
+                                 <p className="text-[10px] text-gray-500">{getString(h.distance || h.address)}</p>
                                </div>
-                               <span className="font-bold text-primary">{h.price}</span>
+                               <span className="font-bold text-primary">{getString(h.price || h.pricing || '')}</span>
                              </div>
                            )) : []}
                       </div>
@@ -750,8 +809,8 @@ export const AdminEventsPage: React.FC = () => {
                       <div className="space-y-3">
                          {Array.isArray(event.transportation) ? event.transportation.map((t, i) => (
                            <div key={i} className="p-3 bg-gray-50 rounded-xl">
-                             <p className="text-[10px] font-bold text-primary uppercase mb-1">{t.type} • {t.provider}</p>
-                             <p className="text-[10px] text-gray-600 leading-tight">{t.details}</p>
+                             <p className="text-[10px] font-bold text-primary uppercase mb-1">{getString(t.type || t.type_en)} • {getString(t.provider)}</p>
+                             <p className="text-[10px] text-gray-600 leading-tight">{getString(t.details || t.description || t.description_en)}</p>
                            </div>
                          )) : []}
                       </div>
@@ -771,11 +830,11 @@ export const AdminEventsPage: React.FC = () => {
                           <img src={doc.thumbnail} className="w-full h-full object-cover" alt="" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-bold text-gray-800 text-sm truncate">{doc.name}</p>
-                          <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{doc.type}</p>
+                          <p className="font-bold text-gray-800 text-sm truncate">{getString(doc.name)}</p>
+                          <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{getString(doc.type)}</p>
                           {doc.expiryDate && (
                             <p className="text-[10px] text-amber-600 font-bold mt-1 flex items-center gap-1">
-                              <AlertCircle className="w-3 h-3" /> Expires: {doc.expiryDate}
+                              <AlertCircle className="w-3 h-3" /> Expires: {getString(doc.expiryDate)}
                             </p>
                           )}
                         </div>
@@ -805,18 +864,18 @@ export const AdminEventsPage: React.FC = () => {
                     {event.ticketTypes.map((ticket, i) => (
                       <div key={i} className="flex justify-between items-end border-b border-white/10 pb-4">
                         <div>
-                          <p className="text-xs text-gray-400 font-bold uppercase">{ticket.name} Ticket</p>
+                          <p className="text-xs text-gray-400 font-bold uppercase">{getString(ticket.name)} Ticket</p>
                           <p className="text-2xl font-bold">ETB {ticket.price.toLocaleString()}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-[10px] text-gray-500">Allocation</p>
-                          <p className="text-sm font-bold">{ticket.quantity}</p>
+                          <p className="text-sm font-bold">{getString(ticket.quantity)}</p>
                         </div>
                       </div>
                     ))}
                     <div className="pt-2">
                       <div className="flex justify-between text-sm text-emerald-400 font-bold">
-                        <span>Platform Commission ({event.commissionRate}%)</span>
+                        <span>Platform Commission ({getString(event.commissionRate)}%)</span>
                         <span>ETB {calculateEstimatedCommission(event).toLocaleString()}</span>
                       </div>
                     </div>
@@ -835,7 +894,7 @@ export const AdminEventsPage: React.FC = () => {
                           <div className="flex flex-wrap gap-2">
                             {Array.isArray(event.services) ? event.services.map((s: any, i: number) => (
                               <span key={`service-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
-                                {typeof s === 'string' ? s : (s?.name || s?.description || 'Service')}
+                                {getString(s?.name || s?.name_en || s?.description || s?.description_en || s || 'Service')}
                               </span>
                             )) : null}
                           </div>
@@ -846,7 +905,7 @@ export const AdminEventsPage: React.FC = () => {
                           {(event.policies || []).map((p, i) => (
                             <li key={i} className="text-xs text-gray-600 flex items-start gap-3">
                               <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0"></div>
-                              {p}
+                              {getString(p)}
                             </li>
                           ))}
                         </ul>
@@ -867,13 +926,13 @@ export const AdminEventsPage: React.FC = () => {
                     </div>
                     <div>
                        <p className="font-bold text-gray-900">{getString(event.organizer.name)}</p>
-                      <p className="text-xs text-gray-500">{event.organizer.email}</p>
+                      <p className="text-xs text-gray-500">{getString(event.organizer.email)}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-gray-50 p-3 rounded-xl text-center">
                       <p className="text-[10px] text-gray-400 font-bold uppercase">{t("events.pastEvents")}</p>
-                      <p className="text-lg font-bold text-gray-800">{event.organizer.pastEvents}</p>
+                      <p className="text-lg font-bold text-gray-800">{getString(event.organizer.pastEvents)}</p>
                     </div>
                     <div className="bg-gray-50 p-3 rounded-xl text-center">
                       <p className="text-[10px] text-gray-400 font-bold uppercase">{t("events.verified")}</p>
@@ -893,7 +952,7 @@ export const AdminEventsPage: React.FC = () => {
                     {event.riskBadges.length > 0 ? (
                       event.riskBadges.map((badge, idx) => (
                         <div key={idx} className="flex items-center gap-3 p-3 bg-amber-50 text-amber-700 rounded-xl text-xs font-bold border border-amber-100">
-                          <AlertTriangle className="w-4 h-4 shrink-0" /> {badge}
+                          <AlertTriangle className="w-4 h-4 shrink-0" /> {getString(badge)}
                         </div>
                       ))
                     ) : (
@@ -974,7 +1033,7 @@ export const AdminEventsPage: React.FC = () => {
                 className="pl-9 pr-8 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 border-none cursor-pointer hover:bg-gray-100 appearance-none"
               >
                 <option value="All">{t("common.all")}</option>
-                <option value="Pending Review">{t("status.pendingApproval")}</option>
+                <option value="Pending Approval">{t("status.pendingApproval")}</option>
                 <option value="Under Review">{t("status.underReview")}</option>
                 <option value="Approved">{t("status.approved")}</option>
                 <option value="Rejected">{t("status.rejected")}</option>
@@ -1127,7 +1186,7 @@ export const AdminEventsPage: React.FC = () => {
                         <button 
                           className="p-1.5 text-gray-400 hover:text-primary transition-colors"
                           title={t("documents.preview")}
-                          onClick={() => setViewEvent(event)}
+                          onClick={() => handleStartReview(event)}
                         >
                           <Eye className="w-4 h-4" />
                         </button>
@@ -1145,7 +1204,7 @@ export const AdminEventsPage: React.FC = () => {
                          event.verificationStatus === 'under_review' || event.verificationStatus === 'Under Review' ? t("status.underReview") : 
                          (event.verificationStatus === 'pending_approval' || event.verificationStatus === 'Pending Approval') ? 
                            ((event as any).reverificationRequested ? t("status.pendingReVerification") : t("status.pendingApproval")) : 
-                           event.status || t("status.draft")}
+                           getString(event.status) || t("status.draft")}
                       </Badge>
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -1154,11 +1213,11 @@ export const AdminEventsPage: React.FC = () => {
                          variant="ghost" 
                          size="sm" 
                          className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest"
-                         onClick={() => setViewEvent(event)}
+                         onClick={() => handleStartReview(event)}
                        >
                          {t("admin.review")}
                        </Button>
-                      {['Pending Review', 'Under Review', 'pending_review', 'under_review'].includes(event.status) ? (
+                      {['Pending Approval', 'Under Review', 'pending_approval', 'under_review'].includes(event.status) ? (
                         <div className="relative">
                           <button 
                             className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 bg-gray-50"

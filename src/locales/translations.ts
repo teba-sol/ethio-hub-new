@@ -6,7 +6,7 @@ export interface TranslationDictionary {
 
 export const translations: Record<Language, TranslationDictionary> = {
   en: {
-    // Navigation
+    // Navigation (Original English - Kept as is for reference)
     nav: {
       home: "Heritage",
       products: "Marketplace",
@@ -17,8 +17,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       logout: "Logout",
       dashboard: "Dashboard"
     },
-
-    // Header
+    // Header (Original English)
     header: {
       searchPlaceholder: "Search...",
       welcome: "Welcome",
@@ -37,8 +36,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       loginNow: "Login Now",
       cancel: "Cancel"
     },
-
-    // Cart & Checkout
+    // Cart & Checkout (Original English)
     cart: {
       yourCart: "Your Cart",
       selectPayment: "Select Payment",
@@ -59,8 +57,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       payNow: "Pay Now",
       secureCheckout: "Secure checkout powered by Chapa & Telebirr"
     },
-
-    // Footer
+    // Footer (Original English)
     footer: {
       tagline: "Preserving centuries of Ethiopian craftsmanship through a secure, unified marketplace aligned with the Digital Ethiopia 2025 strategy.",
       heritageExplorer: "Heritage Explorer",
@@ -82,8 +79,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       terms: "Terms",
       international: "International"
     },
-
-    // Common UI
+    // Common UI (Original English)
     common: {
       search: "Search",
       filter: "Filter",
@@ -111,8 +107,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       yes: "Yes",
       no: "No"
     },
-
-    // Auth
+    // Auth (Original English)
     auth: {
       email: "Email",
       password: "Password",
@@ -124,19 +119,27 @@ export const translations: Record<Language, TranslationDictionary> = {
       signUp: "Sign Up",
       signIn: "Sign In"
     },
-
-    // Dashboard
+    // Dashboard (Original English)
     dashboard: {
       overview: "Overview",
       settings: "Settings",
       profile: "Profile",
       notifications: "Notifications",
       bookings: "My Bookings",
+      myBookings: "My Bookings",
       payments: "Payments",
-      wishlist: "Wishlist"
+      wishlist: "Wishlist",
+      myOrders: "My Orders",
+      myEvents: "My Events",
+      products: "Products",
+      orders: "Orders",
+      revenue: "Revenue",
+      reviews: "Reviews",
+      analytics: "Analytics",
+      helpCenter: "Help Center",
+      approved: "Approved"
     },
-
-     // Admin
+    // Admin (Original English)
     admin: {
       verificationModeration: "Verification & Moderation",
       userVerificationDesc: "Review and verify artisan and organizer accounts.",
@@ -185,7 +188,6 @@ export const translations: Record<Language, TranslationDictionary> = {
       optionalNote: "Optional Note to Organizer",
       optionalNotePlaceholder: "Good luck with your event!...",
       confirmApproval: "Confirm Approval",
-      // Admin Layout translations
       dashboard: "Dashboard",
       userManagement: "User Management",
       verificationAndModeration: "Verification & Moderation",
@@ -215,7 +217,6 @@ export const translations: Record<Language, TranslationDictionary> = {
       endDate: "End Date",
       apply: "Apply",
       clear: "Clear",
-      // User Verification Page translations
       loadingVerificationRequests: "Loading verification requests...",
       noVerificationRequests: "No verification requests found",
       tryAdjustingFilters: "Try adjusting your filters",
@@ -247,42 +248,40 @@ export const translations: Record<Language, TranslationDictionary> = {
       paymentInfo: "Payment Info",
       noDocumentsUploaded: "No documents uploaded",
       uploadedOn: "Uploaded on",
-         verificationRequest: "Verification Request",
-        // Product Verification Page translations
-        productVerification: "Product Verification",
-        productVerificationDesc: "Ensure cultural authenticity and quality of artisan products.",
-        exportLogs: "Export Logs",
-        searchProducts: "Search products, artisans, or SKUs...",
-        loadingProducts: "Loading products...",
-        noProductsFound: "No products found",
-        approveProduct: "Approve Product",
-        rejectProduct: "Reject Product",
-        rejectProductTitle: "Reject Product",
-        rejectProductDesc: "Rejecting {name}. This will notify the artisan.",
-        rejectionReasonLabel: "Reason",
-        internalNote: "Internal Note (Admin Only)",
-        internalNotePlaceholder: "Internal details for audit trail...",
-        confirmingRejection: "Confirm Rejection",
-        canceling: "Cancel",
-        approving: "Approving...",
-        rejecting: "Rejecting...",
-        productApproved: "Product approved successfully!",
-        productRejected: "Product rejected. The artisan has been notified.",
-        errorApproving: "Failed to approve product",
-        errorRejecting: "An error occurred while rejecting the product",
-        materials: "Materials",
-        careInstructions: "Care Instructions",
-        specs: "Specs",
-        fee: "Fee",
-        financials: "Financials",
-        listingPrice: "Listing Price",
-        commission15: "Commission (15%)",
-        selectedCount: "Selected",
-        approveAll: "Approve All",
-        sku: "SKU"
+      verificationRequest: "Verification Request",
+      productVerification: "Product Verification",
+      productVerificationDesc: "Ensure cultural authenticity and quality of artisan products.",
+      exportLogs: "Export Logs",
+      searchProducts: "Search products, artisans, or SKUs...",
+      loadingProducts: "Loading products...",
+      noProductsFound: "No products found",
+      approveProduct: "Approve Product",
+      rejectProduct: "Reject Product",
+      rejectProductTitle: "Reject Product",
+      rejectProductDesc: "Rejecting {name}. This will notify the artisan.",
+      rejectionReasonLabel: "Reason",
+      internalNote: "Internal Note (Admin Only)",
+      internalNotePlaceholder: "Internal details for audit trail...",
+      confirmingRejection: "Confirm Rejection",
+      canceling: "Canceling",
+      approving: "Approving...",
+      rejecting: "Rejecting...",
+      productApproved: "Product approved successfully!",
+      productRejected: "Product rejected. The artisan has been notified.",
+      errorApproving: "Failed to approve product",
+      errorRejecting: "An error occurred while rejecting the product",
+      materials: "Materials",
+      careInstructions: "Care Instructions",
+      specs: "Specs",
+      fee: "Fee",
+      financials: "Financials",
+      listingPrice: "Listing Price",
+      commission15: "Commission (15%)",
+      selectedCount: "Selected",
+      approveAll: "Approve All",
+      sku: "SKU"
     },
-
-    // User Verification
+    // User Verification (Original English)
     userVerification: {
       verificationRequests: "Verification Requests",
       businessName: "Business Name",
@@ -295,8 +294,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       underReview: "Under Review",
       pending: "Pending"
     },
-
-    // Events
+    // Events (Original English)
     events: {
       eventVerification: "Event Verification",
       eventVerificationDesc: "Review, approve, and audit event submissions.",
@@ -339,8 +337,7 @@ export const translations: Record<Language, TranslationDictionary> = {
         risk: "Risk Analysis"
       }
     },
-
-    // Products
+    // Products (Original English)
     products: {
       productVerification: "Product Verification",
       artisanProfile: "Artisan Profile",
@@ -352,8 +349,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       shipping: "Shipping",
       deliveryTime: "Delivery Time"
     },
-
-    // Forms
+    // Forms (Original English)
     forms: {
       required: "Required",
       optional: "Optional",
@@ -363,15 +359,13 @@ export const translations: Record<Language, TranslationDictionary> = {
       addImage: "Add Image",
       addFile: "Add File"
     },
-
-    // Documents
+    // Documents (Original English)
     documents: {
       files: "Files",
       preview: "Preview",
       download: "Download"
     },
-
-    // Status & Badges
+    // Status & Badges (Original English)
     status: {
       active: "Active",
       suspended: "Suspended",
@@ -383,8 +377,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       underReview: "Under Review",
       pendingReVerification: "Pending Re-verification"
     },
-
-    // Errors & Messages
+    // Errors & Messages (Original English)
     messages: {
       somethingWentWrong: "Something went wrong",
       tryAgain: "Please try again",
@@ -392,385 +385,591 @@ export const translations: Record<Language, TranslationDictionary> = {
       changesSaved: "Changes saved successfully",
       deleteConfirm: "Are you sure you want to delete this item?",
       actionRequired: "Action Required"
-    }
-  },
+    },
+    // Public Pages (Original English)
+    home: {
+      unifiedPlatform: "Unified Cultural Platform",
+      discoverHeart: "Discover the Heart of",
+      ethiopianHeritage: "Ethiopian Heritage.",
+      verifiedArtisans: "Verified Artisans",
+      annualFestivals: "Annual Festivals",
+      globalShipments: "Global Shipments",
+      heritageScore: "Heritage Score",
+      communityFavorites: "Community Favorites",
+      topRatedCollections: "Top Rated Collections",
+      highlyAcclaimed: "Highly acclaimed pieces loved by our global community.",
+      exploreTopRated: "Explore Top Rated",
+      masterArtisanCatalog: "Master Artisan Catalog",
+      directTrade: "Direct trade pieces hand-selected for authenticity and quality.",
+      viewAllArtifacts: "View All Artifacts",
+      experienceSoul: "Experience the Soul of Ethiopia",
+      fromVibrant: "From the vibrant processions of Timket to the mesmerizing bonfires of Meskel, immerse yourself in living history.",
+      secureSpot: "Secure your spot at these sacred gatherings with verified local support.",
+      liveHappening: "Live / Happening Now",
+      upcomingEvents: "Upcoming Events",
+      whyChooseUs: "Why Choose EthioCraft Hub?",
+      verifiedOrganizers: "Verified Organizers",
+      verifiedOrganizersDesc: "Every event organizer is vetted by the Ministry of Tourism for authenticity.",
+      securePayment: "Secure Payment",
+      securePaymentDesc: "Seamless transactions via Telebirr and Chapa with buyer protection.",
+      authenticHandmade: "Authentic Handmade",
+      authenticHandmadeDesc: "Direct from master artisans, preserving centuries of craftsmanship.",
+      easyRefund: "Easy Refund Policy",
+      easyRefundDesc: "Worry-free shopping with our transparent return and refund process.",
+      professionalMission: "Professional Mission",
+      digitalInnovation: "Digital Innovation in Cultural Commerce.",
+      digitalInnovationDesc: "Ethio-Craft Hub serves as the official digital infrastructure for the preservation and trade of Ethiopian cultural assets, aligned with national tourism strategies for 2025.",
+      digitalInnovationPrefix: "Digital Innovation in",
+      digitalInnovationSuffix: "Cultural Commerce.",
+      bridgingTradition: "Bridging Tradition & Technology",
+      bridgingTraditionDesc: "We are building the bridge between Ethiopia's master artisans and the global marketplace. By leveraging secure digital payments and verified logistics, we eliminate intermediaries and ensure that the true value of heritage craftsmanship goes back to the creators.",
+      authenticityGuaranteed: "Authenticity Guaranteed",
+      authenticityGuaranteedDesc: "Every item is vetted by our heritage council. We trace the lineage of each artifact to ensure it meets the Ministry of Tourism's standards.",
+      communityFirst: "Community First",
+      communityFirstDesc: "We are a collective. 5% of all platform fees are reinvested into artisan training programs and digital literacy workshops.",
+      globalReach: "Global Reach",
+      globalReachDesc: "From Addis Ababa to New York, we handle the complex logistics of international art trade, making Ethiopian culture accessible to the world.",
+      guidedByExperts: "Guided by Industry Experts",
+      preservingSoul: "Preserving our soul, one artifact at a time.",
+      directorHeritage: "Director of Heritage",
+      headArtisanRelations: "Head of Artisan Relations",
+      leadTechArchitect: "Lead Tech Architect",
+      globalLogistics: "Global Logistics",
+      artisansEmpowered: "Artisans Empowered",
+      directRevenueGenerated: "Direct Revenue Generated",
+      aboutTitle: "Ethio-Craft Hub",
+      aboutSubtitle: "Preserving Ethiopia's cultural heritage through digital innovation.",
+      mission: "Our Mission",
+      vision: "Our Vision",
+      values: "Our Values",
+      leadership: "Our Leadership",
+      heritageDescription: "Ethio-Craft Hub serves as the official digital infrastructure...",
+      bridgingDescription: "We are building the bridge between Ethiopia's master artisans...",
+      authenticity: "Authenticity Guaranteed",
+     community: "Community First",
+      global: "Global Reach",
+      // Cart & Filters
+      emptyCart: "Your cart is empty",
+      continueShopping: "Continue Shopping",
+      showFilters: "Show Filters",
+      hideFilters: "Hide Filters",
+      clearAllFilters: "Clear all filters",
+      marketplace: "Marketplace",
+      discoverArtifacts: "Discover authentic Ethiopian artifacts",
+      noProductsFound: "No products found",
+      tryAdjustingSearch: "Try adjusting your search or filters",
+      sortByFeatured: "Featured"
+    },
+    festival: {
+      hero: {
+        badge: "Official Holiday Directory",
+        titleLine1: "Experience the Sacred",
+        titleLine2: "Traditions of Ethiopia",
+        description: "Join millions in celebrating Ethiopia's ancient religious festivals, historical commemorations, and vibrant cultural holidays."
+      },
+      searchPlaceholder: "Search festivals or locations...",
+      types: {
+        religious: "Religious",
+        historical: "Historical",
+        harvest: "Harvest",
+        newyear: "New Year"
+      },
+      featured: {
+        heading: "Featured Celebration",
+        badge: "Trending Now"
+      },
+      viewDetails: "View Details",
+      empty: {
+        title: "No festivals found",
+        message: "Try adjusting your search or filters to find what you're looking for."
+      },
+      searchResults: "Search Results"
+    },
+    reviews: {
+      verifiedPurchase: "Verified Purchase",
+      reviewedOn: "Reviewed on",
+      helpful: "Helpful",
+      thankFeedback: "Thank you for your feedback",
+      report: "Report",
+      reported: "Reported",
+      reportTitle: "Report this review",
+      optionalReason: "Optional: Why are you reporting this?",
+      reasons: {
+        offTopic: { label: "Off topic", desc: "Not about the product" },
+        inappropriate: { label: "Inappropriate", desc: "Disrespectful, hateful, obscene" },
+        fake: { label: "Fake", desc: "Paid for, inauthentic" },
+        other: { label: "Other", desc: "Something else" }
+      },
+      guidelineNote: "We'll check if this review meets our community guidelines. If it doesn't, we'll remove it.",
+      cancel: "Cancel",
+      submit: "Submit"
+     }
+   },
 
    am: {
-     // Navigation
-     nav: {
-       home: "ልምምር",
-       products: "መገበያ",
-       festivals: "በዓላት",
-       about: "ተልእኮአችን",
-       login: "ግባ",
-       register: "ተመዝገብ",
-       logout: "ውጣ",
-       dashboard: "ዳሽ ቦርድ"
-     },
+    // ማሰሻ (Navigation)
+    nav: {
+      home: "ቅርስ",
+      products: "ገበያ",
+      festivals: "በዓላት",
+      about: "ተልዕኳችን",
+      login: "ግባ",
+      register: "ተመዝገብ",
+      logout: "ውጣ",
+      dashboard: "ዳሽቦርድ"
+    },
 
-      // Common UI
-      common: {
-        search: "ፍለጋ",
-        filter: "አጣራ",
-        sort: "አስተሳሰር",
-        viewAll: "ሁሉን እንይ",
-        loadMore: "ተጫውር",
-        noResults: "የለውም የተገኘ",
-        all: "ሁሉን",
-        saving: "በማስቀመጥ ላይ...",
-        saved: "ተቀምጧል",
-        delete: "ሰርዝ",
-        edit: "አስተካክል",
-        cancel: "ይቅር",
-        confirm: "ይረጋገጡ",
-        submit: "አስገባ",
-        back: "ወደኋላ",
-        next: "የቀጥለው",
-        previous: "የመጨረሻው",
-        close: "ዝጋ",
-        loading: "በማስገባት ላይ...",
-        error: "ስህተት",
-        success: "ስኬት",
-        warning: "ማስጠንቀቂያ",
-        info: "መረጃ",
-        yes: "አዎ",
-        no: "አይ"
-      },
+    // ራስጌ (Header)
+    header: {
+      searchPlaceholder: "ፈልግ...",
+      welcome: "እንኳን ደህና መጣችሁ",
+      signInRegister: "ግባ / ተመዝገብ",
+      newHere: "አዲስ ነዎት?",
+      myOrders: "ትዕዛዞቼ",
+      messageCenter: "የመልዕክት ማዕከል",
+      payments: "ክፍያ",
+      wishlist: "የምኞት ዝርዝር",
+      settings: "ቅንብሮች",
+      helpCenter: "የእርዳታ ማዕከል",
+      disputes: "አለመግባባቶች",
+      signOut: "ውጣ",
+      loginRequired: "መግባት ያስፈልጋል",
+      loginDesc: "ወደ ክፍያ ለመቀጠል እባክዎ በቱሪስትነት ይግቡ።",
+      loginNow: "አሁን ግባ",
+      cancel: "ይቅር"
+    },
 
-    // Auth
+    // ጋሪ እና ክፍያ (Cart & Checkout)
+    cart: {
+      yourCart: "ጋሪዎ",
+      selectPayment: "ክፍያ ምረጥ",
+      choosePayment: "ትዕዛዝዎን ለማጠናቀቅ ደህንነቱ የተጠበቀ የክፍያ ዘዴ ይምረጡ።",
+      chapa: "ቻፓ",
+      telebirr: "ቴሌብር",
+      payWithCardBank: "በካርድ / ባንክ ክፈል",
+      mobileMoney: "የሞባይል ገንዘብ",
+      processingPayment: "ክፍያ በማስኬድ ላይ",
+      paymentWait: "ግብይትዎን ደህንነቱ በተጠበቀ ሁኔታ ማስኬድ እንደምንችል እባክዎ ይጠብቁ...",
+      orderConfirmedMsg: "ለግዢዎ እናመሰግናለን። የማረጋገጫ ኢሜይል ተልኳል።",
+      transactionId: "የግብይት መታወቂያ",
+      subtotal: "ንዑስ ድምር",
+      shipping: "መጓጓዣ",
+      total: "ጠቅላላ",
+      proceedToCheckout: "ወደ ክፍያ ቀጥል",
+      back: "ተመለስ",
+      payNow: "አሁን ክፈል",
+      secureCheckout: "በቻፓ እና ቴሌብር የተጎላበተ ደህንነቱ የተጠበቀ ክፍያ"
+    },
+
+    // ግርጌ (Footer)
+    footer: {
+      tagline: "የኢትዮጵያን የብዙ መቶ ዘመናት የእጅ ጥበብ ሥራ ከዲጂታል ኢትዮጵያ 2025 ስትራቴጂ ጋር በተጣጣመ ደህንነቱ በተጠበቀ፣ በአንድነት ባለው ገበያ ማስጠበቅ።",
+      heritageExplorer: "የቅርስ አሳሽ",
+      curatedMarketplace: "የተመረጠ ገበያ",
+      sacredCelebrations: "ቅዱስ ክብረ በዓላት",
+      artisanStories: "የጥበብ ባለሙያዎች ተረቶች",
+      regionalGuides: "የክልል መመሪያዎች",
+      supportTrust: "ድጋፍ እና እምነት",
+      helpCenter: "የእርዳታ ማዕከል",
+      authenticityShield: "የትክክለኛነት ጋሻ",
+      shippingReturns: "መላኪያ እና መመለሻ",
+      contactOffice: "የቅርስ ጽህፈት ቤት ያግኙ",
+      hubDispatch: "ማዕከል መላኪያ",
+      newsletterText: "ለበዓላት ቲኬቶች እና አዳዲስ ቅርሶች ቅድመ ተደራሽነት ከ50,000+ አሳሾች ጋር ይቀላቀሉ።",
+      emailPlaceholder: "የኢሜይል አድራሻ",
+      subscribe: "ደንበኛ ለመሆን",
+      copyright: "© 2025 ኢትዮ-ክራፍት ሃብ • የባህል አንድነት መረብ",
+      privacy: "ግላዊነት",
+      terms: "ውሎች",
+      international: "አለም አቀፍ"
+    },
+
+    // የጋራ በይነገጽ (Common UI)
+    common: {
+      search: "ፈልግ",
+      filter: "አጣራ",
+      sort: "ደርድር",
+      viewAll: "ሁሉንም ተመልከት",
+      loadMore: "ተጨማሪ ጫን",
+      noResults: "ምንም ውጤት አልተገኘም",
+      all: "ሁሉም",
+      saving: "በማስቀመጥ ላይ...",
+      saved: "ተቀምጧል",
+      delete: "ሰርዝ",
+      edit: "አርትዕ",
+      cancel: "ይቅር",
+      confirm: "አረጋግጥ",
+      submit: "አስገባ",
+      back: "ተመለስ",
+      next: "ቀጣይ",
+      previous: "ቀዳሚ",
+      close: "ዝጋ",
+      loading: "በመጫን ላይ...",
+      error: "ስህተት",
+      success: "ተሳክቷል",
+      warning: "ማስጠንቀቂያ",
+      info: "መረጃ",
+      yes: "አዎ",
+      no: "አይ"
+    },
+
+    // ማረጋገጫ (Auth)
     auth: {
-      email: "ኢሜል",
-      password: "የማለፊያ ቃል",
-      confirmPassword: "የማለፊያ ቃል አድርገው ይገልጹ",
-      forgotPassword: "የማለፊያ ቃላትን ረስተዋል?",
-      rememberMe: "አስታውስኝ",
+      email: "ኢሜይል",
+      password: "የይለፍ ቃል",
+      confirmPassword: "የይለፍ ቃል አረጋግጥ",
+      forgotPassword: "የይለፍ ቃል ረሳሁ?",
+      rememberMe: "አስታውሰኝ",
       noAccount: "መለያ የለዎትም?",
       haveAccount: "መለያ አለዎት?",
       signUp: "ተመዝገብ",
       signIn: "ግባ"
     },
 
-    // Dashboard
+    // ዳሽቦርድ (Dashboard)
     dashboard: {
       overview: "አጠቃላይ እይታ",
       settings: "ቅንብሮች",
       profile: "መገለጫ",
-      notifications: "ማስታወቂያዎች",
-      bookings: "የእኔ ትዕዛዞች",
+      notifications: "ማሳወቂያዎች",
+      bookings: "የእኔ ቦኪንጎች",
+      myBookings: "የእኔ ቦኪንጎች",
       payments: "ክፍያዎች",
-      wishlist: "የምፈልጋቸው"
+      wishlist: "የምኞት ዝርዝር",
+      myOrders: "ትዕዛዞቼ",
+      myEvents: "ዝግጅቶቼ",
+      products: "ምርቶች",
+      orders: "ትዕዛዞች",
+      revenue: "ገቢ",
+      reviews: "ግምገማዎች",
+      analytics: "ትንታኔዎች",
+      helpCenter: "የእርዳታ ማዕከል",
+      approved: "ጸድቋል"
     },
 
-      // Admin
-      admin: {
-        verificationModeration: "የማረጋገጫ እና አስተዳደር",
-        userVerificationDesc: "የአርቲስቶች እና አዘጋጅ መለያዎችን ይመልከቱ እና ያረጋግጡ።",
-        eventVerificationDesc: "የዓለም አቀፍ ማስተናገዶችን ይመልከቱ፣ ይስማሙ፣ እና ይፈትሉ።",
-        userVerifications: "የተጠቃሚ ማረጋገጫዎች",
-        eventVerifications: "የዓለም አቀፍ ማረጋገጫዎች",
-        productVerifications: "የምርት ማረጋገጫዎች",
-        pendingUsers: "የተዘገዩ ተጠቃሚዎች",
-        pendingEvents: "የተዘገዩ ክስተቶች",
-        pendingProducts: "የተዘገዩ ምርቶች",
-        pendingRequests: "የተዘገዩ ጥያቄዎች",
-        approvedUsers: "ፈቃደኛ ተጠቃሚዎች",
-        rejectedRequests: "የተወገዱ ጥያቄዎች",
-        underReview: "በመገምገም ላይ",
-        activeArtisans: "ንቁ አርቲስቶች",
-        totalRevenue: "ጠቅላላ ገቢ",
-        allRoles: "ሁሉን ሚናዎች",
-        allStatus: "ሁሉን ሁኔታዎች",
-        dashboard: "ዳሽቦርድ",
-        userManagement: "የተጠቃሚ አስተዳደር",
-        verificationAndModeration: "የማረጋገጫ እና አስተዳደር",
-        management: "አስተዳደር",
-        revenueAndCommission: "ገቢ እና ኮሚሽን",
-        reportsAndModeration: "ሪፖርቶች እና አስተዳደር",
-        systemLogs: "የስርዓት ማስታወቂያዎች",
-        settings: "ቅንብሮች",
-        adminPanel: "የአስተዳዳሪ ፓነል",
-        mainMenu: "ዋና ማንዊ",
-        searchPlaceholder: "ተጠቃሚዎችን፣ ክስተቶችን፣ ምዝባኔዎችን ይፈልጉ...",
-        notifications: "ማስታወቂያዎች",
-        markAllRead: "ሁሉንም እንደተነበቡ ምልክት አድርግ",
-        viewAllNotifications: "ሁሉንም ማስታወቂያዎች ይመልከቱ",
-        signOut: "ውጣ",
-        newRegistration: "አዲስ ምዝባኔ",
-        systemAlert: "የስርዓት ማንቂያ",
-        quickFilters: {
-          allRequests: "ሁሉን ጥያቄዎች",
-          organizerRequests: "የአዘጋጅ ጥያቄዎች",
-          artisanRequests: "የአርቲስት ጥያቄዎች",
-          pending: "በመጠባበቅ ላይ",
-          approved: "ፈቃደኛ",
-          rejected: "ወጥፍጥ"
-        },
-        startDate: "የጀመረበት ቀን",
-        endDate: "የመጨረሰበት ቀን",
-        apply: "ተግበር",
-        clear: "አጽዳ",
-        viewProfile: "መገለጫን እይ",
-        businessInfo: "የንግድ መረጃ",
-        verificationTimeline: "የማረጋገጫ እቅድ",
-        approveConfirmation: "ይህን እርግጠኛ ነዎት {name} ለማረጋገጥ?",
-        rejectConfirmation: "ይህን {name} ለመቃለስ እርግጠኛ ነዎት?",
-        approveConfirmationEvent: "ይህን {event} ለማረጋገጥ እርግጠኛ ነዎት? ይህ ክስተት በፕላትፎርሙ ላይ ይገኛል።",
-        approvalNote: "ማስታወቂያ (አስፈላጊ ያልሆነ)",
-        rejectionReasonRequired: "የአለመቀበል ምክንያት ያስፈልጋል",
-        statusNotSubmitted: "ያልተላከ",
-        statusSubmitted: "ተላክቷል",
-        statusUnderReview: "በመገምገም ላይ",
-        statusApproved: "ፈቃደኛ",
-        statusRejected: "ወጥፍጥ",
-        statusModificationRequested: "የቀረበ ማስተካከል",
-        commissionRate: "የኮሚሽን መመንት",
-        estimatedCommission: "የተገመተ ኮሚሽን",
-        optionalNote: "አማራጭ ማስታወቂያ",
-        optionalNotePlaceholder: "በዓለም አቀፍዎ ላይ ያለህን ደስታ ይመኝልሃል...",
-        confirmApproval: "ማረጋገጫ ያረጋግጡ",
-        confirmRejection: "ውድድትን ያረጋግጡ",
-        customMessage: "ለአዘጋጅ የተለየ መልዕክት",
-        customMessagePlaceholder: "ይህ ክስተት የለም ለምን እንደሆነ ዝርዝር ይግለጹ...",
-        // User Verification Page translations
-        loadingVerificationRequests: "የማረጋገጫ ጥያቄዎች በመጫን ላይ...",
-        noVerificationRequests: "የማረጋገጫ ጥያቄዎች አውጣም",
-        tryAdjustingFilters: "ፍለጋዎችን ይስተናጥሉ",
-        userInformation: "የተጠቃሚ መረጃ",
-        decisionPanel: "የውሳኔ ፓነል",
-        approveAccount: "መለያውን አረጋግጡ",
-        rejectionReason: "የመቃለል ምክንያት",
-        rejectionReasonRequiredText: "የመቃለል ምክንያት ያስፈልጋል",
-        rejectRequest: "��ያቄውን ውድድ",
-        accountCreated: "መለያ ተፈጠረ",
-        documentsSubmitted: "ሰነዶች ተላኩ",
-        approvedStatus: "ፈቃደኛ",
-        rejectedStatus: "ወጥፍጥ",
-        thisArtisanIsApproved: "ይህ አርቲስት ፈቃደኛ ነው",
-        fullDashboardAccess: "ሙሉ የዳሽቦርድ መገኘት አላቸው",
-        previousRejectionReason: "ያለፈበት የመቃለል ምክንያት",
-        approvingWillEnable: "ማረጋገጥ በ� automático የአርቲስትን ባህሪዎች ያንቁ እና የዳሽቦርድ መገኘት ይሰጣል።",
-        email: "ኢሜል",
-        phone: "ስልክ",
-        registrationDate: "የምዝባኔ ቀን",
-        profileCompletion: "የመገለጫ መጠናቀቂያ",
-        paymentInfo: "የክፍያ መረጃ",
-        noDocumentsUploaded: "ምንም ሰነዶች አልተሰቀመም",
-        uploadedOn: "በተሰቀመበት",
-        verificationRequest: "የማረጋገጫ ጥያቄ",
-        // Product Verification Page translations (Amharic)
-        productVerification: "የምርት ማረጋገጫ",
-        productVerificationDesc: "የአርቲስት ምርቶች የባህላ ልቅነት እና ጥራትነት ያረጋግጡ።",
-        exportLogs: "ማግባዎች ውስርት አድር",
-        searchProducts: "ምርቶችን፣ አርቲስቶችን፣ ወስኩን፣ ይፈልጉ...",
-        loadingProducts: "ምርቶችን በመጫን ላይ...",
-        noProductsFound: "ምርቶች አውጣም",
-        approveProduct: "ምርትን አረጋግጡ",
-        rejectProduct: "ምርትን �ውጡ",
-        rejectProductTitle: "ምርትን �ውጡ",
-        rejectProductDesc: "አትን {name} �ውጡ። ይህ አርቲስን ያገውራል።",
-        rejectionReasonLabel: "የመቃለል ምክንያት",
-        internalNote: "ውስው ማጥቂያ (ለአስተዳደሪ ብና)",
-        internalNotePlaceholder: "ለኦዲት ጨር ማጥቂያ...",
-        confirmingRejection: "መቃለል ያረጋግጡ",
-        canceling: "ይቅር",
-        approving: "በማረጋገጥ ላይ...",
-        rejecting: "በመቃለል ላይ...",
-        productApproved: "ምርት በትረኛ ማረጋገጫ!",
-        productRejected: "ምርት ተቃለለ። አርቲስን ተገቃል።።",
-        errorApproving: "ምርትን ማረጋገጥ አሳነበት",
-        errorRejecting: "ምርትን በመቃለል ላቀረበት ስርስ",
-        materials: "ቁረቶዎች",
-        careInstructions: "የአድጋ መመሪያዎች",
-        specs: "ስቅ�ስ",
-        fee: "ክስ",
-        financials: "የገቢ ሁናት",
-        listingPrice: "የማስተጥቢያ ዋዋ",
-        commission15: "ኮሚሽን (15%)",
-        selectedCount: "ተመረጠቹ",
-        approveAll: "ሁሉንን አረጋግጡ",
-        sku: "ስኩ",
-        artisanProfile: "የአርቲስ መገለጫ",
-        description: "መግለጫ",
-        shipping: "ማሳለፊያ",
-        time: "ጊዜ",
-        verificationStatus: "የማረጋገጫ ሁኔታ"
+    // አስተዳዳሪ (Admin)
+    admin: {
+      verificationModeration: "ማረጋገጫ እና ቁጥጥር",
+      userVerificationDesc: "የጥበብ ባለሙያ እና አዘጋጅ መለያዎችን ይገምግሙ እና ያረጋግጡ።",
+      eventVerificationDesc: "የዝግጅት አቀራረቦችን ይገምግሙ፣ ያጽድቁ እና ይከታተሉ።",
+      userVerifications: "የተጠቃሚ ማረጋገጫዎች",
+      eventVerifications: "የዝግጅት ማረጋገጫዎች",
+      productVerifications: "የምርት ማረጋገጫዎች",
+      pendingUsers: "በመጠባበቅ ላይ ያሉ ተጠቃሚዎች",
+      pendingEvents: "በመጠባበቅ ላይ ያሉ ዝግጅቶች",
+      pendingProducts: "በመጠባበቅ ላይ ያሉ ምርቶች",
+      pendingRequests: "በመጠባበቅ ላይ ያሉ ጥያቄዎች",
+      approvedUsers: "የጸደቁ ተጠቃሚዎች",
+      rejectedRequests: "የተቀበሉ ጥያቄዎች",
+      underReview: "በግምገማ ላይ",
+      activeArtisans: "ንቁ የጥበብ ባለሙያዎች",
+      totalRevenue: "ጠቅላላ ገቢ",
+      allRoles: "ሁሉም ሚናዎች",
+      allStatus: "ሁሉም ሁኔታዎች",
+      approve: "ጽድቅ",
+      reject: "አትቀበል",
+      review: "ገምግም",
+      status: "ሁኔታ",
+      submittedOn: "የቀረበበት ቀን",
+      documents: "ሰነዶች",
+      actions: "ድርጊቶች",
+      viewProfile: "መገለጫ ተመልከት",
+      businessInfo: "የንግድ መረጃ",
+      verificationTimeline: "የማረጋገጫ መስመር ጊዜ",
+      approveConfirmation: "{name} ማጽደቅ እንደሚፈልጉ እርግጠኛ ነዎት?",
+      rejectConfirmation: "{name} ላለመቀበል እንደሚፈልጉ እርግጠኛ ነዎት?",
+      approvalNote: "ማስታወሻ (አማራጭ)",
+      rejectionReasonRequired: "አለመቀበል ምክንያት አስፈላጊ ነው",
+      statusNotSubmitted: "አልቀረበም",
+      statusSubmitted: "ቀርቧል",
+      statusUnderReview: "በግምገማ ላይ",
+      statusApproved: "ጸድቋል",
+      statusRejected: "ተቀብሏል",
+      statusModificationRequested: "ማስተካከያ ተጠይቋል",
+      customMessage: "ለአዘጋጁ ብጁ መልዕክት",
+      customMessagePlaceholder: "ይህ ዝግጅት ለምን እንደተቀበለ ዝርዝር መረጃ ይስጡ...",
+      confirmRejection: "አለመቀበል አረጋግጥ",
+      approveEvent: "ዝግጅት አጽድቅ",
+      approveConfirmationEvent: "{event} ማጽደቅ እንደሚፈልጉ እርግጠኛ ነዎት? ይህ ዝግጅቱ ወዲያውኑ በመድረኩ ላይ እንዲቀርብ ያደርገዋል።",
+      commissionRate: "ኮሚሽን መጠን",
+      estimatedCommission: "ግምታዊ ጠቅላላ ኮሚሽን",
+      optionalNote: "ለአዘጋጁ አማራጭ ማስታወሻ",
+      optionalNotePlaceholder: "ለዝግጅትዎ መልካም እድል!...",
+      confirmApproval: "ማጽደቅ አረጋግጥ",
+      dashboard: "ዳሽቦርድ",
+      userManagement: "የተጠቃሚ አስተዳደር",
+      verificationAndModeration: "ማረጋገጫ እና ቁጥጥር",
+      management: "አስተዳደር",
+      revenueAndCommission: "ገቢ እና ኮሚሽን",
+      reportsAndModeration: "ሪፖርቶች እና ቁጥጥር",
+      systemLogs: "የስርዓት ምዝግብ ማስታወሻዎች",
+      settings: "ቅንብሮች",
+      adminPanel: "የአስተዳዳሪ ፓነል",
+      mainMenu: "ዋና ምናሌ",
+      searchPlaceholder: "ተጠቃሚዎችን፣ ዝግጅቶችን፣ ምዝግብ ማስታወሻዎችን ፈልግ...",
+      notifications: "ማሳወቂያዎች",
+      markAllRead: "ሁሉንም እንደተነበበ ምልክት አድርግ",
+      viewAllNotifications: "ሁሉንም ማሳወቂያዎች ተመልከት",
+      signOut: "ውጣ",
+      newRegistration: "አዲስ ምዝገባ",
+      systemAlert: "የስርዓት ማንቂያ",
+      quickFilters: {
+        allRequests: "ሁሉም ጥያቄዎች",
+        organizerRequests: "የአዘጋጅ ጥያቄዎች",
+        artisanRequests: "የጥበብ ባለሙያ ጥያቄዎች",
+        pending: "በመጠባበቅ ላይ",
+        approved: "የጸደቁ",
+        rejected: "የተቀበሉ"
       },
+      startDate: "የመጀመሪያ ቀን",
+      endDate: "የማብቂያ ቀን",
+      apply: "ተግብር",
+      clear: "አጽዳ",
+      loadingVerificationRequests: "የማረጋገጫ ጥያቄዎችን በመጫን ላይ...",
+      noVerificationRequests: "ምንም የማረጋገጫ ጥያቄዎች አልተገኙም",
+      tryAdjustingFilters: "ማጣሪያዎችዎን ለማስተካከል ይሞክሩ",
+      userInformation: "የተጠቃሚ መረጃ",
+      submittedDocuments: "የቀረቡ ሰነዶች",
+      decisionPanel: "የውሳኔ ፓነል",
+      approveAccount: "መለያ አጽድቅ",
+      rejectionReason: "አለመቀበል ምክንያት",
+      rejectionReasonRequiredText: "አለመቀበል ምክንያት አስፈላጊ ነው",
+      rejectRequest: "ጥያቄ አትቀበል",
+      accountCreated: "መለያ ተፈጥሯል",
+      documentsSubmitted: "ሰነዶች ቀርበዋል",
+      approvedStatus: "ጸድቋል",
+      rejectedStatus: "ተቀብሏል",
+      thisArtisanIsApproved: "ይህ የጥበብ ባለሙያ ጸድቋል",
+      fullDashboardAccess: "የዳሽቦርዱ ሙሉ ተደራሽነት አላቸው",
+      previousRejectionReason: "የቀድሞ አለመቀበል ምክንያት",
+      approvingWillEnable: "ማጽደቅ የጥበብ ባለሙያ ባህሪያትን በራስ-ሰር ያንቃል እና የዳሽቦርድ ተደራሽነት ይሰጣል።",
+      email: "ኢሜይል",
+      phone: "ስልክ",
+      businessName: "የንግድ ስም",
+      category: "ምድብ",
+      region: "ክልል",
+      city: "ከተማ",
+      registrationDate: "የምዝገባ ቀን",
+      profileCompletion: "የመገለጫ ማጠናቀቂያ",
+      bio: "ግለ ታሪክ",
+      address: "አድራሻ",
+      paymentInfo: "የክፍያ መረጃ",
+      noDocumentsUploaded: "ምንም ሰነዶች አልተሰቀሉም",
+      uploadedOn: "የተሰቀለበት ቀን",
+      verificationRequest: "የማረጋገጫ ጥያቄ",
+      productVerification: "የምርት ማረጋገጫ",
+      productVerificationDesc: "የጥበብ ባለሙያ ምርቶች ባህላዊ ትክክለኛነት እና ጥራት ያረጋግጡ።",
+      exportLogs: "ምዝግብ ማስታወሻዎችን ወደ ውጭ ላክ",
+      searchProducts: "ምርቶችን፣ የጥበብ ባለሙያዎችን፣ ወይም SKUs ፈልግ...",
+      loadingProducts: "ምርቶችን በመጫን ላይ...",
+      noProductsFound: "ምንም ምርቶች አልተገኙም",
+      approveProduct: "ምርት አጽድቅ",
+      rejectProduct: "ምርት አትቀበል",
+      rejectProductTitle: "ምርት አትቀበል",
+      rejectProductDesc: "{name} ላለመቀበል። ይህ ለእጅ ጥበብ ባለሙያው ማሳወቂያ ይልካል።",
+      rejectionReasonLabel: "ምክንያት",
+      internalNote: "ውስጣዊ ማስታወሻ (ለአስተዳዳሪ ብቻ)",
+      internalNotePlaceholder: "ለክትትል ዱካ ውስጣዊ ዝርዝሮች...",
+      confirmingRejection: "አለመቀበል ማረጋገጥ",
+      canceling: "በመሰረዝ ላይ",
+      approving: "በማጽደቅ ላይ...",
+      rejecting: "ባለመቀበል ላይ...",
+      productApproved: "ምርት በተሳካ ሁኔታ ጸድቋል!",
+      productRejected: "ምርት ተቀብሏል። ለእጅ ጥበብ ባለሙያው ማሳወቂያ ተልኳል።",
+      errorApproving: "ምርት ማጽደቅ አልተሳካም",
+      errorRejecting: "ምርቱን ላለመቀበል በሚደረግ ሂደት ላይ ስህተት ተከስቷል",
+      materials: "ቁሳቁሶች",
+      careInstructions: "የመንከባከቢያ መመሪያዎች",
+      specs: "ዝርዝር መግለጫዎች",
+      fee: "ክፍያ",
+      financials: "የፋይናንስ ሁኔታ",
+      listingPrice: "የዋጋ አሰጣጥ",
+      commission15: "ኮሚሽን (15%)",
+      selectedCount: "ተመርጧል",
+      approveAll: "ሁሉንም አጽድቅ",
+      sku: "SKU"
+    },
 
-       // Header
-       header: {
-        searchPlaceholder: "ፍለጋ...",
-        welcome: "መነሻ",
-        signInRegister: "ግባ / ተመዝገብ",
-        newHere: "አዲስ ነዎት?",
-        myOrders: "የእኔ ትዕዛዞች",
-        messageCenter: "መልክት ማእከል",
-        payments: "ክፍያዎች",
-        wishlist: "የምፈልጋቸው",
-        settings: "ቅንብሮች",
-        helpCenter: "የእርዳኳ ማእከል",
-        disputes: "አለመስማማቶች",
-        signOut: "ውጣ",
-        loginRequired: "ግባ ያስፈልጋል",
-        loginDesc: "ወደ ክፍያ ለማምለጥ እንደ ቱርክ ተጠቃሚ ግቡ።",
-        loginNow: "አሁን ግባ",
-        cancel: "ይቅር"
-      },
-
-      // Cart & Checkout
-      cart: {
-        yourCart: "የእርስዎ ዘመቻ",
-        selectPayment: "የክፍያ አስመልክት",
-        choosePayment: "ትምህርትዎን ለማስፈጸም የተረጋገጠ የክፍያ ዘዴ ይምረጡ።",
-        chapa: "ቻፓ",
-        telebirr: "��ሌቢር",
-        payWithCardBank: "በካርድ / ባንክ ይክፈሉ",
-        mobileMoney: "ሞባይል ገንዘብ",
-        processingPayment: "የክፍያ ሂደት",
-        paymentWait: "ትምህርትዎን ለመቆየት ይጠብቁ...",
-        orderConfirmedMsg: "ለግዢዎ እናመሰግናለን። የማረጋገጫ ኢሜል ተልኳሎት።",
-        transactionId: "የስርዓት መታወቂያ",
-        subtotal: "ንዑስ ድምር",
-        shipping: "ማሳለፊያ",
-        total: "ጠቅላላ",
-        proceedToCheckout: "ወደ ክፍያ ይሂዱ",
-        back: "ወደኋላ",
-        payNow: "አሁን ይክፈሉ",
-        secureCheckout: "በቻፓ & ቴሌቢር የተጠበቀ የክፍያ ሂደት"
-      },
-
-     // Footer
-     footer: {
-       tagline: "የኢትዮጵያ ሥራ ባህርያት በዘመናዊ የሕንድ አስተዳደር 2025 አማካኝነት በተሰራ የተለየ የተረጋገጠ ዋጋ መገበያ።",
-       heritageExplorer: "የውስጥ ጥናት",
-       curatedMarketplace: "የተመረጠ የማዘጋጀት",
-       sacredCelebrations: "ቅዱስ በዓላት",
-       artisanStories: "የአርቲስቶች ታሪኮች",
-       regionalGuides: "የክልላዊ መምሪያዎች",
-       supportTrust: "ድጋፍ & አስተማመን",
-       helpCenter: "የእርዳኳ ማእከል",
-       authenticityShield: "የማረጋገጫ መ🛡️",
-       shippingReturns: "ማሳለፊያ & መመለስ",
-       contactOffice: "የውስጥ ቢሮን ያግኙ",
-       hubDispatch: "ዋና መልክት",
-       newsletterText: "በ50,000+ ጠቃሚዎች ጋር ይቀላቀሉ ፤ ዓለም አቀፍ በዓላት እና አዲስ አርብ ለመገኘት ይፈልጉ።",
-       emailPlaceholder: "የአስተዳደር ኢሜል",
-       subscribe: "አቀላቀል",
-       copyright: "© 2025 ኢትዮ-ክራፍት ሃብ በአገር ውስጥ በተወሰነ የሕንድ አስተዳደር ተደርጓል።",
-       privacy: "ግላዊነት",
-       terms: "ውሎች",
-       international: "ዓለም አቀፍ"
-     },
-
-    // User Verification
+    // የተጠቃሚ ማረጋገጫ (User Verification)
     userVerification: {
       verificationRequests: "የማረጋገጫ ጥያቄዎች",
       businessName: "የንግድ ስም",
       category: "ምድብ",
       region: "ክልል",
       city: "ከተማ",
-      submittedAt: "የተላከበት",
-      approved: "ፈቃደኛ",
-      rejected: "ውጥረት",
-      underReview: "እየተመለከተ ይገኛል",
+      submittedAt: "የቀረበበት ቀን",
+      approved: "ጸድቋል",
+      rejected: "ተቀብሏል",
+      underReview: "በግምገማ ላይ",
       pending: "በመጠባበቅ ላይ"
     },
 
-      // Events
-      events: {
-        eventVerification: "የዓለም አቀፍ ማረጋገጫ",
-        eventVerificationDesc: "የዓለም አቀፍ ማስተናገዶችን ይመልከቱ፣ ይስማሙ፣ እና ይፈትሉ።",
-        eventDetails: "የዓለም አቀፍ ዝርዝር መረጃ",
-        title: "የዓለም አቀፍ ርዕስ",
-        description: "መግለጫ",
-        location: "አካባቢ",
-        date: "ቀን",
-        time: "ሰዓት",
-        capacity: "ችሎታ",
-        organizer: "አዘጋጅ",
-        pricingStructure: "የዋጋ መዋቅር",
-        ticketTypes: "የትየት አይነቶች",
-        commissionRate: "የኮሚሽን ምንዛሪ",
-        estimatedCommission: "የተገመተ ኮሚሽን",
-        submittedDocuments: "የተላከ ሰነዶች",
-        requestResubmission: "ይቅርታ ይጠይቃል",
-        rejectEvent: "ዓለም አቀፍ አትቀበል",
-        approveEvent: "ዓለም አቀፍ አስተዳደር",
-        noMatchFilters: "ምንም የለውም የሚገናኝ ክስተቶች ከተጠበቁ ፍለጋዎች ጋር።",
-        rejectionReason: "የአለመቀበል ምክንያት",
-        reVerificationRequired: "ዳግም ማረጋገጫ ያስፈልጋል",
-        organizerChanges: "አዘጋጅ ይህንን የተለቀቀ ክስተት አስተዳደር አድርጓል። እባክዎ ዝርዝሩን ይመልከቱ።",
-        lastEdited: "የሚቀርብበት:",
-        pastEvents: "ያለፉ ክስተቶች",
-        verified: "የተረጋገጠ",
-        lowRisk: "ዝቅተኛ ጠበኝነት ተገኝቷል",
-        includedServices: "የተካተቱ አገልግሎቶች",
-        eventPolicies: "የክስተት መመሪያዎች",
-        sections: {
-          media: "የዓለም አቀፍ ሚዲያ",
-          coreInfo: "መሠረታዊ መረጃ",
-          schedule: "የዓለም አቀፍ ቀን መርሃ ግብር",
-          hotels: "የተቀባይ ሆቴሎች",
-          transportation: "መጓዝ",
-          documents: "የተላከ ሰነዶች",
-          pricing: "የዋጋ መዋቅር",
-          servicesPolicies: "አገልግሎቶች & የአስተዳደር መመሪያዎች",
-          organizerInfo: "የአዘጋጅ መረጃ",
-          risk: "የጠበኝ ትንተና"
-        }
-      },
+    // ዝግጅቶች (Events)
+    events: {
+      eventVerification: "የዝግጅት ማረጋገጫ",
+      eventVerificationDesc: "የዝግጅት አቀራረቦችን ይገምግሙ፣ ያጽድቁ እና ይከታተሉ።",
+      eventDetails: "የዝግጅት ማረጋገጫ ዝርዝሮች",
+      title: "የዝግጅት ርዕስ",
+      description: "መግለጫ",
+      location: "አካባቢ",
+      date: "ቀን",
+      time: "ሰዓት",
+      capacity: "አቅም",
+      organizer: "አዘጋጅ",
+      pricingStructure: "የዋጋ አወቃቀር",
+      ticketTypes: "የቲኬት ዓይነቶች",
+      commissionRate: "ኮሚሽን መጠን",
+      estimatedCommission: "ግምታዊ ጠቅላላ ኮሚሽን",
+      submittedDocuments: "የቀረቡ ሰነዶች",
+      requestResubmission: "እንደገና ማቅረብ ጠይቅ",
+      rejectEvent: "ዝግጅት አትቀበል",
+      approveEvent: "ዝግጅት አጽድቅ",
+      noMatchFilters: "ከአሁኑ ማጣሪያዎችዎ ጋር የሚዛመድ ምንም ዝግጅት የለም።",
+      rejectionReason: "አለመቀበል ምክንያት",
+      reVerificationRequired: "እንደገና ማረጋገጥ ያስፈልጋል",
+      organizerChanges: "አዘጋጁ በዚህ በታተመ ዝግጅት ላይ ለውጦች አድርጓል። እባክዎ ዝመናዎቹን ይገምግሙ።",
+      lastEdited: "መጨረሻ የተስተካከለው:",
+      pastEvents: "ያለፉ ዝግጅቶች",
+      verified: "ተረጋግጧል",
+      lowRisk: "ዝቅተኛ አደጋ ተገኝቷል",
+      includedServices: "የተካተቱ አገልግሎቶች",
+      eventPolicies: "የዝግጅት ፖሊሲዎች",
+      sections: {
+        media: "የዝግጅት ሚዲያ",
+        coreInfo: "ዋና መረጃ",
+        schedule: "የዝግጅት መርሐ ግብር",
+        hotels: "አጋር ሆቴሎች",
+        transportation: "ትራንስፖርት",
+        documents: "የቀረቡ ሰነዶች",
+        pricing: "የዋጋ አወቃቀር",
+        servicesPolicies: "አገልግሎቶች እና ፖሊሲዎች",
+        organizerInfo: "የአዘጋጅ መረጃ",
+        risk: "የአደጋ ትንተና"
+      }
+    },
 
-    // Products
+    // ምርቶች (Products)
     products: {
       productVerification: "የምርት ማረጋገጫ",
-      artisanProfile: "የአርቲሰን መገለጫ",
-      pricing: "ዋጋ",
-      materials: "የማቴሪያል",
-      careInstructions: "የአደጋ መመሪያዎች",
+      artisanProfile: "የጥበብ ባለሙያ መገለጫ",
+      pricing: "የዋጋ አወቃቀር",
+      materials: "ቁሳቁሶች",
+      careInstructions: "የመንከባከቢያ መመሪያዎች",
       sku: "SKU",
-      stock: "ክምርት",
-      shipping: "ማሳለፊያ",
-      deliveryTime: "የማስረከብ ጊዜ"
+      stock: "ክምችት",
+      shipping: "መጓጓዣ",
+      deliveryTime: "የአቅርቦት ጊዜ"
     },
 
-     // Forms
-     forms: {
-       required: "አስፈላጊ",
-       optional: "ምርጫ",
-       upload: "ሰቀም",
-       dragDrop: "ወይም ጎተት አንሳ",
-       fileTypes: "SVG, PNG, JPG ወይም GIF (ከፍተኛ የሆነ መስፈርት 800x400px)",
-       addImage: "ምስል አክል",
-       addFile: "ፋይል አክል"
-     },
+    // ቅጾች (Forms)
+    forms: {
+      required: "አስፈላጊ",
+      optional: "አማራጭ",
+      upload: "ስቀል",
+      dragDrop: "ወይም ጎትተህ ጣል",
+      fileTypes: "SVG፣ PNG፣ JPG ወይም GIF (ከፍተኛው 800x400px)",
+      addImage: "ምስል ጨምር",
+      addFile: "ፋይል ጨምር"
+    },
 
-     // Documents
-     documents: {
-       files: "ፋይሎች",
-       preview: "ቅድመ እይታ",
-       download: "አውርድ"
-     },
+    // ሰነዶች (Documents)
+    documents: {
+      files: "ፋይሎች",
+      preview: "ቅድመ እይታ",
+      download: "አውርድ"
+    },
 
-    // Status & Badges
+    // ሁኔታ እና ባጅዎች (Status & Badges)
     status: {
       active: "ንቁ",
-      suspended: "ተዘግቷል",
+      suspended: "ታግዷል",
       deleted: "ተሰርዟል",
       draft: "ረቂቅ",
-      published: "ተለቋል",
-      archived: "ተቀማል",
-      pendingApproval: "በመወደድ ላይ",
-      underReview: "በማረጋገጫ ላይ",
-      pendingReVerification: "በመወደድ ላይ"
+      published: "ታትሟል",
+      archived: "በማህደር ውስጥ",
+      pendingApproval: "ጸደቀ በማለት ላይ",
+      underReview: "በግምገማ ላይ",
+      pendingReVerification: "እንደገና ማረጋገጥ በመጠባበቅ ላይ"
     },
 
-    // Errors & Messages
+    // ስህተቶች እና መልዕክቶች (Errors & Messages)
     messages: {
-      somethingWentWrong: "አንዳንድ ነገር ተሳክቷል",
-      tryAgain: "እንደገና ይሞክሩ",
-      noChanges: "ምንም ለውጥ የለም",
-      changesSaved: "ለውጦች በተሳክተ መልኩ ተቀምጠዋል",
-      deleteConfirm: "ይህን ነገር ለማስወገድ እርግጠኛ ነዎት?",
-      actionRequired: "የሚያስፈልግ ውጤት"
+      somethingWentWrong: "ስህተት ተከስቷል",
+      tryAgain: "እባክዎ እንደገና ይሞክሩ",
+      noChanges: "ምንም ለማስቀመጥ ለውጦች የሉም",
+      changesSaved: "ለውጦች በተሳካ ሁኔታ ተቀምጠዋል",
+      deleteConfirm: "ይህን ንጥል መሰረዝ እንደሚፈልጉ እርግጠኛ ነዎት?",
+      actionRequired: "ድርጊት ያስፈልጋል"
+    },
+
+    // ህዝብ ገጾች (Public Pages)
+    home: {
+      unifiedPlatform: "የተዋሃደ የባህል መድረክ",
+      discoverHeart: "የኢትዮጵያን ባህል",
+      ethiopianHeritage: "ልብ ያግኙ።",
+      verifiedArtisans: "የተረጋገጡ የጥበብ ባለሙያዎች",
+      annualFestivals: "ዓመታዊ በዓላት",
+      globalShipments: "ዓለም አቀፍ ጭነቶች",
+      heritageScore: "የቅርስ ነጥብ",
+      communityFavorites: "የማህበረሰብ ተመራጮች",
+      topRatedCollections: "ከፍተኛ ደረጃ ያላቸው ስብስቦች",
+      highlyAcclaimed: "በአለም አቀፍ ማህበረሰባችን ዘንድ ተወዳጅ የሆኑ እጅግ ከፍተኛ ተቀባይነት ያገኙ ስራዎች።",
+      exploreTopRated: "ከፍተኛ ደረጃ ያላቸውን ያስሱ",
+      masterArtisanCatalog: "ዋና የጥበብ ባለሙያ ካታሎግ",
+      directTrade: "ለትክክለኛነት እና ጥራት እጅ በእጅ የተመረጡ ቀጥተኛ የንግድ ቁሳቁሶች።",
+      viewAllArtifacts: "ሁሉንም ቅርሶች ተመልከት",
+      experienceSoul: "የኢትዮጵያን ነፍስ ተሞክር",
+      fromVibrant: "ከተለዋዋጭ የጥምቀት ሰልፎች እስከ አስደናቂው የመስቀል እሳት ጉብታዎች፣ በህያው ታሪክ ውስጥ እራስዎን ያስጠምቁ።",
+      secureSpot: "በእነዚህ ቅዱስ ስብሰባዎች ላይ ቦታዎን በተረጋገጠ የአካባቢ ድጋፍ ያስጠብቁ።",
+      liveHappening: "የቀጥታ / በሂደት ላይ",
+      upcomingEvents: "መጪ ዝግጅቶች",
+      whyChooseUs: "ለምን ኢትዮ-ክራፍት ሃብን መምረጥ አለብዎት?",
+      verifiedOrganizers: "የተረጋገጡ አዘጋጆች",
+      verifiedOrganizersDesc: "እያንዳንዱ የዝግጅት አዘጋጅ ለትክክለኛነት በቱሪዝም ሚኒስቴር ይጣራል።",
+      securePayment: "ደህንነቱ የተጠበቀ ክፍያ",
+      securePaymentDesc: "በቴሌብር እና ቻፓ ቀላል ግብይቶች ከገዢ ጥበቃ ጋር።",
+      authenticHandmade: "ትክክለኛ የእጅ ሥራ",
+      authenticHandmadeDesc: "ከዋና የጥበብ ባለሙያዎች በቀጥታ፣ የብዙ መቶ ዘመናት የእጅ ጥበብ ሥራን ይጠብቃል።",
+      easyRefund: "ቀላል የመመለሻ ፖሊሲ",
+      easyRefundDesc: "ግልጽ በሆነ የመመለሻ እና የተመላሽ ገንዘብ ሂደታችን ከጭንቀት ነጻ የሆነ ግዢ።",
+      professionalMission: "ሙያዊ ተልዕኮ",
+      digitalInnovation: "በባህል ንግድ ውስጥ ዲጂታል ፈጠራ።",
+      digitalInnovationDesc: "ኢትዮ-ክራፍት ሃብ ከ2025 ብሔራዊ የቱሪዝም ስትራቴጂዎች ጋር በተጣጣመ መልኩ የኢትዮጵያን ባህላዊ ንብረቶች ለመጠበቅ እና ለመገበያየት እንደ ኦፊሴላዊ ዲጂታል መሠረተ ልማት ያገለግላል።",
+      digitalInnovationPrefix: "በባህል ንግድ ውስጥ",
+      digitalInnovationSuffix: "ዲጂታል ፈጠራ።",
+      bridgingTradition: "ትውፊት እና ቴክኖሎጂን ማቀናጀት",
+      bridgingTraditionDesc: "የኢትዮጵያን ዋና የጥበብ ባለሙያዎች ከአለም አቀፍ ገበያ ጋር ድልድይ እንገነባለን። ደህንነቱ የተጠበቀ ዲጂታል ክፍያዎችን እና የተረጋገጡ ሎጂስቲክስን በመጠቀም አማላጆችን እናስወግዳለን እና የቅርስ ጥበብ ሥራ ትክክለኛ ዋጋ ወደ ፈጣሪዎች መመለሱን እናረጋግጣለን።",
+      authenticityGuaranteed: "ትክክለኛነት የተረጋገጠ",
+      authenticityGuaranteedDesc: "እያንዳንዱ እቃ በቅርስ ካውንስላችን ይጣራል። እያንዳንዱ ቅርስ የቱሪዝም ሚኒስቴርን መስፈርት የሚያሟላ መሆኑን ለማረጋገጥ የምንከታተለውን መስመር እንመረምራለን።",
+      communityFirst: "ማህበረሰብ ቀዳሚ",
+      communityFirstDesc: "እኛ አንድ ስብስብ ነን። ከሁሉም የመድረክ ክፍያዎች 5% ወደ ጥበብ ባለሙያ ማሰልጠኛ ፕሮግራሞች እና የዲጂታል እውቀት አውደ ጥናቶች እንደገና ይዋላል።",
+      globalReach: "አለም አቀፍ ተደራሽነት",
+      globalReachDesc: "ከአዲስ አበባ እስከ ኒው ዮርክ፣ ዓለም አቀፉን የጥበብ ንግድ ውስብስብ ሎጂስቲክስ እንይዛለን፣ የኢትዮጵያን ባህል ለዓለም ተደራሽ በማድረግ።",
+      guidedByExperts: "በኢንዱስትሪ ባለሙያዎች የሚመራ",
+      preservingSoul: "ነፍሳችንን እንጠብቃለን፣ አንድ ቅርስ በአንድ ጊዜ።",
+      directorHeritage: "የቅርስ ዳይሬክተር",
+      headArtisanRelations: "የጥበብ ባለሙያ ግንኙነት ኃላፊ",
+      leadTechArchitect: "ዋና ቴክ አርክቴክት",
+      globalLogistics: "አለም አቀፍ ሎጂስቲክስ",
+      artisansEmpowered: "የተጎለበቱ የጥበብ ባለሙያዎች",
+      directRevenueGenerated: "የተገኘ ቀጥተኛ ገቢ",
+      aboutTitle: "ኢትዮ-ክራፍት ሃብ",
+      aboutSubtitle: "የኢትዮጵያን ባህላዊ ቅርስ በዲጂታል ፈጠራ ማስጠበቅ።",
+      mission: "ተልዕኳችን",
+      vision: "ራዕያችን",
+      values: "እሴቶቻችን",
+      leadership: "አመራራችን",
+      heritageDescription: "ኢትዮ-ክራፍት ሃብ የኢትዮጵያን ባህላዊ ሀብቶች ለመጠበቅ እና ለመገበያየት እንደ ኦፊሴላዊ ዲጂታል መሠረተ ልማት ያገለግላል።",
+      bridgingDescription: "የኢትዮጵያን ዋና የጥበብ ባለሙያዎች ከአለም አቀፍ ገበያ ጋር ድልድይ እንገነባለን።",
+      authenticity: "ትክክለኛነት የተረጋገጠ",
+      community: "ማህበረሰብ ቀዳሚ",
+      global: "አለም አቀፍ ተደራሽነት",
+      artisansEmpowered: "የተጎለበቱ የጥበብ ባለሙያዎች",
+      directRevenueGenerated: "የተገኘ ቀጥተኛ ገቢ",
+      preservingSoul: "ነፍሳችንን እንጠብቃለን፣ አንድ ቅርስ በአንድ ጊዜ።",
+      artisansEmpowered: "የተጎለበቱ የጥበብ ባለሙያዎች",
+      directRevenueGenerated: "የተገኘ ቀጥተኛ ገቢ",
+      preservingSoul: "ነፍሳችንን እንጠብቃለን፣ አንድ ቅርስ በአንድ ጊዜ።"
     }
   }
 };
