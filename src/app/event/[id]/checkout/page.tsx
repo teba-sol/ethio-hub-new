@@ -82,11 +82,11 @@ export default function CheckoutPage() {
             window.open(data.checkoutUrl, '_blank');
           } else {
             // If Chapa fails, just confirm
-            router.push(`/confirmation/${bookingId}?status=success`);
+            router.push(`/payment-success?bookingId=${bookingId}&status=success`);
           }
         } else {
           // Telebirr - simulate
-          router.push(`/confirmation/${bookingId}?status=success`);
+          router.push(`/payment-success?bookingId=${bookingId}&status=success`);
         }
       } else {
         alert('Failed to create booking');

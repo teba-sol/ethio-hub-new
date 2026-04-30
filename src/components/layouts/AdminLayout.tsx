@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, CalendarCheck, PackageCheck, Ticket, 
   DollarSign, Flag, LayoutTemplate, FileText, Settings, LogOut, 
   Bell, Search, ShieldAlert, ShieldCheck, UserPlus, Info,
-  ChevronDown, ChevronUp, Briefcase, ShoppingBag, Calendar, Menu, X
+  ChevronDown, ChevronUp, Briefcase, ShoppingBag, Calendar, Menu, X, TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -38,7 +38,8 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
     { path: '/dashboard/admin/users', name: 'User Management', icon: Users },
     { path: '/dashboard/admin/verification-moderation', name: 'Verification & Moderation', icon: ShieldCheck },
     { path: '/dashboard/admin/management', name: 'Management', icon: Briefcase },
-    { path: '/dashboard/admin/revenue', name: 'Revenue & Commission', icon: DollarSign },
+    { path: '/dashboard/admin/wallet', name: 'Wallet', icon: DollarSign },
+    { path: '/dashboard/admin/revenue', name: 'Revenue & Commission', icon: TrendingUp },
     { path: '/dashboard/admin/reports', name: 'Reports & Moderation', icon: Flag },
     { path: '/dashboard/admin/logs', name: 'System Logs', icon: FileText },
     { path: '/dashboard/admin/settings', name: 'Settings', icon: Settings },

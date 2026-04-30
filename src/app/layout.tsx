@@ -25,8 +25,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     pathname.startsWith('/festivals/') ||
     pathname.startsWith('/event/') ||
     pathname.startsWith('/hotels/') ||
-    pathname.startsWith('/payment/') ||
-    pathname.startsWith('/confirmation/')
+     pathname.startsWith('/payment/') ||
+     pathname.startsWith('/payment-success')
   );
 
   const showHeader = mounted && isPublicPage;

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Booking from '@/models/booking.model';
 import Order from '@/models/order.model';
+import Payment from '@/models/payment.model';
+import { processSuccessfulPayment } from '@/services/payment.service';
 
 const CHAPA_BASE_URL = process.env.CHAPA_BASE_URL || 'https://api.chapa.co/v1';
 const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY;
@@ -30,35 +32,21 @@ export async function GET(request: NextRequest) {
     const data = await response.json();
     console.log('Chapa verify response:', data);
 
-    if (data.status === 'success') {
-      const updateData = data.data || {};
-      const metadata = updateData.metadata || {};
+    if (data.status === 'success' || data.data?.status === 'success') {
+      const result = await processSuccessfulPayment(txRef, data.data);
       
-      if (metadata.type === 'order') {
-        // Update Order
-        await Order.findOneAndUpdate(
-          { paymentRef: txRef },
-          { 
-            paymentStatus: 'paid',
-            paymentDate: new Date(),
-            status: 'confirmed',
-          },
-          { new: true }
-        );
-      } else {
-        // Update Booking (default)
-        await Booking.findOneAndUpdate(
-          { paymentRef: txRef },
-          { 
-            paymentStatus: 'paid',
-            paymentDate: new Date(),
-            status: 'confirmed',
-          },
-          { new: true }
-        );
-      }
+      if (result.success) {
+        const redirectPath = result.order
+          ? `/payment-success?orderId=${result.order._id}&status=success&tx_ref=${txRef}`
+          : result.booking
+          ? `/payment-success?bookingId=${result.booking._id}&status=success&tx_ref=${txRef}`
+          : `/payment-success?status=success&tx_ref=${txRef}`;
 
-      return NextResponse.redirect(new URL(`/payment/success?tx_ref=${txRef}&status=success`, request.url));
+        return NextResponse.redirect(new URL(redirectPath, request.url));
+      } else {
+        console.error('Failed to process payment:', result.message);
+        return NextResponse.redirect(new URL('/?payment=error', request.url));
+      }
     }
 
     return NextResponse.redirect(new URL('/?payment=failed', request.url));
@@ -73,34 +61,26 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     console.log('Chapa webhook received:', body);
-    
-    const { tx_ref, status } = body;
-    
-    if (status === 'success' && tx_ref) {
-      await connectDB();
+
+    const txRef = body.tx_ref || body.trx_ref || body.data?.tx_ref || body.data?.trx_ref;
+    const status = body.status || body.data?.status;
+
+    if (status === 'success' && txRef) {
+      const result = await processSuccessfulPayment(txRef, body);
       
-      // Try to find and update Booking first
-      const booking = await Booking.findOneAndUpdate(
-        { paymentRef: tx_ref },
-        { 
-          paymentStatus: 'paid',
-          paymentDate: new Date(),
-        }
-      );
-      
-      // If not found in Booking, try Order
-      if (!booking) {
-        await Order.findOneAndUpdate(
-          { paymentRef: tx_ref },
-          { 
-            paymentStatus: 'paid',
-            paymentDate: new Date(),
-          }
-        );
+      if (result.success) {
+        return NextResponse.json({ 
+          received: true, 
+          type: result.order ? 'order' : (result.booking ? 'booking' : 'unknown') 
+        });
+      } else {
+        console.error('Failed to process webhook payment:', result.message);
+        return NextResponse.json({ error: result.message }, { status: 500 });
       }
     }
-    
+
     return NextResponse.json({ received: true });
+
   } catch (error: any) {
     console.error('Chapa webhook error:', error);
     return NextResponse.json({ error: 'Webhook failed' }, { status: 500 });

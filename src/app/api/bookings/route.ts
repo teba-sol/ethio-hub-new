@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '../../../../lib/mongodb';
-import Booking from '../../../../models/booking.model';
-import Festival from '../../../../models/festival.model';
+import { connectDB } from '@/lib/mongodb';
+import Booking from '@/models/booking.model';
+import Festival from '@/models/festival.model';
 import * as jose from 'jose';
 
 export async function POST(request: NextRequest) {

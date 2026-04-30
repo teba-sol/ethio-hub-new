@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     // Query orders for this artisan using ObjectId
     const query: any = { 
       artisan: artisanId,
-      paymentStatus: 'Paid',
+      paymentStatus: 'paid',
     };
     
     if (period !== 'all') {
@@ -69,32 +69,14 @@ export async function GET(request: NextRequest) {
 
     // Calculate totals using ObjectId
     const grossResult = await Order.aggregate([
-      { $match: { artisan: artisanId, paymentStatus: 'Paid' } },
+      { $match: { artisan: artisanId, paymentStatus: 'paid' } },
       { $group: { _id: null, total: { $sum: '$totalPrice' } } }
     ]);
     const grossTotal = grossResult[0]?.total || 0;
-
-    const commissionResult = await Order.aggregate([
-      { $match: { artisan: artisanId, paymentStatus: 'Paid' } },
-      { $group: { _id: null, total: { $sum: '$platformCommission' } } }
-    ]);
-    const platformCommissionTotal = commissionResult[0]?.total || 0;
-
-    const earningsResult = await Order.aggregate([
-      { $match: { artisan: artisanId, paymentStatus: 'Paid' } },
-      { $group: { _id: null, total: { $sum: '$artisanEarnings' } } }
-    ]);
-    const artisanEarningsTotal = earningsResult[0]?.total || 0;
-
-     const pendingResult = await Order.aggregate([
-       { $match: { artisan: artisanId, paymentStatus: 'pending' } },
-       { $group: { _id: null, total: { $sum: '$artisanEarnings' } } }
-     ]);
-     const pendingTotal = pendingResult[0]?.total || 0;
-
-    // Group sales by product
+ 
+     // Group sales by product
     const productSales = await Order.aggregate([
-      { $match: { artisan: artisanId, paymentStatus: 'Paid' } },
+      { $match: { artisan: artisanId, paymentStatus: 'paid' } },
       { $group: { _id: '$product', totalSales: { $sum: '$totalPrice' }, count: { $sum: 1 } } },
       { $sort: { totalSales: -1 } },
       { $limit: 10 }
@@ -121,8 +103,6 @@ export async function GET(request: NextRequest) {
       buyerName: (o.tourist as any)?.name || 'Customer',
       quantity: o.quantity,
       gross: o.totalPrice,
-      commission: o.platformCommission,
-      net: o.artisanEarnings,
       status: o.paymentStatus,
     }));
 
@@ -130,11 +110,7 @@ export async function GET(request: NextRequest) {
       orders: mappedOrders,
       stats: {
         grossTotal,
-        platformCommissionTotal,
-        artisanEarningsTotal,
-        pendingTotal,
         totalOrders: orders.length,
-        commissionRate: 10,
       },
       revenueByProduct,
       period,

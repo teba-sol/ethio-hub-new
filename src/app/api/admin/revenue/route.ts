@@ -30,66 +30,51 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type"); // 'all', 'product', 'event'
     const status = searchParams.get("status"); // 'all', 'completed', 'pending', 'refunded'
 
-    const query: any = { paymentStatus: "Paid" };
+    const query: any = { paymentStatus: "paid" };
     
     if (status && status !== "all") {
-      query.paymentStatus = status.charAt(0).toUpperCase() + status.slice(1);
+      query.paymentStatus = status.toLowerCase();
     }
 
     const orders = await Order.find(query)
-      .populate("touristId", "name email phone")
-      .populate("artisanId", "name")
-      .sort({ orderDate: -1 })
+      .populate("tourist", "name email phone")
+      .populate("artisan", "name")
+      .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
 
     const total = await Order.countDocuments(query);
-    const totalOrders = await Order.countDocuments({ paymentStatus: "Paid" });
+    const totalOrders = await Order.countDocuments({ paymentStatus: "paid" });
     
     // Calculate totals
     const grossResult = await Order.aggregate([
-      { $match: { paymentStatus: "Paid" } },
-      { $group: { _id: null, total: { $sum: "$total" } } }
+      { $match: { paymentStatus: "paid" } },
+      { $group: { _id: null, total: { $sum: "$totalPrice" } } }
     ]);
     const grossTotal = grossResult[0]?.total || 0;
 
-    const commissionResult = await Order.aggregate([
-      { $match: { paymentStatus: "Paid" } },
-      { $group: { _id: null, total: { $sum: "$platformCommission" } } }
-    ]);
-    const platformCommissionTotal = commissionResult[0]?.total || 0;
-
-    const artisanEarningsResult = await Order.aggregate([
-      { $match: { paymentStatus: "Paid" } },
-      { $group: { _id: null, total: { $sum: "$artisanEarnings" } } }
-    ]);
-    const artisanEarningsTotal = artisanEarningsResult[0]?.total || 0;
-
     // Group by payment method
     const paymentMethodStats = await Order.aggregate([
-      { $match: { paymentStatus: "Paid" } },
-      { $group: { _id: "$paymentMethod", count: { $sum: 1 }, total: { $sum: "$total" } } }
+      { $match: { paymentStatus: "paid" } },
+      { $group: { _id: "$paymentMethod", count: { $sum: 1 }, total: { $sum: "$totalPrice" } } }
     ]);
 
     const mappedOrders = orders.map(o => ({
       _id: o._id,
-      orderId: o.orderId,
-      date: o.orderDate,
+      orderId: o._id,
+      date: o.createdAt,
       type: "Product Sale",
       sellerType: "Artisan",
-      sellerName: (o.artisanId as any)?.name || "Unknown",
+      sellerName: (o.artisan as any)?.name || "Unknown",
       sellerVerified: true,
-      buyerName: o.customer?.name || (o.touristId as any)?.name || "Unknown",
-      buyerEmail: o.customer?.email || (o.touristId as any)?.email || "",
-      buyerPhone: o.customer?.phone || (o.touristId as any)?.phone || "",
-      item: o.items?.[0]?.productName || "Product",
-      itemImage: o.items?.[0]?.productImage || "",
+      buyerName: (o.tourist as any)?.name || "Unknown",
+      buyerEmail: (o.tourist as any)?.email || "",
+      buyerPhone: (o.tourist as any)?.phone || "",
+      item: (o.product as any)?.name || "Product",
+      itemImage: "",
       paymentMethod: o.paymentMethod,
-      paymentRef: o.paymentReference || o.orderId,
-      gross: o.total,
-      commissionRate: o.commissionRate,
-      commission: o.platformCommission,
-      net: o.artisanEarnings,
+      paymentRef: o.paymentReference || o.paymentRef,
+      gross: o.totalPrice,
       status: o.paymentStatus,
       isSuspicious: false,
       timeline: o.timeline,
@@ -101,8 +86,6 @@ export async function GET(request: NextRequest) {
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
       stats: {
         grossTotal,
-        platformCommissionTotal,
-        artisanEarningsTotal,
         totalOrders,
         paymentMethodStats: paymentMethodStats.map(p => ({
           method: p._id,

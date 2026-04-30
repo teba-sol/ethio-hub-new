@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  BarChart3, Package, ShoppingCart, LogOut, Bell, Search, DollarSign, MessageSquare, PieChart, Settings, Menu, X
+  BarChart3, Package, ShoppingCart, LogOut, Bell, Search, DollarSign, MessageSquare, PieChart, Settings, Menu, X, TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -16,7 +16,8 @@ export const ArtisanLayout: React.FC<{ children?: React.ReactNode }> = ({ childr
     { path: '/dashboard/artisan/overview', name: 'Dashboard', icon: BarChart3 },
     { path: '/dashboard/artisan/products', name: 'Products', icon: Package },
     { path: '/dashboard/artisan/orders', name: 'Orders', icon: ShoppingCart },
-    { path: '/dashboard/artisan/revenue', name: 'Revenue', icon: DollarSign },
+    { path: '/dashboard/artisan/wallet', name: 'Wallet', icon: DollarSign },
+    { path: '/dashboard/artisan/revenue', name: 'Revenue', icon: TrendingUp },
     { path: '/dashboard/artisan/reviews', name: 'Reviews', icon: MessageSquare },
     { path: '/dashboard/artisan/analytics', name: 'Analytics', icon: PieChart },
     { path: '/dashboard/artisan/settings', name: 'Settings', icon: Settings },

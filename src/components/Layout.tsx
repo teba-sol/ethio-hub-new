@@ -67,18 +67,58 @@ const CartDrawer: React.FC = () => {
 
   const handlePayment = async () => {
     if (!selectedPayment) return;
-    setCheckoutStep("processing");
+    
+    if (selectedPayment === "chapa") {
+      try {
+        setCheckoutStep("processing");
 
-    // Mock transaction delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+        // Use the first item in the cart for now since the backend supports single product orders
+        // In a real multi-item cart, the backend would need to be updated to handle arrays
+        const item = cart[0];
+        if (!item) {
+          alert("Cart is empty");
+          setCheckoutStep("cart");
+          return;
+        }
 
-    setCheckoutStep("success");
-    setTimeout(() => {
-      clearCart();
-      toggleCart();
-      setCheckoutStep("cart");
-      setSelectedPayment(null);
-    }, 3000);
+        const response = await fetch("/api/chapa/initialize", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            productId: item.id,
+            quantity: item.quantity,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.checkout_url) {
+          // Redirect to Chapa checkout
+          window.location.href = data.checkout_url;
+        } else {
+          console.error("Payment initialization failed:", data.message);
+          alert(data.message || "Failed to initialize payment");
+          setCheckoutStep("payment");
+        }
+      } catch (error) {
+        console.error("Error in handlePayment:", error);
+        alert("An error occurred. Please try again.");
+        setCheckoutStep("payment");
+      }
+    } else {
+      // Handle other payment methods (telebirr etc)
+      setCheckoutStep("processing");
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      setCheckoutStep("success");
+      setTimeout(() => {
+        clearCart();
+        toggleCart();
+        setCheckoutStep("cart");
+        setSelectedPayment(null);
+      }, 3000);
+    }
   };
 
   if (!isCartOpen) return null;

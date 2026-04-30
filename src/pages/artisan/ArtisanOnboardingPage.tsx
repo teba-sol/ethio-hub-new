@@ -5,6 +5,16 @@ import { Button, Input } from '../../components/UI';
 import { useAuth } from '../../context/AuthContext';
 import { ArtisanStatus } from '../../types';
 
+// Chapa Bank IDs - Replace these placeholder UUIDs with actual IDs from GET /api/chapa.co/v1/banks
+const BANK_ID_MAP: Record<string, string> = {
+  'Commercial Bank of Ethiopia': 'placeholder-uuid-cbe',
+  'Dashen Bank': 'placeholder-uuid-dashen',
+  'Awash Bank': 'placeholder-uuid-awash',
+  'Bank of Abyssinia': 'placeholder-uuid-boa',
+  'Telebirr': 'placeholder-uuid-telebirr',
+  'CBE Birr': 'placeholder-uuid-cbe-birr',
+};
+
 export const ArtisanOnboardingPage: React.FC = () => {
   const { user, updateUser } = useAuth();
   const router = useRouter();
@@ -446,12 +456,12 @@ export const ArtisanOnboardingPage: React.FC = () => {
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Bank or Mobile Wallet</label>
                   <select name="bankName" value={formData.bankName} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all bg-gray-50 hover:bg-white" required>
                     <option value="">Select Bank / Wallet</option>
-                    <option value="Commercial Bank of Ethiopia">Commercial Bank of Ethiopia</option>
-                    <option value="Dashen Bank">Dashen Bank</option>
-                    <option value="Awash Bank">Awash Bank</option>
-                    <option value="Bank of Abyssinia">Bank of Abyssinia</option>
-                    <option value="Telebirr">Telebirr</option>
-                    <option value="CBE Birr">CBE Birr</option>
+                    <option value={BANK_ID_MAP['Commercial Bank of Ethiopia']}>Commercial Bank of Ethiopia</option>
+                    <option value={BANK_ID_MAP['Dashen Bank']}>Dashen Bank</option>
+                    <option value={BANK_ID_MAP['Awash Bank']}>Awash Bank</option>
+                    <option value={BANK_ID_MAP['Bank of Abyssinia']}>Bank of Abyssinia</option>
+                    <option value={BANK_ID_MAP['Telebirr']}>Telebirr</option>
+                    <option value={BANK_ID_MAP['CBE Birr']}>CBE Birr</option>
                   </select>
                 </div>
 
@@ -474,21 +484,9 @@ export const ArtisanOnboardingPage: React.FC = () => {
               ) : (
                 <div></div>
               )}
-              <div className="flex gap-3">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => {
-                    updateUser({ artisanStatus: 'Approved' as ArtisanStatus });
-                    router.push('/dashboard/artisan/overview');
-                  }}
-                >
-                  Skip
-                </Button>
-                <Button type="submit" isLoading={submitting}>
-                  {step < 4 ? 'Continue' : 'Submit Application'}
-                </Button>
-              </div>
+              <Button type="submit" isLoading={submitting}>
+                {step < 4 ? 'Continue' : 'Submit Application'}
+              </Button>
             </div>
           </form>
         </div>

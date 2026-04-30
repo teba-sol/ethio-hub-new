@@ -11,22 +11,26 @@ import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../lib/apiClient';
 
 // Mock Data
-const MOCK_ORDERS = [
-  { id: 'ORD-7829', date: 'Oct 24, 2023', items: 'Handwoven Gabi, Coffee Set', total: 145.00, status: 'Delivered', image: 'https://images.unsplash.com/photo-1584555613497-9ecf9dd06f68?q=80&w=200' },
-  { id: 'ORD-9921', date: 'Nov 02, 2023', items: 'Leather Crossbody Bag', total: 85.50, status: 'Shipped', image: 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?q=80&w=200' },
-  { id: 'ORD-1102', date: 'Nov 15, 2023', items: 'Silver Coptic Cross', total: 210.00, status: 'Processing', image: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=200' },
-];
+interface PaymentData {
+  _id: string;
+  product?: { name?: string; _id?: string; images?: string[] };
+  paymentStatus?: string;
+  status?: string;
+  totalPrice?: number;
+  paymentMethod?: string;
+  paymentRef?: string;
+  paymentDate?: string;
+  updatedAt?: string;
+  createdAt?: string;
+  artisan?: { name?: string; email?: string };
+  artisanProfile?: { businessName?: string; userId?: { email?: string } };
+  quantity?: number;
+  contactInfo?: { fullName?: string; email?: string; phone?: string };
+}
 
 const MOCK_BOOKINGS = [
   { id: 'BKG-5542', event: 'Timket Festival 2024', date: 'Jan 19, 2024', location: 'Gondar, Ethiopia', tickets: 2, status: 'Confirmed', image: 'https://images.unsplash.com/photo-1566998826769-e58f276226b9?q=80&w=200' },
   { id: 'BKG-3321', event: 'Meskel Celebration', date: 'Sep 27, 2023', location: 'Addis Ababa', tickets: 1, status: 'Completed', image: 'https://images.unsplash.com/photo-1533551030643-dca0a68d8311?q=80&w=200' },
-];
-
-const MOCK_PAYMENTS = [
-  { id: 'TXN-8821', date: 'Nov 15, 2023', description: 'Order #ORD-1102', amount: 210.00, method: 'Visa ending in 4242', status: 'Success' },
-  { id: 'TXN-7732', date: 'Nov 02, 2023', description: 'Order #ORD-9921', amount: 85.50, method: 'Chapa', status: 'Success' },
-  { id: 'TXN-6619', date: 'Oct 24, 2023', description: 'Order #ORD-7829', amount: 145.00, method: 'Telebirr', status: 'Success' },
-  { id: 'TXN-5520', date: 'Sep 15, 2023', description: 'Booking #BKG-3321', amount: 50.00, method: 'Mastercard ending in 8821', status: 'Success' },
 ];
 
 export const TouristBookingsView: React.FC = () => {
@@ -281,14 +285,68 @@ export const TouristOrdersView: React.FC = () => {
   const [timeFilter, setTimeFilter] = useState('All Time');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [trackingOrder, setTrackingOrder] = useState<any>(null);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [highlightOrderId, setHighlightOrderId] = useState<string | null>(null);
+  const router = useRouter();
 
-  const filteredOrders = MOCK_ORDERS.filter(order => {
-    const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          order.items.toLowerCase().includes(searchTerm.toLowerCase());
-    // In a real app, we would parse the date and compare. 
-    // For this mock, we'll just return true for time filter as dates are strings.
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const response = await apiClient.get('/api/tourist/orders');
+        if (response.success) {
+          setOrders(response.orders || []);
+        }
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
+
+    // Check for highlight parameter
+    const params = new URLSearchParams(window.location.search);
+    const highlight = params.get('highlight');
+    if (highlight) {
+      setHighlightOrderId(highlight);
+      setTimeout(() => {
+        const element = document.getElementById(`order-${highlight}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('ring-2', 'ring-primary');
+          setTimeout(() => element.classList.remove('ring-2', 'ring-primary'), 3000);
+        }
+      }, 500);
+    }
+  }, []);
+
+  const filteredOrders = orders.filter(order => {
+    const orderId = order._id?.slice(-8).toUpperCase() || '';
+    const productName = order.product?.name || '';
+    const matchesSearch = orderId.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          productName.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
+
+  const getOrderStatusBadge = (status: string, paymentStatus: string) => {
+    if (paymentStatus === 'paid' || status === 'confirmed' || status === 'completed') {
+      return <Badge variant="success" className="capitalize">Paid</Badge>;
+    } else if (status === 'pending') {
+      return <Badge variant="warning" className="capitalize">Pending</Badge>;
+    } else if (status === 'cancelled') {
+      return <Badge variant="secondary" className="capitalize">Cancelled</Badge>;
+    }
+    return <Badge className="capitalize">{status}</Badge>;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -321,25 +379,22 @@ export const TouristOrdersView: React.FC = () => {
       <div className="grid gap-6">
         {filteredOrders.length > 0 ? (
           filteredOrders.map((order) => (
-            <div key={order.id} className="bg-white p-6 rounded-3xl border border-gray-100 flex flex-col md:flex-row gap-6 hover:shadow-md transition-shadow">
+            <div id={`order-${order._id}`} key={order._id} className="bg-white p-6 rounded-3xl border border-gray-100 flex flex-col md:flex-row gap-6 hover:shadow-md transition-shadow">
               <div className="w-24 h-24 rounded-2xl overflow-hidden shrink-0 border border-gray-100">
-                <img src={order.image} alt="Product" className="w-full h-full object-cover" />
+                <img src={order.product?.images?.[0] || '/placeholder-product.jpg'} alt="Product" className="w-full h-full object-cover" />
               </div>
               <div className="flex-1">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <h3 className="font-bold text-primary text-lg">{order.id}</h3>
-                    <p className="text-sm text-gray-500">{order.date}</p>
+                    <h3 className="font-bold text-primary text-lg">#{order._id?.slice(-8).toUpperCase()}</h3>
+                    <p className="text-sm text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
                   </div>
-                  <Badge variant={order.status === 'Delivered' ? 'success' : order.status === 'Shipped' ? 'info' : 'warning'}>
-                    {order.status}
-                  </Badge>
+                  {getOrderStatusBadge(order.status, order.paymentStatus)}
                 </div>
-                <p className="text-gray-600 text-sm mb-4">{order.items}</p>
+                <p className="text-gray-600 text-sm mb-4">{order.product?.name || 'Product'}</p>
                 <div className="flex justify-between items-center pt-4 border-t border-gray-50">
-                  <span className="font-bold text-primary">${order.total.toFixed(2)}</span>
+                  <span className="font-bold text-primary">ETB {order.totalPrice?.toLocaleString()}</span>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="ghost" className="text-xs" onClick={() => setTrackingOrder(order)}>Track Order</Button>
                     <Button size="sm" variant="outline" className="text-xs" onClick={() => setSelectedOrder(order)}>View Details</Button>
                   </div>
                 </div>
@@ -348,7 +403,8 @@ export const TouristOrdersView: React.FC = () => {
           ))
         ) : (
           <div className="text-center py-12 bg-white rounded-3xl border border-gray-100">
-            <p className="text-gray-500">No orders found matching your criteria.</p>
+            <p className="text-gray-500">No orders found.</p>
+            <Link href="/products" className="text-primary underline mt-2 inline-block">Browse Products</Link>
           </div>
         )}
       </div>
@@ -356,7 +412,7 @@ export const TouristOrdersView: React.FC = () => {
       {/* Order Details Modal */}
       {selectedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedOrder(null)}>
-          <div className="bg-white rounded-[32px] p-8 max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-[32px] p-8 max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-serif font-bold text-primary">Order Details</h3>
               <button onClick={() => setSelectedOrder(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -367,47 +423,56 @@ export const TouristOrdersView: React.FC = () => {
             <div className="space-y-6">
               <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
                 <div className="w-16 h-16 rounded-xl overflow-hidden border border-gray-200 shrink-0">
-                  <img src={selectedOrder.image} alt="" className="w-full h-full object-cover" />
+                  <img src={selectedOrder.product?.images?.[0] || '/placeholder-product.jpg'} alt="" className="w-full h-full object-cover" />
                 </div>
                 <div>
-                  <p className="font-bold text-primary">{selectedOrder.id}</p>
-                  <p className="text-sm text-gray-500">{selectedOrder.date}</p>
-                  <Badge size="sm" variant={selectedOrder.status === 'Delivered' ? 'success' : selectedOrder.status === 'Shipped' ? 'info' : 'warning'} className="mt-1">
-                    {selectedOrder.status}
-                  </Badge>
+                  <p className="font-bold text-primary">#{selectedOrder._id?.slice(-8).toUpperCase()}</p>
+                  <p className="text-sm text-gray-500">{new Date(selectedOrder.createdAt).toLocaleString('en-ET', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                  {getOrderStatusBadge(selectedOrder.status, selectedOrder.paymentStatus)}
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-bold text-sm text-gray-900 mb-1">Items</h4>
-                  <p className="text-sm text-gray-600">{selectedOrder.items}</p>
+                  <h4 className="font-bold text-sm text-gray-900 mb-1">Product</h4>
+                  <p className="text-sm text-gray-600 font-medium">{selectedOrder.product?.name || 'N/A'}</p>
+                  <p className="text-xs text-gray-500">Quantity: {selectedOrder.quantity} x ETB {(selectedOrder.product?.discountPrice || selectedOrder.product?.price)?.toLocaleString()}</p>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-sm text-gray-900 mb-1">Artisan</h4>
+                  <p className="text-sm text-gray-600">{selectedOrder.artisan?.name || selectedOrder.artisanProfile?.businessName || 'N/A'}</p>
+                  <p className="text-xs text-gray-500">{selectedOrder.artisan?.email || selectedOrder.artisanProfile?.userId?.email || 'N/A'}</p>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h4 className="font-bold text-sm text-gray-900 mb-1">Shipping Address</h4>
-                    <p className="text-sm text-gray-600">
-                      John Doe<br />
-                      123 Bole Road<br />
-                      Addis Ababa, Ethiopia
-                    </p>
+                    <h4 className="font-bold text-sm text-gray-900 mb-1">Payment Method</h4>
+                    <p className="text-sm text-gray-600 capitalize">{selectedOrder.paymentMethod || 'N/A'}</p>
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-gray-900 mb-1">Payment Method</h4>
-                    <p className="text-sm text-gray-600">Visa ending in 4242</p>
+                    <h4 className="font-bold text-sm text-gray-900 mb-1">Payment Status</h4>
+                    <p className="text-sm text-gray-600 capitalize">{selectedOrder.paymentStatus || 'pending'}</p>
                   </div>
                 </div>
 
+                {selectedOrder.contactInfo && (
+                  <div>
+                    <h4 className="font-bold text-sm text-gray-900 mb-1">Contact Information</h4>
+                    <p className="text-sm text-gray-600">{selectedOrder.contactInfo.fullName}</p>
+                    <p className="text-xs text-gray-500">{selectedOrder.contactInfo.email}</p>
+                    <p className="text-xs text-gray-500">{selectedOrder.contactInfo.phone}</p>
+                  </div>
+                )}
+
                 <div className="pt-4 border-t border-gray-100 flex justify-between items-center">
                   <span className="font-bold text-gray-900">Total Amount</span>
-                  <span className="font-bold text-xl text-primary">${selectedOrder.total.toFixed(2)}</span>
+                  <span className="font-bold text-xl text-primary">ETB {selectedOrder.totalPrice?.toLocaleString()}</span>
                 </div>
               </div>
 
               <div className="flex gap-3 pt-2">
-                <Button className="flex-1" onClick={() => { setSelectedOrder(null); setTrackingOrder(selectedOrder); }}>Track Order</Button>
-                <Button variant="outline" className="flex-1">Download Invoice</Button>
+                <Button variant="outline" className="flex-1" onClick={() => window.print()}>Download Receipt</Button>
               </div>
             </div>
           </div>
@@ -481,12 +546,66 @@ export const TouristOrdersView: React.FC = () => {
 export const TouristPaymentsView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [timeFilter, setTimeFilter] = useState('All Time');
+  const [payments, setPayments] = useState<PaymentData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredPayments = MOCK_PAYMENTS.filter(payment => {
-    const matchesSearch = payment.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          payment.description.toLowerCase().includes(searchTerm.toLowerCase());
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        const response: any = await apiClient.get('/api/tourist/orders');
+        let orders: PaymentData[] = [];
+        
+        // Handle both response formats
+        if (response.success && response.orders) {
+          orders = response.orders;
+        } else if (response.orders) {
+          orders = response.orders;
+        } else if (Array.isArray(response)) {
+          orders = response as any[];
+        }
+
+        // Filter for paid orders only to show as payment history
+        const paidOrders = orders.filter((order: any) => 
+          order.paymentStatus === 'paid' || order.status === 'confirmed'
+        );
+        
+        setPayments(paidOrders);
+        setError(null);
+      } catch (error: any) {
+        console.error('Error fetching payments:', error);
+        setError('Failed to load payment history');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPayments();
+  }, []);
+
+  const filteredPayments = payments.filter(payment => {
+    const orderId = `#${payment._id?.slice(-8).toUpperCase()}` || '';
+    const productName = payment.product?.name || '';
+    const matchesSearch = orderId.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          productName.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-500">{error}</p>
+        <Button className="mt-4" onClick={() => window.location.reload()}>Try Again</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -533,26 +652,28 @@ export const TouristPaymentsView: React.FC = () => {
             <tbody className="divide-y divide-gray-50">
               {filteredPayments.length > 0 ? (
                 filteredPayments.map((payment) => (
-                  <tr key={payment.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="p-6 font-mono font-medium text-gray-600">{payment.id}</td>
-                    <td className="p-6 text-gray-600">{payment.date}</td>
-                    <td className="p-6 font-medium text-primary">{payment.description}</td>
+                  <tr key={payment._id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="p-6 font-mono font-medium text-gray-600">{payment.paymentRef || payment._id?.slice(-8).toUpperCase()}</td>
+                    <td className="p-6 text-gray-600">{new Date(payment.paymentDate || payment.updatedAt || payment.createdAt || Date.now()).toLocaleDateString()}</td>
+                    <td className="p-6 font-medium text-primary">Order #{payment._id?.slice(-8).toUpperCase()} - {payment.product?.name || 'Product'}</td>
                     <td className="p-6 text-gray-500 flex items-center gap-2">
-                      <CreditCard className="w-4 h-4" /> {payment.method}
+                      <CreditCard className="w-4 h-4" /> <span className="capitalize">{payment.paymentMethod || 'N/A'}</span>
                     </td>
-                    <td className="p-6 font-bold text-primary">${payment.amount.toFixed(2)}</td>
+                    <td className="p-6 font-bold text-primary">ETB {payment.totalPrice?.toLocaleString()}</td>
                     <td className="p-6">
-                      <Badge variant="success" className="bg-green-50 text-green-600 border-green-100">{payment.status}</Badge>
+                      <Badge variant="success" className="bg-green-50 text-green-600 border-green-100">Success</Badge>
                     </td>
                     <td className="p-6">
-                      <Button size="sm" variant="outline" className="text-xs">Download Receipt</Button>
+                      <Link href={`/payment-success?orderId=${payment._id}&status=success`} target="_blank">
+                        <Button size="sm" variant="outline" className="text-xs">View Receipt</Button>
+                      </Link>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td colSpan={7} className="p-12 text-center text-gray-500">
-                    No payments found matching your criteria.
+                    No payments found. Complete a purchase to see your payment history.
                   </td>
                 </tr>
               )}

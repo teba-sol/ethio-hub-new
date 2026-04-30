@@ -6,11 +6,16 @@ export interface IOrder extends Document {
   product: mongoose.Types.ObjectId;
   artisan: mongoose.Types.ObjectId;
   quantity: number;
+  unitPrice: number;
   totalPrice: number;
+  adminCommission: number;
+  artisanEarnings: number;
+  commissionRate: number;
   currency: string;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   paymentStatus: 'pending' | 'paid' | 'refunded';
   paymentRef?: string;
+  paymentReference?: string;
   paymentMethod?: string;
   paymentDate?: Date;
   contactInfo: {
@@ -55,6 +60,24 @@ const OrderSchema: Schema = new Schema(
       type: Number,
       required: true,
     },
+    unitPrice: {
+      type: Number,
+      required: true,
+    },
+    adminCommission: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    artisanEarnings: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    commissionRate: {
+      type: Number,
+      default: 0.10, // 10% default commission
+    },
     currency: {
       type: String,
       default: 'ETB',
@@ -70,6 +93,9 @@ const OrderSchema: Schema = new Schema(
       default: 'pending',
     },
     paymentRef: {
+      type: String,
+    },
+    paymentReference: {
       type: String,
     },
     paymentMethod: {

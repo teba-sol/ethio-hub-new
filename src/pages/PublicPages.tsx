@@ -925,12 +925,32 @@ export const ProductDetailPage: React.FC = () => {
     }
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     if (!isAuthenticated || user?.role?.toLowerCase() !== UserRole.TOURIST) {
       setShowLoginPrompt(true);
       return;
     }
-    router.push(`/products/${id}/checkout?quantity=${quantity}`);
+
+    try {
+      const response = await fetch('/api/chapa/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: id,
+          quantity,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success && data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        alert(data.message || 'Failed to initialize payment');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('Payment failed. Please try again.');
+    }
   };
 
   const processPayment = async (method: 'chapa' | 'telebirr') => {

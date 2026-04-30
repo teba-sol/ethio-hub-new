@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Order from '@/models/order.model';
 import Product from '@/models/artisan/product.model';
+import ArtisanProfile from '@/models/artisan/artisanProfile.model';
 import mongoose from 'mongoose';
 import * as jose from 'jose';
 
@@ -30,6 +31,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
+    const orderId = searchParams.get('id');
 
     let touristObjectId;
     try {
@@ -38,12 +40,47 @@ export async function GET(request: NextRequest) {
       touristObjectId = touristId;
     }
 
+    if (orderId) {
+      // Fetch single order by ID with full details
+      try {
+        const order = await Order.findOne({ 
+          _id: orderId, 
+          tourist: touristObjectId 
+        })
+          .populate('product', 'name price images discountPrice')
+          .populate('artisan', 'name email');
+
+        if (!order) {
+          return new NextResponse(
+            JSON.stringify({ success: false, message: 'Order not found' }),
+            { status: 404, headers: { 'content-type': 'application/json' } }
+          );
+        }
+
+        // Fetch artisan profile for receipt
+        const artisanProfile = await ArtisanProfile.findOne({ userId: order.artisan._id });
+
+        const orderObj = order.toObject();
+        orderObj.artisanProfile = artisanProfile?.toObject() || null;
+
+        return new NextResponse(
+          JSON.stringify({ success: true, order: orderObj }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        );
+      } catch (e) {
+        return new NextResponse(
+          JSON.stringify({ success: false, message: 'Invalid order ID' }),
+          { status: 400, headers: { 'content-type': 'application/json' } }
+        );
+      }
+    }
+
     const query: any = { tourist: touristObjectId };
     if (status) query.status = status;
 
     const orders = await Order.find(query)
-      .populate('product', 'name price images')
-      .populate('artisan', 'name')
+      .populate('product', 'name price images discountPrice')
+      .populate('artisan', 'name email')
       .sort({ createdAt: -1 });
 
     return new NextResponse(
