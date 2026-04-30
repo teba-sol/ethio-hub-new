@@ -11,6 +11,7 @@ import { Festival, HotelAccommodation, TransportOption, RoomType } from '../../t
 import { motion, AnimatePresence } from 'motion/react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
+import { DualLanguageField } from '../BilingualInput';
 
 const MapPickerModal = dynamic(() => import('../MapPickerModal'), { 
   ssr: false 
@@ -38,31 +39,41 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     core: { 
-      name: '', 
+      name_en: '', 
+      name_am: '',
       slug: '', 
       startDate: '', 
       endDate: '', 
-      locationName: '', 
+      locationName_en: '', 
+      locationName_am: '',
       address: '', 
-      shortDescription: '', 
-      fullDescription: '', 
+      shortDescription_en: '', 
+      shortDescription_am: '',
+      fullDescription_en: '', 
+      fullDescription_am: '',
       coverImage: 'https://picsum.photos/seed/ethio-cover/1920/1080', 
       gallery: [] as string[],
       coordinates: { lat: 9.0333, lng: 38.7500 }
     },
-    schedule: [{ day: 1, title: '', activities: '', performers: [] as string[] }],
+    schedule: [{ day: 1, title_en: '', title_am: '', activities_en: '', activities_am: '', performers: [] as string[] }],
     hotels: [] as any[],
     transportation: [] as any[],
     services: { 
       foodPackages: [] as any[], 
-      culturalServices: [] as string[],
-      specialAssistance: [] as string[],
-      extras: [] as string[]
+      culturalServices_en: [] as string[],
+      culturalServices_am: [] as string[],
+      specialAssistance_en: [] as string[],
+      specialAssistance_am: [] as string[],
+      extras_en: [] as string[],
+      extras_am: [] as string[]
     },
     policies: { 
-      cancellation: '', 
-      terms: '', 
-      safety: '', 
+      cancellation_en: '', 
+      cancellation_am: '',
+      terms_en: '', 
+      terms_am: '',
+      safety_en: '', 
+      safety_am: '',
       ageRestriction: '' 
     },
     pricing: { 
@@ -74,11 +85,11 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
     }
   });
 
-  // Auto-generate slug
+  // Auto-generate slug from English name
   useEffect(() => {
-    const slug = formData.core.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+    const slug = formData.core.name_en.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
     setFormData(prev => ({ ...prev, core: { ...prev.core, slug } }));
-  }, [formData.core.name]);
+  }, [formData.core.name_en]);
 
   const nextStep = () => setStep(s => Math.min(s + 1, 8));
   const prevStep = () => setStep(s => Math.max(s - 1, 1));
@@ -112,17 +123,21 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
 
   const handlePublish = async () => {
     const requiredFields = {
-      name: formData.core.name,
-      shortDescription: formData.core.shortDescription,
-      fullDescription: formData.core.fullDescription,
+      name_en: formData.core.name_en,
+      name_am: formData.core.name_am,
+      shortDescription_en: formData.core.shortDescription_en,
+      shortDescription_am: formData.core.shortDescription_am,
+      fullDescription_en: formData.core.fullDescription_en,
+      fullDescription_am: formData.core.fullDescription_am,
       startDate: formData.core.startDate,
       endDate: formData.core.endDate,
-      locationName: formData.core.locationName,
+      locationName_en: formData.core.locationName_en,
+      locationName_am: formData.core.locationName_am,
     };
 
     const missingFields = Object.entries(requiredFields)
       .filter(([_, value]) => !value)
-      .map(([key]) => key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())); // Prettify the key for display
+      .map(([key]) => key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()));
 
     if (missingFields.length > 0) {
       alert(`Please fill out all required fields:\n- ${missingFields.join('\n- ' )}`);
@@ -131,13 +146,17 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
 
     try {
       const response = await apiClient.post('/api/organizer/festivals', {
-        name: formData.core.name,
-        shortDescription: formData.core.shortDescription,
-        fullDescription: formData.core.fullDescription,
+        name_en: formData.core.name_en,
+        name_am: formData.core.name_am,
+        shortDescription_en: formData.core.shortDescription_en,
+        shortDescription_am: formData.core.shortDescription_am,
+        fullDescription_en: formData.core.fullDescription_en,
+        fullDescription_am: formData.core.fullDescription_am,
         startDate: formData.core.startDate,
         endDate: formData.core.endDate,
         location: {
-          name: formData.core.locationName,
+          name_en: formData.core.locationName_en,
+          name_am: formData.core.locationName_am,
           address: formData.core.address,
           coordinates: formData.core.coordinates,
         },
@@ -230,11 +249,14 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-16">
                   <div className="lg:col-span-3 space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Input 
-                        label="Festival Name *" 
-                        placeholder="e.g. Timket 2025"
-                        value={formData.core.name} 
-                        onChange={e => setFormData({...formData, core: {...formData.core, name: e.target.value}})} 
+                      <DualLanguageField
+                        label="Festival Name *"
+                        englishPlaceholder="e.g. Timket 2025"
+                        amharicPlaceholder="ቲምኬት 2025"
+                        englishValue={formData.core.name_en}
+                        amharicValue={formData.core.name_am}
+                        onEnglishChange={(value) => setFormData({...formData, core: {...formData.core, name_en: value}})}
+                        onAmharicChange={(value) => setFormData({...formData, core: {...formData.core, name_am: value}})}
                       />
                       <Input 
                         label="Slug" 
@@ -258,11 +280,14 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                       />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Input 
-                        label="Location Name *" 
-                        placeholder="e.g. Gondar, Ethiopia"
-                        value={formData.core.locationName} 
-                        onChange={e => setFormData({...formData, core: {...formData.core, locationName: e.target.value}})} 
+                      <DualLanguageField
+                        label="Location Name *"
+                        englishPlaceholder="e.g. Gondar, Ethiopia"
+                        amharicPlaceholder="ጎንዳር ፣ ኢትዮጵያ"
+                        englishValue={formData.core.locationName_en}
+                        amharicValue={formData.core.locationName_am}
+                        onEnglishChange={(value) => setFormData({...formData, core: {...formData.core, locationName_en: value}})}
+                        onAmharicChange={(value) => setFormData({...formData, core: {...formData.core, locationName_am: value}})}
                       />
                       <Input 
                         label="Address" 
@@ -284,24 +309,28 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                         <p className="text-[10px]">Lat: {formData.core.coordinates.lat.toFixed(4)}, Lng: {formData.core.coordinates.lng.toFixed(4)}</p>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Short Description *</label>
-                      <textarea 
-                        className="w-full h-24 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
-                        placeholder="Brief summary for listing cards..."
-                        value={formData.core.shortDescription} 
-                        onChange={e => setFormData({...formData, core: {...formData.core, shortDescription: e.target.value}})} 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Full Description *</label>
-                      <textarea 
-                        className="w-full h-48 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
-                        placeholder="Detailed story and information..."
-                        value={formData.core.fullDescription} 
-                        onChange={e => setFormData({...formData, core: {...formData.core, fullDescription: e.target.value}})} 
-                      />
-                    </div>
+                    <DualLanguageField
+                      label="Short Description *"
+                      englishPlaceholder="Brief summary for listing cards..."
+                      amharicPlaceholder="ለዝርዝር ካርዶች አጭር መግለጫ..."
+                      englishValue={formData.core.shortDescription_en}
+                      amharicValue={formData.core.shortDescription_am}
+                      onEnglishChange={(value) => setFormData({...formData, core: {...formData.core, shortDescription_en: value}})}
+                      onAmharicChange={(value) => setFormData({...formData, core: {...formData.core, shortDescription_am: value}})}
+                      textarea
+                      rows={3}
+                    />
+                    <DualLanguageField
+                      label="Full Description *"
+                      englishPlaceholder="Detailed story and information..."
+                      amharicPlaceholder="ዝርዝር ታሪክ እና መረጃ..."
+                      englishValue={formData.core.fullDescription_en}
+                      amharicValue={formData.core.fullDescription_am}
+                      onEnglishChange={(value) => setFormData({...formData, core: {...formData.core, fullDescription_en: value}})}
+                      onAmharicChange={(value) => setFormData({...formData, core: {...formData.core, fullDescription_am: value}})}
+                      textarea
+                      rows={6}
+                    />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="p-8 border-2 border-dashed border-gray-100 rounded-[32px] text-center hover:border-primary/20 transition-colors cursor-pointer">
                         <input type="file" className="hidden" id="cover-image-upload" onChange={e => e.target.files && handleFileUpload(e.target.files[0], true)} />
@@ -329,12 +358,12 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                           <div className="absolute top-6 left-6"><Badge variant="info" className="backdrop-blur-md bg-white/80">Live Event</Badge></div>
                         </div>
                         <div className="p-8 space-y-4">
-                          <h4 className="text-2xl font-serif font-bold text-primary">{formData.core.name || 'Festival Title'}</h4>
+                          <h4 className="text-2xl font-serif font-bold text-primary">{formData.core.name_en || 'Festival Title'}</h4>
                           <div className="flex items-center text-gray-400 text-xs gap-4">
                             <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {formData.core.startDate || 'Date'}</span>
-                            <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {formData.core.locationName || 'Location'}</span>
+                            <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {formData.core.locationName_en || 'Location'}</span>
                           </div>
-                          <p className="text-gray-500 text-sm line-clamp-2">{formData.core.shortDescription || 'Your festival description will appear here...'}</p>
+                          <p className="text-gray-500 text-sm line-clamp-2">{formData.core.shortDescription_en || 'Your festival description will appear here...'}</p>
                           <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
                             <span className="text-primary font-bold">From ${formData.pricing.basePrice}</span>
                             <Button size="sm">View Details</Button>
@@ -356,7 +385,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                       leftIcon={Plus}
                       onClick={() => setFormData({
                         ...formData, 
-                        schedule: [...formData.schedule, { day: formData.schedule.length + 1, title: '', activities: '', performers: [] }]
+                        schedule: [...formData.schedule, { day: formData.schedule.length + 1, title_en: '', title_am: '', activities_en: '', activities_am: '', performers: [] }]
                       })}
                     >
                       Add Day
@@ -382,29 +411,42 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                             </div>
                           </div>
                           <div className="md:col-span-3 space-y-6">
-                            <Input 
-                              label="Day Title" 
-                              placeholder="e.g. Ketera (The Eve)"
-                              value={day.title}
-                              onChange={e => {
+                            <DualLanguageField
+                              label="Day Title"
+                              englishPlaceholder="e.g. Ketera (The Eve)"
+                              amharicPlaceholder="ከተራ (ማታ)"
+                              englishValue={day.title_en}
+                              amharicValue={day.title_am}
+                              onEnglishChange={(value) => {
                                 const newSchedule = [...formData.schedule];
-                                newSchedule[idx].title = e.target.value;
+                                newSchedule[idx].title_en = value;
+                                setFormData({ ...formData, schedule: newSchedule });
+                              }}
+                              onAmharicChange={(value) => {
+                                const newSchedule = [...formData.schedule];
+                                newSchedule[idx].title_am = value;
                                 setFormData({ ...formData, schedule: newSchedule });
                               }}
                             />
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Activities & Highlights</label>
-                              <textarea 
-                                className="w-full h-32 p-4 bg-white border border-gray-100 rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
-                                placeholder="What happens on this day?"
-                                value={day.activities}
-                                onChange={e => {
-                                  const newSchedule = [...formData.schedule];
-                                  newSchedule[idx].activities = e.target.value;
-                                  setFormData({ ...formData, schedule: newSchedule });
-                                }}
-                              />
-                            </div>
+                            <DualLanguageField
+                              label="Activities & Highlights"
+                              englishPlaceholder="What happens on this day?"
+                              amharicPlaceholder="ይህ ቀን ላይ ምን ይሆናል?"
+                              englishValue={day.activities_en || ''}
+                              amharicValue={day.activities_am || ''}
+                              onEnglishChange={(value) => {
+                                const newSchedule = [...formData.schedule];
+                                newSchedule[idx].activities_en = value;
+                                setFormData({ ...formData, schedule: newSchedule });
+                              }}
+                              onAmharicChange={(value) => {
+                                const newSchedule = [...formData.schedule];
+                                newSchedule[idx].activities_am = value;
+                                setFormData({ ...formData, schedule: newSchedule });
+                              }}
+                              textarea
+                              rows={4}
+                            />
                             <div className="space-y-4">
                               <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Performers & Groups</label>
                               <div className="flex flex-wrap gap-2">
@@ -418,19 +460,37 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                     }}><X className="w-3 h-3" /></button>
                                   </Badge>
                                 ))}
-                                <button 
-                                  className="text-xs font-bold text-primary flex items-center gap-1 hover:underline"
-                                  onClick={() => {
-                                    const name = prompt('Enter performer name:');
-                                    if (name) {
-                                      const newSchedule = [...formData.schedule];
-                                      newSchedule[idx].performers.push(name);
-                                      setFormData({ ...formData, schedule: newSchedule });
-                                    }
-                                  }}
-                                >
-                                  <Plus className="w-3 h-3" /> Add Performer
-                                </button>
+                                <div className="flex gap-2 items-center">
+                                  <input 
+                                    type="text"
+                                    placeholder="Add performer..."
+                                    className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs w-32 focus:ring-1 focus:ring-primary/20 outline-none"
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
+                                        const name = (e.target as HTMLInputElement).value.trim();
+                                        const newSchedule = [...formData.schedule];
+                                        newSchedule[idx].performers.push(name);
+                                        setFormData({ ...formData, schedule: newSchedule });
+                                        (e.target as HTMLInputElement).value = '';
+                                      }
+                                    }}
+                                  />
+                                  <button 
+                                    className="text-xs font-bold text-primary flex items-center gap-1 hover:underline"
+                                    onClick={(e) => {
+                                      const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                                      if (input?.value.trim()) {
+                                        const name = input.value.trim();
+                                        const newSchedule = [...formData.schedule];
+                                        newSchedule[idx].performers.push(name);
+                                        setFormData({ ...formData, schedule: newSchedule });
+                                        input.value = '';
+                                      }
+                                    }}
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -452,8 +512,8 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                       onClick={() => setFormData({
                         ...formData,
                         hotels: [...formData.hotels, { 
-                          id: Date.now(), name: '', image: '', starRating: 5, address: '', description: '', 
-                          fullDescription: '', policies: '', checkInTime: '15:00', checkOutTime: '12:00', facilities: [], rooms: [], gallery: [] 
+                          id: Date.now(), name_en: '', name_am: '', image: '', starRating: 5, address: '', description_en: '', description_am: '', 
+                          fullDescription_en: '', fullDescription_am: '', policies: '', checkInTime: '15:00', checkOutTime: '12:00', facilities: [], rooms: [], gallery: [] 
                         }]
                       })}
                     >
@@ -490,7 +550,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                 </label>
                               </div>
                               <div>
-                                <h4 className="text-xl font-serif font-bold text-primary">{hotel.name || 'New Hotel Partner'}</h4>
+                                <h4 className="text-xl font-serif font-bold text-primary">{hotel.name_en || 'New Hotel Partner'}</h4>
                                 <p className="text-gray-400 text-xs">Configure rooms and details for this partner.</p>
                               </div>
                             </div>
@@ -506,12 +566,20 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <Input 
-                            label="Hotel Name" 
-                            value={hotel.name}
-                            onChange={e => {
+                          <DualLanguageField
+                            label="Hotel Name"
+                            englishPlaceholder="e.g. Gondar Hill Resort"
+                            amharicPlaceholder="ጎንዳር ሂል ሪዞርት"
+                            englishValue={hotel.name_en || ''}
+                            amharicValue={hotel.name_am || ''}
+                            onEnglishChange={(value) => {
                               const newHotels = [...formData.hotels];
-                              newHotels[hIdx].name = e.target.value;
+                              newHotels[hIdx].name_en = value;
+                              setFormData({ ...formData, hotels: newHotels });
+                            }}
+                            onAmharicChange={(value) => {
+                              const newHotels = [...formData.hotels];
+                              newHotels[hIdx].name_am = value;
                               setFormData({ ...formData, hotels: newHotels });
                             }}
                           />
@@ -560,19 +628,25 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                         </div>
 
                         <div className="space-y-4">
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Full Description</label>
-                            <textarea 
-                              className="w-full h-24 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
-                              placeholder="Describe the hotel, amenities, and what makes it special..."
-                              value={hotel.fullDescription || ''}
-                              onChange={e => {
-                                const newHotels = [...formData.hotels];
-                                newHotels[hIdx].fullDescription = e.target.value;
-                                setFormData({ ...formData, hotels: newHotels });
-                              }}
-                            />
-                          </div>
+                          <DualLanguageField
+                            label="Full Description"
+                            englishPlaceholder="Describe the hotel, amenities, and what makes it special..."
+                            amharicPlaceholder="ሆተሉን ደስታዎችን እና ልዩነቱን ይግለጹ..."
+                            englishValue={hotel.fullDescription_en || ''}
+                            amharicValue={hotel.fullDescription_am || ''}
+                            onEnglishChange={(value) => {
+                              const newHotels = [...formData.hotels];
+                              newHotels[hIdx].fullDescription_en = value;
+                              setFormData({ ...formData, hotels: newHotels });
+                            }}
+                            onAmharicChange={(value) => {
+                              const newHotels = [...formData.hotels];
+                              newHotels[hIdx].fullDescription_am = value;
+                              setFormData({ ...formData, hotels: newHotels });
+                            }}
+                            textarea
+                            rows={4}
+                          />
                         </div>
 
                         <div className="space-y-3">
@@ -659,7 +733,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                               onClick={() => {
                                 const newHotels = [...formData.hotels];
                                 newHotels[hIdx].rooms.push({
-                                  id: Date.now(), name: '', description: '', capacity: 2, pricePerNight: 100, availability: 5, image: '', sqm: 30, amenities: [], bedType: ''
+                                  id: Date.now(), name_en: '', name_am: '', description_en: '', description_am: '', capacity: 2, pricePerNight: 100, availability: 5, image: '', sqm: 30, amenities: [], bedType: ''
                                 });
                                 setFormData({ ...formData, hotels: newHotels });
                               }}
@@ -707,13 +781,20 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                       </label>
                                     </div>
                                     <div className="flex-1 space-y-2">
-                                      <Input 
-                                        label="Room Name" 
-                                        className="bg-white"
-                                        value={room.name}
-                                        onChange={e => {
+                                      <DualLanguageField
+                                        label="Room Name"
+                                        englishPlaceholder="e.g. Deluxe Suite"
+                                        amharicPlaceholder="ዴሉክስ ሱቅ"
+                                        englishValue={room.name_en || ''}
+                                        amharicValue={room.name_am || ''}
+                                        onEnglishChange={(value) => {
                                           const newHotels = [...formData.hotels];
-                                          newHotels[hIdx].rooms[rIdx].name = e.target.value;
+                                          newHotels[hIdx].rooms[rIdx].name_en = value;
+                                          setFormData({ ...formData, hotels: newHotels });
+                                        }}
+                                        onAmharicChange={(value) => {
+                                          const newHotels = [...formData.hotels];
+                                          newHotels[hIdx].rooms[rIdx].name_am = value;
                                           setFormData({ ...formData, hotels: newHotels });
                                         }}
                                       />
@@ -779,19 +860,25 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                       }}
                                     />
                                   </div>
-                                  <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Room Description</label>
-                                    <textarea 
-                                      className="w-full h-16 p-3 bg-white border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-primary/10" 
-                                      placeholder="Describe the room..."
-                                      value={room.description || ''}
-                                      onChange={e => {
-                                        const newHotels = [...formData.hotels];
-                                        newHotels[hIdx].rooms[rIdx].description = e.target.value;
-                                        setFormData({ ...formData, hotels: newHotels });
-                                      }}
-                                    />
-                                  </div>
+                                  <DualLanguageField
+                                    label="Room Description"
+                                    englishPlaceholder="Describe the room..."
+                                    amharicPlaceholder="ክፍሉን ይግለጹ..."
+                                    englishValue={room.description_en || ''}
+                                    amharicValue={room.description_am || ''}
+                                    onEnglishChange={(value) => {
+                                      const newHotels = [...formData.hotels];
+                                      newHotels[hIdx].rooms[rIdx].description_en = value;
+                                      setFormData({ ...formData, hotels: newHotels });
+                                    }}
+                                    onAmharicChange={(value) => {
+                                      const newHotels = [...formData.hotels];
+                                      newHotels[hIdx].rooms[rIdx].description_am = value;
+                                      setFormData({ ...formData, hotels: newHotels });
+                                    }}
+                                    textarea
+                                    rows={2}
+                                  />
                                   <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Room Amenities</label>
                                     <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
@@ -839,7 +926,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                       onClick={() => setFormData({
                         ...formData,
                         transportation: [...formData.transportation, { 
-                          id: Date.now(), type: 'Private Car', capacity: 4, price: 50, availability: 5, description: '', image: '', pickupLocations: '' 
+                          id: Date.now(), type_en: 'Private Car', type_am: 'የግል መኪና', capacity: 4, price: 50, availability: 5, description_en: '', description_am: '', image: '', pickupLocations: '' 
                         }]
                       })}
                     >
@@ -884,21 +971,23 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                             </label>
                           </div>
                           <div className="flex-1 space-y-4">
-                            <select 
-                              className="w-full bg-ethio-bg border-none rounded-xl py-3 px-4 text-sm font-bold text-primary"
-                              value={car.type}
-                              onChange={e => {
+                            <DualLanguageField
+                              label="Vehicle Type"
+                              englishPlaceholder="Private Car"
+                              amharicPlaceholder="የግል መኪና"
+                              englishValue={car.type_en || ''}
+                              amharicValue={car.type_am || ''}
+                              onEnglishChange={(value) => {
                                 const newTrans = [...formData.transportation];
-                                newTrans[idx].type = e.target.value;
+                                newTrans[idx].type_en = value;
                                 setFormData({ ...formData, transportation: newTrans });
                               }}
-                            >
-                              <option>Private Car</option>
-                              <option>VIP SUV</option>
-                              <option>Minibus</option>
-                              <option>Luxury Coach</option>
-                              <option>Helicopter Transfer</option>
-                            </select>
+                              onAmharicChange={(value) => {
+                                const newTrans = [...formData.transportation];
+                                newTrans[idx].type_am = value;
+                                setFormData({ ...formData, transportation: newTrans });
+                              }}
+                            />
                             <Input 
                               label="Image URL" 
                               value={car.image}
@@ -955,16 +1044,24 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                           />
                         </div>
                         <div className="mt-4">
-                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Description</label>
-                          <textarea 
-                            className="w-full h-24 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
-                            placeholder="Vehicle description, e.g. includes water, air-conditioning..."
-                            value={car.description}
-                            onChange={e => {
+                          <DualLanguageField
+                            label="Description"
+                            englishPlaceholder="Vehicle description, e.g. includes water, air-conditioning..."
+                            amharicPlaceholder="ተሽከርካሪ መግለጫ፣ ምሳሌ፡ ውሃ፣ አየር ማቀዝቀዣ..."
+                            englishValue={car.description_en || ''}
+                            amharicValue={car.description_am || ''}
+                            onEnglishChange={(value) => {
                               const newTrans = [...formData.transportation];
-                              newTrans[idx].description = e.target.value;
+                              newTrans[idx].description_en = value;
                               setFormData({ ...formData, transportation: newTrans });
                             }}
+                            onAmharicChange={(value) => {
+                              const newTrans = [...formData.transportation];
+                              newTrans[idx].description_am = value;
+                              setFormData({ ...formData, transportation: newTrans });
+                            }}
+                            textarea
+                            rows={3}
                           />
                         </div>
                       </div>
@@ -1138,44 +1235,92 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                   {/* Other Services - Simple List */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {[
-                      { key: 'culturalServices', label: 'Cultural Services', icon: Music },
-                      { key: 'specialAssistance', label: 'Special Assistance', icon: Heart },
-                      { key: 'extras', label: 'Extras & Souvenirs', icon: Box }
+                      { keyEn: 'culturalServices_en', keyAm: 'culturalServices_am', label: 'Cultural Services', icon: Music },
+                      { keyEn: 'specialAssistance_en', keyAm: 'specialAssistance_am', label: 'Special Assistance', icon: Heart },
+                      { keyEn: 'extras_en', keyAm: 'extras_am', label: 'Extras & Souvenirs', icon: Box }
                     ].map(section => (
-                      <div key={section.key} className="space-y-6">
+                      <div key={section.keyEn} className="space-y-6">
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-primary/5 text-primary rounded-lg"><section.icon className="w-5 h-5" /></div>
                           <h4 className="font-bold text-primary">{section.label}</h4>
                         </div>
                         <div className="space-y-3">
-                          {(formData.services as any)[section.key].map((item: string, idx: number) => (
-                            <div key={idx} className="flex items-center justify-between p-4 bg-ethio-bg rounded-2xl group">
-                              <span className="text-sm font-medium text-gray-600">{item}</span>
-                              <button 
-                                className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                                onClick={() => {
+                          {/* Show bilingual items */}
+                          {(formData.services as any)[section.keyEn]?.map((itemEn: string, idx: number) => {
+                            const itemAm = (formData.services as any)[section.keyAm]?.[idx] || '';
+                            return (
+                              <div key={idx} className="p-4 bg-ethio-bg rounded-2xl group space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-gray-600">{itemEn}</span>
+                                  <button 
+                                    className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                    onClick={() => {
+                                      const newServices = { ...formData.services };
+                                      (newServices as any)[section.keyEn] = (newServices as any)[section.keyEn].filter((_: any, i: number) => i !== idx);
+                                      if ((newServices as any)[section.keyAm]) {
+                                        (newServices as any)[section.keyAm] = (newServices as any)[section.keyAm].filter((_: any, i: number) => i !== idx);
+                                      }
+                                      setFormData({ ...formData, services: newServices });
+                                    }}
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                                {itemAm && <p className="text-xs text-gray-400" dir="rtl">{itemAm}</p>}
+                              </div>
+                            );
+                          })}
+                          {/* Bilingual Add Input */}
+                          <div className="space-y-2">
+                            <input 
+                              type="text"
+                              placeholder={`${section.label} (English)...`}
+                              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                              id={`${section.keyEn}-input`}
+                            />
+                            <input 
+                              type="text"
+                              placeholder={`${section.label} (አማርኛ)...`}
+                              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                              dir="rtl"
+                              id={`${section.keyAm}-input`}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  const enInput = document.getElementById(`${section.keyEn}-input`) as HTMLInputElement;
+                                  const amInput = document.getElementById(`${section.keyAm}-input`) as HTMLInputElement;
+                                  if (enInput?.value.trim() || amInput?.value.trim()) {
+                                    const newServices = { ...formData.services };
+                                    if (!newServices[section.keyEn]) newServices[section.keyEn] = [];
+                                    if (!newServices[section.keyAm]) newServices[section.keyAm] = [];
+                                    (newServices as any)[section.keyEn].push(enInput?.value.trim() || '');
+                                    (newServices as any)[section.keyAm].push(amInput?.value.trim() || '');
+                                    setFormData({ ...formData, services: newServices });
+                                    enInput.value = '';
+                                    amInput.value = '';
+                                  }
+                                }
+                              }}
+                            />
+                            <button 
+                              className="w-full px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 hover:bg-primary/90"
+                              onClick={() => {
+                                const enInput = document.getElementById(`${section.keyEn}-input`) as HTMLInputElement;
+                                const amInput = document.getElementById(`${section.keyAm}-input`) as HTMLInputElement;
+                                if (enInput?.value.trim() || amInput?.value.trim()) {
                                   const newServices = { ...formData.services };
-                                  (newServices as any)[section.key] = (newServices as any)[section.key].filter((_: any, i: number) => i !== idx);
+                                  if (!newServices[section.keyEn]) newServices[section.keyEn] = [];
+                                  if (!newServices[section.keyAm]) newServices[section.keyAm] = [];
+                                  (newServices as any)[section.keyEn].push(enInput?.value.trim() || '');
+                                  (newServices as any)[section.keyAm].push(amInput?.value.trim() || '');
                                   setFormData({ ...formData, services: newServices });
-                                }}
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ))}
-                          <button 
-                            className="w-full p-4 border-2 border-dashed border-gray-100 rounded-2xl text-xs font-bold text-gray-400 hover:border-primary/20 hover:text-primary transition-all flex items-center justify-center gap-2"
-                            onClick={() => {
-                              const val = prompt(`Add ${section.label}:`);
-                              if (val) {
-                                const newServices = { ...formData.services };
-                                (newServices as any)[section.key].push(val);
-                                setFormData({ ...formData, services: newServices });
-                              }
-                            }}
-                          >
-                            <Plus className="w-4 h-4" /> Add Service
-                          </button>
+                                  enInput.value = '';
+                                  amInput.value = '';
+                                }
+                              }}
+                            >
+                              <Plus className="w-4 h-4" /> Add Bilingual
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1189,37 +1334,43 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                   <div className="space-y-8">
                     <h3 className="text-2xl font-serif font-bold text-primary">Legal & Policies</h3>
                     <div className="space-y-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Cancellation Policy</label>
-                        <textarea 
-                          className="w-full h-32 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
-                          placeholder="e.g. Full refund up to 30 days before..."
-                          value={formData.policies.cancellation}
-                          onChange={e => setFormData({...formData, policies: {...formData.policies, cancellation: e.target.value}})}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Booking Terms</label>
-                        <textarea 
-                          className="w-full h-32 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
-                          placeholder="General terms and conditions..."
-                          value={formData.policies.terms}
-                          onChange={e => setFormData({...formData, policies: {...formData.policies, terms: e.target.value}})}
-                        />
-                      </div>
+                      <DualLanguageField
+                        label="Cancellation Policy"
+                        englishPlaceholder="e.g. Full refund up to 30 days before..."
+                        amharicPlaceholder="ምሳሌ፡ ከ30 ቀን በፊት ሙሉ መመለስ..."
+                        englishValue={formData.policies.cancellation_en}
+                        amharicValue={formData.policies.cancellation_am}
+                        onEnglishChange={(value) => setFormData({...formData, policies: {...formData.policies, cancellation_en: value}})}
+                        onAmharicChange={(value) => setFormData({...formData, policies: {...formData.policies, cancellation_am: value}})}
+                        textarea
+                        rows={4}
+                      />
+                      <DualLanguageField
+                        label="Booking Terms"
+                        englishPlaceholder="General terms and conditions..."
+                        amharicPlaceholder="አጠቃላይ ውል ሁኔታዎች..."
+                        englishValue={formData.policies.terms_en}
+                        amharicValue={formData.policies.terms_am}
+                        onEnglishChange={(value) => setFormData({...formData, policies: {...formData.policies, terms_en: value}})}
+                        onAmharicChange={(value) => setFormData({...formData, policies: {...formData.policies, terms_am: value}})}
+                        textarea
+                        rows={4}
+                      />
                     </div>
                   </div>
                   <div className="space-y-8 pt-16">
                     <div className="space-y-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Safety Rules</label>
-                        <textarea 
-                          className="w-full h-32 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
-                          placeholder="On-site safety guidelines..."
-                          value={formData.policies.safety}
-                          onChange={e => setFormData({...formData, policies: {...formData.policies, safety: e.target.value}})}
-                        />
-                      </div>
+                      <DualLanguageField
+                        label="Safety Rules"
+                        englishPlaceholder="On-site safety guidelines..."
+                        amharicPlaceholder="የቦታው ደህንነት መመሪያዎች..."
+                        englishValue={formData.policies.safety_en}
+                        amharicValue={formData.policies.safety_am}
+                        onEnglishChange={(value) => setFormData({...formData, policies: {...formData.policies, safety_en: value}})}
+                        onAmharicChange={(value) => setFormData({...formData, policies: {...formData.policies, safety_am: value}})}
+                        textarea
+                        rows={4}
+                      />
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Age Restriction</label>
                         <textarea 
@@ -1336,10 +1487,10 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                       <div className="absolute bottom-16 left-16 right-16 flex justify-between items-end">
                         <div className="space-y-4">
                           <Badge className="bg-secondary text-white border-none">Verified Festival</Badge>
-                          <h1 className="text-6xl font-serif font-bold text-white">{formData.core.name}</h1>
+                          <h1 className="text-6xl font-serif font-bold text-white">{formData.core.name_en}</h1>
                           <div className="flex items-center text-white/80 gap-8">
                             <span className="flex items-center gap-2"><Calendar className="w-5 h-5" /> {formData.core.startDate} - {formData.core.endDate}</span>
-                            <span className="flex items-center gap-2"><MapPin className="w-5 h-5" /> {formData.core.locationName}</span>
+                            <span className="flex items-center gap-2"><MapPin className="w-5 h-5" /> {formData.core.locationName_en}</span>
                           </div>
                         </div>
                         <div className="bg-white/10 backdrop-blur-xl p-8 rounded-[32px] border border-white/20 text-white">
@@ -1354,7 +1505,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                       <div className="lg:col-span-2 space-y-12">
                         <section className="space-y-6">
                           <h4 className="text-2xl font-serif font-bold text-primary">About the Festival</h4>
-                          <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">{formData.core.fullDescription}</p>
+                          <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">{formData.core.fullDescription_en}</p>
                         </section>
 
                         <section className="space-y-6">
@@ -1364,7 +1515,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                               <div key={hotel.id} className="bg-white border border-gray-100 rounded-[32px] overflow-hidden shadow-sm">
                                 <img src={hotel.image} className="w-full h-48 object-cover" alt="" />
                                 <div className="p-6">
-                                  <h5 className="font-bold text-primary">{hotel.name}</h5>
+                                  <h5 className="font-bold text-primary">{hotel.name_en}</h5>
                                   <div className="flex text-secondary mb-2">
                                     {[...Array(hotel.starRating)].map((_, i) => <Star key={i} className="w-3 h-3 fill-current" />)}
                                   </div>

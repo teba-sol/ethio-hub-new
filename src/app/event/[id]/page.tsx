@@ -11,6 +11,8 @@ import {
 import apiClient from '@/lib/apiClient';
 import { Festival } from '@/types';
 import { useBooking } from '@/context/BookingContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { getLocalizedText } from '@/utils/getLocalizedText';
 
 export default function EventPage() {
   const params = useParams();
@@ -18,6 +20,7 @@ export default function EventPage() {
   const eventId = params?.id as string;
   
   const { setEvent } = useBooking();
+  const { language } = useLanguage();
   
   const [festival, setFestival] = useState<Festival | null>(null);
   const [loading, setLoading] = useState(true);
@@ -114,7 +117,7 @@ export default function EventPage() {
         >
           <img 
             src={getActiveImage()} 
-            alt={festival.name}
+            alt={getLocalizedText(festival, 'name', language)}
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
@@ -149,7 +152,7 @@ export default function EventPage() {
             )}
             
             <h1 className="text-4xl md:text-6xl font-serif font-bold mb-4 max-w-3xl">
-              {festival.name}
+              {getLocalizedText(festival, 'name', language)}
             </h1>
             
             <div className="flex flex-wrap gap-6 text-white/90">
@@ -163,7 +166,7 @@ export default function EventPage() {
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-secondary" />
-                <span className="font-bold">{festival.locationName}</span>
+                <span className="font-bold">{getLocalizedText(festival as any, 'locationName', language)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-secondary" />
@@ -273,13 +276,13 @@ export default function EventPage() {
               <div className="space-y-8">
                 <div>
                   <h2 className="text-2xl font-bold text-primary mb-4">About This Experience</h2>
-                  <p className="text-gray-600 leading-relaxed text-lg">{festival.fullDescription}</p>
+                  <p className="text-gray-600 leading-relaxed text-lg">{getLocalizedText(festival, 'fullDescription', language)}</p>
                 </div>
                 
-                {festival.shortDescription && (
+                {festival.shortDescription_en && (
                   <div className="bg-ethio-bg p-6 rounded-2xl">
                     <h3 className="font-bold text-primary mb-2">Quick Overview</h3>
-                    <p className="text-gray-600">{festival.shortDescription}</p>
+                    <p className="text-gray-600">{getLocalizedText(festival, 'shortDescription', language)}</p>
                   </div>
                 )}
 
@@ -330,7 +333,7 @@ export default function EventPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t">
                   <div className="bg-red-50 p-6 rounded-2xl">
                     <h3 className="font-bold text-red-800 mb-2">Cancellation Policy</h3>
-                    <p className="text-red-700 text-sm">{festival.cancellationPolicy || 'Standard cancellation policy applies'}</p>
+                    <p className="text-red-700 text-sm">{getLocalizedText(festival, 'cancellation', language) || 'Standard cancellation policy applies'}</p>
                   </div>
                   <div className="bg-blue-50 p-6 rounded-2xl">
                     <h3 className="font-bold text-blue-800 mb-2">Age Restriction</h3>
@@ -352,8 +355,8 @@ export default function EventPage() {
                           <span className="text-3xl font-bold">{day.day}</span>
                         </div>
                         <div className="flex-1">
-                          <h3 className="text-xl font-bold text-primary mb-2">{day.title}</h3>
-                          <p className="text-gray-600">{day.activities}</p>
+                          <h3 className="text-xl font-bold text-primary mb-2">{getLocalizedText(day, 'title', language)}</h3>
+                          <p className="text-gray-600">{getLocalizedText(day, 'activities', language)}</p>
                         </div>
                       </div>
                     ))}
@@ -508,7 +511,7 @@ export default function EventPage() {
           <div className="max-w-5xl max-h-[80vh] px-20" onClick={() => nextImage()}>
             <img 
               src={allImages[lightboxIndex]} 
-              alt={`${festival.name} - Image ${lightboxIndex + 1}`}
+              alt={`${getLocalizedText(festival, 'name', language)} - Image ${lightboxIndex + 1}`}
               className="max-w-full max-h-[80vh] object-contain cursor-pointer"
             />
             <div className="text-center text-white mt-4">

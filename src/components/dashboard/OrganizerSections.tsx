@@ -16,6 +16,8 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { Festival, HotelAccommodation, Review } from '../../types';
 import { Button, Badge, VerifiedBadge, Input } from '../UI';
+import { useLanguage } from '../../context/LanguageContext';
+import { getLocalizedText } from '../../utils/getLocalizedText';
 import { MOCK_FESTIVALS } from '../../data/constants';
 import { 
   CartesianGrid, Tooltip, 
@@ -3387,6 +3389,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { language } = useLanguage();
 
   useEffect(() => {
     const fetchFestivals = async () => {
@@ -3514,11 +3517,11 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
             {festivals.map(festival => (
               <div key={festival._id} onClick={() => onManageEvent(festival._id)} className="bg-white border border-gray-100 rounded-[32px] overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 group cursor-pointer">
                 <div className="h-48 overflow-hidden">
-                  <img src={festival.coverImage || `https://picsum.photos/seed/${festival._id}/600/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={festival.name} />
+                  <img src={festival.coverImage || `https://picsum.photos/seed/${festival._id}/600/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={getLocalizedText(festival, 'name', language)} />
                 </div>
                 <div className="p-6 space-y-4">
                   <div className="flex justify-between items-start">
-                    <h4 className="text-lg font-serif font-bold text-primary leading-tight pr-4">{festival.name}</h4>
+                    <h4 className="text-lg font-serif font-bold text-primary leading-tight pr-4">{getLocalizedText(festival, 'name', language)}</h4>
                     <Badge variant={new Date(festival.startDate) > new Date() ? 'secondary' : 'success'}>
                       {new Date(festival.startDate) > new Date() ? 'Upcoming' : 'Live'}
                     </Badge>

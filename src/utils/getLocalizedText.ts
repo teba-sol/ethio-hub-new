@@ -1,7 +1,7 @@
 // src/utils/getLocalizedText.ts
 import { Language } from '@/locales/translations';
 
-type LocalizedField = 'name' | 'description' | 'shortDescription' | 'fullDescription' | 'title' | 'type';
+type LocalizedField = 'name' | 'description' | 'shortDescription' | 'fullDescription' | 'title' | 'type' | 'locationName' | 'cancellation' | 'terms' | 'safety' | 'activities';
 
 interface LocalizedObject {
   [key: string]: any;
