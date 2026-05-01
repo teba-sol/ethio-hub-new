@@ -12,7 +12,12 @@ import {
   normalizeEmail,
   REGISTRATION_OTP_TTL_MS,
 } from "../../../../../lib/registrationOtp";
-import { EmailProviderError, sendRegistrationOtpEmail } from "../../../../../lib/email";
+import {
+  EmailProviderError,
+  probeGmailRecipient,
+  sendRegistrationOtpEmail,
+} from "../../../../../lib/email";
+import { applyRateLimit, getRequestIp } from "../../../../../lib/rateLimit";
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +26,22 @@ export async function POST(request: Request) {
     const body = await request.json();
     const name = body.name?.trim();
     const email = normalizeEmail(body.email || "");
+    const ip = getRequestIp(request);
+    const limiter = applyRateLimit({
+      key: `request-otp:${ip}:${email}`,
+      limit: 5,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!limiter.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Too many OTP requests. Try again in ${limiter.retryAfterSeconds}s.`,
+        },
+        { status: 429 }
+      );
+    }
+
     const password = body.password || "";
     const role = body.role?.toLowerCase?.() || "tourist";
     const allowedRoles = ["tourist", "organizer", "artisan"];
@@ -36,7 +57,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          message: "Please use a real Google email address ending in @gmail.com.",
+          message: "Please use a valid Gmail address (example@gmail.com).",
         },
         { status: 400 }
       );
@@ -82,6 +103,27 @@ export async function POST(request: Request) {
     const otp = generateOtp();
     const passwordHash = await bcrypt.hash(password, 10);
     const otpExpiresAt = getOtpExpiryDate();
+
+    const probe = await probeGmailRecipient(email);
+    if (probe.status === "invalid") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Please use a valid Gmail address.",
+        },
+        { status: 400 }
+      );
+    }
+    if (probe.status === "unknown") {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "We could not verify this Gmail address right now. Please try again shortly.",
+        },
+        { status: 503 }
+      );
+    }
 
     await sendRegistrationOtpEmail({ to: email, name, otp });
 

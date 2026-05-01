@@ -4,6 +4,8 @@ import { connectDB } from '@/lib/mongodb';
 import Product from '@/models/artisan/product.model';
 import User from '@/models/User';
 import { cookies } from 'next/headers';
+import { isProductCompleteForReview } from '@/lib/reviewAutomation';
+import { queueAdminReviewEmail } from '@/lib/adminApproval';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
@@ -163,7 +165,25 @@ export async function PUT(
       }
     }
 
+    if (
+      product.verificationStatus !== 'Pending' &&
+      isProductCompleteForReview(product)
+    ) {
+      product.verificationStatus = 'Pending';
+      product.rejectionReason = undefined;
+    }
+
     await product.save();
+
+    if (product.verificationStatus === 'Pending') {
+      await queueAdminReviewEmail({
+        subjectType: 'product',
+        subjectId: product._id.toString(),
+        subjectLabel: product.name || 'Product',
+        submittedByEmail: user.email || 'unknown@unknown.local',
+        submittedByName: user.name || 'Artisan',
+      }).catch(() => null);
+    }
 
     return NextResponse.json({
       message: 'Product updated successfully',

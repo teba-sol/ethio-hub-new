@@ -209,11 +209,19 @@ export const RegisterPage: React.FC = () => {
         throw new Error(
           data.message ||
             data.rawText ||
-            `Failed to send OTP (HTTP ${response.status}).`
+            `Failed to register (HTTP ${response.status}).`
         );
       }
 
-      sessionStorage.setItem("pendingRegistration", JSON.stringify(payload));
+      sessionStorage.setItem("pendingVerificationEmail", email);
+      sessionStorage.setItem(
+        "pendingRegistrationMeta",
+        JSON.stringify({
+          name,
+          email,
+          role: role.toLowerCase(),
+        })
+      );
       const query = new URLSearchParams({
         email,
         name,
@@ -298,13 +306,24 @@ export const RegisterPage: React.FC = () => {
            </div>
          </form>
 
-         <div className="mt-8 pt-8 border-t border-gray-100 text-center text-sm text-gray-500">
-           {t("auth.haveAccount")}{" "}
-           <Link href="/login" className="text-primary font-bold hover:underline">
-             {t("auth.signIn")}
-           </Link>
-         </div>
-       </div>
-     </div>
-   );
- };
+          <div className="md:col-span-2 space-y-4 pt-4">
+            <p className="text-[10px] text-gray-400 text-center leading-relaxed">
+              By creating an account, you agree to our Terms of Service and Privacy Policy.
+              We&apos;ll send you updates about authentic cultural products and festivals.
+            </p>
+            <Button type="submit" className="w-full" size="lg" isLoading={isSubmitting}>
+              Create account
+            </Button>
+          </div>
+        </form>
+
+        <div className="mt-8 text-center text-sm text-gray-500">
+          Already have an account?{" "}
+          <Link href="/login" className="text-primary font-bold hover:underline">
+            Log in
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+};
