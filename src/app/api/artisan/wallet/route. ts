@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
-import Wallet from '@/models/wallet.model';
-import Transaction from '@/models/transaction.model';
-import Order from '@/models/order.model';
-import { verifyToken } from '@/services/auth.service';
+import Wallet from '@/models/wallet. model';
+import Transaction from '@/models/transaction. model';
+import Order from '@/models/order. model';
+import { verifyToken } from '@/services/ auth. service';
 import mongoose from 'mongoose';
 
-export async function GET(request: NextRequest) {
+export async function GET( request: NextRequest) {
   try {
     await connectDB();
 
@@ -28,14 +28,15 @@ export async function GET(request: NextRequest) {
 
     const userId = tokenResult.payload.userId as string;
     const userObjectId = new mongoose.Types.ObjectId(userId);
-    
+     
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const skip = (page - 1) * limit;
 
+    // Get wallet
     const wallet = await Wallet.findOne({ userId: userObjectId }).lean();
-    
+     
     if (!wallet) {
       return NextResponse.json({
         success: true,
@@ -54,6 +55,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Get transactions
     const [transactions, total] = await Promise.all([
       Transaction.find({ userId: userObjectId })
         .sort({ createdAt: -1 })
