@@ -59,11 +59,28 @@ export async function GET(request: NextRequest) {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('orderId', 'totalPrice paymentRef quantity unitPrice')
-        .populate('productId', 'name')
+        .populate({
+          path: 'orderId',
+          select: 'tourist product artisan quantity unitPrice totalPrice adminCommission artisanEarnings commissionRate currency status paymentStatus paymentRef paymentReference paymentMethod paymentDate contactInfo shippingAddress createdAt',
+          populate: {
+            path: 'tourist',
+            select: 'name email phone touristProfile',
+          },
+        })
+        .populate('productId', 'name sku category')
         .lean(),
       Transaction.countDocuments({ userId: userObjectId }),
     ]);
+
+    const getOrder = (tx: any) => {
+      if (tx.orderId && typeof tx.orderId === 'object') return tx.orderId;
+      return null;
+    };
+
+    const getProduct = (tx: any) => {
+      if (tx.productId && typeof tx.productId === 'object') return tx.productId;
+      return null;
+    };
 
     return NextResponse.json({
       success: true,
@@ -76,19 +93,51 @@ export async function GET(request: NextRequest) {
           lifetimeRefunded: wallet.lifetimeRefunded || 0,
           currency: wallet.currency || 'ETB',
         },
-        transactions: transactions.map((tx) => ({
-          id: tx._id,
-          type: tx.type,
-          amount: tx.amount,
-          currency: tx.currency,
-          status: tx.status,
-          paymentRef: tx.paymentRef,
-          createdAt: tx.createdAt,
-          orderId: tx.orderId?._id || tx.orderId,
-          productName: (tx.productId as any)?.name || null,
-          quantity: tx.quantity || (tx.orderId as any)?.quantity || tx.metadata?.quantity || null,
-          unitPrice: tx.unitPrice || (tx.orderId as any)?.unitPrice || tx.metadata?.unitPrice || null,
-        })),
+        transactions: transactions.map((tx: any) => {
+          const order = getOrder(tx);
+          const product = getProduct(tx);
+          const tourist = order?.tourist && typeof order.tourist === 'object' ? order.tourist : null;
+          const contactInfo = order?.contactInfo || {};
+          const paymentGatewayId = tx.metadata?.paymentGatewayId || order?.paymentReference || null;
+
+          return {
+            id: tx._id,
+            type: tx.type,
+            amount: tx.amount,
+            currency: tx.currency,
+            status: tx.status,
+            paymentRef: tx.paymentRef,
+            createdAt: tx.createdAt,
+            orderId: order?._id || tx.orderId,
+            productId: product?._id || tx.productId || tx.metadata?.productId || order?.product || null,
+            productName: product?.name || null,
+            quantity: tx.quantity || order?.quantity || tx.metadata?.quantity || null,
+            unitPrice: tx.unitPrice || order?.unitPrice || tx.metadata?.unitPrice || null,
+            details: {
+              touristFullName: contactInfo.fullName || tourist?.name || 'N/A',
+              touristEmail: contactInfo.email || tourist?.email || 'N/A',
+              touristPhone: contactInfo.phone || tourist?.phone || tourist?.touristProfile?.phone || null,
+              productId: product?._id || tx.productId || tx.metadata?.productId || order?.product || null,
+              productName: product?.name || null,
+              productSku: product?.sku || null,
+              productCategory: product?.category || null,
+              orderId: order?._id || tx.orderId || null,
+              quantity: tx.quantity || order?.quantity || tx.metadata?.quantity || null,
+              unitPrice: tx.unitPrice || order?.unitPrice || tx.metadata?.unitPrice || null,
+              totalPrice: order?.totalPrice || tx.metadata?.totalAmount || null,
+              artisanEarnings: order?.artisanEarnings || tx.amount || null,
+              adminCommission: order?.adminCommission || null,
+              commissionRate: order?.commissionRate || tx.metadata?.commissionRate || null,
+              paymentRef: tx.paymentRef || order?.paymentRef || null,
+              paymentGatewayId,
+              paymentMethod: order?.paymentMethod || 'chapa',
+              paymentDate: order?.paymentDate || tx.metadata?.completedAt || tx.createdAt,
+              orderStatus: order?.status || null,
+              paymentStatus: order?.paymentStatus || null,
+              shippingAddress: order?.shippingAddress || null,
+            },
+          };
+        }),
         pagination: {
           page,
           limit,

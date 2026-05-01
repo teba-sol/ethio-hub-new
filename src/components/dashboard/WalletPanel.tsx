@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Coins, TrendingUp, DollarSign, Download, ArrowUpRight,
-  ArrowDownLeft, RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet
+  ArrowDownLeft, RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet, Eye, X
 } from 'lucide-react';
 import { Button, Badge } from '../UI';
 
@@ -34,9 +34,41 @@ interface Transaction {
   paymentRef?: string;
   createdAt: string;
   orderId?: string;
+  productId?: string;
   productName?: string;
   quantity?: number;
   unitPrice?: number;
+  details?: TransactionDetails;
+}
+
+interface TransactionDetails {
+  touristFullName?: string;
+  touristEmail?: string;
+  touristPhone?: string | null;
+  productId?: string;
+  productName?: string | null;
+  productSku?: string | null;
+  productCategory?: string | null;
+  orderId?: string;
+  quantity?: number;
+  unitPrice?: number;
+  totalPrice?: number;
+  artisanEarnings?: number;
+  adminCommission?: number | null;
+  commissionRate?: number | null;
+  paymentRef?: string;
+  paymentGatewayId?: string | null;
+  paymentMethod?: string;
+  paymentDate?: string;
+  orderStatus?: string | null;
+  paymentStatus?: string | null;
+  shippingAddress?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    zipCode?: string;
+  } | null;
 }
 
 interface WalletPanelProps {
@@ -78,6 +110,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   const fetchWallet = async (pageNum: number = 1) => {
     try {
@@ -107,6 +140,23 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
   const formatCurrency = (amount: number) => {
     return `ETB ${(amount || 0).toLocaleString()}`;
   };
+
+  const formatDateTime = (date?: string) => {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleString();
+  };
+
+  const renderDetailValue = (value?: string | number | null) => {
+    if (value === undefined || value === null || value === '') return 'N/A';
+    return value;
+  };
+
+  const DetailItem = ({ label, value }: { label: string; value?: string | number | null }) => (
+    <div className="space-y-1">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{label}</p>
+      <p className="text-sm font-medium text-gray-800 break-words">{renderDetailValue(value)}</p>
+    </div>
+  );
 
   const handleWithdraw = async () => {
     if (!withdrawAmount || isNaN(Number(withdrawAmount))) {
@@ -342,6 +392,9 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                     <th className="px-6 py-4 text-left">Details</th>
                     <th className="px-6 py-4 text-right">Amount</th>
                     <th className="px-6 py-4 text-center">Status</th>
+                    {userType === 'artisan' && (
+                      <th className="px-6 py-4 text-center">View Detail</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -384,6 +437,19 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                           {tx.status}
                         </Badge>
                       </td>
+                      {userType === 'artisan' && (
+                        <td className="px-6 py-4 text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            leftIcon={Eye}
+                            onClick={() => setSelectedTransaction(tx)}
+                            className="text-xs"
+                          >
+                            View
+                          </Button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -414,6 +480,132 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
           </>
         )}
       </div>
+
+      {/* Artisan Transaction Detail Modal */}
+      {userType === 'artisan' && selectedTransaction && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => setSelectedTransaction(null)}
+        >
+          <div
+            className="w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <div>
+                <h3 className="text-xl font-bold text-primary">Transaction Detail</h3>
+                <p className="text-xs text-gray-400 font-mono mt-1">
+                  {selectedTransaction.paymentRef || selectedTransaction.id}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedTransaction(null)}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Close transaction detail"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Artisan Earning</p>
+                  <p className="text-xl font-bold text-emerald-800 mt-1">
+                    {formatCurrency(selectedTransaction.details?.artisanEarnings || selectedTransaction.amount)}
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-700">Total Paid</p>
+                  <p className="text-xl font-bold text-blue-800 mt-1">
+                    {selectedTransaction.details?.totalPrice
+                      ? formatCurrency(selectedTransaction.details.totalPrice)
+                      : 'N/A'}
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Status</p>
+                  <div className="mt-2">
+                    <Badge variant={selectedTransaction.status === 'COMPLETED' ? 'success' : 'warning'} size="sm">
+                      {selectedTransaction.status}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-primary mb-4">Tourist Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <DetailItem label="Full Name" value={selectedTransaction.details?.touristFullName} />
+                  <DetailItem label="Email" value={selectedTransaction.details?.touristEmail} />
+                  <DetailItem label="Phone" value={selectedTransaction.details?.touristPhone} />
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-primary mb-4">Product and Order</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <DetailItem label="Product Name" value={selectedTransaction.details?.productName || selectedTransaction.productName} />
+                  <DetailItem label="Product ID" value={selectedTransaction.details?.productId || selectedTransaction.productId} />
+                  <DetailItem label="Order ID" value={selectedTransaction.details?.orderId || selectedTransaction.orderId} />
+                  <DetailItem label="Quantity" value={selectedTransaction.details?.quantity || selectedTransaction.quantity} />
+                  <DetailItem
+                    label="Unit Price"
+                    value={
+                      selectedTransaction.details?.unitPrice || selectedTransaction.unitPrice
+                        ? formatCurrency(selectedTransaction.details?.unitPrice || selectedTransaction.unitPrice || 0)
+                        : null
+                    }
+                  />
+                  <DetailItem label="SKU" value={selectedTransaction.details?.productSku} />
+                  <DetailItem label="Category" value={selectedTransaction.details?.productCategory} />
+                  <DetailItem label="Order Status" value={selectedTransaction.details?.orderStatus} />
+                  <DetailItem label="Payment Status" value={selectedTransaction.details?.paymentStatus} />
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-primary mb-4">Payment Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <DetailItem label="Chapa Reference" value={selectedTransaction.details?.paymentRef || selectedTransaction.paymentRef} />
+                  <DetailItem label="Gateway Reference" value={selectedTransaction.details?.paymentGatewayId} />
+                  <DetailItem label="Payment Method" value={selectedTransaction.details?.paymentMethod} />
+                  <DetailItem label="Paid At" value={formatDateTime(selectedTransaction.details?.paymentDate || selectedTransaction.createdAt)} />
+                  <DetailItem
+                    label="Admin Commission"
+                    value={
+                      selectedTransaction.details?.adminCommission
+                        ? formatCurrency(selectedTransaction.details.adminCommission)
+                        : null
+                    }
+                  />
+                  <DetailItem
+                    label="Commission Rate"
+                    value={
+                      selectedTransaction.details?.commissionRate
+                        ? `${Math.round(selectedTransaction.details.commissionRate * 100)}%`
+                        : null
+                    }
+                  />
+                </div>
+              </div>
+
+              {selectedTransaction.details?.shippingAddress && (
+                <div>
+                  <h4 className="font-bold text-primary mb-4">Shipping Address</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <DetailItem label="Street" value={selectedTransaction.details.shippingAddress.street} />
+                    <DetailItem label="City" value={selectedTransaction.details.shippingAddress.city} />
+                    <DetailItem label="State" value={selectedTransaction.details.shippingAddress.state} />
+                    <DetailItem label="Country" value={selectedTransaction.details.shippingAddress.country} />
+                    <DetailItem label="Zip Code" value={selectedTransaction.details.shippingAddress.zipCode} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Info Box */}
       <div className="bg-blue-50 p-6 rounded-2xl">
