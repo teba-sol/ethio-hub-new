@@ -861,9 +861,10 @@ export const ProductDetailPage: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'select' | 'processing' | 'receipt'>('select');
   const [selectedMethod, setSelectedMethod] = useState<'chapa' | 'telebirr' | null>(null);
-  const [transactionRef, setTransactionRef] = useState("");
-
-  useEffect(() => {
+   const [transactionRef, setTransactionRef] = useState("");
+   const [isBuying, setIsBuying] = useState(false);
+ 
+   useEffect(() => {
     const fetchProduct = async () => {
       if (!id) return;
       try {
@@ -925,19 +926,23 @@ export const ProductDetailPage: React.FC = () => {
     }
   };
 
-  const handleBuyNow = async () => {
+   const handleBuyNow = async () => {
+    if (isBuying) return;
     if (!isAuthenticated || user?.role?.toLowerCase() !== UserRole.TOURIST) {
       setShowLoginPrompt(true);
       return;
     }
 
+    setIsBuying(true);
     try {
+      const idempotencyKey = crypto.randomUUID();
       const response = await fetch('/api/chapa/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productId: id,
           quantity,
+          idempotencyKey,
         }),
       });
 
@@ -950,6 +955,8 @@ export const ProductDetailPage: React.FC = () => {
     } catch (error) {
       console.error('Payment error:', error);
       alert('Payment failed. Please try again.');
+    } finally {
+      setIsBuying(false);
     }
   };
 
@@ -1083,7 +1090,7 @@ export const ProductDetailPage: React.FC = () => {
                     <Button size="lg" className="w-full rounded-xl py-4 shadow-lg shadow-primary/10 font-bold uppercase tracking-widest text-xs" leftIcon={ShoppingCart} onClick={handleAddToCart}>
                         Add to Cart
                     </Button>
-                    <Button size="lg" variant="outline" className="w-full rounded-xl py-4 border-primary text-primary hover:bg-primary hover:text-white font-bold uppercase tracking-widest text-xs" onClick={handleBuyNow}>
+                    <Button size="lg" variant="outline" className="w-full rounded-xl py-4 border-primary text-primary hover:bg-primary hover:text-white font-bold uppercase tracking-widest text-xs" onClick={handleBuyNow} disabled={isBuying}>
                         Buy Now
                     </Button>
                 </div>

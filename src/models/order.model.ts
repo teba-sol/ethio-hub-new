@@ -18,6 +18,7 @@ export interface IOrder extends Document {
   paymentReference?: string;
   paymentMethod?: string;
   paymentDate?: Date;
+  idempotencyKey?: string;
   contactInfo: {
     fullName: string;
     email: string;
@@ -101,10 +102,15 @@ const OrderSchema: Schema = new Schema(
     paymentMethod: {
       type: String,
     },
-    paymentDate: {
-      type: Date,
-    },
-    contactInfo: {
+     paymentDate: {
+       type: Date,
+     },
+     idempotencyKey: {
+       type: String,
+       sparse: true,
+       unique: true,
+     },
+     contactInfo: {
       fullName: { type: String, required: true },
       email: { type: String, required: true },
       phone: { type: String, required: true },

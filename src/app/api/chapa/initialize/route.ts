@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { productId, quantity = 1 } = body;
+    const { productId, quantity = 1, idempotencyKey } = body;
 
     if (!productId) {
       return NextResponse.json(
@@ -86,6 +86,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check for existing order with idempotencyKey
+    if (idempotencyKey) {
+      const existingOrder = await Order.findOne({ idempotencyKey });
+      if (existingOrder) {
+        const existingPayment = await Payment.findOne({ 
+          orderId: existingOrder._id, 
+          transactionRef: existingOrder.paymentRef 
+        });
+        return NextResponse.json({
+          success: true,
+          checkout_url: existingPayment?.invoiceUrl || '',
+          tx_ref: existingOrder.paymentRef,
+          orderId: existingOrder._id,
+        });
+      }
+    }
+
     const txRef = generateTxRef();
 
      // Calculate commission split
@@ -109,9 +126,10 @@ export async function POST(request: NextRequest) {
         currency: 'ETB',
         status: 'pending',
         paymentStatus: 'pending',
-        paymentRef: txRef,
-        paymentMethod: 'chapa',
-        contactInfo: {
+         paymentRef: txRef,
+         paymentMethod: 'chapa',
+         idempotencyKey: idempotencyKey || undefined,
+         contactInfo: {
           fullName: user.name || 'Tourist',
           email: user.email || '',
           phone: user.phone || 'Not Provided',
@@ -125,7 +143,23 @@ export async function POST(request: NextRequest) {
         },
       });
 
-    await order.save();
+    try {
+      await order.save();
+    } catch (error: any) {
+      if (error.code === 11000 && error.keyPattern?.idempotencyKey) {
+        const existingOrder = await Order.findOne({ idempotencyKey });
+        if (existingOrder) {
+          const existingPayment = await Payment.findOne({ orderId: existingOrder._id });
+          return NextResponse.json({
+            success: true,
+            checkout_url: existingPayment?.invoiceUrl || '',
+            tx_ref: existingOrder.paymentRef,
+            orderId: existingOrder._id,
+          });
+        }
+      }
+      throw error;
+    }
 
     // Create a payment record
     await Payment.create({
@@ -272,16 +306,22 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
 
-    if (!response.ok || !data.data?.checkout_url) {
-      console.error('Chapa API error:', JSON.stringify(data, null, 2));
-      const errorMessage = typeof data.message === 'object' ? JSON.stringify(data.message) : (data.message || 'Failed to initialize payment');
-      return NextResponse.json(
-        { success: false, message: errorMessage },
-        { status: response.status }
-      );
-    }
+     if (!response.ok || !data.data?.checkout_url) {
+       console.error('Chapa API error:', JSON.stringify(data, null, 2));
+       const errorMessage = typeof data.message === 'object' ? JSON.stringify(data.message) : (data.message || 'Failed to initialize payment');
+       return NextResponse.json(
+         { success: false, message: errorMessage },
+         { status: response.status }
+       );
+     }
 
-    return NextResponse.json({
+     // Update Payment with Chapa checkout URL
+     await Payment.updateOne(
+       { transactionRef: txRef },
+       { $set: { invoiceUrl: data.data.checkout_url } }
+     );
+
+     return NextResponse.json({
       success: true,
       checkout_url: data.data.checkout_url,
       tx_ref: txRef,
