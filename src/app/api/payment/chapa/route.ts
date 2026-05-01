@@ -1,19 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Booking from '@/models/booking.model';
+import Payment from '@/models/payment.model';
+import mongoose from 'mongoose';
+import { verifyToken } from '@/services/auth.service';
 
 const CHAPA_BASE_URL = process.env.CHAPA_BASE_URL || 'https://api.chapa.co/v1';
 const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY;
 const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
 
+async function getUserFromToken(token: string) {
+  const result = await verifyToken(token);
+  if (!result.valid || !result.payload) return null;
+  return result.payload;
+}
+
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
 
+    const token = request.cookies.get('sessionToken')?.value;
+    let userId = null;
+    
+    if (token) {
+      const user: any = await getUserFromToken(token);
+      if (user) userId = user.userId;
+    }
+
     const body = await request.json();
-    const {
+    const { 
       bookingId,
-      amount,
+      orderId,
+      amount, 
       currency = 'ETB',
       email,
       firstName,
@@ -22,10 +40,9 @@ export async function POST(request: NextRequest) {
       description
     } = body;
 
-    console.log('Chapa payment request:', { bookingId, amount, currency });
+    console.log('Chapa payment request:', { bookingId, orderId, amount, currency });
 
-    // ✅ Validate required fields
-    if (!bookingId) {
+    if ((!bookingId && !orderId) || !amount || typeof amount !== 'number' || amount <= 0) {
       return NextResponse.json(
         { success: false, message: 'Booking ID is required' },
         { status: 400 }
@@ -55,6 +72,27 @@ export async function POST(request: NextRequest) {
 
     // ✅ Generate transaction reference
     const txRef = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const chapaData = {
+      amount: amount.toString(),
+      currency,
+      email: email || 'customer@email.com',
+      first_name: firstName || 'Customer',
+      last_name: lastName || 'User',
+      phone_number: phone || '0912345678',
+      tx_ref: txRef,
+      callback_url: `${FRONTEND_URL}/api/payment/chapa/callback`,
+      return_url: bookingId
+        ? `${FRONTEND_URL}/payment-success?bookingId=${bookingId}&status=success&tx_ref=${txRef}`
+        : orderId
+        ? `${FRONTEND_URL}/payment-success?orderId=${orderId}&status=success&tx_ref=${txRef}`
+        : `${FRONTEND_URL}/payment-success?status=success&tx_ref=${txRef}`,
+      metadata: {
+        bookingId: bookingId || undefined,
+        orderId: orderId || undefined,
+        type: bookingId ? 'booking' : 'order',
+      },
+    };
 
     // ✅ Correct Chapa payload
    const chapaData = {
@@ -92,18 +130,38 @@ export async function POST(request: NextRequest) {
 
     // ✅ Success case
     if (data.status === 'success' && data.data?.checkout_url) {
+      // Create a payment record
       try {
-        await Booking.findByIdAndUpdate(bookingId, {
-          paymentRef: txRef,
-          paymentStatus: 'pending',
-          status: 'pending',
+        await Payment.create({
+          userId: userId ? new mongoose.Types.ObjectId(userId) : new mongoose.Types.ObjectId(), // Fallback if no user
+          orderId: orderId ? new mongoose.Types.ObjectId(orderId) : undefined,
+          bookingId: bookingId ? new mongoose.Types.ObjectId(bookingId) : undefined,
+          transactionRef: txRef,
+          method: 'chapa',
+          amount: amount,
+          status: 'Pending',
         });
-
-        console.log('Booking updated with txRef:', txRef);
-      } catch (dbError) {
-        console.error('Booking update error (non-fatal):', dbError);
+      } catch (payError) {
+        console.log('Payment record creation skipped:', payError);
       }
 
+      try {
+        if (bookingId) {
+          await Booking.findByIdAndUpdate(bookingId, {
+            paymentRef: txRef,
+            paymentStatus: 'pending',
+          });
+        } else if (orderId) {
+          const Order = (await import('@/models/order.model')).default;
+          await Order.findByIdAndUpdate(orderId, {
+            paymentRef: txRef,
+            paymentStatus: 'pending',
+          });
+        }
+      } catch (dbError) {
+        console.log('Payment ref update skipped:', dbError);
+      }
+      
       return NextResponse.json({
         success: true,
         checkoutUrl: data.data.checkout_url,

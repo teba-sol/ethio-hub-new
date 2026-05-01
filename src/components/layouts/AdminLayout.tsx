@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, CalendarCheck, PackageCheck, Ticket, 
   DollarSign, Flag, LayoutTemplate, FileText, Settings, LogOut, 
   Bell, Search, ShieldAlert, ShieldCheck, UserPlus, Info,
-  ChevronDown, ChevronUp, Briefcase, ShoppingBag, Calendar, Menu, X
+  ChevronDown, ChevronUp, Briefcase, ShoppingBag, Calendar, Menu, X, TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -36,14 +36,15 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
   ];
 
   const menuItems: MenuItem[] = [
-    { path: '/dashboard/admin/overview', name: t('admin.dashboard'), icon: LayoutDashboard },
-    { path: '/dashboard/admin/users', name: t('admin.userManagement'), icon: Users },
-    { path: '/dashboard/admin/verification-moderation', name: t('admin.verificationAndModeration'), icon: ShieldCheck },
-    { path: '/dashboard/admin/management', name: t('admin.management'), icon: Briefcase },
-    { path: '/dashboard/admin/revenue', name: t('admin.revenueAndCommission'), icon: DollarSign },
-    { path: '/dashboard/admin/reports', name: t('admin.reportsAndModeration'), icon: Flag },
-    { path: '/dashboard/admin/logs', name: t('admin.systemLogs'), icon: FileText },
-    { path: '/dashboard/admin/settings', name: t('admin.settings'), icon: Settings },
+    { path: '/dashboard/admin/overview', name: 'Dashboard', icon: LayoutDashboard },
+    { path: '/dashboard/admin/users', name: 'User Management', icon: Users },
+    { path: '/dashboard/admin/verification-moderation', name: 'Verification & Moderation', icon: ShieldCheck },
+    { path: '/dashboard/admin/management', name: 'Management', icon: Briefcase },
+    { path: '/dashboard/admin/wallet', name: 'Wallet', icon: DollarSign },
+    { path: '/dashboard/admin/revenue', name: 'Revenue & Commission', icon: TrendingUp },
+    { path: '/dashboard/admin/reports', name: 'Reports & Moderation', icon: Flag },
+    { path: '/dashboard/admin/logs', name: 'System Logs', icon: FileText },
+    { path: '/dashboard/admin/settings', name: 'Settings', icon: Settings },
   ];
 
   const getCurrentPageName = () => {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Calendar, ShoppingBag, TrendingUp, 
-  Package, Users, DollarSign, ChevronRight
+  Package, Users, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AdminEventManagementPage } from './AdminEventManagementPage';
@@ -9,12 +9,12 @@ import { AdminProductManagementPage } from './AdminProductManagementPage';
 
 export const AdminManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'events' | 'products'>('events');
-
+  
   const tabs = [
     { id: 'events', name: 'Event Management', icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
     { id: 'products', name: 'Product Management', icon: ShoppingBag, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' }
   ];
-
+  
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="max-w-4xl">

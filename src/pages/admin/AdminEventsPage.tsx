@@ -883,21 +883,36 @@ export const AdminEventsPage: React.FC = () => {
                 </div>
 
                 {/* Services & Policies */}
-                 <div className="space-y-4">
-                   <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                     <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                       <Shield className="w-4 h-4" /> {t("events.sections.servicesPolicies")}
-                     </h3>
-                      <div className="space-y-6">
-                        <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">{t("events.includedServices")}</p>
-                          <div className="flex flex-wrap gap-2">
-                            {Array.isArray(event.services) ? event.services.map((s: any, i: number) => (
-                              <span key={`service-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
-                                {getString(s?.name || s?.name_en || s?.description || s?.description_en || s || 'Service')}
+                <div className="space-y-4">
+                  <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <Shield className="w-4 h-4" /> Services & Policies
+                    </h3>
+                    <div className="space-y-6">
+                       <div>
+                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Included Services</p>
+                         <div className="flex flex-wrap gap-2">
+{Array.isArray((event as any).services?.foodPackages) ? ((event as any).services.foodPackages || []).map((s: any, i: number) => (
+                              <span key={`food-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                                {s.name || s}
                               </span>
-                            )) : null}
-                          </div>
+                            )) : []}
+                       {(((event as any).services?.culturalServices as any[]) || []).map((s: any, i: number) => (
+                              <span key={`cultural-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                                {s}
+                              </span>
+                            ))}
+                           {(((event as any).services?.specialAssistance as any[]) || []).map((s: any, i: number) => (
+                              <span key={`special-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                                {s}
+                              </span>
+                            ))}
+                           {(((event as any).services?.extras as any[]) || []).map((s: any, i: number) => (
+                              <span key={`extra-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                                {s}
+                              </span>
+                            ))}
+                         </div>
                        </div>
                        <div>
                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">{t("events.eventPolicies")}</p>

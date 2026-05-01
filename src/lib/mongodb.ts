@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
+import { seedAdminUser } from "./seedAdmin";
 
 const MONGO_URI = process.env.atlas_URL as string;
+let adminSeeded = false;
 
 let cached = (global as any).mongoose;
 
@@ -25,6 +27,17 @@ export async function connectDB() {
   }
 
   cached.conn = await cached.promise;
+  
+  // Seed admin user on first connection
+  if (!adminSeeded) {
+    adminSeeded = true;
+    try {
+      await seedAdminUser();
+    } catch (error) {
+      console.error('Failed to seed admin user:', error);
+    }
+  }
+  
   return cached.conn;
 }
 

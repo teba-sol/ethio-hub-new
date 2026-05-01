@@ -901,9 +901,10 @@ export const ProductDetailPage: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'select' | 'processing' | 'receipt'>('select');
   const [selectedMethod, setSelectedMethod] = useState<'chapa' | 'telebirr' | null>(null);
-  const [transactionRef, setTransactionRef] = useState("");
-
-  useEffect(() => {
+   const [transactionRef, setTransactionRef] = useState("");
+   const [isBuying, setIsBuying] = useState(false);
+ 
+   useEffect(() => {
     const fetchProduct = async () => {
       if (!id) return;
       try {
@@ -969,14 +970,38 @@ export const ProductDetailPage: React.FC = () => {
     }
   };
 
-  const handleBuyNow = () => {
-    if (!isAuthenticated || user?.role !== UserRole.TOURIST) {
+   const handleBuyNow = async () => {
+    if (isBuying) return;
+    if (!isAuthenticated || user?.role?.toLowerCase() !== UserRole.TOURIST) {
       setShowLoginPrompt(true);
       return;
     }
-    setShowPaymentModal(true);
-    setPaymentStep('select');
-    setSelectedMethod(null);
+
+    setIsBuying(true);
+    try {
+      const idempotencyKey = crypto.randomUUID();
+      const response = await fetch('/api/chapa/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: id,
+          quantity,
+          idempotencyKey,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success && data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        alert(data.message || 'Failed to initialize payment');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('Payment failed. Please try again.');
+    } finally {
+      setIsBuying(false);
+    }
   };
 
   const processPayment = async (method: 'chapa' | 'telebirr') => {
@@ -1166,11 +1191,18 @@ export const ProductDetailPage: React.FC = () => {
                     </div>
                 </div>
 
+                <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+                    <span className="text-xs font-bold uppercase tracking-widest text-gray-500">Total Price</span>
+                    <span className="text-xl font-bold text-primary">
+                        ${product.price * quantity} <span className="text-xs font-light text-gray-400">USD</span>
+                    </span>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Button size="lg" className="w-full rounded-xl py-4 shadow-lg shadow-primary/10 font-bold uppercase tracking-widest text-xs" leftIcon={ShoppingCart} onClick={handleAddToCart}>
                         Add to Cart
                     </Button>
-                    <Button size="lg" variant="outline" className="w-full rounded-xl py-4 border-primary text-primary hover:bg-primary hover:text-white font-bold uppercase tracking-widest text-xs" onClick={handleBuyNow}>
+                    <Button size="lg" variant="outline" className="w-full rounded-xl py-4 border-primary text-primary hover:bg-primary hover:text-white font-bold uppercase tracking-widest text-xs" onClick={handleBuyNow} disabled={isBuying}>
                         Buy Now
                     </Button>
                 </div>
@@ -1604,7 +1636,7 @@ export const FestivalDetailPage: React.FC = () => {
   };
 
   const handleBooking = async () => {
-    if (!isAuthenticated || user?.role !== UserRole.TOURIST) {
+    if (!isAuthenticated || user?.role?.toLowerCase() !== UserRole.TOURIST) {
       setShowLoginPrompt(true);
       return;
     }

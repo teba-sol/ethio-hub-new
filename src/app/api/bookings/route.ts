@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '../../../../lib/mongodb';
-import Booking from '../../../../models/booking.model';
-import Festival from '../../../../models/festival.model';
+import { connectDB } from '@/lib/mongodb';
+import Booking from '@/models/booking.model';
+import Festival from '@/models/festival.model';
 import * as jose from 'jose';
 
 const EARLY_BIRD_WINDOW_HOURS = Number(process.env.EARLY_BIRD_WINDOW_HOURS || 5);

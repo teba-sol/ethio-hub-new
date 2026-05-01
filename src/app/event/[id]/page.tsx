@@ -289,19 +289,25 @@ export default function EventPage() {
                 {/* What's Included */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {(festival.foodPackages?.length > 0 || festival.culturalServices?.length > 0) && (
-                     <div>
-                       <h3 className="font-bold text-primary mb-4 flex items-center gap-2">
-                         <Utensils className="w-5 h-5 text-secondary" />
-                         {t('festival.includedServices')}
-                       </h3>
-                        <ul className="space-y-3">
-                          {festival.foodPackages?.map((item: any, idx: number) => (
-                            <li key={idx} className="flex items-center gap-3 text-gray-600">
-                              <Check className="w-4 h-4 text-green-500" />
-                              {getLocalizedText(item, 'name', language)}
-                            </li>
-                          ))}
-                        </ul>
+                    <div>
+                      <h3 className="font-bold text-primary mb-4 flex items-center gap-2">
+                        <Utensils className="w-5 h-5 text-secondary" />
+                        Included Services
+                      </h3>
+                      <ul className="space-y-3">
+                        {festival.foodPackages?.map((item: any, idx: number) => (
+                          <li key={idx} className="flex items-center gap-3 text-gray-600">
+                            <Check className="w-4 h-4 text-green-500" />
+                            {item.name || item}
+                          </li>
+                        ))}
+                        {festival.culturalServices?.map((item: any, idx: number) => (
+                          <li key={idx} className="flex items-center gap-3 text-gray-600">
+                            <Music className="w-4 h-4 text-purple-500" />
+                            {item.name || item}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                   

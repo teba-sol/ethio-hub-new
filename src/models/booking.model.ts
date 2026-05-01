@@ -14,6 +14,9 @@ export interface IBooking extends Document {
   paymentRef?: string;
   paymentMethod?: string;
   paymentDate?: Date;
+  adminCommission: number;
+  organizerEarnings: number;
+  commissionRate: number;
   contactInfo: {
     fullName: string;
     email: string;
@@ -75,6 +78,20 @@ const BookingSchema: Schema = new Schema(
     totalPrice: {
       type: Number,
       required: true,
+    },
+    adminCommission: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    organizerEarnings: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    commissionRate: {
+      type: Number,
+      default: 0.10,
     },
     currency: {
       type: String,

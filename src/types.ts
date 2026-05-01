@@ -190,7 +190,7 @@ export interface Festival {
   performances: string[];
   hotels: HotelAccommodation[];
   transportation: TransportOption[];
-  foodPackages: string[];
+  foodPackages: Array<{ name: string; description: string; pricePerPerson: number; items: string[]; _id?: string }>;
   culturalServices: string[];
   baseTicketPrice?: number;
   vipTicketPrice?: number;
