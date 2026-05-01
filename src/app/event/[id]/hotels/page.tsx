@@ -11,12 +11,12 @@ import { useLanguage } from '@/context/LanguageContext';
 import { getLocalizedText } from '@/utils/getLocalizedText';
 
 const FACILITIES = [
-  { id: 'wifi', label: 'Free WiFi', labelKey: 'festival.freeWiFi', icon: Wifi },
-  { id: 'pool', label: 'Swimming Pool', labelKey: 'festival.swimmingPool', icon: Waves },
-  { id: 'restaurant', label: 'Restaurant', labelKey: 'festival.restaurant', icon: Utensils },
-  { id: 'gym', label: 'Fitness Center', labelKey: 'festival.fitnessCenter', icon: Dumbbell },
-  { id: 'parking', label: 'Free Parking', labelKey: 'festival.freeParking', icon: Car },
-  { id: 'spa', label: 'Spa & Wellness', labelKey: 'festival.spaWellness', icon: Coffee },
+  { id: 'wifi', label: 'Free WiFi', labelKey: 'hotel.freeWiFi', icon: Wifi },
+  { id: 'pool', label: 'Swimming Pool', labelKey: 'hotel.swimmingPool', icon: Waves },
+  { id: 'restaurant', label: 'Restaurant', labelKey: 'hotel.restaurant', icon: Utensils },
+  { id: 'gym', label: 'Fitness Center', labelKey: 'hotel.fitnessCenter', icon: Dumbbell },
+  { id: 'parking', label: 'Free Parking', labelKey: 'hotel.freeParking', icon: Car },
+  { id: 'spa', label: 'Spa & Wellness', labelKey: 'hotel.spaWellness', icon: Coffee },
 ];
 
 export default function HotelsPage() {
@@ -133,13 +133,13 @@ export default function HotelsPage() {
       <div className="min-h-screen bg-ethio-bg">
         <div className="bg-white border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-6 py-4">
-            <button 
-              onClick={() => router.back()}
-              className="flex items-center gap-2 text-gray-500 hover:text-primary"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Event</span>
-            </button>
+           <button 
+             onClick={() => router.back()}
+             className="flex items-center gap-2 text-gray-500 hover:text-primary"
+           >
+             <ArrowLeft className="w-4 h-4" />
+             <span>{t('common.back')}</span>
+           </button>
           </div>
         </div>
 
@@ -203,12 +203,12 @@ export default function HotelsPage() {
                   <SlidersHorizontal className="w-4 h-4" />
                   {t('festival.filters')}
                 </h3>
-                <button 
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="lg:hidden text-gray-500"
-                >
-                  {showFilters ? 'Hide' : 'Show'}
-                </button>
+                 <button 
+                   onClick={() => setShowFilters(!showFilters)}
+                   className="lg:hidden text-gray-500"
+                 >
+                   {showFilters ? t('common.hide') : t('common.show')}
+                 </button>
               </div>
               
               <div className={`space-y-6 ${showFilters ? 'block' : 'hidden lg:block'}`}>
@@ -220,16 +220,16 @@ export default function HotelsPage() {
                       value={priceRange[0]}
                       onChange={(e) => setPriceRange([parseInt(e.target.value) || 0, priceRange[1]])}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                      placeholder="Min"
-                    />
-                    <span className="text-gray-400">-</span>
-                    <input 
-                      type="number" 
-                      value={priceRange[1]}
-                      onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 1000])}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                      placeholder="Max"
-                    />
+                       placeholder={t('common.min')}
+                     />
+                     <span className="text-gray-400">-</span>
+                     <input 
+                       type="number" 
+                       value={priceRange[1]}
+                       onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 1000])}
+                       className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                       placeholder={t('common.max')}
+                     />
                   </div>
                 </div>
 
@@ -253,8 +253,8 @@ export default function HotelsPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">{t('festival.facilities')}</label>
+                 <div>
+                   <label className="text-sm font-medium text-gray-700 mb-2 block">{t('hotel.facilities')}</label>
                     <div className="space-y-2">
                      {FACILITIES.map(facility => (
                        <label 
@@ -397,21 +397,21 @@ export default function HotelsPage() {
                         </div>
                       )}
                       
-                      <div className="mt-4">
-                        <span className="text-sm text-primary font-medium hover:underline">
-                          {t('hotel.viewDetailsSelectRoom')}
-                        </span>
-                      </div>
+                       <div className="mt-4">
+                         <span className="text-sm text-primary font-medium hover:underline">
+                           {t('hotel.viewDetails')}
+                         </span>
+                       </div>
                     </div>
                   </div>
                 </Link>
               );
             })}
 
-            {filteredHotels.length === 0 && (
-              <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
-                <p className="text-gray-500">No hotels match your filters.</p>
-                <button
+             {filteredHotels.length === 0 && (
+               <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
+                 <p className="text-gray-500">{t('common.noResults')}</p>
+                 <button
                   onClick={() => {
                     setSelectedStars([]);
                     setSelectedFacilities([]);

@@ -440,8 +440,8 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
                   <div className="mt-4 p-4 bg-gray-50 rounded-xl">
                     <div className="flex items-center justify-between mb-3">
                        <div>
-                         <p className="font-medium text-sm">{t('hotel.adults')}</p>
-                         <p className="text-xs text-gray-500">{t('hotel.age13+')}</p>
+                          <p className="font-medium text-sm">{t('hotel.adults')}</p>
+                          <p className="text-xs text-gray-500">{t('hotel.age13Plus')}</p>
                        </div>
                       <div className="flex items-center gap-3">
                         <button 
@@ -461,8 +461,8 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
                     </div>
                     <div className="flex items-center justify-between">
                        <div>
-                         <p className="font-medium text-sm">{t('hotel.children')}</p>
-                         <p className="text-xs text-gray-500">{t('hotel.age0-12')}</p>
+                          <p className="font-medium text-sm">{t('hotel.children')}</p>
+                          <p className="text-xs text-gray-500">{t('hotel.age0to12')}</p>
                        </div>
                       <div className="flex items-center gap-3">
                         <button 
@@ -508,9 +508,9 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
                     <span className="text-2xl font-bold text-primary">${(selectedRoom?.pricePerNight || (hotel.rooms?.[0] as any)?.pricePerNight || 0)}</span>
                     <span className="text-gray-500 text-sm"> /night</span>
                   </div>
-                  <div className="text-right text-sm text-gray-500">
-                    {(selectedRoom as any)?.availability || (hotel.rooms?.[0] as any)?.availability || 0} rooms left
-                  </div>
+                   <div className="text-right text-sm text-gray-500">
+                     {t('hotel.roomsLeft').replace('{count}', String((selectedRoom as any)?.availability || (hotel.rooms?.[0] as any)?.availability || 0))}
+                   </div>
                 </div>
               </div>
 

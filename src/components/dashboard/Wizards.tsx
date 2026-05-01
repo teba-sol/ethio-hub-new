@@ -246,34 +246,15 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
      });
    };
 
-   const handleFileUpload = async (file: File, isCoverImage: boolean = false) => {
-    const formData = new FormData();
-    formData.append('file', file);
+   // Helper to get display text based on language preference
+   const getDisplayText = (en: string, am: string) => {
+     if (languagePreference === 'both') return { primary: en, secondary: am, showBoth: true };
+     if (languagePreference === 'en') return { primary: en, secondary: '', showBoth: false };
+     if (languagePreference === 'am') return { primary: am, secondary: '', showBoth: false };
+     return { primary: en, secondary: '', showBoth: false };
+   };
 
-    try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        if (isCoverImage) {
-          setFormData(prev => ({ ...prev, core: { ...prev.core, coverImage: data.url } }));
-        } else {
-          setFormData(prev => ({ ...prev, core: { ...prev.core, gallery: [...prev.core.gallery, data.url] } }));
-        }
-      } else {
-        alert(`Upload failed: ${data.message}`);
-      }
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      alert('An error occurred during file upload.');
-    }
-  };
-
-  const handlePublish = async () => {
+   const handlePublish = async () => {
     const requiredFields: Record<string, any> = {
       startDate: formData.core.startDate,
       endDate: formData.core.endDate,
@@ -1079,16 +1060,24 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                    <section>
                      <h4 className="text-lg font-bold text-primary mb-4">Cultural Services</h4>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                       <div>
-                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">English Services (comma-separated)</label>
-                         <textarea
-                           rows={4}
-                           className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all mt-2"
-                           placeholder="e.g. Traditional dance performances, Craft workshops..."
-                           value={formData.services.culturalServices_en.join(', ')}
-                           onChange={(e) => updateServiceArray('culturalServices', 'en', e.target.value)}
-                         />
-                       </div>
+                        <div>
+                          <textarea
+                            rows={4}
+                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                            placeholder="e.g. Traditional dance performances, Craft workshops..."
+                            value={formData.services.culturalServices_en.join(', ')}
+                            onChange={(e) => updateServiceArray('culturalServices', 'en', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <textarea
+                            rows={4}
+                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                            placeholder="e.g. የባህል አድራᎎቶች፣ የእጅ ጥበብ ስራቶች..."
+                            value={formData.services.culturalServices_am.join(', ')}
+                            onChange={(e) => updateServiceArray('culturalServices', 'am', e.target.value)}
+                          />
+                        </div>
                        <div>
                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Amharic Services (comma-separated)</label>
                          <textarea
@@ -1106,26 +1095,24 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                    <section>
                      <h4 className="text-lg font-bold text-primary mb-4">Special Assistance</h4>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                       <div>
-                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">English (comma-separated)</label>
-                         <textarea
-                           rows={3}
-                           className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all mt-2"
-                           placeholder="e.g. Wheelchair access, Sign language interpreter..."
-                           value={formData.services.specialAssistance_en.join(', ')}
-                           onChange={(e) => updateServiceArray('specialAssistance', 'en', e.target.value)}
-                         />
-                       </div>
-                       <div>
-                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Amharic (comma-separated)</label>
-                         <textarea
-                           rows={3}
-                           className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all mt-2"
-                           placeholder="e.g. ለአካል ተገዢ መድረሻ፣ የምልክት ቋንቋ ትርጉም..."
-                           value={formData.services.specialAssistance_am.join(', ')}
-                           onChange={(e) => updateServiceArray('specialAssistance', 'am', e.target.value)}
-                         />
-                       </div>
+                        <div>
+                          <textarea
+                            rows={3}
+                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                            placeholder="e.g. Wheelchair access, Sign language interpreter..."
+                            value={formData.services.specialAssistance_en.join(', ')}
+                            onChange={(e) => updateServiceArray('specialAssistance', 'en', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <textarea
+                            rows={3}
+                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                            placeholder="e.g. ለአካል ተገዢ መድረሻ፣ የምልክት ቋንቋ ትርጉም..."
+                            value={formData.services.specialAssistance_am.join(', ')}
+                            onChange={(e) => updateServiceArray('specialAssistance', 'am', e.target.value)}
+                          />
+                        </div>
                      </div>
                    </section>
 
@@ -1133,26 +1120,24 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                    <section>
                      <h4 className="text-lg font-bold text-primary mb-4">Extra Services</h4>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                       <div>
-                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">English (comma-separated)</label>
-                         <textarea
-                           rows={3}
-                           className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all mt-2"
-                           placeholder="e.g. Photography, Souvenir shop, Guided tours..."
-                           value={formData.services.extras_en.join(', ')}
-                           onChange={(e) => updateServiceArray('extras', 'en', e.target.value)}
-                         />
-                       </div>
-                       <div>
-                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Amharic (comma-separated)</label>
-                         <textarea
-                           rows={3}
-                           className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all mt-2"
-                           placeholder="e.g. ፎቶግራፍ፣ ህዝባዊ መዝነት፣ የመምሪያ ጉዞች..."
-                           value={formData.services.extras_am.join(', ')}
-                           onChange={(e) => updateServiceArray('extras', 'am', e.target.value)}
-                         />
-                       </div>
+                        <div>
+                          <textarea
+                            rows={3}
+                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                            placeholder="e.g. Photography, Souvenir shop, Guided tours..."
+                            value={formData.services.extras_en.join(', ')}
+                            onChange={(e) => updateServiceArray('extras', 'en', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <textarea
+                            rows={3}
+                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                            placeholder="e.g. ፎቶግራፍ፣ ህዝባዊ መዝነት፣ የመምሪያ ጉዞች..."
+                            value={formData.services.extras_am.join(', ')}
+                            onChange={(e) => updateServiceArray('extras', 'am', e.target.value)}
+                          />
+                        </div>
                      </div>
                    </section>
                  </div>
@@ -1276,20 +1261,54 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                      <section className="bg-ethio-bg rounded-2xl p-6">
                        <h4 className="text-lg font-bold text-primary mb-4">Core Information</h4>
                        <div className="space-y-3 text-sm">
-                         <div><span className="font-bold">Festival Name:</span> {languagePreference !== 'am' ? formData.core.name_en || '(not provided)' : ''} {languagePreference === 'both' && formData.core.name_am ? '/' : ''} {languagePreference !== 'en' ? formData.core.name_am || '(not provided)' : ''}</div>
+                         <div>
+                           <span className="font-bold">Festival Name:</span>
+                           {languagePreference === 'both' ? (
+                             <>
+                               <br />EN: {formData.core.name_en || 'Not provided'}
+                               <br />AM: {formData.core.name_am || 'Not provided'}
+                             </>
+                           ) : languagePreference === 'en' ? (
+                             formData.core.name_en || 'Not provided'
+                           ) : (
+                             formData.core.name_am || 'Not provided'
+                           )}
+                         </div>
                          <div><span className="font-bold">Dates:</span> {formData.core.startDate} - {formData.core.endDate}</div>
-                         <div><span className="font-bold">Location:</span> {languagePreference !== 'am' ? formData.core.locationName_en || '' : ''} {languagePreference === 'both' && formData.core.locationName_am ? '/' : ''} {languagePreference !== 'en' ? formData.core.locationName_am || '' : ''}</div>
+                         <div>
+                           <span className="font-bold">Location:</span>
+                           {languagePreference === 'both' ? (
+                             <>
+                               <br />EN: {formData.core.locationName_en || 'Not provided'}
+                               <br />AM: {formData.core.locationName_am || 'Not provided'}
+                             </>
+                           ) : languagePreference === 'en' ? (
+                             formData.core.locationName_en || 'Not provided'
+                           ) : (
+                             formData.core.locationName_am || 'Not provided'
+                           )}
+                         </div>
                          <div><span className="font-bold">Address:</span> {formData.core.address}</div>
                        </div>
                      </section>
 
                      {/* Schedule Summary */}
                      <section className="bg-ethio-bg rounded-2xl p-6">
-                       <h4 className="text-lg font-bold text-primary mb-4">Schedule ({formData.schedule.length} day(s))</h4>
+                       <h4 className="text-lg font-bold text-primary mb-4">Schedule ({formData.schedule.length} day{formData.schedule.length !== 1 ? 's' : ''})</h4>
                        <ul className="space-y-2 text-sm">
                          {formData.schedule.map((day: any, idx: number) => (
-                           <li key={idx} className="border-b border-gray-200 pb-2">
-                             <span className="font-bold">Day {day.day}:</span> {languagePreference !== 'am' ? day.title_en || '' : ''} {languagePreference === 'both' && day.title_am ? '/' : ''} {languagePreference !== 'en' ? day.title_am || '' : ''}
+                           <li key={idx} className="border-b border-gray-200 pb-2 last:border-0">
+                             <span className="font-bold">Day {day.day}:</span>
+                             {languagePreference === 'both' ? (
+                               <>
+                                 <br />EN Title: {day.title_en || 'Not provided'}
+                                 <br />AM Title: {day.title_am || 'Not provided'}
+                               </>
+                             ) : languagePreference === 'en' ? (
+                               day.title_en || 'Not provided'
+                             ) : (
+                               day.title_am || 'Not provided'
+                             )}
                            </li>
                          ))}
                        </ul>
@@ -1300,10 +1319,19 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                        <h4 className="text-lg font-bold text-primary mb-4">Hotels ({formData.hotels.length})</h4>
                        <div className="space-y-4 text-sm">
                          {formData.hotels.map((hotel: any, idx: number) => (
-                           <div key={idx} className="border-b border-gray-200 pb-2">
-                             <div className="font-bold">{languagePreference !== 'am' ? hotel.name_en || 'Unnamed' : ''} {languagePreference === 'both' && hotel.name_am ? '/' : ''} {languagePreference !== 'en' ? hotel.name_am : ''}</div>
-                             <div>{hotel.starRating} stars</div>
-                             <div>{hotel.rooms?.length || 0} room types</div>
+                           <div key={idx} className="border-b border-gray-200 pb-3 last:border-0">
+                             <div className="font-bold">
+                               {languagePreference === 'both' ? (
+                                 <>
+                                   {hotel.name_en || 'Unnamed'} / {hotel.name_am || 'Unnamed'}
+                                 </>
+                               ) : languagePreference === 'en' ? (
+                                 hotel.name_en || 'Unnamed'
+                               ) : (
+                                 hotel.name_am || 'Unnamed'
+                               )}
+                             </div>
+                             <div>{hotel.starRating} stars • {hotel.rooms?.length || 0} room type(s)</div>
                            </div>
                          ))}
                        </div>
@@ -1314,8 +1342,18 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                        <h4 className="text-lg font-bold text-primary mb-4">Transportation ({formData.transportation.length})</h4>
                        <div className="space-y-2 text-sm">
                          {formData.transportation.map((t: any, idx: number) => (
-                           <div key={idx} className="border-b border-gray-200 pb-2">
-                             <span className="font-bold">{languagePreference !== 'am' ? t.type_en || 'Unnamed' : ''} {languagePreference === 'both' && t.type_am ? '/' : ''} {languagePreference !== 'en' ? t.type_am : ''}</span>
+                           <div key={idx} className="border-b border-gray-200 pb-2 last:border-0">
+                             <span className="font-bold">
+                               {languagePreference === 'both' ? (
+                                 <>
+                                   {t.type_en || 'Unnamed'} / {t.type_am || 'Unnamed'}
+                                 </>
+                               ) : languagePreference === 'en' ? (
+                                 t.type_en || 'Unnamed'
+                               ) : (
+                                 t.type_am || 'Unnamed'
+                               )}
+                             </span>
                              <span className="ml-2 text-gray-500">- {t.availability} units, {t.price} ETB</span>
                            </div>
                          ))}
@@ -1327,9 +1365,9 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                        <h4 className="text-lg font-bold text-primary mb-4">Services</h4>
                        <div className="text-sm space-y-2">
                          <div><span className="font-bold">Food Packages:</span> {formData.services.foodPackages.length}</div>
-                         <div><span className="font-bold">Cultural Services:</span> {formData.services.culturalServices_en.length} EN / {formData.services.culturalServices_am.length} AM</div>
-                         <div><span className="font-bold">Special Assistance:</span> {formData.services.specialAssistance_en.length} EN / {formData.services.specialAssistance_am.length} AM</div>
-                         <div><span className="font-bold">Extras:</span> {formData.services.extras_en.length} EN / {formData.services.extras_am.length} AM</div>
+                         <div><span className="font-bold">Cultural Services:</span> EN: {formData.services.culturalServices_en.length}, AM: {formData.services.culturalServices_am.length}</div>
+                         <div><span className="font-bold">Special Assistance:</span> EN: {formData.services.specialAssistance_en.length}, AM: {formData.services.specialAssistance_am.length}</div>
+                         <div><span className="font-bold">Extras:</span> EN: {formData.services.extras_en.length}, AM: {formData.services.extras_am.length}</div>
                        </div>
                      </section>
 

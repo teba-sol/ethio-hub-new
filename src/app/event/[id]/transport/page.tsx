@@ -68,14 +68,14 @@ export default function TransportPage() {
 
   return (
     <div className="min-h-screen bg-ethio-bg">
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-500 hover:text-primary">
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back</span>
-          </button>
-        </div>
-      </div>
+         <div className="bg-white border-b border-gray-100">
+           <div className="max-w-7xl mx-auto px-6 py-4">
+             <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-500 hover:text-primary">
+               <ArrowLeft className="w-4 h-4" />
+               <span>{t('common.back')}</span>
+             </button>
+           </div>
+         </div>
 
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="mb-12">
@@ -93,7 +93,7 @@ export default function TransportPage() {
                    onClick={() => router.push(`/event/${eventId}/tickets`)}
                    className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-primary/90"
                  >
-                   {t('common.continueToCheckout')}
+                   {t('festival.continueToCheckout')}
                  </button>
                </div>
             ) : (
@@ -262,20 +262,20 @@ export default function TransportPage() {
                   >
                     {[1, 2, 3, 4, 5, 6, 7].map((num) => (
                       <option key={num} value={num}>
-                        {num} {num === 1 ? 'day' : 'days'}
+                         {num} {num === 1 ? t('festival.dayLabel') : t('festival.days')}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-xl">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-600">$ {(currentTransport?.price || firstTransport?.price) || 0} x {transportDays} days</span>
+                     <span className="text-gray-600">$ {(currentTransport?.price || firstTransport?.price) || 0} x {transportDays} {transportDays === 1 ? t('festival.dayLabel') : t('festival.days')}</span>
                     <span className="font-bold text-gray-900">$ {(currentTransport?.price || firstTransport?.price || 0) * transportDays}</span>
                   </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                    <span className="font-medium text-gray-900">Total</span>
-                    <span className="text-xl font-bold text-primary">$ {(currentTransport?.price || firstTransport?.price || 0) * transportDays}</span>
-                  </div>
+                   <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                     <span className="font-medium text-gray-900">{t('common.total')}</span>
+                     <span className="text-xl font-bold text-primary">$ {(currentTransport?.price || firstTransport?.price || 0) * transportDays}</span>
+                   </div>
                 </div>
                 <button
                   className="w-full py-3 text-center rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"

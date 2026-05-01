@@ -27,32 +27,41 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('language', lang);
   };
 
-  // Translation function
-  const t = (key: string): string => {
-    const keys = key.split('.');
-    let current: TranslationDictionary | string = translations[language];
+   // Translation function
+   const t = (key: string, params?: Record<string, any>): string => {
+     const keys = key.split('.');
+     let current: TranslationDictionary | string = translations[language];
 
-    for (const k of keys) {
-      if (typeof current === 'string') {
-        // Key path too deep
-        return key;
-      }
-      current = current[k];
+     for (const k of keys) {
+       if (typeof current === 'string') {
+         return key;
+       }
+       current = current[k];
 
-      if (current === undefined) {
-        // Key not found, fallback to English
-        let fallback: TranslationDictionary | string = translations.en;
-        for (const fk of keys) {
-          if (typeof fallback === 'string') break;
-          fallback = fallback[fk];
-          if (fallback === undefined) return key;
-        }
-        return typeof fallback === 'string' ? fallback : key;
-      }
-    }
+       if (current === undefined) {
+         // Key not found, fallback to English
+         let fallback: TranslationDictionary | string = translations.en;
+         for (const fk of keys) {
+           if (typeof fallback === 'string') break;
+           fallback = fallback[fk];
+           if (fallback === undefined) return key;
+         }
+         current = fallback;
+         if (typeof current !== 'string') return key;
+       }
+     }
 
-    return typeof current === 'string' ? current : key;
-  };
+     let result = typeof current === 'string' ? current : key;
+
+     // Apply parameter interpolation
+     if (params && typeof result === 'string') {
+       Object.entries(params).forEach(([k, v]) => {
+         result = result.replace(new RegExp(`{${k}}`, 'g'), String(v));
+       });
+     }
+
+     return result;
+   };
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>
