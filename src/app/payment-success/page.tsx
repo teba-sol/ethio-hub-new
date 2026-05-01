@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, ArrowRight, AlertCircle } from "lucide-react";
+import { useCart } from "@/context/CartContext";
 
 export default function PaymentSuccessPage() {
   const searchParams = useSearchParams()!;
@@ -12,6 +13,8 @@ export default function PaymentSuccessPage() {
   const status = searchParams.get("status") || "";
   const orderId = searchParams.get("orderId") || "";
   const bookingId = searchParams.get("bookingId") || "";
+  const isCartCheckout = searchParams.get("cart") === "true";
+  const { clearCart } = useCart();
   
   const [verifying, setVerifying] = useState(false);
   const [verifyResult, setVerifyResult] = useState<any>(null);
@@ -45,6 +48,9 @@ export default function PaymentSuccessPage() {
           }
           
           setVerifyResult(data);
+          if (data.success && isCartCheckout) {
+            clearCart();
+          }
           console.log("[PaymentSuccess] Payment verify and process result:", data);
         } catch (e: any) {
           console.error("[PaymentSuccess] Verification error:", e);
@@ -57,7 +63,7 @@ export default function PaymentSuccessPage() {
       }
     };
     verifyPayment();
-  }, [orderId, txRef, status]);
+  }, [orderId, txRef, status, isCartCheckout]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">

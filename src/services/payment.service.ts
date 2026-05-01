@@ -103,6 +103,183 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
       return { success: false, message: 'No associated order or booking found' };
     }
 
+    const cartOrders = await Order.find({ paymentRef: txRef });
+    if (cartOrders.length > 1) {
+      console.log(`[PaymentService] Processing cart payment with ${cartOrders.length} orders for txRef: ${txRef}`);
+      let paymentTotal = 0;
+
+      for (const cartOrder of cartOrders) {
+        const totalAmount = cartOrder.totalPrice || 0;
+        const commissionRate = cartOrder.commissionRate || 0.10;
+        let adminCommission = cartOrder.adminCommission;
+        let artisanEarnings = cartOrder.artisanEarnings;
+
+        if (adminCommission === undefined || artisanEarnings === undefined || adminCommission === 0) {
+          adminCommission = Math.round(totalAmount * commissionRate * 100) / 100;
+          artisanEarnings = Math.round((totalAmount - adminCommission) * 100) / 100;
+        }
+
+        paymentTotal += totalAmount;
+        cartOrder.paymentStatus = 'paid';
+        cartOrder.status = 'confirmed';
+        cartOrder.paymentDate = new Date();
+        cartOrder.adminCommission = adminCommission;
+        cartOrder.artisanEarnings = artisanEarnings;
+        await cartOrder.save();
+
+        const artisanId = cartOrder.artisan;
+        const existingArtisanTx = await Transaction.findOne({
+          paymentRef: txRef,
+          orderId: cartOrder._id,
+          type: 'ORDER_PAYMENT',
+          userId: artisanId,
+        });
+
+        let artisanWallet = await Wallet.findOne({ userId: artisanId });
+        if (!artisanWallet) {
+          artisanWallet = new Wallet({
+            userId: artisanId,
+            userRole: 'artisan',
+            pendingBalance: 0,
+            availableBalance: 0,
+            lifetimeEarned: 0,
+            lifetimePaidOut: 0,
+            lifetimeRefunded: 0,
+            currency: 'ETB',
+          });
+        }
+
+        if (!existingArtisanTx || existingArtisanTx.status !== 'COMPLETED') {
+          const originalPendingBalance = artisanWallet.pendingBalance || 0;
+          artisanWallet.pendingBalance = originalPendingBalance >= artisanEarnings
+            ? originalPendingBalance - artisanEarnings
+            : 0;
+          artisanWallet.availableBalance = (artisanWallet.availableBalance || 0) + artisanEarnings;
+          artisanWallet.lifetimeEarned = (artisanWallet.lifetimeEarned || 0) + artisanEarnings;
+          await artisanWallet.save();
+
+          if (existingArtisanTx) {
+            existingArtisanTx.status = 'COMPLETED';
+            existingArtisanTx.metadata = {
+              ...existingArtisanTx.metadata,
+              completedAt: new Date(),
+              paymentGatewayId: metadataPayload?.reference || metadataObject?.reference,
+            };
+            await existingArtisanTx.save();
+          } else {
+            await Transaction.create({
+              walletId: artisanWallet._id,
+              userId: artisanId,
+              orderId: cartOrder._id,
+              productId: cartOrder.product,
+              type: 'ORDER_PAYMENT',
+              amount: artisanEarnings,
+              currency: 'ETB',
+              status: 'COMPLETED',
+              paymentRef: txRef,
+              metadata: {
+                orderId: cartOrder._id,
+                productId: cartOrder.product,
+                totalAmount,
+                commissionRate,
+                paymentGatewayId: metadataPayload?.reference || metadataObject?.reference,
+                payerId: cartOrder.tourist,
+                receiverId: artisanId,
+              },
+            });
+          }
+        }
+
+        if (adminId) {
+          let adminWallet = await Wallet.findOne({ userId: adminId, userRole: 'admin' });
+          if (!adminWallet) {
+            adminWallet = new Wallet({
+              userId: adminId,
+              userRole: 'admin',
+              pendingBalance: 0,
+              availableBalance: 0,
+              lifetimeEarned: 0,
+              lifetimePaidOut: 0,
+              lifetimeRefunded: 0,
+              currency: 'ETB',
+            });
+          }
+
+          const existingAdminTx = await Transaction.findOne({
+            walletId: adminWallet._id,
+            paymentRef: txRef,
+            orderId: cartOrder._id,
+            type: 'ADMIN_COMMISSION',
+            userId: adminId,
+          });
+
+          if (!existingAdminTx || existingAdminTx.status !== 'COMPLETED') {
+            const originalPendingAdmin = adminWallet.pendingBalance || 0;
+            adminWallet.pendingBalance = originalPendingAdmin >= adminCommission
+              ? originalPendingAdmin - adminCommission
+              : 0;
+            adminWallet.availableBalance = (adminWallet.availableBalance || 0) + adminCommission;
+            adminWallet.lifetimeEarned = (adminWallet.lifetimeEarned || 0) + adminCommission;
+            await adminWallet.save();
+
+            if (existingAdminTx) {
+              existingAdminTx.status = 'COMPLETED';
+              existingAdminTx.metadata = {
+                ...existingAdminTx.metadata,
+                completedAt: new Date(),
+                paymentGatewayId: metadataPayload?.reference || metadataObject?.reference,
+              };
+              await existingAdminTx.save();
+            } else {
+              await Transaction.create({
+                walletId: adminWallet._id,
+                userId: adminId,
+                orderId: cartOrder._id,
+                productId: cartOrder.product,
+                type: 'ADMIN_COMMISSION',
+                amount: adminCommission,
+                currency: 'ETB',
+                status: 'COMPLETED',
+                paymentRef: txRef,
+                metadata: {
+                  orderId: cartOrder._id,
+                  productId: cartOrder.product,
+                  totalAmount,
+                  commissionRate,
+                  artisanId: cartOrder.artisan,
+                  paymentGatewayId: metadataPayload?.reference || metadataObject?.reference,
+                  payerId: cartOrder.tourist,
+                  receiverId: adminId,
+                },
+              });
+            }
+          }
+        }
+      }
+
+      if (payment) {
+        payment.status = 'Success';
+        payment.userId = payment.userId || cartOrders[0].tourist;
+        payment.amount = payment.amount || paymentTotal;
+        payment.method = payment.method || 'chapa';
+        payment.paymentGatewayId = payment.paymentGatewayId || metadataPayload?.reference || metadataObject?.reference;
+        payment.invoiceUrl = payment.invoiceUrl || metadataPayload?.checkout_url || metadataObject?.checkout_url;
+        await payment.save();
+      } else {
+        await Payment.create({
+          userId: cartOrders[0].tourist,
+          transactionRef: txRef,
+          paymentGatewayId: metadataPayload?.reference || metadataObject?.reference,
+          method: 'chapa',
+          amount: paymentTotal,
+          status: 'Success',
+          invoiceUrl: metadataPayload?.checkout_url || metadataObject?.checkout_url,
+        });
+      }
+
+      return { success: true, orders: cartOrders };
+    }
+
     // 2. Process Order Payment
     if (order) {
       console.log(`[PaymentService] Processing order: ${order._id}`);
@@ -111,6 +288,7 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
       // Check if already processed fully
       const existingArtisanTx = await Transaction.findOne({ 
         paymentRef: txRef, 
+        orderId: order._id,
         type: 'ORDER_PAYMENT',
         userId: order.artisan
       });
@@ -286,6 +464,7 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
           const existingAdminTx = await Transaction.findOne({
             walletId: adminWallet._id,
             paymentRef: txRef,
+            orderId: order._id,
             type: 'ADMIN_COMMISSION',
             userId: adminId,
           });

@@ -42,7 +42,6 @@ const CartDrawer: React.FC = () => {
     cart,
     removeFromCart,
     updateQuantity,
-    clearCart,
     cartTotal,
     isCartOpen,
     toggleCart,
@@ -50,74 +49,51 @@ const CartDrawer: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
   const [checkoutStep, setCheckoutStep] = useState<
-    "cart" | "payment" | "processing" | "success"
+    "cart" | "success"
   >("cart");
-  const [selectedPayment, setSelectedPayment] = useState<
-    "chapa" | "telebirr" | null
-  >(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
-  const handleProceedToCheckout = () => {
+  const handleProceedToCheckout = async () => {
     if (!isAuthenticated || user?.role !== UserRole.TOURIST) {
       setShowLoginPrompt(true);
       return;
     }
-    setCheckoutStep("payment");
-  };
 
-  const handlePayment = async () => {
-    if (!selectedPayment) return;
-    
-    if (selectedPayment === "chapa") {
-      try {
-        setCheckoutStep("processing");
+    if (cart.length === 0) {
+      alert("Cart is empty");
+      return;
+    }
 
-        // Use the first item in the cart for now since the backend supports single product orders
-        // In a real multi-item cart, the backend would need to be updated to handle arrays
-        const item = cart[0];
-        if (!item) {
-          alert("Cart is empty");
-          setCheckoutStep("cart");
-          return;
-        }
+    try {
+      const idempotencyKey = crypto.randomUUID();
 
-        const response = await fetch("/api/chapa/initialize", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
+      const response = await fetch("/api/chapa/initialize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          items: cart.map((item) => ({
             productId: item.id,
             quantity: item.quantity,
-          }),
-        });
+          })),
+          idempotencyKey,
+        }),
+      });
 
-        const data = await response.json();
+      const data = await response.json();
 
-        if (data.success && data.checkout_url) {
-          // Redirect to Chapa checkout
-          window.location.href = data.checkout_url;
-        } else {
-          console.error("Payment initialization failed:", data.message);
-          alert(data.message || "Failed to initialize payment");
-          setCheckoutStep("payment");
-        }
-      } catch (error) {
-        console.error("Error in handlePayment:", error);
-        alert("An error occurred. Please try again.");
-        setCheckoutStep("payment");
-      }
-    } else {
-      // Handle other payment methods (telebirr etc)
-      setCheckoutStep("processing");
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      setCheckoutStep("success");
-      setTimeout(() => {
-        clearCart();
-        toggleCart();
+      if (data.success && data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        console.error("Payment initialization failed:", data.message);
+        alert(data.message || "Failed to initialize payment");
         setCheckoutStep("cart");
-        setSelectedPayment(null);
-      }, 3000);
+      }
+    } catch (error) {
+      console.error("Error in cart checkout:", error);
+      alert("An error occurred. Please try again.");
+      setCheckoutStep("cart");
     }
   };
 
@@ -135,11 +111,7 @@ const CartDrawer: React.FC = () => {
             <ShoppingCart className="w-5 h-5 text-secondary" />
             {checkoutStep === "cart"
               ? "Your Cart"
-              : checkoutStep === "payment"
-                ? "Select Payment"
-                : checkoutStep === "processing"
-                  ? "Processing"
-                  : "Order Confirmed"}
+              : "Order Confirmed"}
           </h2>
           <button
             onClick={toggleCart}
@@ -225,66 +197,6 @@ const CartDrawer: React.FC = () => {
             </>
           )}
 
-          {checkoutStep === "payment" && (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-500">
-                Choose a secure payment method to complete your order.
-              </p>
-
-              <button
-                onClick={() => setSelectedPayment("chapa")}
-                className={`w-full p-4 rounded-xl border-2 flex items-center justify-between transition-all ${selectedPayment === "chapa" ? "border-primary bg-primary/5" : "border-gray-100 hover:border-gray-200"}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold text-xs">
-                    CH
-                  </div>
-                  <div className="text-left">
-                    <p className="font-bold text-primary">Chapa</p>
-                    <p className="text-xs text-gray-400">
-                      Pay with Card / Bank
-                    </p>
-                  </div>
-                </div>
-                {selectedPayment === "chapa" && (
-                  <div className="w-4 h-4 bg-primary rounded-full" />
-                )}
-              </button>
-
-              <button
-                onClick={() => setSelectedPayment("telebirr")}
-                className={`w-full p-4 rounded-xl border-2 flex items-center justify-between transition-all ${selectedPayment === "telebirr" ? "border-primary bg-primary/5" : "border-gray-100 hover:border-gray-200"}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-xs">
-                    TB
-                  </div>
-                  <div className="text-left">
-                    <p className="font-bold text-primary">Telebirr</p>
-                    <p className="text-xs text-gray-400">Mobile Money</p>
-                  </div>
-                </div>
-                {selectedPayment === "telebirr" && (
-                  <div className="w-4 h-4 bg-primary rounded-full" />
-                )}
-              </button>
-            </div>
-          )}
-
-          {checkoutStep === "processing" && (
-            <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
-              <div className="w-16 h-16 border-4 border-gray-100 border-t-secondary rounded-full animate-spin"></div>
-              <div>
-                <h3 className="text-xl font-bold text-primary mb-2">
-                  Processing Payment
-                </h3>
-                <p className="text-gray-500 text-sm">
-                  Please wait while we secure your transaction...
-                </p>
-              </div>
-            </div>
-          )}
-
           {checkoutStep === "success" && (
             <div className="h-full flex flex-col items-center justify-center text-center space-y-6 animate-in zoom-in duration-300">
               <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
@@ -313,7 +225,7 @@ const CartDrawer: React.FC = () => {
 
         {cart.length > 0 &&
           checkoutStep !== "success" &&
-          checkoutStep !== "processing" && (
+          (
             <div className="p-6 border-t border-gray-100 bg-gray-50/50 space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm text-gray-500">
@@ -338,28 +250,10 @@ const CartDrawer: React.FC = () => {
                 >
                   Proceed to Checkout
                 </Button>
-              ) : (
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => setCheckoutStep("cart")}
-                    className="flex-1 py-4 rounded-xl font-bold uppercase tracking-widest text-xs"
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    onClick={handlePayment}
-                    disabled={!selectedPayment}
-                    className="flex-[2] py-4 rounded-xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-primary/10 group disabled:opacity-50 disabled:cursor-not-allowed"
-                    rightIcon={ArrowRight}
-                  >
-                    Pay Now
-                  </Button>
-                </div>
-              )}
+              ) : null}
 
               <p className="text-[9px] text-center text-gray-400 font-medium">
-                Secure checkout powered by Chapa & Telebirr
+                Secure checkout powered by Chapa
               </p>
             </div>
           )}
