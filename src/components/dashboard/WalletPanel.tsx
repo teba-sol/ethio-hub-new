@@ -36,6 +36,7 @@ interface Transaction {
   orderId?: string;
   productId?: string;
   productName?: string;
+  artisanName?: string;
   quantity?: number;
   unitPrice?: number;
   details?: TransactionDetails;
@@ -45,6 +46,10 @@ interface TransactionDetails {
   touristFullName?: string;
   touristEmail?: string;
   touristPhone?: string | null;
+  artisanFullName?: string;
+  artisanEmail?: string;
+  artisanPhone?: string | null;
+  artisanId?: string;
   productId?: string;
   productName?: string | null;
   productSku?: string | null;
@@ -392,7 +397,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                     <th className="px-6 py-4 text-left">Details</th>
                     <th className="px-6 py-4 text-right">Amount</th>
                     <th className="px-6 py-4 text-center">Status</th>
-                    {userType === 'artisan' && (
+                    {(userType === 'artisan' || userType === 'admin') && (
                       <th className="px-6 py-4 text-center">View Detail</th>
                     )}
                   </tr>
@@ -437,7 +442,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                           {tx.status}
                         </Badge>
                       </td>
-                      {userType === 'artisan' && (
+                      {(userType === 'artisan' || userType === 'admin') && (
                         <td className="px-6 py-4 text-center">
                           <Button
                             variant="ghost"
@@ -481,8 +486,8 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
         )}
       </div>
 
-      {/* Artisan Transaction Detail Modal */}
-      {userType === 'artisan' && selectedTransaction && (
+      {/* Transaction Detail Modal */}
+      {(userType === 'artisan' || userType === 'admin') && selectedTransaction && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
           onClick={() => setSelectedTransaction(null)}
@@ -510,17 +515,33 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
             <div className="p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Artisan Earning</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">
+                    {userType === 'admin' ? 'Admin Commission' : 'Artisan Earning'}
+                  </p>
                   <p className="text-xl font-bold text-emerald-800 mt-1">
-                    {formatCurrency(selectedTransaction.details?.artisanEarnings || selectedTransaction.amount)}
+                    {formatCurrency(
+                      userType === 'admin'
+                        ? selectedTransaction.details?.adminCommission || selectedTransaction.amount
+                        : selectedTransaction.details?.artisanEarnings || selectedTransaction.amount
+                    )}
                   </p>
                 </div>
                 <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-700">Total Paid</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-700">Tourist Paid</p>
                   <p className="text-xl font-bold text-blue-800 mt-1">
                     {selectedTransaction.details?.totalPrice
                       ? formatCurrency(selectedTransaction.details.totalPrice)
                       : 'N/A'}
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-100">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">Artisan Got</p>
+                  <p className="text-xl font-bold text-amber-800 mt-1">
+                    {selectedTransaction.details?.artisanEarnings
+                      ? formatCurrency(selectedTransaction.details.artisanEarnings)
+                      : selectedTransaction.details?.totalPrice
+                        ? formatCurrency(selectedTransaction.details.totalPrice - (selectedTransaction.details?.adminCommission || 0))
+                        : 'N/A'}
                   </p>
                 </div>
                 <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
@@ -541,6 +562,18 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                   <DetailItem label="Phone" value={selectedTransaction.details?.touristPhone} />
                 </div>
               </div>
+
+              {userType === 'admin' && (
+                <div>
+                  <h4 className="font-bold text-primary mb-4">Artisan Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <DetailItem label="Full Name" value={selectedTransaction.details?.artisanFullName || selectedTransaction.artisanName} />
+                    <DetailItem label="Email" value={selectedTransaction.details?.artisanEmail} />
+                    <DetailItem label="Phone" value={selectedTransaction.details?.artisanPhone} />
+                    <DetailItem label="Artisan ID" value={selectedTransaction.details?.artisanId} />
+                  </div>
+                </div>
+              )}
 
               <div>
                 <h4 className="font-bold text-primary mb-4">Product and Order</h4>
