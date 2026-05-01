@@ -4,6 +4,8 @@ import { connectDB } from '@/lib/mongodb';
 import Product from '@/models/artisan/product.model';
 import User from '@/models/User';
 import { cookies } from 'next/headers';
+import { isProductCompleteForReview } from '@/lib/reviewAutomation';
+import { queueAdminReviewEmail } from '@/lib/adminApproval';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
@@ -133,6 +135,18 @@ export async function POST(req: Request) {
       ? (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()) : tags)
       : [];
 
+    const shouldAutoPending = isProductCompleteForReview({
+      name_en: normalizedNameEn,
+      name_am: normalizedNameAm,
+      description_en: normalizedDescriptionEn,
+      description_am: normalizedDescriptionAm,
+      price: Number(price),
+      stock: Number(stock),
+      category,
+      deliveryTime,
+      shippingFee,
+    });
+
     const product = await Product.create({
       artisanId: user._id,
       name: normalizedNameEn,
@@ -157,8 +171,19 @@ export async function POST(req: Request) {
       deliveryTime,
       shippingFee,
       status: productStatus,
-      verificationStatus: productStatus === 'Published' ? 'Pending' : undefined,
+      verificationStatus:
+        productStatus === 'Published' || shouldAutoPending ? 'Pending' : undefined,
     });
+
+    if (product.verificationStatus === 'Pending') {
+      await queueAdminReviewEmail({
+        subjectType: 'product',
+        subjectId: product._id.toString(),
+        subjectLabel: product.name || 'Product',
+        submittedByEmail: user.email || 'unknown@unknown.local',
+        submittedByName: user.name || 'Artisan',
+      }).catch(() => null);
+    }
 
     return NextResponse.json(
       {

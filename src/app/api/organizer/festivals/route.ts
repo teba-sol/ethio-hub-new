@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '../../../../lib/mongodb';
 import Festival from '../../../../models/festival.model';
 import * as jose from 'jose';
+import { isFestivalCompleteForReview } from '../../../../lib/reviewAutomation';
+import { queueAdminReviewEmail } from '../../../../lib/adminApproval';
+import User from '../../../../models/User';
 
 const isMissing = (value: any) => value === undefined || value === null || value === '';
 
@@ -343,6 +346,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const organizer = await User.findById(organizerId).select('name email');
+    const computedPendingStatus =
+      isFestivalCompleteForReview({
+        name_en: normalizedNameEn || normalizedNameAm,
+        name_am: normalizedNameAm || normalizedNameEn,
+        shortDescription_en: normalizedShortEn || normalizedShortAm,
+        shortDescription_am: normalizedShortAm || normalizedShortEn,
+        fullDescription_en: normalizedFullEn || normalizedFullAm,
+        fullDescription_am: normalizedFullAm || normalizedFullEn,
+        startDate,
+        endDate,
+        location: { name_en: normalizedLocationNameEn, name_am: normalizedLocationNameAm },
+        hotels: normalizedHotels,
+        transportation: normalizedTransportation,
+      }) && requestedStatus === 'Draft'
+        ? 'Pending Approval'
+        : requestedStatus;
+
     const newFestival = new Festival({
       name: normalizedNameEn || normalizedNameAm || 'Untitled draft festival',
       name_en: normalizedNameEn || normalizedNameAm || 'Untitled draft festival',
@@ -370,17 +391,27 @@ export async function POST(request: NextRequest) {
       services: normalizedServices,
       policies,
       pricing,
-      verificationStatus: requestedStatus,
+      verificationStatus: computedPendingStatus,
       status: 'Draft',
-      submittedAt: requestedStatus === 'Pending Approval' ? new Date() : undefined,
+      submittedAt: computedPendingStatus === 'Pending Approval' ? new Date() : undefined,
     });
 
     await newFestival.save();
 
+    if (computedPendingStatus === 'Pending Approval') {
+      await queueAdminReviewEmail({
+        subjectType: 'event',
+        subjectId: newFestival._id.toString(),
+        subjectLabel: newFestival.name || 'Festival',
+        submittedByEmail: organizer?.email || 'unknown@unknown.local',
+        submittedByName: organizer?.name || 'Organizer',
+      }).catch(() => null);
+    }
+
     return new NextResponse(
       JSON.stringify({
         success: true,
-        message: requestedStatus === 'Pending Approval'
+        message: computedPendingStatus === 'Pending Approval'
           ? 'Festival submitted for admin approval'
           : 'Festival saved as draft',
         festival: newFestival,

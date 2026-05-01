@@ -206,11 +206,19 @@ export const RegisterPage: React.FC = () => {
         throw new Error(
           data.message ||
             data.rawText ||
-            `Failed to send OTP (HTTP ${response.status}).`
+            `Failed to register (HTTP ${response.status}).`
         );
       }
 
-      sessionStorage.setItem("pendingRegistration", JSON.stringify(payload));
+      sessionStorage.setItem("pendingVerificationEmail", email);
+      sessionStorage.setItem(
+        "pendingRegistrationMeta",
+        JSON.stringify({
+          name,
+          email,
+          role: role.toLowerCase(),
+        })
+      );
       const query = new URLSearchParams({
         email,
         name,
@@ -294,11 +302,8 @@ export const RegisterPage: React.FC = () => {
               By creating an account, you agree to our Terms of Service and Privacy Policy.
               We&apos;ll send you updates about authentic cultural products and festivals.
             </p>
-            <p className="text-xs text-gray-500 text-center">
-              OTP verification is available for Gmail addresses only.
-            </p>
             <Button type="submit" className="w-full" size="lg" isLoading={isSubmitting}>
-              Send OTP to continue
+              Create account
             </Button>
           </div>
         </form>

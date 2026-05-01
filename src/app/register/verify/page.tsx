@@ -2,25 +2,15 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button, Input } from "../../../components/UI";
-import { useAuth } from "../../../context/AuthContext";
 
-type PendingRegistrationPayload = {
-  name: string;
-  email: string;
-  password: string;
-  role: string;
-};
-
-const OTP_TTL_SECONDS = 120;
+const COOLDOWN_SECONDS = 60;
 
 const readJsonSafely = async (response: Response) => {
   const rawBody = await response.text();
-  if (!rawBody) {
-    return { rawText: "" };
-  }
-
+  if (!rawBody) return { rawText: "" };
   try {
     return JSON.parse(rawBody);
   } catch {
@@ -28,50 +18,38 @@ const readJsonSafely = async (response: Response) => {
   }
 };
 
-const redirectByRole = (role: string, router: ReturnType<typeof useRouter>) => {
-  const userRole = role?.toLowerCase();
-  if (userRole === "organizer") {
-    router.push("/dashboard/organizer/onboarding");
-  } else if (userRole === "artisan") {
-    router.push("/dashboard/artisan/onboarding");
-  } else if (userRole === "admin") {
-    router.push("/dashboard/admin/overview");
-  } else {
-    router.push("/");
-  }
-};
-
 export default function RegisterVerifyPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setAuthenticatedUser } = useAuth();
-
   const queryEmail = searchParams?.get("email") || "";
-  const queryName = searchParams?.get("name") || "";
-  const queryRole = searchParams?.get("role") || "tourist";
+  const storedEmail =
+    typeof window !== "undefined"
+      ? sessionStorage.getItem("pendingVerificationEmail") || ""
+      : "";
+  const email = useMemo(() => queryEmail || storedEmail, [queryEmail, storedEmail]);
+  const storedMeta =
+    typeof window !== "undefined"
+      ? sessionStorage.getItem("pendingRegistrationMeta") || ""
+      : "";
+  const pendingMeta = useMemo(() => {
+    if (!storedMeta) return { name: "", role: "" };
+    try {
+      const parsed = JSON.parse(storedMeta);
+      return {
+        name: String(parsed?.name || ""),
+        role: String(parsed?.role || ""),
+      };
+    } catch {
+      return { name: "", role: "" };
+    }
+  }, [storedMeta]);
 
   const [otp, setOtp] = useState("");
-  const [secondsRemaining, setSecondsRemaining] = useState(OTP_TTL_SECONDS);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [secondsRemaining, setSecondsRemaining] = useState(COOLDOWN_SECONDS);
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [info, setInfo] = useState(
-    "We sent your verification code. Check your Gmail inbox."
-  );
-  const [pendingRegistration, setPendingRegistration] =
-    useState<PendingRegistrationPayload | null>(null);
-
-  useEffect(() => {
-    const raw = sessionStorage.getItem("pendingRegistration");
-    if (!raw) return;
-
-    try {
-      const parsed = JSON.parse(raw) as PendingRegistrationPayload;
-      setPendingRegistration(parsed);
-    } catch {
-      sessionStorage.removeItem("pendingRegistration");
-    }
-  }, []);
 
   useEffect(() => {
     if (secondsRemaining <= 0) return;
@@ -81,96 +59,74 @@ export default function RegisterVerifyPage() {
     return () => window.clearInterval(timer);
   }, [secondsRemaining]);
 
-  const resolvedEmail = useMemo(
-    () => queryEmail || pendingRegistration?.email || "",
-    [queryEmail, pendingRegistration?.email]
-  );
-  const resolvedName = useMemo(
-    () => queryName || pendingRegistration?.name || "there",
-    [queryName, pendingRegistration?.name]
-  );
-  const resolvedRole = useMemo(
-    () => queryRole || pendingRegistration?.role || "tourist",
-    [queryRole, pendingRegistration?.role]
-  );
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!resolvedEmail) {
-      setError("Missing registration email. Please restart signup.");
-      return;
-    }
-    if (otp.trim().length !== 6) {
-      setError("Please enter your 6-digit OTP.");
-      return;
-    }
-
+  const handleVerify = async () => {
+    if (!email || otp.trim().length !== 6 || isVerifying) return;
     try {
       setIsVerifying(true);
       setError("");
-      setInfo("");
-
+      setMessage("");
       const response = await fetch("/api/auth/register/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: resolvedEmail, otp: otp.trim() }),
+        body: JSON.stringify({ email, otp: otp.trim() }),
       });
       const data = await readJsonSafely(response);
-
       if (!response.ok || !data.success) {
-        throw new Error(
-          data.message ||
-            data.rawText ||
-            `OTP verification failed (HTTP ${response.status}).`
-        );
+        throw new Error(data.message || data.rawText || "Invalid OTP. Please try again.");
       }
-
-      if (data.user) {
-        setAuthenticatedUser(data.user);
+      setMessage("Verification successful. Redirecting...");
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("pendingVerificationEmail");
+        sessionStorage.removeItem("pendingRegistrationMeta");
       }
-
-      sessionStorage.removeItem("pendingRegistration");
-      redirectByRole(data.user?.role || resolvedRole, router);
+      const userRole = data?.user?.role?.toLowerCase?.() || "tourist";
+      const organizerStatus = data?.user?.organizerStatus;
+      const artisanStatus = data?.user?.artisanStatus;
+      window.setTimeout(() => {
+        if (userRole === "organizer") {
+          if (organizerStatus === "Not Submitted") router.push("/dashboard/organizer/onboarding");
+          else if (organizerStatus === "Approved") router.push("/dashboard/organizer/overview");
+          else router.push("/organizer/waiting");
+          return;
+        }
+        if (userRole === "artisan") {
+          if (artisanStatus === "Not Submitted") router.push("/dashboard/artisan/onboarding");
+          else if (artisanStatus === "Approved") router.push("/dashboard/artisan/overview");
+          else router.push("/artisan/waiting");
+          return;
+        }
+        router.push("/");
+      }, 700);
     } catch (verifyError: any) {
-      setError(verifyError.message || "Failed to verify OTP.");
+      setError(verifyError.message || "Unable to verify OTP right now.");
     } finally {
       setIsVerifying(false);
     }
   };
 
   const handleResend = async () => {
-    if (secondsRemaining > 0 || isResending) return;
-
-    if (!pendingRegistration) {
-      setError("Session expired. Please restart registration to request a new OTP.");
-      return;
-    }
-
+    if (!email || isResending || secondsRemaining > 0) return;
     try {
       setIsResending(true);
       setError("");
-      setInfo("");
-
-      const response = await fetch("/api/auth/register/request-otp", {
+      setMessage("");
+      const response = await fetch("/api/auth/register/resend-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(pendingRegistration),
+        body: JSON.stringify({
+          email,
+          name: pendingMeta.name,
+          role: pendingMeta.role,
+        }),
       });
       const data = await readJsonSafely(response);
-
       if (!response.ok || !data.success) {
-        throw new Error(
-          data.message ||
-            data.rawText ||
-            `Unable to resend OTP (HTTP ${response.status}).`
-        );
+        throw new Error(data.message || data.rawText || "Unable to resend OTP.");
       }
-
-      setOtp("");
-      setSecondsRemaining(data.expiresInSeconds || OTP_TTL_SECONDS);
-      setInfo("A new OTP was sent to your Gmail inbox.");
+      setMessage("A new OTP has been sent to your Gmail address.");
+      setSecondsRemaining(COOLDOWN_SECONDS);
     } catch (resendError: any) {
-      setError(resendError.message || "Unable to resend OTP.");
+      setError(resendError.message || "Unable to resend OTP right now.");
     } finally {
       setIsResending(false);
     }
@@ -180,58 +136,51 @@ export default function RegisterVerifyPage() {
     <div className="min-h-screen py-20 bg-ethio-bg flex items-center justify-center p-4">
       <div className="bg-white p-8 md:p-12 rounded-3xl shadow-xl max-w-md w-full border border-gray-100">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-serif font-bold text-primary mb-2">
-            Verify Your Gmail
-          </h1>
+          <h1 className="text-3xl font-serif font-bold text-primary mb-2">Verify with OTP</h1>
           <p className="text-gray-600 text-sm">
-            Hi {resolvedName}, enter the 6-digit code sent to:
+            Enter the 6-digit code sent to:
           </p>
-          <p className="font-semibold text-primary mt-1 break-all">{resolvedEmail || "your email"}</p>
+          <p className="font-semibold text-primary mt-1 break-all">{email || "your email"}</p>
         </div>
 
-        <form onSubmit={handleVerifyOtp} className="space-y-5">
+        {message && <p className="text-sm text-green-700 bg-green-50 p-3 rounded-xl mb-4">{message}</p>}
+        {error && <p className="text-sm text-red-700 bg-red-50 p-3 rounded-xl mb-4">{error}</p>}
+
+        <div className="space-y-4">
           <Input
-            label="OTP Code"
+            label="One-time password (OTP)"
             type="text"
             inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            placeholder="123456"
+            placeholder="Enter 6-digit OTP"
             value={otp}
             onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            required
           />
-
-          {info && <p className="text-sm text-green-700 bg-green-50 p-3 rounded-xl">{info}</p>}
-          {error && <p className="text-sm text-red-700 bg-red-50 p-3 rounded-xl">{error}</p>}
-
-          <Button type="submit" className="w-full" size="lg" isLoading={isVerifying}>
-            Verify and create account
-          </Button>
-        </form>
-
-        <div className="mt-6 text-center text-sm text-gray-500 space-y-2">
-          <p>
-            {secondsRemaining > 0
-              ? `Resend available in ${secondsRemaining}s`
-              : "Did not get the code?"}
-          </p>
           <Button
             type="button"
-            variant="outline"
             className="w-full"
-            onClick={handleResend}
-            disabled={secondsRemaining > 0}
-            isLoading={isResending}
+            onClick={handleVerify}
+            isLoading={isVerifying}
+            disabled={!email || otp.length !== 6}
           >
-            Resend OTP
+            Verify and continue
           </Button>
-          <p>
-            Wrong email?{" "}
-            <Link href="/register" className="text-primary font-semibold hover:underline">
-              Start over
-            </Link>
-          </p>
+        </div>
+
+        <Button
+          type="button"
+          className="w-full mt-3"
+          onClick={handleResend}
+          isLoading={isResending}
+          disabled={!email || secondsRemaining > 0}
+        >
+          {secondsRemaining > 0 ? `Resend OTP in ${secondsRemaining}s` : "Resend OTP"}
+        </Button>
+
+        <div className="mt-6 text-center text-sm text-gray-500">
+          <p>Use only your valid Gmail address during registration.</p>
+          <Link href="/register" className="text-primary font-semibold hover:underline">
+            Back to register
+          </Link>
         </div>
       </div>
     </div>

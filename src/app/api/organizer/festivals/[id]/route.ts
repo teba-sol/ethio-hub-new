@@ -4,6 +4,9 @@ import Festival from '../../../../../models/festival.model';
 import Booking from '../../../../../models/booking.model';
 import * as jose from 'jose';
 import { attachAvailabilityToFestival } from '../../../../../lib/festivalAvailability';
+import { isFestivalCompleteForReview } from '../../../../../lib/reviewAutomation';
+import { queueAdminReviewEmail } from '../../../../../lib/adminApproval';
+import User from '../../../../../models/User';
 
 export async function GET(request: NextRequest) {
   let id: string | undefined;
@@ -124,6 +127,25 @@ export async function PUT(request: NextRequest) {
     );
 
     const finalFestival = await Festival.findById(id);
+    if (
+      finalFestival &&
+      finalFestival.verificationStatus === 'Draft' &&
+      isFestivalCompleteForReview(finalFestival)
+    ) {
+      finalFestival.verificationStatus = 'Pending Approval';
+      finalFestival.submittedAt = new Date();
+      await finalFestival.save();
+
+      const organizer = await User.findById(organizerId).select('name email');
+      await queueAdminReviewEmail({
+        subjectType: 'event',
+        subjectId: finalFestival._id.toString(),
+        subjectLabel: finalFestival.name || 'Festival',
+        submittedByEmail: organizer?.email || 'unknown@unknown.local',
+        submittedByName: organizer?.name || 'Organizer',
+      }).catch(() => null);
+    }
+
     return new NextResponse(JSON.stringify({ success: true, festival: finalFestival }), { status: 200 });
 
   } catch (error: any) {

@@ -9,6 +9,8 @@ import {
   normalizeEmail,
   REGISTRATION_OTP_MAX_ATTEMPTS,
 } from "../../../../../lib/registrationOtp";
+import { applyRateLimit, getRequestIp } from "../../../../../lib/rateLimit";
+import { queueAdminReviewEmail } from "../../../../../lib/adminApproval";
 
 const JWT_SECRET = process.env.JWT_SECRET || "ethio-hub-secret-key-2025";
 
@@ -19,6 +21,22 @@ export async function POST(request: Request) {
     const body = await request.json();
     const email = normalizeEmail(body.email || "");
     const otp = `${body.otp || ""}`.trim();
+
+    const ip = getRequestIp(request);
+    const rate = applyRateLimit({
+      key: `verify-otp:${ip}:${email}`,
+      limit: 10,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!rate.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Too many verification attempts. Try again in ${rate.retryAfterSeconds}s.`,
+        },
+        { status: 429 }
+      );
+    }
 
     if (!email || !otp) {
       return NextResponse.json(
@@ -91,6 +109,11 @@ export async function POST(request: Request) {
       email: pending.email,
       password: pending.passwordHash,
       role,
+      isVerified: true,
+      adminApprovalStatus:
+        role === "artisan" || role === "organizer"
+          ? "PENDING_ADMIN_APPROVAL"
+          : "NOT_REQUIRED",
     };
 
     if (role === "organizer") {
@@ -101,6 +124,16 @@ export async function POST(request: Request) {
 
     const user = await User.create(newUserData);
     await PendingRegistration.deleteOne({ _id: pending._id });
+
+    if (role === "artisan" || role === "organizer") {
+      await queueAdminReviewEmail({
+        subjectType: "user",
+        subjectId: user._id.toString(),
+        subjectLabel: `${role} account: ${user.name}`,
+        submittedByEmail: user.email,
+        submittedByName: user.name,
+      });
+    }
 
     const token = await new SignJWT({
       userId: user._id.toString(),

@@ -13,6 +13,7 @@ import {
   REGISTRATION_OTP_TTL_MS,
 } from "../../../../../lib/registrationOtp";
 import { EmailProviderError, sendRegistrationOtpEmail } from "../../../../../lib/email";
+import { applyRateLimit, getRequestIp } from "../../../../../lib/rateLimit";
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +22,22 @@ export async function POST(request: Request) {
     const body = await request.json();
     const name = body.name?.trim();
     const email = normalizeEmail(body.email || "");
+    const ip = getRequestIp(request);
+    const limiter = applyRateLimit({
+      key: `request-otp:${ip}:${email}`,
+      limit: 5,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!limiter.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Too many OTP requests. Try again in ${limiter.retryAfterSeconds}s.`,
+        },
+        { status: 429 }
+      );
+    }
+
     const password = body.password || "";
     const role = body.role?.toLowerCase?.() || "tourist";
     const allowedRoles = ["tourist", "organizer", "artisan"];
@@ -36,7 +53,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          message: "Please use a real Google email address ending in @gmail.com.",
+          message: "Please use a valid Gmail address (example@gmail.com).",
         },
         { status: 400 }
       );

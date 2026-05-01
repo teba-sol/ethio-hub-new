@@ -5,7 +5,7 @@ export async function POST() {
     {
       success: false,
       message:
-        "Direct registration is disabled. Please complete signup via OTP verification.",
+        "Direct registration is disabled. Please continue with OTP verification.",
       nextStep: "/api/auth/register/request-otp",
     },
     { status: 410 }
