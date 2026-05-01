@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import net from "net";
 
 type RegistrationOtpEmailInput = {
   to: string;
@@ -48,6 +49,12 @@ export class EmailProviderError extends Error {
     this.statusCode = statusCode;
   }
 }
+
+export type RecipientProbeStatus = "valid" | "invalid" | "unknown";
+
+type RecipientProbeResult = {
+  status: RecipientProbeStatus;
+};
 
 const SENDER_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -244,6 +251,112 @@ const sendMail = async (to: string, subject: string, html: string) => {
       "Unable to send verification email right now. Please try again shortly.",
       502
     );
+  }
+};
+
+const parseSmtpCode = (line: string) => {
+  const match = line.match(/^(\d{3})[ -]/);
+  return match ? Number(match[1]) : null;
+};
+
+const readSmtpResponse = (socket: net.Socket, timeoutMs: number) =>
+  new Promise<string>((resolve, reject) => {
+    let buffer = "";
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error("SMTP probe timeout"));
+    }, timeoutMs);
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      socket.off("data", onData);
+      socket.off("error", onError);
+      socket.off("close", onClose);
+    };
+
+    const tryResolve = () => {
+      const lines = buffer.split(/\r?\n/).filter(Boolean);
+      if (!lines.length) return;
+      const lastLine = lines[lines.length - 1];
+      if (/^\d{3}\s/.test(lastLine)) {
+        cleanup();
+        resolve(lines.join("\n"));
+      }
+    };
+
+    const onData = (data: Buffer) => {
+      buffer += data.toString("utf8");
+      tryResolve();
+    };
+
+    const onError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+
+    const onClose = () => {
+      cleanup();
+      reject(new Error("SMTP probe connection closed"));
+    };
+
+    socket.on("data", onData);
+    socket.on("error", onError);
+    socket.on("close", onClose);
+  });
+
+const sendSmtpCommand = async (socket: net.Socket, command: string, timeoutMs = 5000) => {
+  socket.write(`${command}\r\n`);
+  const response = await readSmtpResponse(socket, timeoutMs);
+  const firstLine = response.split(/\r?\n/)[0] || "";
+  const code = parseSmtpCode(firstLine);
+  return { code, response };
+};
+
+export const probeGmailRecipient = async (email: string): Promise<RecipientProbeResult> => {
+  const normalized = email.trim().toLowerCase();
+  if (!/^[^\s@]+@gmail\.com$/.test(normalized)) {
+    return { status: "invalid" };
+  }
+
+  let socket: net.Socket | null = null;
+  try {
+    socket = await new Promise<net.Socket>((resolve, reject) => {
+      const client = net.createConnection({ host: "gmail-smtp-in.l.google.com", port: 25 });
+      const timer = setTimeout(() => {
+        client.destroy();
+        reject(new Error("SMTP probe connect timeout"));
+      }, 5000);
+      client.once("connect", () => {
+        clearTimeout(timer);
+        resolve(client);
+      });
+      client.once("error", (error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+    });
+
+    const banner = await readSmtpResponse(socket, 5000);
+    const bannerCode = parseSmtpCode(banner.split(/\r?\n/)[0] || "");
+    if (bannerCode !== 220) return { status: "unknown" };
+
+    const ehlo = await sendSmtpCommand(socket, "EHLO ethio-craft-hub.local");
+    if (!ehlo.code || ehlo.code >= 400) return { status: "unknown" };
+
+    const mailFrom = await sendSmtpCommand(socket, "MAIL FROM:<probe@ethiocrafthub.local>");
+    if (!mailFrom.code || mailFrom.code >= 400) return { status: "unknown" };
+
+    const rcpt = await sendSmtpCommand(socket, `RCPT TO:<${normalized}>`);
+    await sendSmtpCommand(socket, "QUIT").catch(() => null);
+
+    if (!rcpt.code) return { status: "unknown" };
+    if (rcpt.code === 250 || rcpt.code === 251) return { status: "valid" };
+    if ([550, 551, 552, 553, 554].includes(rcpt.code)) return { status: "invalid" };
+    return { status: "unknown" };
+  } catch {
+    return { status: "unknown" };
+  } finally {
+    if (socket && !socket.destroyed) socket.destroy();
   }
 };
 

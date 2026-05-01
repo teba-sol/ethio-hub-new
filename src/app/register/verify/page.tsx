@@ -79,23 +79,8 @@ export default function RegisterVerifyPage() {
         sessionStorage.removeItem("pendingVerificationEmail");
         sessionStorage.removeItem("pendingRegistrationMeta");
       }
-      const userRole = data?.user?.role?.toLowerCase?.() || "tourist";
-      const organizerStatus = data?.user?.organizerStatus;
-      const artisanStatus = data?.user?.artisanStatus;
       window.setTimeout(() => {
-        if (userRole === "organizer") {
-          if (organizerStatus === "Not Submitted") router.push("/dashboard/organizer/onboarding");
-          else if (organizerStatus === "Approved") router.push("/dashboard/organizer/overview");
-          else router.push("/organizer/waiting");
-          return;
-        }
-        if (userRole === "artisan") {
-          if (artisanStatus === "Not Submitted") router.push("/dashboard/artisan/onboarding");
-          else if (artisanStatus === "Approved") router.push("/dashboard/artisan/overview");
-          else router.push("/artisan/waiting");
-          return;
-        }
-        router.push("/");
+        router.push("/login");
       }, 700);
     } catch (verifyError: any) {
       setError(verifyError.message || "Unable to verify OTP right now.");

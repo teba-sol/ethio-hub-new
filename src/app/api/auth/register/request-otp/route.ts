@@ -12,7 +12,11 @@ import {
   normalizeEmail,
   REGISTRATION_OTP_TTL_MS,
 } from "../../../../../lib/registrationOtp";
-import { EmailProviderError, sendRegistrationOtpEmail } from "../../../../../lib/email";
+import {
+  EmailProviderError,
+  probeGmailRecipient,
+  sendRegistrationOtpEmail,
+} from "../../../../../lib/email";
 import { applyRateLimit, getRequestIp } from "../../../../../lib/rateLimit";
 
 export async function POST(request: Request) {
@@ -99,6 +103,27 @@ export async function POST(request: Request) {
     const otp = generateOtp();
     const passwordHash = await bcrypt.hash(password, 10);
     const otpExpiresAt = getOtpExpiryDate();
+
+    const probe = await probeGmailRecipient(email);
+    if (probe.status === "invalid") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Please use a valid Gmail address.",
+        },
+        { status: 400 }
+      );
+    }
+    if (probe.status === "unknown") {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "We could not verify this Gmail address right now. Please try again shortly.",
+        },
+        { status: 503 }
+      );
+    }
 
     await sendRegistrationOtpEmail({ to: email, name, otp });
 
