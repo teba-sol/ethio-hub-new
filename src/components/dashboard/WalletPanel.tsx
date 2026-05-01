@@ -35,6 +35,8 @@ interface Transaction {
   createdAt: string;
   orderId?: string;
   productName?: string;
+  quantity?: number;
+  unitPrice?: number;
 }
 
 interface WalletPanelProps {
@@ -355,7 +357,20 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                       </td>
                       <td className="px-6 py-4">
                         <div>
-                          <p className="font-medium text-gray-800 text-sm">{tx.productName || 'N/A'}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-gray-800 text-sm">{tx.productName || 'N/A'}</p>
+                            {(tx.type === 'ORDER_PAYMENT' || tx.type === 'ADMIN_COMMISSION') && tx.quantity && tx.quantity > 1 && (
+                              <span className="text-xs font-bold text-primary bg-primary/5 px-2 py-0.5 rounded">
+                                x{tx.quantity}
+                              </span>
+                            )}
+                          </div>
+                          {(tx.type === 'ORDER_PAYMENT' || tx.type === 'ADMIN_COMMISSION') && tx.quantity && (
+                            <p className="text-xs text-gray-400">
+                              Quantity: {tx.quantity}
+                              {tx.unitPrice ? ` x ${formatCurrency(tx.unitPrice)}` : ''}
+                            </p>
+                          )}
                           {tx.paymentRef && (
                             <p className="text-xs text-gray-400 font-mono">{tx.paymentRef}</p>
                           )}

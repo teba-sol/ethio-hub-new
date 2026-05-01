@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('orderId', 'totalPrice paymentRef')
+        .populate('orderId', 'totalPrice paymentRef quantity unitPrice')
         .populate('productId', 'name')
         .populate('userId', 'name email')
         .lean(),
@@ -68,6 +68,8 @@ export async function GET(request: NextRequest) {
           orderId: tx.orderId?._id || tx.orderId,
           productName: (tx.productId as any)?.name || null,
           artisanName: (tx.metadata as any)?.artisanId || null,
+          quantity: tx.quantity || (tx.orderId as any)?.quantity || (tx.metadata as any)?.quantity || null,
+          unitPrice: tx.unitPrice || (tx.orderId as any)?.unitPrice || (tx.metadata as any)?.unitPrice || null,
         })),
         pagination: {
           page,

@@ -8,6 +8,8 @@ export interface ITransaction extends Document {
   userId: mongoose.Types.ObjectId;
   orderId?: mongoose.Types.ObjectId;
   productId?: mongoose.Types.ObjectId;
+  quantity?: number;
+  unitPrice?: number;
   type: TransactionType;
   amount: number;
   currency: string;
@@ -36,6 +38,14 @@ const TransactionSchema: Schema = new Schema(
     productId: {
       type: Schema.Types.ObjectId,
       ref: 'Product',
+    },
+    quantity: {
+      type: Number,
+      min: 1,
+    },
+    unitPrice: {
+      type: Number,
+      min: 0,
     },
     type: {
       type: String,

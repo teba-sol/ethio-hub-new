@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('orderId', 'totalPrice paymentRef')
+        .populate('orderId', 'totalPrice paymentRef quantity unitPrice')
         .populate('productId', 'name')
         .lean(),
       Transaction.countDocuments({ userId: userObjectId }),
@@ -87,6 +87,8 @@ export async function GET(request: NextRequest) {
           createdAt: tx.createdAt,
           orderId: tx.orderId?._id || tx.orderId,
           productName: (tx.productId as any)?.name || null,
+          quantity: tx.quantity || (tx.orderId as any)?.quantity || tx.metadata?.quantity || null,
+          unitPrice: tx.unitPrice || (tx.orderId as any)?.unitPrice || tx.metadata?.unitPrice || null,
         })),
         pagination: {
           page,

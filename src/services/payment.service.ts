@@ -159,9 +159,13 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
           await artisanWallet.save();
 
           if (existingArtisanTx) {
+            existingArtisanTx.quantity = cartOrder.quantity;
+            existingArtisanTx.unitPrice = cartOrder.unitPrice;
             existingArtisanTx.status = 'COMPLETED';
             existingArtisanTx.metadata = {
               ...existingArtisanTx.metadata,
+              quantity: cartOrder.quantity,
+              unitPrice: cartOrder.unitPrice,
               completedAt: new Date(),
               paymentGatewayId: metadataPayload?.reference || metadataObject?.reference,
             };
@@ -172,6 +176,8 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
               userId: artisanId,
               orderId: cartOrder._id,
               productId: cartOrder.product,
+              quantity: cartOrder.quantity,
+              unitPrice: cartOrder.unitPrice,
               type: 'ORDER_PAYMENT',
               amount: artisanEarnings,
               currency: 'ETB',
@@ -180,6 +186,8 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
               metadata: {
                 orderId: cartOrder._id,
                 productId: cartOrder.product,
+                quantity: cartOrder.quantity,
+                unitPrice: cartOrder.unitPrice,
                 totalAmount,
                 commissionRate,
                 paymentGatewayId: metadataPayload?.reference || metadataObject?.reference,
@@ -223,9 +231,13 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
             await adminWallet.save();
 
             if (existingAdminTx) {
+              existingAdminTx.quantity = cartOrder.quantity;
+              existingAdminTx.unitPrice = cartOrder.unitPrice;
               existingAdminTx.status = 'COMPLETED';
               existingAdminTx.metadata = {
                 ...existingAdminTx.metadata,
+                quantity: cartOrder.quantity,
+                unitPrice: cartOrder.unitPrice,
                 completedAt: new Date(),
                 paymentGatewayId: metadataPayload?.reference || metadataObject?.reference,
               };
@@ -236,6 +248,8 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
                 userId: adminId,
                 orderId: cartOrder._id,
                 productId: cartOrder.product,
+                quantity: cartOrder.quantity,
+                unitPrice: cartOrder.unitPrice,
                 type: 'ADMIN_COMMISSION',
                 amount: adminCommission,
                 currency: 'ETB',
@@ -244,6 +258,8 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
                 metadata: {
                   orderId: cartOrder._id,
                   productId: cartOrder.product,
+                  quantity: cartOrder.quantity,
+                  unitPrice: cartOrder.unitPrice,
                   totalAmount,
                   commissionRate,
                   artisanId: cartOrder.artisan,
@@ -392,9 +408,13 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
       // 5. Create or finalize Transaction Record for Artisan
       const existingPendingArtisanTx = existingArtisanTx && existingArtisanTx.status !== 'COMPLETED' ? existingArtisanTx : null;
       if (existingPendingArtisanTx) {
+        existingPendingArtisanTx.quantity = order.quantity;
+        existingPendingArtisanTx.unitPrice = order.unitPrice;
         existingPendingArtisanTx.status = 'COMPLETED';
         existingPendingArtisanTx.metadata = {
           ...existingPendingArtisanTx.metadata,
+          quantity: order.quantity,
+          unitPrice: order.unitPrice,
           completedAt: new Date(),
           paymentGatewayId: metadataPayload?.reference || metadataObject?.reference,
         };
@@ -408,6 +428,8 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
             userId: artisanId,
             orderId: order._id,
             productId: order.product,
+            quantity: order.quantity,
+            unitPrice: order.unitPrice,
             type: 'ORDER_PAYMENT',
             amount: artisanEarnings,
             currency: 'ETB',
@@ -416,6 +438,8 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
             metadata: {
               orderId: order._id,
               productId: order.product,
+              quantity: order.quantity,
+              unitPrice: order.unitPrice,
               totalAmount,
               commissionRate,
               paymentGatewayId: metadataPayload?.reference || metadataObject?.reference,
@@ -470,9 +494,13 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
           });
 
           if (existingAdminTx && existingAdminTx.status !== 'COMPLETED') {
+            existingAdminTx.quantity = order.quantity;
+            existingAdminTx.unitPrice = order.unitPrice;
             existingAdminTx.status = 'COMPLETED';
             existingAdminTx.metadata = {
               ...existingAdminTx.metadata,
+              quantity: order.quantity,
+              unitPrice: order.unitPrice,
               completedAt: new Date(),
               paymentGatewayId: metadataPayload?.reference || metadataObject?.reference,
             };
@@ -486,6 +514,8 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
                 userId: adminId,
                 orderId: order._id,
                 productId: order.product,
+                quantity: order.quantity,
+                unitPrice: order.unitPrice,
                 type: 'ADMIN_COMMISSION',
                 amount: adminCommission,
                 currency: 'ETB',
@@ -494,6 +524,8 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
                 metadata: {
                   orderId: order._id,
                   productId: order.product,
+                  quantity: order.quantity,
+                  unitPrice: order.unitPrice,
                   totalAmount,
                   commissionRate,
                   artisanId: order.artisan,
