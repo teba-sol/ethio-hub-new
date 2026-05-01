@@ -45,6 +45,7 @@ const CartDrawer: React.FC = () => {
     cartTotal,
     isCartOpen,
     toggleCart,
+    clearCart,
   } = useCart();
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
@@ -99,13 +100,9 @@ const CartDrawer: React.FC = () => {
 
   if (!isCartOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[60] flex justify-end">
-      <div
-        className="absolute inset-0 bg-black/20 backdrop-blur-sm"
-        onClick={toggleCart}
-      />
-      <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+   return (
+    <div className="fixed inset-0 z-[60] flex justify-end pointer-events-none">
+      <div className="pointer-events-auto w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
         <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white z-10">
           <h2 className="text-xl font-serif font-bold text-primary flex items-center gap-2">
             <ShoppingCart className="w-5 h-5 text-secondary" />
@@ -113,12 +110,22 @@ const CartDrawer: React.FC = () => {
               ? "Your Cart"
               : "Order Confirmed"}
           </h2>
-          <button
-            onClick={toggleCart}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-400" />
-          </button>
+          <div className="flex items-center gap-3">
+            {checkoutStep === "cart" && cart.length > 0 && (
+              <button
+                onClick={clearCart}
+                className="text-xs font-bold text-red-500 hover:text-red-700 uppercase tracking-wider transition-colors"
+              >
+                Clear All
+              </button>
+            )}
+            <button
+              onClick={toggleCart}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-400" />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">

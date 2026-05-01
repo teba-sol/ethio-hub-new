@@ -1086,6 +1086,13 @@ export const ProductDetailPage: React.FC = () => {
                     </div>
                 </div>
 
+                <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+                    <span className="text-xs font-bold uppercase tracking-widest text-gray-500">Total Price</span>
+                    <span className="text-xl font-bold text-primary">
+                        ${product.price * quantity} <span className="text-xs font-light text-gray-400">USD</span>
+                    </span>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Button size="lg" className="w-full rounded-xl py-4 shadow-lg shadow-primary/10 font-bold uppercase tracking-widest text-xs" leftIcon={ShoppingCart} onClick={handleAddToCart}>
                         Add to Cart
