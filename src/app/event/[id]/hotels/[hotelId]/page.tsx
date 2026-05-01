@@ -12,7 +12,9 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/UI';
 import { useBooking } from '@/context/BookingContext';
+import { useLanguage } from '@/context/LanguageContext';
 import apiClient from '@/lib/apiClient';
+import { getLocalizedText } from '@/utils/getLocalizedText';
 import { Festival, HotelAccommodation, RoomType } from '@/types';
 
 export default function HotelDetailPage() {
@@ -20,7 +22,7 @@ export default function HotelDetailPage() {
   const router = useRouter();
   const eventId = params?.id as string;
   const hotelId = params?.hotelId as string;
-  
+   
   const { 
     setSelectedHotel,
     selectedRoom,
@@ -35,7 +37,7 @@ export default function HotelDetailPage() {
     selectFoodPackage,
     clearFoodPackages
   } = useBooking();
-  
+  const { language, t } = useLanguage();
   const [festival, setFestival] = useState<Festival | null>(null);
   const [hotel, setHotel] = useState<HotelAccommodation | null>(null);
   const [allHotels, setAllHotels] = useState<HotelAccommodation[]>([]);
@@ -225,7 +227,7 @@ export default function HotelDetailPage() {
             className="flex items-center gap-2 text-gray-500 hover:text-primary"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Hotels</span>
+            <span>{t('common.backToHotels')}</span>
           </button>
         </div>
       </div>
@@ -238,18 +240,18 @@ export default function HotelDetailPage() {
               <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
             ))}
           </div>
-          <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 mb-3">{hotel.name}</h1>
-          <div className="flex items-center gap-2 text-gray-600">
-            <MapPin className="w-4 h-4" />
-            <span className="text-sm">{hotel.address}</span>
+           <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 mb-3">{getLocalizedText(hotel, 'name', language)}</h1>
+           <div className="flex items-center gap-2 text-gray-600">
+             <MapPin className="w-4 h-4" />
+             <span className="text-sm">{getLocalizedText(hotel, 'address', language)}</span>
             <a 
               href={`https://maps.google.com/?q=${encodeURIComponent(hotel.address)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:underline text-sm ml-2 flex items-center gap-1"
-            >
-              View on map <ExternalLink className="w-3 h-3" />
-            </a>
+               className="text-primary hover:underline text-sm ml-2 flex items-center gap-1"
+             >
+                 {t('common.viewOnMap')} <ExternalLink className="w-3 h-3" />
+               </a>
           </div>
         </div>
 
@@ -333,15 +335,15 @@ export default function HotelDetailPage() {
 
             {/* Description Section */}
             <div>
-              <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">Description</h2>
+              <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">{t('hotel.description')}</h2>
               <p className="text-gray-600 leading-relaxed whitespace-pre-line">
-                {hotel.fullDescription || hotel.description || 'No description available.'}
+                {getLocalizedText(hotel, 'fullDescription', language) || getLocalizedText(hotel, 'description', language) || t('hotel.noDescription')}
               </p>
             </div>
 
             {/* Select Your Room Section */}
-            <div id="select-room">
-              <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Select Your Room</h2>
+             <div id="select-room">
+               <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">{t('hotel.selectRoom')}</h2>
               
               <div className="space-y-4">
                 {(hotel.rooms || []).map((room) => {
@@ -364,13 +366,13 @@ export default function HotelDetailPage() {
                         <div className="md:col-span-1">
                           <img 
                             src={room.image || 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=300&fit=crop'} 
-                            alt={room.name}
+                            alt={getLocalizedText(room, 'name', language)}
                             className="w-full h-32 md:h-24 object-cover rounded-xl"
                           />
                         </div>
                         <div className="md:col-span-2">
-                          <h3 className="text-lg font-bold text-gray-900 mb-1">{room.name}</h3>
-                          <p className="text-gray-600 text-sm mb-3">{room.description}</p>
+                           <h3 className="text-lg font-bold text-gray-900 mb-1">{getLocalizedText(room, 'name', language)}</h3>
+                           <p className="text-gray-600 text-sm mb-3">{getLocalizedText(room, 'description', language)}</p>
                           <div className="flex flex-wrap gap-3">
                             <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200">
                               <Maximize className="w-3.5 h-3.5" /> {room.sqm || 30} m²
@@ -432,11 +434,11 @@ export default function HotelDetailPage() {
               )}
             </div>
 
-            {/* Food & Drink Packages Section - from Event Services */}
-            {foodPackages.length > 0 && (
-              <div>
-                <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Food & Drink Packages</h2>
-                <p className="text-gray-500 text-sm mb-4">Enhance your stay with our meal packages available for this event</p>
+             {/* Food & Drink Packages Section - from Event Services */}
+             {foodPackages.length > 0 && (
+               <div>
+                 <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">{t('hotel.foodPackages')}</h2>
+                 <p className="text-gray-500 text-sm mb-4">{t('hotel.enhanceStay')}</p>
                 
                 <div className="space-y-3">
                   {foodPackages.map((pkg: any) => {

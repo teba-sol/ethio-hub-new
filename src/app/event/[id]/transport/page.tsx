@@ -7,6 +7,8 @@ import { ArrowLeft, Car, Users, TrendingUp, AlertCircle, Maximize2 } from 'lucid
 import { useBooking } from '@/context/BookingContext';
 import apiClient from '@/lib/apiClient';
 import { Festival, TransportOption } from '@/types';
+import { useLanguage } from '@/context/LanguageContext';
+import { getLocalizedText } from '@/utils/getLocalizedText';
 
 export default function TransportPage() {
   const params = useParams();
@@ -14,6 +16,7 @@ export default function TransportPage() {
   const eventId = params?.id as string;
 
   const { selectedTransport, transportDays, setTransportDays } = useBooking();
+  const { language, t } = useLanguage();
 
   const [festival, setFestival] = useState<Festival | null>(null);
   const [transports, setTransports] = useState<TransportOption[]>([]);
@@ -76,23 +79,23 @@ export default function TransportPage() {
 
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="mb-12">
-          <h1 className="text-4xl font-serif font-bold text-primary mb-4">Select Transportation</h1>
-          <p className="text-gray-500 text-lg">Choose transport for your journey</p>
+          <h1 className="text-4xl font-serif font-bold text-primary mb-4">{t('festival.selectTransport')}</h1>
+          <p className="text-gray-500 text-lg">{t('festival.chooseTransport')}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {transports.length === 0 ? (
-              <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 md:col-span-2">
-                <h3 className="text-xl font-bold text-gray-700 mb-2">No Transport Available</h3>
-                <p className="text-gray-500 mb-4">This event has no transport options listed.</p>
-                <button
-                  onClick={() => router.push(`/event/${eventId}/tickets`)}
-                  className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-primary/90"
-                >
-                  Continue to Tickets
-                </button>
-              </div>
+             {transports.length === 0 ? (
+               <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 md:col-span-2">
+                 <h3 className="text-xl font-bold text-gray-700 mb-2">{t('transport.noTransportAvailable')}</h3>
+                 <p className="text-gray-500 mb-4">{t('transport.noTransportOptions')}</p>
+                 <button
+                   onClick={() => router.push(`/event/${eventId}/tickets`)}
+                   className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-primary/90"
+                 >
+                   {t('common.continueToCheckout')}
+                 </button>
+               </div>
             ) : (
               transports.map((transport) => {
                 const remainingUnits = transport.remaining ?? transport.availability ?? 0;
@@ -115,14 +118,14 @@ export default function TransportPage() {
                       <div className="w-full h-56 flex-shrink-0 relative group">
                         <img
                           src={transport.image || 'https://images.unsplash.com/photo-1449966308865-2d33e1d7a7a3?w=400&h=300&fit=crop'}
-                          alt={transport.type}
+                          alt={getLocalizedText(transport, 'type', language)}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       </div>
                       <div className="flex-1 p-5">
                         <div className="flex justify-between items-start">
                           <div>
-                            <h3 className="text-lg font-bold text-primary">{transport.type}</h3>
+                            <h3 className="text-lg font-bold text-primary">{getLocalizedText(transport, 'type', language)}</h3>
                             {transport.provider && <p className="text-gray-500 text-sm">{transport.provider}</p>}
                           </div>
                           <div className="text-right">
@@ -131,10 +134,10 @@ export default function TransportPage() {
                           </div>
                         </div>
                         {transport.description && (
-                          <p className="mt-3 text-sm leading-relaxed text-gray-500 line-clamp-3">{transport.description}</p>
+                          <p className="mt-3 text-sm leading-relaxed text-gray-500 line-clamp-3">{getLocalizedText(transport, 'description', language)}</p>
                         )}
                         <div className="mt-5">
-                          <h4 className="text-sm font-bold uppercase tracking-wide text-gray-700 mb-3">Vehicle Specifications</h4>
+                          <h4 className="text-sm font-bold uppercase tracking-wide text-gray-700 mb-3">{t('festival.vehicleSpecifications')}</h4>
                           <div className="grid grid-cols-3 gap-4">
                             <div
                               className={`rounded-xl p-3 border ${
@@ -157,39 +160,39 @@ export default function TransportPage() {
                               >
                                 {remainingUnits}
                               </h3>
-                              <p
-                                className={`text-sm ${
-                                  isSoldOut ? 'text-red-700' : isLowStock ? 'text-amber-700' : 'text-emerald-700'
-                                }`}
-                              >
-                                {isSoldOut ? 'Sold Out' : isLowStock ? 'Limited Units' : 'Available Units'}
-                              </p>
+                               <p
+                                 className={`text-sm ${
+                                   isSoldOut ? 'text-red-700' : isLowStock ? 'text-amber-700' : 'text-emerald-700'
+                                 }`}
+                               >
+                                 {isSoldOut ? t('transport.soldOut') : isLowStock ? t('transport.limitedUnits') : t('transport.availableUnits')}
+                               </p>
                             </div>
                             <div className="rounded-xl bg-gray-50 p-3">
                               <Car className="w-6 h-6 text-gray-400 mb-2" />
-                              <h3 className="font-bold text-gray-900">{transport.type}</h3>
-                              <p className="text-sm text-gray-500">Vehicle Type</p>
+                               <h3 className="font-bold text-gray-900">{getLocalizedText(transport, 'type', language)}</h3>
+                               <p className="text-sm text-gray-500">{t('transport.vehicleType')}</p>
                             </div>
                             <div className="rounded-xl bg-gray-50 p-3">
                               <Users className="w-6 h-6 text-gray-400 mb-2" />
                               <h3 className="font-bold text-gray-900">{transport.capacity || 5}</h3>
-                              <p className="text-sm text-gray-500">Passenger Capacity</p>
+                               <p className="text-sm text-gray-500">{t('transport.passengerCapacity')}</p>
                             </div>
-                            <div className="rounded-xl bg-gray-50 p-3">
-                              <AlertCircle className="w-6 h-6 text-gray-400 mb-2" />
-                              <h3 className="font-bold text-gray-900">Petrol/Diesel</h3>
-                              <p className="text-sm text-gray-500">Fuel Type</p>
-                            </div>
-                            <div className="rounded-xl bg-gray-50 p-3">
-                              <Maximize2 className="w-6 h-6 text-gray-400 mb-2" />
-                              <h3 className="font-bold text-gray-900">Automatic</h3>
-                              <p className="text-sm text-gray-500">Transmission</p>
-                            </div>
+                             <div className="rounded-xl bg-gray-50 p-3">
+                               <AlertCircle className="w-6 h-6 text-gray-400 mb-2" />
+                               <h3 className="font-bold text-gray-900">{t('transport.fuelType')}</h3>
+                               <p className="text-sm text-gray-500">{t('transport.fuelType')}</p>
+                             </div>
+                             <div className="rounded-xl bg-gray-50 p-3">
+                               <Maximize2 className="w-6 h-6 text-gray-400 mb-2" />
+                               <h3 className="font-bold text-gray-900">{t('transport.transmission')}</h3>
+                               <p className="text-sm text-gray-500">{t('transport.transmission')}</p>
+                             </div>
                           </div>
                         </div>
                         <div className="border-t border-gray-100 p-4 bg-gray-50">
                           <span className={`font-medium ${isSoldOut ? 'text-red-600' : 'text-primary'}`}>
-                            {isSoldOut ? 'Sold out' : 'View Full Details'}
+                            {isSoldOut ? t('transport.soldOut') : t('transport.viewFullDetails')}
                           </span>
                         </div>
                       </div>
@@ -202,7 +205,7 @@ export default function TransportPage() {
               onClick={() => router.push(`/event/${eventId}/tickets`)}
               className="w-full mt-4 py-3 text-center text-gray-500 text-sm hover:text-primary md:col-span-2"
             >
-              Skip transport selection
+              {t('festival.skipTransport')}
             </button>
           </div>
 
@@ -210,16 +213,16 @@ export default function TransportPage() {
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sticky top-6">
               <div className="space-y-6">
                 <div className="text-center mb-6">
-                  <p className="text-sm text-gray-500">Starting from</p>
+                  <p className="text-sm text-gray-500">{t('festival.startingFrom')}</p>
                   <div className="flex items-baseline justify-center gap-1">
                     <span className="text-4xl font-bold text-primary">
                       {currentTransport ? currentTransport.price : firstTransport?.price}
                     </span>
-                    <span className="text-gray-500">/day</span>
+                    <span className="text-gray-500">{t('festival.perDay')}</span>
                   </div>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-gray-500">Available Units</p>
+                  <p className="text-sm text-gray-500">{t('festival.availableUnits')}</p>
                   <p
                     className={`text-3xl font-bold ${
                       displayedRemaining === 0
@@ -235,23 +238,23 @@ export default function TransportPage() {
                   <div className="mt-3">
                     {(displayedRemaining ?? 0) === 0 && (
                       <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">
-                        Sold Out
+                        {t('transport.soldOut')}
                       </span>
                     )}
                     {(displayedRemaining ?? 0) > 0 && (displayedRemaining ?? 0) <= 3 && (
                       <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
-                        Limited Availability: {(displayedRemaining ?? 0)} units left
+                        {t('transport.limitedAvailability', { count: displayedRemaining ?? 0 })}
                       </span>
                     )}
                     {(displayedRemaining ?? 0) > 3 && (
                       <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
-                        Available: {(displayedRemaining ?? 0)} units
+                        {t('transport.availableUnitsCount', { count: displayedRemaining ?? 0 })}
                       </span>
                     )}
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Number of Days</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t('transport.numberOfDays')}</label>
                   <select
                     value={transportDays}
                     onChange={(e) => setTransportDays(parseInt(e.target.value))}
@@ -278,9 +281,9 @@ export default function TransportPage() {
                   className="w-full py-3 text-center rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
                   onClick={handleContinue}
                 >
-                  Continue to Tickets
+                  {t('common.continueToCheckout')}
                 </button>
-                <p className="text-center text-xs text-gray-500">Free cancellation up to 24h before pickup</p>
+                <p className="text-center text-xs text-gray-500">{t('festival.freeCancellation')}</p>
               </div>
             </div>
           </div>

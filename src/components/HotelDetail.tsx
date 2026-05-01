@@ -18,7 +18,7 @@ interface HotelDetailPageProps {
 
 export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookRoom }) => {
   const router = useRouter();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [checkIn, setCheckIn] = useState<Date | null>(null);
@@ -35,7 +35,7 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
   const hotelName = getLocalizedText(hotel as any, 'name', language);
   const hotelDescription = getLocalizedText(hotel as any, 'description', language) || 
     getLocalizedText(hotel as any, 'fullDescription', language);
-  const hotelAddress = (hotel as any).address || '';
+  const hotelAddress = getLocalizedText(hotel as any, 'address', language) || '';
 
   const handleCheckAvailability = () => {
     const el = document.getElementById('select-room');
@@ -78,7 +78,7 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
           className="flex items-center gap-2 text-gray-600 hover:text-primary transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-medium">Back</span>
+          <span className="text-sm font-medium">{t('common.back')}</span>
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -92,14 +92,14 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
             <div className="flex items-center gap-2 text-gray-600 mb-4">
               <MapPin className="w-4 h-4" />
               <span className="text-sm">{hotelAddress}</span>
-              <a 
-                href={`https://maps.google.com/?q=${encodeURIComponent(hotelAddress)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline text-sm ml-2"
-              >
-                View on map
-              </a>
+               <a 
+                 href={`https://maps.google.com/?q=${encodeURIComponent(hotelAddress)}`}
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 className="text-primary hover:underline text-sm ml-2"
+               >
+                 {t('common.viewOnMap')}
+               </a>
             </div>
           </div>
         </div>
@@ -171,14 +171,14 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
             </div>
 
             <div className="mt-8">
-              <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">Description</h2>
+              <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">{t('hotel.description')}</h2>
               <p className="text-gray-600 leading-relaxed whitespace-pre-line">
                 {hotelDescription}
               </p>
             </div>
 
             <div className="mt-8" id="select-room">
-              <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Select Your Room</h2>
+              <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">{t('hotel.selectRoom')}</h2>
               
               <div className="grid grid-cols-1 gap-6">
                 {(hotel.rooms || []).map((room, idx) => {
@@ -267,7 +267,7 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
             </div>
 
             <div className="mt-8">
-              <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Facilities</h2>
+              <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">{t('hotel.facilities')}</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {(hotel.facilities || []).map((facility, idx) => (
                   <div key={idx} className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
@@ -281,14 +281,14 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
             </div>
 
             <div className="mt-8">
-              <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Hotel Rules - Policies</h2>
+              <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">{t('hotel.hotelRules')}</h2>
               <div className="grid grid-cols-2 gap-6">
                 <div className="bg-gray-50 p-6 rounded-2xl">
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Check In</h3>
+                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">{t('hotel.checkIn')}</h3>
                   <p className="text-2xl font-bold text-gray-900">{(hotel as any).checkInTime || '14:00'}</p>
                 </div>
                 <div className="bg-gray-50 p-6 rounded-2xl">
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Check Out</h3>
+                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">{t('hotel.checkOut')}</h3>
                   <p className="text-2xl font-bold text-gray-900">{(hotel as any).checkOutTime || '12:00'}</p>
                 </div>
               </div>
@@ -298,7 +298,7 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
             </div>
 
             <div className="mt-8">
-              <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Location</h2>
+              <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">{t('hotel.location')}</h2>
               <div className="relative h-64 bg-gray-200 rounded-2xl overflow-hidden">
                 <iframe 
                   src={`https://maps.google.com/maps?q=${encodeURIComponent(hotelAddress)}&output=embed`}
@@ -309,50 +309,50 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
             </div>
 
             <div className="mt-8">
-              <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Reviews</h2>
+              <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">{t('hotel.reviews')}</h2>
               <div className="flex items-center gap-6 mb-6">
                 <div className="text-center">
                   <div className="text-5xl font-bold text-gray-900">0</div>
                   <div className="text-sm text-gray-500">/5</div>
                 </div>
                 <div>
-                  <div className="text-lg font-semibold text-gray-900">Not rated</div>
-                  <div className="text-sm text-gray-500">From 0 review</div>
+                <div className="text-lg font-semibold text-gray-900">{t('hotel.notRated')}</div>
+                <div className="text-sm text-gray-500">{t('hotel.fromReviews', { count: 0 })}</div>
                 </div>
               </div>
-              <p className="text-gray-500 text-center py-8">No reviews yet.</p>
+               <p className="text-gray-500 text-center py-8">{t('hotel.noReviews')}</p>
             </div>
 
             <div className="mt-8 bg-primary rounded-2xl p-8 text-white">
-              <h2 className="text-2xl font-serif font-bold mb-4">Why Book With Us?</h2>
+              <h2 className="text-2xl font-serif font-bold mb-4">{t('hotel.whyBookWithUs')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="flex items-center gap-4">
                   <Shield className="w-8 h-8" />
-                  <div>
-                    <h3 className="font-semibold">Best Price Guarantee</h3>
-                    <p className="text-sm text-white/70">No-hassle best price</p>
-                  </div>
+                   <div>
+                     <h3 className="font-semibold">{t('hotel.bestPriceGuarantee')}</h3>
+                     <p className="text-sm text-white/70">{t('hotel.noHassleBestPrice')}</p>
+                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <Users className="w-8 h-8" />
-                  <div>
-                    <h3 className="font-semibold">24/7 Support</h3>
-                    <p className="text-sm text-white/70">Customer care available</p>
-                  </div>
+                   <div>
+                     <h3 className="font-semibold">{t('hotel.support24_7')}</h3>
+                     <p className="text-sm text-white/70">{t('hotel.customerCareAvailable')}</p>
+                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <Sparkles className="w-8 h-8" />
-                  <div>
-                    <h3 className="font-semibold">Hand-picked Hotels</h3>
-                    <p className="text-sm text-white/70">Quality accommodations</p>
-                  </div>
+                   <div>
+                     <h3 className="font-semibold">{t('hotel.handPickedHotels')}</h3>
+                     <p className="text-sm text-white/70">{t('hotel.qualityAccommodations')}</p>
+                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <Car className="w-8 h-8" />
-                  <div>
-                    <h3 className="font-semibold">Free Insurance</h3>
-                    <p className="text-sm text-white/70">Travel protection</p>
-                  </div>
+                   <div>
+                     <h3 className="font-semibold">{t('hotel.freeInsurance')}</h3>
+                     <p className="text-sm text-white/70">{t('hotel.travelProtection')}</p>
+                   </div>
                 </div>
               </div>
             </div>
@@ -375,9 +375,9 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
 
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sticky top-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Check In</span>
+                <div className="space-y-4">
+                 <div className="flex items-center justify-between">
+                   <span className="text-sm text-gray-600">{t('hotel.checkIn')}</span>
                   <button 
                     onClick={() => { setShowDatePicker(!showDatePicker); setShowGuestSelector(false); }}
                     className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
@@ -388,8 +388,8 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Check Out</span>
+                 <div className="flex items-center justify-between">
+                   <span className="text-sm text-gray-600">{t('hotel.checkOut')}</span>
                   <button 
                     onClick={() => { setShowDatePicker(!showDatePicker); setShowGuestSelector(false); }}
                     className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
@@ -400,8 +400,8 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Guests</span>
+                 <div className="flex items-center justify-between">
+                   <span className="text-sm text-gray-600">{t('hotel.guests')}</span>
                   <button 
                     onClick={() => { setShowGuestSelector(!showGuestSelector); setShowDatePicker(false); }}
                     className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
@@ -414,18 +414,18 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
 
                 {showDatePicker && (
                   <div className="mt-4 p-4 bg-gray-50 rounded-xl">
-                    <p className="text-sm text-gray-500 mb-2">Select dates</p>
+                    <p className="text-sm text-gray-500 mb-2">{t('hotel.selectDates')}</p>
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Check In</p>
+                       <div>
+                         <p className="text-xs text-gray-500 mb-1">{t('hotel.checkIn')}</p>
                         <input 
                           type="date" 
                           className="w-full p-2 border rounded-lg text-sm"
                           onChange={(e) => setCheckIn(e.target.value ? new Date(e.target.value) : null)}
                         />
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Check Out</p>
+                       <div>
+                         <p className="text-xs text-gray-500 mb-1">{t('hotel.checkOut')}</p>
                         <input 
                           type="date" 
                           className="w-full p-2 border rounded-lg text-sm"
@@ -439,10 +439,10 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
                 {showGuestSelector && (
                   <div className="mt-4 p-4 bg-gray-50 rounded-xl">
                     <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <p className="font-medium text-sm">Adults</p>
-                        <p className="text-xs text-gray-500">Age 13+</p>
-                      </div>
+                       <div>
+                         <p className="font-medium text-sm">{t('hotel.adults')}</p>
+                         <p className="text-xs text-gray-500">{t('hotel.age13+')}</p>
+                       </div>
                       <div className="flex items-center gap-3">
                         <button 
                           onClick={() => setAdults(Math.max(1, adults - 1))}
@@ -460,10 +460,10 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-sm">Children</p>
-                        <p className="text-xs text-gray-500">Age 0-12</p>
-                      </div>
+                       <div>
+                         <p className="font-medium text-sm">{t('hotel.children')}</p>
+                         <p className="text-xs text-gray-500">{t('hotel.age0-12')}</p>
+                       </div>
                       <div className="flex items-center gap-3">
                         <button 
                           onClick={() => setChildren(Math.max(0, children - 1))}
@@ -484,25 +484,25 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
                 )}
 
                 <Button className="w-full py-3" onClick={handleCheckAvailability}>
-                  Check Availability
+                  {t('hotel.checkAvailability')}
                 </Button>
               </div>
 
               <div className="mt-6 pt-6 border-t border-gray-100">
                 {selectedRoom ? (
                   <div className="bg-primary/5 rounded-xl p-4 mb-4">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Selected Room</p>
-                    <p className="font-bold text-primary">{(selectedRoom as any).name}</p>
+                     <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('hotel.selectedRoom')}</p>
+                    <p className="font-bold text-primary">{getLocalizedText(selectedRoom as any, 'name', language)}</p>
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-xl font-bold text-primary">${(selectedRoom as any).pricePerNight || 0}</span>
                       <span className="text-sm text-gray-500">/night</span>
                     </div>
                   </div>
-                ) : (
-                  <div className="bg-gray-50 rounded-xl p-4 mb-4 text-center">
-                    <p className="text-sm text-gray-500">Select a room below to book</p>
-                  </div>
-                )}
+                 ) : (
+                    <div className="bg-gray-50 rounded-xl p-4 mb-4 text-center">
+                      <p className="text-sm text-gray-500">{t('hotel.selectRoomBelow')}</p>
+                    </div>
+                  )}
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-2xl font-bold text-primary">${(selectedRoom?.pricePerNight || (hotel.rooms?.[0] as any)?.pricePerNight || 0)}</span>
@@ -520,10 +520,10 @@ export const HotelDetailPage: React.FC<HotelDetailPageProps> = ({ hotel, onBookR
                   onClick={() => selectedRoom && handleBookRoom(selectedRoom)}
                   disabled={!selectedRoom}
                 >
-                  {selectedRoom ? 'Book Now' : 'Select a Room'}
+                  {selectedRoom ? t('hotel.bookNow') : t('hotel.selectRoom')}
                 </Button>
                 <Button variant="outline" className="flex-1 py-3" onClick={() => setShowEnquiryModal(true)}>
-                  Enquiry
+                  {t('hotel.enquiry')}
                 </Button>
               </div>
             </div>

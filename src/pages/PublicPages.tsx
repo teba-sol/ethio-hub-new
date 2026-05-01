@@ -447,16 +447,16 @@ export const ProductListingPage: React.FC = () => {
             </div>
            
            {/* Search Bar */}
-           <div className="relative w-full md:w-96">
-              <input 
-                type="text"
-                placeholder="Search products..." 
-                className="w-full pl-10 pr-4 py-3 border-none shadow-sm rounded-xl focus:ring-2 focus:ring-primary/20 text-sm"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <Search className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
-           </div>
+            <div className="relative w-full md:w-96">
+               <input 
+                 type="text"
+                 placeholder={t("home.searchPlaceholder")}
+                 className="w-full pl-10 pr-4 py-3 border-none shadow-sm rounded-xl focus:ring-2 focus:ring-primary/20 text-sm"
+                 value={searchTerm}
+                 onChange={(e) => setSearchTerm(e.target.value)}
+               />
+               <Search className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+            </div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
@@ -468,78 +468,91 @@ export const ProductListingPage: React.FC = () => {
              <Filter className="w-4 h-4" /> {showFilters ? t("home.hideFilters") : t("home.showFilters")}
            </button>
 
-          {/* Sidebar Filters */}
-          <aside className={`w-full lg:w-64 flex-shrink-0 ${showFilters ? 'block' : 'hidden lg:block'}`}>
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 sticky top-24">
-              <h3 className="font-bold text-primary mb-4 flex items-center gap-2">
-                <Filter className="w-4 h-4" /> Categories
-              </h3>
-              <div className="space-y-1">
-                {categories.map(category => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                      selectedCategory === category 
-                        ? 'bg-primary text-white font-medium shadow-md shadow-primary/20' 
-                        : 'text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    {category}
-                  </button>
-                ))}
-              </div>
+               {/* Sidebar Filters */}
+               <aside className={`w-full lg:w-64 flex-shrink-0 ${showFilters ? 'block' : 'hidden lg:block'}`}>
+                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 sticky top-24">
+                   <h3 className="font-bold text-primary mb-4 flex items-center gap-2">
+                     <Filter className="w-4 h-4" /> {t("home.categoriesLabel")}
+                   </h3>
+                   <div className="space-y-1">
+                     {categories.map(category => {
+                       // Map category values to translation keys
+                       const categoryKeyMap: Record<string, string> = {
+                         All: "common.all",
+                         Jewelry: "home.categoryNames.jewelry",
+                         Pottery: "home.categoryNames.pottery",
+                         Woodcraft: "home.categoryNames.woodcraft",
+                         Clothing: "home.categoryNames.clothing"
+                       };
+                       const displayName = t(categoryKeyMap[category] || "common.all");
+                       return (
+                         <button
+                           key={category}
+                           onClick={() => setSelectedCategory(category)}
+                           className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                             selectedCategory === category 
+                               ? 'bg-primary text-white font-medium shadow-md shadow-primary/20' 
+                               : 'text-gray-600 hover:bg-gray-50'
+                           }`}
+                         >
+                           {displayName}
+                         </button>
+                       );
+                     })}
+                   </div>
 
-              {/* Price Range (Mock) */}
-              <div className="mt-8 pt-8 border-t border-gray-100">
-                <h3 className="font-bold text-primary mb-4 text-sm">Price Range</h3>
-                <div className="space-y-3 text-sm text-gray-600">
-                    <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
-                        <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" /> 
-                        <span>Under $50</span>
-                    </label>
-                    <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
-                        <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" /> 
-                        <span>$50 - $100</span>
-                    </label>
-                    <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
-                        <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" /> 
-                        <span>$100 - $200</span>
-                    </label>
-                    <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
-                        <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" /> 
-                        <span>Over $200</span>
-                    </label>
-                </div>
-              </div>
-              
-               {/* Rating (Mock) */}
-              <div className="mt-8 pt-8 border-t border-gray-100">
-                <h3 className="font-bold text-primary mb-4 text-sm">Avg. Customer Review</h3>
-                <div className="space-y-2">
-                    {[4, 3, 2, 1].map((rating) => (
-                        <div key={rating} className="flex items-center gap-2 cursor-pointer hover:opacity-80 group">
-                            <div className="flex text-yellow-400">
-                                {[...Array(5)].map((_, i) => (
-                                    <Star key={i} className={`w-3.5 h-3.5 ${i < rating ? 'fill-current' : 'text-gray-200'}`} />
-                                ))}
-                            </div>
-                            <span className="text-xs text-gray-500 group-hover:text-primary transition-colors">& Up</span>
+                   {/* Price Range (Mock) */}
+                   <div className="mt-8 pt-8 border-t border-gray-100">
+                     <h3 className="font-bold text-primary mb-4 text-sm">{t("home.priceRange")}</h3>
+                     <div className="space-y-3 text-sm text-gray-600">
+                         <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
+                             <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" /> 
+                             <span>{t("home.under50")}</span>
+                         </label>
+                         <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
+                             <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" /> 
+                             <span>{t("home.price50to100")}</span>
+                         </label>
+                         <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
+                             <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" /> 
+                             <span>{t("home.price100to200")}</span>
+                         </label>
+                         <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
+                             <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" /> 
+                             <span>{t("home.over200")}</span>
+                         </label>
+                         </div>
+                       </div>
+                       
+                        {/* Rating (Mock) */}
+                        <div className="mt-8 pt-8 border-t border-gray-100">
+                          <h3 className="font-bold text-primary mb-4 text-sm">{t("home.averageCustomerReview")}</h3>
+                          <div className="space-y-2">
+                              {[4, 3, 2, 1].map((rating) => (
+                                  <div key={rating} className="flex items-center gap-2 cursor-pointer hover:opacity-80 group">
+                                      <div className="flex text-yellow-400">
+                                          {[...Array(5)].map((_, i) => (
+                                              <Star key={i} className={`w-3.5 h-3.5 ${i < rating ? 'fill-current' : 'text-gray-200'}`} />
+                                          ))}
+                                      </div>
+                                      <span className="text-xs text-gray-500 group-hover:text-primary transition-colors">{t("home.andUp")}</span>
+                                  </div>
+                              ))}
+                          </div>
                         </div>
-                    ))}
-                </div>
-              </div>
-            </div>
-          </aside>
+                      </div>
+                    </aside>
 
-          {/* Product Grid */}
-          <div className="flex-1">
-            <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                <span className="text-sm text-gray-500 font-medium">Showing <span className="text-primary font-bold">{filtered.length}</span> results</span>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                    Sort by: <span className="font-bold text-primary cursor-pointer hover:underline">Featured</span> <ChevronRight className="w-4 h-4 rotate-90" />
-                </div>
-            </div>
+           {/* Product Grid */}
+           <div className="flex-1">
+             <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                  <span className="text-sm text-gray-500 font-medium">
+                    {t("home.showing")} <span className="text-primary font-bold">{filtered.length}</span> {t("home.results")}
+                  </span>
+                 <div className="flex items-center gap-2 text-sm text-gray-500">
+                     {t("home.sortBy")} <span className="font-bold text-primary cursor-pointer hover:underline">{t("home.sortByFeatured")}</span> <ChevronRight className="w-4 h-4 rotate-90" />
+                 </div>
+             </div>
             
             {filtered.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -1905,14 +1918,14 @@ export const FestivalDetailPage: React.FC = () => {
                           </span>
                           Food Packages
                         </h3>
-                        <ul className="space-y-3">
-                          {festival.foodPackages.map((item: string, idx: number) => (
-                            <li key={idx} className="flex items-center gap-3 text-gray-600">
-                              <Check className="w-4 h-4 text-green-500" />
-                              {item}
-                            </li>
-                          ))}
-                        </ul>
+                         <ul className="space-y-3">
+                           {festival.foodPackages.map((item: any, idx: number) => (
+                             <li key={idx} className="flex items-center gap-3 text-gray-600">
+                               <Check className="w-4 h-4 text-green-500" />
+                               {getLocalizedField(item, 'name')}
+                             </li>
+                           ))}
+                         </ul>
                       </div>
                     )}
                     {festival.services?.culturalServices?.length > 0 && (

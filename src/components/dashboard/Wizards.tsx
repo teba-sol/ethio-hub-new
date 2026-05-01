@@ -7,7 +7,7 @@ import {
   Utensils, Music, Heart, AlertCircle
 } from 'lucide-react';
 import { Button, Badge, Input, VerifiedBadge } from '../UI';
-import { Festival, HotelAccommodation, TransportOption, RoomType } from '../../types';
+import { HotelAccommodation, TransportOption, RoomType } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
@@ -18,9 +18,6 @@ const MapPickerModal = dynamic(() => import('../MapPickerModal'), {
 });
 
 import apiClient from '../../lib/apiClient';
-
-// import { useAuth } from '../../context/AuthContext';
-// import apiClient from '../../lib/apiClient';
 
 const STEPS = [
   { id: 1, name: 'Core Information', icon: Info },
@@ -37,6 +34,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [languagePreference, setLanguagePreference] = useState<'both' | 'en' | 'am'>('both');
   const [formData, setFormData] = useState({
     core: { 
       name_en: '', 
@@ -55,7 +53,14 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
       gallery: [] as string[],
       coordinates: { lat: 9.0333, lng: 38.7500 }
     },
-    schedule: [{ day: 1, title_en: '', title_am: '', activities_en: '', activities_am: '', performers: [] as string[] }],
+    schedule: [{ 
+      day: 1, 
+      title_en: '', 
+      title_am: '', 
+      activities_en: '', 
+      activities_am: '', 
+      performers: [] as string[] 
+    }],
     hotels: [] as any[],
     transportation: [] as any[],
     services: { 
@@ -79,10 +84,14 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
     pricing: { 
       basePrice: 0, 
       vipPrice: 0, 
-      currency: 'USD', 
+      currency: 'ETB', 
       earlyBird: 0, 
       groupDiscount: 0 
-    }
+    },
+    ticketTypes: [
+      { name_en: 'Standard', name_am: 'ስታንዳርድ', price: 0, quantity: 100, available: 100, benefits: [] },
+      { name_en: 'VIP', name_am: 'ቪአይ', price: 0, quantity: 50, available: 50, benefits: [] }
+    ]
   });
 
   // Auto-generate slug from English name
@@ -92,9 +101,152 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
   }, [formData.core.name_en]);
 
   const nextStep = () => setStep(s => Math.min(s + 1, 8));
-  const prevStep = () => setStep(s => Math.max(s - 1, 1));
+   const prevStep = () => setStep(s => Math.max(s - 1, 1));
 
-  const handleFileUpload = async (file: File, isCoverImage: boolean = false) => {
+   // Helper creators
+   const createEmptyHotel = () => ({
+     name_en: '',
+     name_am: '',
+     description_en: '',
+     description_am: '',
+     fullDescription_en: '',
+     fullDescription_am: '',
+     address: '',
+     starRating: 3,
+     image: '',
+     facilities: [] as string[],
+     rooms: [] as any[],
+   });
+
+   const createEmptyRoom = () => ({
+     name_en: '',
+     name_am: '',
+     description_en: '',
+     description_am: '',
+     capacity: 1,
+     pricePerNight: 0,
+     availability: 0,
+   });
+
+   const createEmptyTransport = () => ({
+     type_en: '',
+     type_am: '',
+     description_en: '',
+     description_am: '',
+     price: 0,
+     availability: 1,
+     capacity: 0,
+     image: '',
+   });
+
+   const createEmptyFoodPackage = () => ({
+     name_en: '',
+     name_am: '',
+     description_en: '',
+     description_am: '',
+     pricePerPerson: 0,
+     items: [] as string[],
+   });
+
+   // Hotel handlers
+   const addHotel = () => {
+     setFormData(prev => ({ ...prev, hotels: [...prev.hotels, createEmptyHotel()] }));
+   };
+
+   const updateHotel = (index: number, field: string, value: any) => {
+     const newHotels = [...formData.hotels];
+     newHotels[index] = { ...newHotels[index], [field]: value };
+     setFormData(prev => ({ ...prev, hotels: newHotels }));
+   };
+
+   const removeHotel = (index: number) => {
+     setFormData(prev => ({ ...prev, hotels: prev.hotels.filter((_: any, i: number) => i !== index) }));
+   };
+
+   const addRoom = (hotelIndex: number) => {
+     const newHotels = [...formData.hotels];
+     const hotel = { ...newHotels[hotelIndex], rooms: [...(newHotels[hotelIndex].rooms || [])] };
+     hotel.rooms.push(createEmptyRoom());
+     newHotels[hotelIndex] = hotel;
+     setFormData({ ...formData, hotels: newHotels });
+   };
+
+   const updateRoom = (hotelIndex: number, roomIndex: number, field: string, value: any) => {
+     const newHotels = [...formData.hotels];
+     const rooms = [...newHotels[hotelIndex].rooms];
+     rooms[roomIndex] = { ...rooms[roomIndex], [field]: value };
+     newHotels[hotelIndex] = { ...newHotels[hotelIndex], rooms };
+     setFormData({ ...formData, hotels: newHotels });
+   };
+
+   const removeRoom = (hotelIndex: number, roomIndex: number) => {
+     const newHotels = [...formData.hotels];
+     const rooms = newHotels[hotelIndex].rooms.filter((_: any, i: number) => i !== roomIndex);
+     newHotels[hotelIndex] = { ...newHotels[hotelIndex], rooms };
+     setFormData({ ...formData, hotels: newHotels });
+   };
+
+   // Transport handlers
+   const addTransport = () => {
+     setFormData(prev => ({ ...prev, transportation: [...prev.transportation, createEmptyTransport()] }));
+   };
+
+   const updateTransport = (index: number, field: string, value: any) => {
+     const newTransport = [...formData.transportation];
+     newTransport[index] = { ...newTransport[index], [field]: value };
+     setFormData(prev => ({ ...prev, transportation: newTransport }));
+   };
+
+   const removeTransport = (index: number) => {
+     setFormData(prev => ({ ...prev, transportation: prev.transportation.filter((_: any, i: number) => i !== index) }));
+   };
+
+   // Food package handlers
+   const addFoodPackage = () => {
+     setFormData(prev => ({
+       ...prev,
+       services: {
+         ...prev.services,
+         foodPackages: [...prev.services.foodPackages, createEmptyFoodPackage()]
+       }
+     }));
+   };
+
+   const updateFoodPackage = (index: number, field: string, value: any) => {
+     const newPackages = [...formData.services.foodPackages];
+     newPackages[index] = { ...newPackages[index], [field]: value };
+     setFormData(prev => ({ ...prev, services: { ...prev.services, foodPackages: newPackages } }));
+   };
+
+   const removeFoodPackage = (index: number) => {
+     setFormData(prev => ({
+       ...prev,
+       services: {
+         ...prev.services,
+         foodPackages: prev.services.foodPackages.filter((_: any, i: number) => i !== index)
+       }
+     }));
+   };
+
+   const updateFoodPackageItems = (index: number, itemsString: string) => {
+     const items = itemsString.split(',').map(item => item.trim()).filter(Boolean);
+     const newPackages = [...formData.services.foodPackages];
+     newPackages[index] = { ...newPackages[index], items };
+     setFormData(prev => ({ ...prev, services: { ...prev.services, foodPackages: newPackages } }));
+   };
+
+   // Services list handlers (comma-separated arrays)
+   const updateServiceArray = (field: 'culturalServices' | 'specialAssistance' | 'extras', lang: 'en' | 'am', value: string) => {
+     const arr = value.split(',').map(v => v.trim()).filter(Boolean);
+     const key = `${field}_${lang}`;
+     setFormData(prev => {
+       const newServices = { ...prev.services };
+       (newServices as any)[key] = arr;
+       return { ...prev, services: newServices };
+     });
+   };
+
+   const handleFileUpload = async (file: File, isCoverImage: boolean = false) => {
     const formData = new FormData();
     formData.append('file', file);
 
@@ -122,41 +274,113 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
   };
 
   const handlePublish = async () => {
-    const requiredFields = {
-      name_en: formData.core.name_en,
-      name_am: formData.core.name_am,
-      shortDescription_en: formData.core.shortDescription_en,
-      shortDescription_am: formData.core.shortDescription_am,
-      fullDescription_en: formData.core.fullDescription_en,
-      fullDescription_am: formData.core.fullDescription_am,
+    const requiredFields: Record<string, any> = {
       startDate: formData.core.startDate,
       endDate: formData.core.endDate,
-      locationName_en: formData.core.locationName_en,
-      locationName_am: formData.core.locationName_am,
+      address: formData.core.address,
     };
 
-    const missingFields = Object.entries(requiredFields)
-      .filter(([_, value]) => !value)
-      .map(([key]) => key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()));
-
-    if (missingFields.length > 0) {
-      alert(`Please fill out all required fields:\n- ${missingFields.join('\n- ' )}`);
-      return;
+    // Add language-specific required fields based on preference
+    if (languagePreference !== 'am') {
+      requiredFields.name_en = formData.core.name_en;
+      requiredFields.locationName_en = formData.core.locationName_en;
+      requiredFields.shortDescription_en = formData.core.shortDescription_en;
+      requiredFields.fullDescription_en = formData.core.fullDescription_en;
     }
+    if (languagePreference !== 'en') {
+      requiredFields.name_am = formData.core.name_am;
+      requiredFields.locationName_am = formData.core.locationName_am;
+      requiredFields.shortDescription_am = formData.core.shortDescription_am;
+      requiredFields.fullDescription_am = formData.core.fullDescription_am;
+    }
+
+     const baseMissing = Object.entries(requiredFields)
+       .filter(([_, value]) => !value)
+       .map(([key]) => key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()));
+
+     // Extended validation for other sections
+     let additionalMissing: string[] = [];
+
+     // Validate schedule
+     if (!formData.schedule || formData.schedule.length === 0) {
+       additionalMissing.push('At least one schedule day is required');
+     } else {
+       formData.schedule.forEach((day: any, idx: number) => {
+         if (languagePreference !== 'am') {
+           if (!day.title_en?.trim()) additionalMissing.push(`Day ${day.day} title (English)`);
+           if (!day.activities_en?.trim()) additionalMissing.push(`Day ${day.day} activities (English)`);
+         }
+         if (languagePreference !== 'en') {
+           if (!day.title_am?.trim()) additionalMissing.push(`Day ${day.day} title (Amharic)`);
+           if (!day.activities_am?.trim()) additionalMissing.push(`Day ${day.day} activities (Amharic)`);
+         }
+       });
+     }
+
+     // Validate hotels
+     if (!formData.hotels || formData.hotels.length === 0) {
+       additionalMissing.push('At least one hotel is required');
+     } else {
+       formData.hotels.forEach((hotel: any, hIdx: number) => {
+         const num = hIdx + 1;
+         if (languagePreference !== 'am' && !hotel.name_en?.trim()) additionalMissing.push(`Hotel ${num} name (English)`);
+         if (languagePreference !== 'en' && !hotel.name_am?.trim()) additionalMissing.push(`Hotel ${num} name (Amharic)`);
+         if (languagePreference !== 'am' && !hotel.description_en?.trim()) additionalMissing.push(`Hotel ${num} short description (English)`);
+         if (languagePreference !== 'en' && !hotel.description_am?.trim()) additionalMissing.push(`Hotel ${num} short description (Amharic)`);
+         if (languagePreference !== 'am' && !hotel.fullDescription_en?.trim()) additionalMissing.push(`Hotel ${num} full description (English)`);
+         if (languagePreference !== 'en' && !hotel.fullDescription_am?.trim()) additionalMissing.push(`Hotel ${num} full description (Amharic)`);
+
+         if (!hotel.rooms || hotel.rooms.length === 0) {
+           additionalMissing.push(`Hotel ${num} must have at least one room`);
+         } else {
+           hotel.rooms.forEach((room: any, rIdx: number) => {
+             const rNum = rIdx + 1;
+             if (languagePreference !== 'am' && !room.name_en?.trim()) additionalMissing.push(`Hotel ${num} Room ${rNum} name (English)`);
+             if (languagePreference !== 'en' && !room.name_am?.trim()) additionalMissing.push(`Hotel ${num} Room ${rNum} name (Amharic)`);
+             if (!room.capacity || room.capacity <= 0) additionalMissing.push(`Hotel ${num} Room ${rNum} capacity`);
+             if (room.pricePerNight == null || room.pricePerNight < 0) additionalMissing.push(`Hotel ${num} Room ${rNum} price per night`);
+             if (room.availability == null || room.availability <= 0) additionalMissing.push(`Hotel ${num} Room ${rNum} availability`);
+           });
+         }
+       });
+     }
+
+     // Validate transportation
+     if (!formData.transportation || formData.transportation.length === 0) {
+       additionalMissing.push('At least one transportation option is required');
+     } else {
+       formData.transportation.forEach((trans: any, tIdx: number) => {
+         const num = tIdx + 1;
+         if (languagePreference !== 'am' && !trans.type_en?.trim()) additionalMissing.push(`Transport ${num} type (English)`);
+         if (languagePreference !== 'en' && !trans.type_am?.trim()) additionalMissing.push(`Transport ${num} type (Amharic)`);
+         if (trans.availability == null || trans.availability <= 0) additionalMissing.push(`Transport ${num} availability`);
+       });
+     }
+
+     // Validate pricing
+     if (formData.pricing.basePrice == null || formData.pricing.basePrice <= 0) {
+       additionalMissing.push('Base ticket price must be greater than 0');
+     }
+
+     const allMissing = [...baseMissing, ...additionalMissing];
+     if (allMissing.length > 0) {
+       alert(`Please fill out all required fields:\n- ${allMissing.join('\n- ')}`);
+       return;
+     }
 
     try {
       const response = await apiClient.post('/api/organizer/festivals', {
         name_en: formData.core.name_en,
-        name_am: formData.core.name_am,
+        name_am: languagePreference === 'am' ? formData.core.name_am : undefined,
         shortDescription_en: formData.core.shortDescription_en,
-        shortDescription_am: formData.core.shortDescription_am,
+        shortDescription_am: languagePreference === 'am' ? formData.core.shortDescription_am : undefined,
         fullDescription_en: formData.core.fullDescription_en,
-        fullDescription_am: formData.core.fullDescription_am,
+        fullDescription_am: languagePreference === 'am' ? formData.core.fullDescription_am : undefined,
         startDate: formData.core.startDate,
         endDate: formData.core.endDate,
         location: {
           name_en: formData.core.locationName_en,
-          name_am: formData.core.locationName_am,
+          name_am: languagePreference === 'am' ? formData.core.locationName_am : undefined,
           address: formData.core.address,
           coordinates: formData.core.coordinates,
         },
@@ -248,6 +472,56 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
               {step === 1 && (
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-16">
                   <div className="lg:col-span-3 space-y-8">
+                    {/* Language Preference Radio Buttons */}
+                    <div className="bg-ethio-bg p-6 rounded-2xl">
+                      <h3 className="text-lg font-bold text-primary mb-4">Language Preference</h3>
+                      <p className="text-sm text-gray-600 mb-4">Choose which languages to include in your festival:</p>
+                      <div className="flex flex-col space-y-3">
+                        <label className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 cursor-pointer hover:border-primary transition-colors">
+                          <input
+                            type="radio"
+                            name="languagePreference"
+                            value="both"
+                            checked={languagePreference === 'both'}
+                            onChange={(e) => setLanguagePreference(e.target.value as 'both')}
+                            className="w-4 h-4 text-primary"
+                          />
+                          <div>
+                            <span className="font-medium">Both English and Amharic</span>
+                            <p className="text-xs text-gray-500">Show fields for both languages</p>
+                          </div>
+                        </label>
+                        <label className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 cursor-pointer hover:border-primary transition-colors">
+                          <input
+                            type="radio"
+                            name="languagePreference"
+                            value="en"
+                            checked={languagePreference === 'en'}
+                            onChange={(e) => setLanguagePreference(e.target.value as 'en')}
+                            className="w-4 h-4 text-primary"
+                          />
+                          <div>
+                            <span className="font-medium">English Only (Foreign Audience)</span>
+                            <p className="text-xs text-gray-500">Only English fields required</p>
+                          </div>
+                        </label>
+                        <label className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 cursor-pointer hover:border-primary transition-colors">
+                          <input
+                            type="radio"
+                            name="languagePreference"
+                            value="am"
+                            checked={languagePreference === 'am'}
+                            onChange={(e) => setLanguagePreference(e.target.value as 'am')}
+                            className="w-4 h-4 text-primary"
+                          />
+                          <div>
+                            <span className="font-medium">Amharic Only (Native Audience)</span>
+                            <p className="text-xs text-gray-500">Only Amharic fields required</p>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <DualLanguageField
                         label="Festival Name *"
@@ -257,6 +531,8 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                         amharicValue={formData.core.name_am}
                         onEnglishChange={(value) => setFormData({...formData, core: {...formData.core, name_en: value}})}
                         onAmharicChange={(value) => setFormData({...formData, core: {...formData.core, name_am: value}})}
+                        showEnglish={languagePreference !== 'am'}
+                        showAmharic={languagePreference !== 'en'}
                       />
                       <Input 
                         label="Slug" 
@@ -265,6 +541,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                         className="bg-gray-50"
                       />
                     </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <Input 
                         label="Start Date *" 
@@ -279,6 +556,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                         onChange={e => setFormData({...formData, core: {...formData.core, endDate: e.target.value}})} 
                       />
                     </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <DualLanguageField
                         label="Location Name *"
@@ -288,6 +566,8 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                         amharicValue={formData.core.locationName_am}
                         onEnglishChange={(value) => setFormData({...formData, core: {...formData.core, locationName_en: value}})}
                         onAmharicChange={(value) => setFormData({...formData, core: {...formData.core, locationName_am: value}})}
+                        showEnglish={languagePreference !== 'am'}
+                        showAmharic={languagePreference !== 'en'}
                       />
                       <Input 
                         label="Address" 
@@ -296,6 +576,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                         onChange={e => setFormData({...formData, core: {...formData.core, address: e.target.value}})} 
                       />
                     </div>
+
                     <div 
                       onClick={() => setIsMapModalOpen(true)}
                       className="bg-ethio-bg h-48 rounded-3xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center text-gray-400 space-y-2 group hover:border-secondary transition-colors cursor-pointer relative overflow-hidden"
@@ -309,6 +590,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                         <p className="text-[10px]">Lat: {formData.core.coordinates.lat.toFixed(4)}, Lng: {formData.core.coordinates.lng.toFixed(4)}</p>
                       </div>
                     </div>
+
                     <DualLanguageField
                       label="Short Description *"
                       englishPlaceholder="Brief summary for listing cards..."
@@ -319,7 +601,10 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                       onAmharicChange={(value) => setFormData({...formData, core: {...formData.core, shortDescription_am: value}})}
                       textarea
                       rows={3}
+                      showEnglish={languagePreference !== 'am'}
+                      showAmharic={languagePreference !== 'en'}
                     />
+
                     <DualLanguageField
                       label="Full Description *"
                       englishPlaceholder="Detailed story and information..."
@@ -330,7 +615,10 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                       onAmharicChange={(value) => setFormData({...formData, core: {...formData.core, fullDescription_am: value}})}
                       textarea
                       rows={6}
+                      showEnglish={languagePreference !== 'am'}
+                      showAmharic={languagePreference !== 'en'}
                     />
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="p-8 border-2 border-dashed border-gray-100 rounded-[32px] text-center hover:border-primary/20 transition-colors cursor-pointer">
                         <input type="file" className="hidden" id="cover-image-upload" onChange={e => e.target.files && handleFileUpload(e.target.files[0], true)} />
@@ -348,7 +636,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="lg:col-span-2">
                     <div className="sticky top-8">
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-4 block">Live Preview</label>
@@ -393,675 +681,56 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                   </div>
                   <div className="space-y-6">
                     {formData.schedule.map((day, idx) => (
-                      <div key={idx} className="bg-ethio-bg/50 p-8 rounded-[32px] border border-gray-100 relative group">
-                        <button 
-                          className="absolute top-6 right-6 p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                          onClick={() => setFormData({
-                            ...formData,
-                            schedule: formData.schedule.filter((_, i) => i !== idx)
-                          })}
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                          <div className="md:col-span-1">
-                            <div className="w-16 h-16 bg-primary text-white rounded-2xl flex flex-col items-center justify-center mb-4">
-                              <span className="text-[10px] uppercase font-bold opacity-60 tracking-widest">Day</span>
-                              <span className="text-2xl font-serif font-bold">{day.day}</span>
-                            </div>
-                          </div>
-                          <div className="md:col-span-3 space-y-6">
-                            <DualLanguageField
-                              label="Day Title"
-                              englishPlaceholder="e.g. Ketera (The Eve)"
-                              amharicPlaceholder="ከተራ (ማታ)"
-                              englishValue={day.title_en}
-                              amharicValue={day.title_am}
-                              onEnglishChange={(value) => {
-                                const newSchedule = [...formData.schedule];
-                                newSchedule[idx].title_en = value;
-                                setFormData({ ...formData, schedule: newSchedule });
-                              }}
-                              onAmharicChange={(value) => {
-                                const newSchedule = [...formData.schedule];
-                                newSchedule[idx].title_am = value;
-                                setFormData({ ...formData, schedule: newSchedule });
-                              }}
-                            />
-                            <DualLanguageField
-                              label="Activities & Highlights"
-                              englishPlaceholder="What happens on this day?"
-                              amharicPlaceholder="ይህ ቀን ላይ ምን ይሆናል?"
-                              englishValue={day.activities_en || ''}
-                              amharicValue={day.activities_am || ''}
-                              onEnglishChange={(value) => {
-                                const newSchedule = [...formData.schedule];
-                                newSchedule[idx].activities_en = value;
-                                setFormData({ ...formData, schedule: newSchedule });
-                              }}
-                              onAmharicChange={(value) => {
-                                const newSchedule = [...formData.schedule];
-                                newSchedule[idx].activities_am = value;
-                                setFormData({ ...formData, schedule: newSchedule });
-                              }}
-                              textarea
-                              rows={4}
-                            />
-                            <div className="space-y-4">
-                              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Performers & Groups</label>
-                              <div className="flex flex-wrap gap-2">
-                                {day.performers.map((p, pIdx) => (
-                                  <Badge key={pIdx} variant="info" className="pl-3 pr-1 py-1 flex items-center gap-2">
-                                    {p}
-                                    <button onClick={() => {
-                                      const newSchedule = [...formData.schedule];
-                                      newSchedule[idx].performers = newSchedule[idx].performers.filter((_, i) => i !== pIdx);
-                                      setFormData({ ...formData, schedule: newSchedule });
-                                    }}><X className="w-3 h-3" /></button>
-                                  </Badge>
-                                ))}
-                                <div className="flex gap-2 items-center">
-                                  <input 
-                                    type="text"
-                                    placeholder="Add performer..."
-                                    className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs w-32 focus:ring-1 focus:ring-primary/20 outline-none"
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
-                                        const name = (e.target as HTMLInputElement).value.trim();
-                                        const newSchedule = [...formData.schedule];
-                                        newSchedule[idx].performers.push(name);
-                                        setFormData({ ...formData, schedule: newSchedule });
-                                        (e.target as HTMLInputElement).value = '';
-                                      }
-                                    }}
-                                  />
-                                  <button 
-                                    className="text-xs font-bold text-primary flex items-center gap-1 hover:underline"
-                                    onClick={(e) => {
-                                      const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                                      if (input?.value.trim()) {
-                                        const name = input.value.trim();
-                                        const newSchedule = [...formData.schedule];
-                                        newSchedule[idx].performers.push(name);
-                                        setFormData({ ...formData, schedule: newSchedule });
-                                        input.value = '';
-                                      }
-                                    }}
-                                  >
-                                    <Plus className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+                      <div key={idx} className="flex gap-6 p-6 bg-ethio-bg rounded-2xl">
+                        <div className="w-20 h-20 bg-primary rounded-2xl flex flex-col items-center justify-center text-white flex-shrink-0">
+                          <span className="text-xs font-bold uppercase">Day</span>
+                          <span className="text-3xl font-bold">{day.day}</span>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Step 3: Hotels */}
-              {step === 3 && (
-                <div className="space-y-8">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-2xl font-serif font-bold text-primary">Accommodation Partners</h3>
-                    <Button 
-                      variant="outline" 
-                      leftIcon={Plus}
-                      onClick={() => setFormData({
-                        ...formData,
-                        hotels: [...formData.hotels, { 
-                          id: Date.now(), name_en: '', name_am: '', image: '', starRating: 5, address: '', description_en: '', description_am: '', 
-                          fullDescription_en: '', fullDescription_am: '', policies: '', checkInTime: '15:00', checkOutTime: '12:00', facilities: [], rooms: [], gallery: [] 
-                        }]
-                      })}
-                    >
-                      Add Hotel
-                    </Button>
-                  </div>
-                  <div className="space-y-12">
-                    {formData.hotels.map((hotel, hIdx) => (
-                      <div key={hotel.id} className="bg-white border border-gray-100 rounded-[40px] p-10 shadow-sm space-y-8">
-                        <div className="flex justify-between items-start">
-                            <div className="flex items-center gap-6">
-                              <div className="relative group">
-                                <div className="w-20 h-20 bg-ethio-bg rounded-3xl flex items-center justify-center text-gray-300 overflow-hidden">
-                                  {hotel.image ? <img src={hotel.image} className="w-full h-full object-cover" alt="" /> : <Hotel className="w-8 h-8" />}
-                                </div>
-                                <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-3xl">
-                                  <Camera className="w-6 h-6 text-white" />
-                                  <input type="file" className="hidden" accept="image/*" onChange={e => {
-                                    if (e.target.files?.[0]) {
-                                      const file = e.target.files[0];
-                                      const uploadData = new FormData();
-                                      uploadData.append('file', file);
-                                      fetch('/api/upload', { method: 'POST', body: uploadData })
-                                        .then(res => res.json())
-                                        .then(data => {
-                                          if (data.success) {
-                                            const newHotels = [...formData.hotels];
-                                            newHotels[hIdx].image = data.url;
-                                            setFormData({ ...formData, hotels: newHotels });
-                                          }
-                                        });
-                                    }
-                                  }} />
-                                </label>
-                              </div>
-                              <div>
-                                <h4 className="text-xl font-serif font-bold text-primary">{hotel.name_en || 'New Hotel Partner'}</h4>
-                                <p className="text-gray-400 text-xs">Configure rooms and details for this partner.</p>
-                              </div>
-                            </div>
-                          <button 
-                            className="p-2 text-gray-300 hover:text-red-500"
-                            onClick={() => setFormData({
-                              ...formData,
-                              hotels: formData.hotels.filter((_, i) => i !== hIdx)
-                            })}
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="flex-1 space-y-4">
                           <DualLanguageField
-                            label="Hotel Name"
-                            englishPlaceholder="e.g. Gondar Hill Resort"
-                            amharicPlaceholder="ጎንዳር ሂል ሪዞርት"
-                            englishValue={hotel.name_en || ''}
-                            amharicValue={hotel.name_am || ''}
+                            label="Day Title"
+                            englishValue={day.title_en}
+                            amharicValue={day.title_am}
                             onEnglishChange={(value) => {
-                              const newHotels = [...formData.hotels];
-                              newHotels[hIdx].name_en = value;
-                              setFormData({ ...formData, hotels: newHotels });
+                              const newSchedule = [...formData.schedule];
+                              newSchedule[idx].title_en = value;
+                              setFormData({ ...formData, schedule: newSchedule });
                             }}
                             onAmharicChange={(value) => {
-                              const newHotels = [...formData.hotels];
-                              newHotels[hIdx].name_am = value;
-                              setFormData({ ...formData, hotels: newHotels });
+                              const newSchedule = [...formData.schedule];
+                              newSchedule[idx].title_am = value;
+                              setFormData({ ...formData, schedule: newSchedule });
                             }}
+                            showEnglish={languagePreference !== 'am'}
+                            showAmharic={languagePreference !== 'en'}
                           />
-                          <Input 
-                            label="Star Rating" 
-                            type="number" 
-                            min="1" max="5"
-                            value={hotel.starRating}
-                            onChange={e => {
-                              const newHotels = [...formData.hotels];
-                              newHotels[hIdx].starRating = parseInt(e.target.value);
-                              setFormData({ ...formData, hotels: newHotels });
-                            }}
-                          />
-                          <Input 
-                            label="Address" 
-                            value={hotel.address}
-                            onChange={e => {
-                              const newHotels = [...formData.hotels];
-                              newHotels[hIdx].address = e.target.value;
-                              setFormData({ ...formData, hotels: newHotels });
-                            }}
-                          />
-                          <div className="grid grid-cols-2 gap-4">
-                            <Input 
-                              label="Check-in Time" 
-                              type="time"
-                              value={hotel.checkInTime || '15:00'}
-                              onChange={e => {
-                                const newHotels = [...formData.hotels];
-                                newHotels[hIdx].checkInTime = e.target.value;
-                                setFormData({ ...formData, hotels: newHotels });
-                              }}
-                            />
-                            <Input 
-                              label="Check-out Time" 
-                              type="time"
-                              value={hotel.checkOutTime || '12:00'}
-                              onChange={e => {
-                                const newHotels = [...formData.hotels];
-                                newHotels[hIdx].checkOutTime = e.target.value;
-                                setFormData({ ...formData, hotels: newHotels });
-                              }}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-4">
                           <DualLanguageField
-                            label="Full Description"
-                            englishPlaceholder="Describe the hotel, amenities, and what makes it special..."
-                            amharicPlaceholder="ሆተሉን ደስታዎችን እና ልዩነቱን ይግለጹ..."
-                            englishValue={hotel.fullDescription_en || ''}
-                            amharicValue={hotel.fullDescription_am || ''}
+                            label="Activities"
+                            englishValue={day.activities_en}
+                            amharicValue={day.activities_am}
                             onEnglishChange={(value) => {
-                              const newHotels = [...formData.hotels];
-                              newHotels[hIdx].fullDescription_en = value;
-                              setFormData({ ...formData, hotels: newHotels });
+                              const newSchedule = [...formData.schedule];
+                              newSchedule[idx].activities_en = value;
+                              setFormData({ ...formData, schedule: newSchedule });
                             }}
                             onAmharicChange={(value) => {
-                              const newHotels = [...formData.hotels];
-                              newHotels[hIdx].fullDescription_am = value;
-                              setFormData({ ...formData, hotels: newHotels });
-                            }}
-                            textarea
-                            rows={4}
-                          />
-                        </div>
-
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Facilities</label>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            {['Free WiFi', 'Swimming Pool', 'Gym', 'Spa & Sauna', 'Restaurant', 'Airport Shuttle', 'Free Parking', 'Room Service'].map(facility => (
-                              <label key={facility} className={`flex items-center gap-2 p-3 rounded-xl cursor-pointer transition-all ${(hotel.facilities || []).includes(facility) ? 'bg-primary/10 text-primary border border-primary' : 'bg-ethio-bg text-gray-500 border border-transparent hover:bg-gray-100'}`}>
-                                <input 
-                                  type="checkbox" 
-                                  className="hidden"
-                                  checked={(hotel.facilities || []).includes(facility)}
-                                  onChange={e => {
-                                    const newHotels = [...formData.hotels];
-                                    const facilities = newHotels[hIdx].facilities || [];
-                                    if (e.target.checked) {
-                                      newHotels[hIdx].facilities = [...facilities, facility];
-                                    } else {
-                                      newHotels[hIdx].facilities = facilities.filter((f: string) => f !== facility);
-                                    }
-                                    setFormData({ ...formData, hotels: newHotels });
-                                  }}
-                                />
-                                <span className="text-xs font-semibold">{facility}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div className="flex justify-between items-center">
-                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Hotel Gallery (Pool, Gym, Restaurant, etc.)</label>
-                          </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {(hotel.gallery || []).map((img: string, gIdx: number) => (
-                              <div key={gIdx} className="relative h-24 rounded-2xl overflow-hidden group">
-                                <img src={img} alt="" className="w-full h-full object-cover" />
-                                <button 
-                                  className="absolute top-1 right-1 p-1 bg-black/50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all"
-                                  onClick={() => {
-                                    const newHotels = [...formData.hotels];
-                                    newHotels[hIdx].gallery = newHotels[hIdx].gallery.filter((_: string, i: number) => i !== gIdx);
-                                    setFormData({ ...formData, hotels: newHotels });
-                                  }}
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </div>
-                            ))}
-                            <label className="h-24 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all">
-                              <Camera className="w-6 h-6 text-gray-400" />
-                              <span className="text-[10px] text-gray-400 mt-1">Add Photo</span>
-                              <input 
-                                type="file" 
-                                className="hidden" 
-                                accept="image/*" 
-                                multiple
-                                onChange={e => {
-                                  if (e.target.files) {
-                                    Array.from(e.target.files).forEach(file => {
-                                      const uploadData = new FormData();
-                                      uploadData.append('file', file);
-                                      fetch('/api/upload', { method: 'POST', body: uploadData })
-                                        .then(res => res.json())
-                                        .then(data => {
-                                          if (data.success) {
-                                            const newHotels = [...formData.hotels];
-                                            newHotels[hIdx].gallery = [...(newHotels[hIdx].gallery || []), data.url];
-                                            setFormData({ ...formData, hotels: newHotels });
-                                          }
-                                        });
-                                    });
-                                  }
-                                }} 
-                              />
-                            </label>
-                          </div>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div className="flex justify-between items-center">
-                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Room Types</label>
-                            <button 
-                              className="text-xs font-bold text-primary flex items-center gap-1"
-                              onClick={() => {
-                                const newHotels = [...formData.hotels];
-                                newHotels[hIdx].rooms.push({
-                                  id: Date.now(), name_en: '', name_am: '', description_en: '', description_am: '', capacity: 2, pricePerNight: 100, availability: 5, image: '', sqm: 30, amenities: [], bedType: ''
-                                });
-                                setFormData({ ...formData, hotels: newHotels });
-                              }}
-                            >
-                              <Plus className="w-3 h-3" /> Add Room Type
-                            </button>
-                          </div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                            {hotel.rooms.map((room: any, rIdx: number) => (
-                              <div key={room.id} className="bg-ethio-bg/50 p-6 rounded-3xl border border-gray-50 relative group">
-                                <button 
-                                  className="absolute top-4 right-4 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                                  onClick={() => {
-                                    const newHotels = [...formData.hotels];
-                                    newHotels[hIdx].rooms = newHotels[hIdx].rooms.filter((_: any, i: number) => i !== rIdx);
-                                    setFormData({ ...formData, hotels: newHotels });
-                                  }}
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                                <div className="space-y-4">
-                                  <div className="flex gap-4 items-start">
-                                    <div className="relative group flex-shrink-0">
-                                      <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-gray-300 border border-gray-100 overflow-hidden">
-                                        {room.image ? <img src={room.image} className="w-full h-full object-cover" alt="" /> : <ImageIcon className="w-6 h-6" />}
-                                      </div>
-                                      <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-2xl">
-                                        <Camera className="w-4 h-4 text-white" />
-                                        <input type="file" className="hidden" accept="image/*" onChange={e => {
-                                          if (e.target.files?.[0]) {
-                                            const file = e.target.files[0];
-                                            const uploadData = new FormData();
-                                            uploadData.append('file', file);
-                                            fetch('/api/upload', { method: 'POST', body: uploadData })
-                                              .then(res => res.json())
-                                              .then(data => {
-                                                if (data.success) {
-                                                  const newHotels = [...formData.hotels];
-                                                  newHotels[hIdx].rooms[rIdx].image = data.url;
-                                                  setFormData({ ...formData, hotels: newHotels });
-                                                }
-                                              });
-                                          }
-                                        }} />
-                                      </label>
-                                    </div>
-                                    <div className="flex-1 space-y-2">
-                                      <DualLanguageField
-                                        label="Room Name"
-                                        englishPlaceholder="e.g. Deluxe Suite"
-                                        amharicPlaceholder="ዴሉክስ ሱቅ"
-                                        englishValue={room.name_en || ''}
-                                        amharicValue={room.name_am || ''}
-                                        onEnglishChange={(value) => {
-                                          const newHotels = [...formData.hotels];
-                                          newHotels[hIdx].rooms[rIdx].name_en = value;
-                                          setFormData({ ...formData, hotels: newHotels });
-                                        }}
-                                        onAmharicChange={(value) => {
-                                          const newHotels = [...formData.hotels];
-                                          newHotels[hIdx].rooms[rIdx].name_am = value;
-                                          setFormData({ ...formData, hotels: newHotels });
-                                        }}
-                                      />
-                                      <Input 
-                                        label="Room Image URL" 
-                                        className="bg-white"
-                                        placeholder="https://..."
-                                        value={room.image || ''}
-                                        onChange={e => {
-                                          const newHotels = [...formData.hotels];
-                                          newHotels[hIdx].rooms[rIdx].image = e.target.value;
-                                          setFormData({ ...formData, hotels: newHotels });
-                                        }}
-                                      />
-                                    </div>
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <Input 
-                                      label="Bed Type" 
-                                      placeholder="e.g. King Size"
-                                      className="bg-white"
-                                      value={room.bedType || ''}
-                                      onChange={e => {
-                                        const newHotels = [...formData.hotels];
-                                        newHotels[hIdx].rooms[rIdx].bedType = e.target.value;
-                                        setFormData({ ...formData, hotels: newHotels });
-                                      }}
-                                    />
-                                    <Input 
-                                      label="Capacity" 
-                                      type="number"
-                                      className="bg-white"
-                                      value={room.capacity}
-                                      onChange={e => {
-                                        const newHotels = [...formData.hotels];
-                                        newHotels[hIdx].rooms[rIdx].capacity = parseInt(e.target.value);
-                                        setFormData({ ...formData, hotels: newHotels });
-                                      }}
-                                    />
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <Input 
-                                      label="Price/Night" 
-                                      type="number" 
-                                      className="bg-white"
-                                      value={room.pricePerNight}
-                                      onChange={e => {
-                                        const newHotels = [...formData.hotels];
-                                        newHotels[hIdx].rooms[rIdx].pricePerNight = parseInt(e.target.value);
-                                        setFormData({ ...formData, hotels: newHotels });
-                                      }}
-                                    />
-                                    <Input 
-                                      label="Size (sqm)" 
-                                      type="number" 
-                                      className="bg-white"
-                                      placeholder="e.g. 35"
-                                      value={room.sqm || ''}
-                                      onChange={e => {
-                                        const newHotels = [...formData.hotels];
-                                        newHotels[hIdx].rooms[rIdx].sqm = parseInt(e.target.value);
-                                        setFormData({ ...formData, hotels: newHotels });
-                                      }}
-                                    />
-                                  </div>
-                                  <DualLanguageField
-                                    label="Room Description"
-                                    englishPlaceholder="Describe the room..."
-                                    amharicPlaceholder="ክፍሉን ይግለጹ..."
-                                    englishValue={room.description_en || ''}
-                                    amharicValue={room.description_am || ''}
-                                    onEnglishChange={(value) => {
-                                      const newHotels = [...formData.hotels];
-                                      newHotels[hIdx].rooms[rIdx].description_en = value;
-                                      setFormData({ ...formData, hotels: newHotels });
-                                    }}
-                                    onAmharicChange={(value) => {
-                                      const newHotels = [...formData.hotels];
-                                      newHotels[hIdx].rooms[rIdx].description_am = value;
-                                      setFormData({ ...formData, hotels: newHotels });
-                                    }}
-                                    textarea
-                                    rows={2}
-                                  />
-                                  <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Room Amenities</label>
-                                    <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-                                      {['Free WiFi', 'Balcony', 'Air Conditioning', 'Mini Bar', 'TV', 'Safe'].map(amenity => (
-                                        <label key={amenity} className={`flex items-center gap-1.5 p-2 rounded-lg cursor-pointer transition-all text-xs ${(room.amenities || []).includes(amenity) ? 'bg-primary/10 text-primary border border-primary' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'}`}>
-                                          <input 
-                                            type="checkbox" 
-                                            className="hidden"
-                                            checked={(room.amenities || []).includes(amenity)}
-                                            onChange={e => {
-                                              const newHotels = [...formData.hotels];
-                                              const amenities = newHotels[hIdx].rooms[rIdx].amenities || [];
-                                              if (e.target.checked) {
-                                                newHotels[hIdx].rooms[rIdx].amenities = [...amenities, amenity];
-                                              } else {
-                                                newHotels[hIdx].rooms[rIdx].amenities = amenities.filter((a: string) => a !== amenity);
-                                              }
-                                              setFormData({ ...formData, hotels: newHotels });
-                                            }}
-                                          />
-                                          <span className="font-semibold">{amenity}</span>
-                                        </label>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Step 4: Transportation */}
-              {step === 4 && (
-                <div className="space-y-8">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-2xl font-serif font-bold text-primary">Transportation Options</h3>
-                    <Button 
-                      variant="outline" 
-                      leftIcon={Plus}
-                      onClick={() => setFormData({
-                        ...formData,
-                        transportation: [...formData.transportation, { 
-                          id: Date.now(), type_en: 'Private Car', type_am: 'የግል መኪና', capacity: 4, price: 50, availability: 5, description_en: '', description_am: '', image: '', pickupLocations: '' 
-                        }]
-                      })}
-                    >
-                      Add Vehicle
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {formData.transportation.map((car, idx) => (
-                      <div key={car.id} className="bg-white border border-gray-100 rounded-[40px] p-8 shadow-sm relative group">
-                        <button 
-                          className="absolute top-6 right-6 p-2 text-gray-300 hover:text-red-500"
-                          onClick={() => setFormData({
-                            ...formData,
-                            transportation: formData.transportation.filter((_, i) => i !== idx)
-                          })}
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                        <div className="flex gap-6 mb-8">
-                          <div className="relative group">
-                            <div className="w-24 h-24 bg-ethio-bg rounded-3xl flex items-center justify-center text-gray-300 overflow-hidden">
-                              {car.image ? <img src={car.image} className="w-full h-full object-cover" alt="" /> : <Car className="w-10 h-10" />}
-                            </div>
-                            <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-3xl">
-                              <Camera className="w-6 h-6 text-white" />
-                              <input type="file" className="hidden" accept="image/*" onChange={e => {
-                                if (e.target.files?.[0]) {
-                                  const file = e.target.files[0];
-                                  const uploadFormData = new FormData();
-                                  uploadFormData.append('file', file);
-                                  fetch('/api/upload', { method: 'POST', body: uploadFormData })
-                                    .then(res => res.json())
-                                    .then(data => {
-                                      if (data.success) {
-                                        const newTrans = [...formData.transportation];
-                                        newTrans[idx].image = data.url;
-                                        setFormData({ ...formData, transportation: newTrans });
-                                      }
-                                    });
-                                }
-                              }} />
-                            </label>
-                          </div>
-                          <div className="flex-1 space-y-4">
-                            <DualLanguageField
-                              label="Vehicle Type"
-                              englishPlaceholder="Private Car"
-                              amharicPlaceholder="የግል መኪና"
-                              englishValue={car.type_en || ''}
-                              amharicValue={car.type_am || ''}
-                              onEnglishChange={(value) => {
-                                const newTrans = [...formData.transportation];
-                                newTrans[idx].type_en = value;
-                                setFormData({ ...formData, transportation: newTrans });
-                              }}
-                              onAmharicChange={(value) => {
-                                const newTrans = [...formData.transportation];
-                                newTrans[idx].type_am = value;
-                                setFormData({ ...formData, transportation: newTrans });
-                              }}
-                            />
-                            <Input 
-                              label="Image URL" 
-                              value={car.image}
-                              onChange={e => {
-                                const newTrans = [...formData.transportation];
-                                newTrans[idx].image = e.target.value;
-                                setFormData({ ...formData, transportation: newTrans });
-                              }}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-4">
-                          <Input 
-                            label="Capacity" 
-                            type="number"
-                            value={car.capacity}
-                            onChange={e => {
-                              const newTrans = [...formData.transportation];
-                              newTrans[idx].capacity = parseInt(e.target.value);
-                              setFormData({ ...formData, transportation: newTrans });
-                            }}
-                          />
-                          <Input 
-                            label="Price" 
-                            type="number"
-                            value={car.price}
-                            onChange={e => {
-                              const newTrans = [...formData.transportation];
-                              newTrans[idx].price = parseInt(e.target.value);
-                              setFormData({ ...formData, transportation: newTrans });
-                            }}
-                          />
-                          <Input 
-                            label="Available" 
-                            type="number"
-                            value={car.availability}
-                            onChange={e => {
-                              const newTrans = [...formData.transportation];
-                              newTrans[idx].availability = parseInt(e.target.value);
-                              setFormData({ ...formData, transportation: newTrans });
-                            }}
-                          />
-                        </div>
-                        <div className="mt-4">
-                          <Input 
-                            label="Pick-up Locations" 
-                            placeholder="e.g. Bole Airport, Hilton Hotel, Meskel Square"
-                            value={car.pickupLocations || ''}
-                            onChange={e => {
-                              const newTrans = [...formData.transportation];
-                              newTrans[idx].pickupLocations = e.target.value;
-                              setFormData({ ...formData, transportation: newTrans });
-                            }}
-                          />
-                        </div>
-                        <div className="mt-4">
-                          <DualLanguageField
-                            label="Description"
-                            englishPlaceholder="Vehicle description, e.g. includes water, air-conditioning..."
-                            amharicPlaceholder="ተሽከርካሪ መግለጫ፣ ምሳሌ፡ ውሃ፣ አየር ማቀዝቀዣ..."
-                            englishValue={car.description_en || ''}
-                            amharicValue={car.description_am || ''}
-                            onEnglishChange={(value) => {
-                              const newTrans = [...formData.transportation];
-                              newTrans[idx].description_en = value;
-                              setFormData({ ...formData, transportation: newTrans });
-                            }}
-                            onAmharicChange={(value) => {
-                              const newTrans = [...formData.transportation];
-                              newTrans[idx].description_am = value;
-                              setFormData({ ...formData, transportation: newTrans });
+                              const newSchedule = [...formData.schedule];
+                              newSchedule[idx].activities_am = value;
+                              setFormData({ ...formData, schedule: newSchedule });
                             }}
                             textarea
                             rows={3}
+                            showEnglish={languagePreference !== 'am'}
+                            showAmharic={languagePreference !== 'en'}
+                          />
+                          <Input
+                            label="Performers (comma-separated)"
+                            value={day.performers.join(', ')}
+                            onChange={(e) => {
+                              const newSchedule = [...formData.schedule];
+                              newSchedule[idx].performers = e.target.value.split(',').map(p => p.trim());
+                              setFormData({ ...formData, schedule: newSchedule });
+                            }}
                           />
                         </div>
                       </div>
@@ -1070,603 +739,627 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                 </div>
               )}
 
-              {/* Step 5: Services */}
-              {step === 5 && (
-                <div className="space-y-12">
-                  <h3 className="text-2xl font-serif font-bold text-primary">Event Services & Add-ons</h3>
-                  
-                  {/* Food & Drink Packages Section - Enhanced */}
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/5 text-primary rounded-lg"><Utensils className="w-5 h-5" /></div>
-                      <h4 className="font-bold text-primary">Food & Drink Packages</h4>
-                    </div>
-                    <p className="text-sm text-gray-500">Add meal packages available for this event (can also be booked with hotel rooms)</p>
-                    
-                    {(!formData.services.foodPackages || formData.services.foodPackages.length === 0) ? (
-                      <p className="text-sm text-gray-400 italic">No food packages added yet.</p>
-                    ) : (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        {(formData.services.foodPackages as any[]).map((pkg: any, pIdx: number) => (
-                          <div key={pkg.id} className="bg-ethio-bg/50 p-5 rounded-2xl border border-gray-50 relative group">
-                            <button 
-                              className="absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                              onClick={() => {
-                                const newServices = { ...formData.services };
-                                newServices.foodPackages = newServices.foodPackages.filter((_: any, i: number) => i !== pIdx);
-                                setFormData({ ...formData, services: newServices });
-                              }}
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                            <div className="space-y-3">
-                              <div className="flex gap-3">
-                                <div className="flex-1">
-                                  <label className="text-xs text-gray-500 mb-1 block">Package Name</label>
-                                  <select 
-                                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                                    value={pkg.name}
-                                    onChange={e => {
-                                      const newServices = { ...formData.services };
-                                      const name = e.target.value;
-                                      newServices.foodPackages[pIdx].name = name;
-                                      
-                                      const presets: Record<string, {desc: string, items: string[]}> = {
-                                        'Breakfast Only': { desc: 'Continental breakfast with coffee and tea', items: ['Breakfast', 'Coffee', 'Tea'] },
-                                        'Half Board': { desc: 'Breakfast and dinner included', items: ['Breakfast', 'Dinner'] },
-                                        'Full Board': { desc: 'All meals included - breakfast, lunch, and dinner', items: ['Breakfast', 'Lunch', 'Dinner'] },
-                                        'All Inclusive': { desc: 'Unlimited meals, snacks, and drinks', items: ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Drinks'] },
-                                        'Ethiopian Feast': { desc: 'Traditional Ethiopian cuisine experience', items: ['Injera', 'Wat', 'Bread', 'Coffee Ceremony'] },
-                                      };
-                                      if (presets[name]) {
-                                        newServices.foodPackages[pIdx].description = presets[name].desc;
-                                        newServices.foodPackages[pIdx].items = presets[name].items;
-                                      }
-                                      setFormData({ ...formData, services: newServices });
-                                    }}
-                                  >
-                                    <option value="">Select package...</option>
-                                    <option value="Breakfast Only">Breakfast Only</option>
-                                    <option value="Half Board">Half Board</option>
-                                    <option value="Full Board">Full Board</option>
-                                    <option value="All Inclusive">All Inclusive</option>
-                                    <option value="Ethiopian Feast">Ethiopian Feast</option>
-                                    <option value="Other">Other (Custom)</option>
-                                  </select>
-                                </div>
-                                <div className="w-28">
-                                  <label className="text-xs text-gray-500 mb-1 block">Price/Person</label>
-                                  <input 
-                                    type="number"
-                                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                                    placeholder="$0"
-                                    value={pkg.pricePerPerson || ''}
-                                    onChange={e => {
-                                      const newServices = { ...formData.services };
-                                      newServices.foodPackages[pIdx].pricePerPerson = parseInt(e.target.value) || 0;
-                                      setFormData({ ...formData, services: newServices });
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                              
-                              {pkg.name === 'Other' && (
-                                <div>
-                                  <label className="text-xs text-gray-500 mb-1 block">Custom Package Name</label>
-                                  <input 
-                                    type="text"
-                                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                                    placeholder="e.g., Traditional Coffee Ceremony"
-                                    value={pkg.customName || ''}
-                                    onChange={e => {
-                                      const newServices = { ...formData.services };
-                                      newServices.foodPackages[pIdx].name = e.target.value;
-                                      setFormData({ ...formData, services: newServices });
-                                    }}
-                                  />
-                                </div>
-                              )}
-                              
-                              <div>
-                                <label className="text-xs text-gray-500 mb-1 block">Description</label>
-                                <input 
-                                  type="text"
-                                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                                  placeholder="Describe what's included..."
-                                  value={pkg.description || ''}
-                                  onChange={e => {
-                                    const newServices = { ...formData.services };
-                                    newServices.foodPackages[pIdx].description = e.target.value;
-                                    setFormData({ ...formData, services: newServices });
-                                  }}
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="text-xs text-gray-500 mb-2 block">Included Items</label>
-                                <div className="flex flex-wrap gap-2">
-                                  {['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Coffee', 'Tea', 'Juices', 'Soft Drinks', 'Alcoholic Drinks', 'Injera', 'Wat', 'Bread', 'Coffee Ceremony'].map(item => (
-                                    <label key={item} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer text-xs transition-all ${(pkg.items || []).includes(item) ? 'bg-primary/10 text-primary border border-primary' : 'bg-white text-gray-500 border border-gray-200'}`}>
-                                      <input 
-                                        type="checkbox" 
-                                        className="hidden"
-                                        checked={(pkg.items || []).includes(item)}
-                                        onChange={e => {
-                                          const newServices = { ...formData.services };
-                                          const items = newServices.foodPackages[pIdx].items || [];
-                                          if (e.target.checked) {
-                                            newServices.foodPackages[pIdx].items = [...items, item];
-                                          } else {
-                                            newServices.foodPackages[pIdx].items = items.filter((i: string) => i !== item);
-                                          }
-                                          setFormData({ ...formData, services: newServices });
-                                        }}
-                                      />
-                                      <span>{item}</span>
-                                    </label>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    <button 
-                      className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-primary/90"
-                      onClick={() => {
-                        const newServices = { ...formData.services };
-                        newServices.foodPackages = newServices.foodPackages || [];
-                        newServices.foodPackages.push({
-                          id: Date.now(),
-                          name: '',
-                          description: '',
-                          pricePerPerson: 0,
-                          items: []
-                        });
-                        setFormData({ ...formData, services: newServices });
-                      }}
-                    >
-                      <Plus className="w-4 h-4" /> Add Food Package
-                    </button>
-                  </div>
+               {/* Step 3: Hotels */}
+               {step === 3 && (
+                 <div className="space-y-8">
+                   <div className="flex justify-between items-center">
+                     <h3 className="text-2xl font-serif font-bold text-primary">Partner Hotels</h3>
+                     <Button variant="outline" leftIcon={Plus} onClick={addHotel}>Add Hotel</Button>
+                   </div>
+                   {formData.hotels.length === 0 ? (
+                     <div className="text-center p-12 border-2 border-dashed border-gray-100 rounded-2xl">
+                       <Hotel className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                       <p className="text-gray-400 mb-4">No hotels added yet. Add at least one hotel with rooms to continue.</p>
+                       <Button variant="outline" leftIcon={Plus} onClick={addHotel}>Add Your First Hotel</Button>
+                     </div>
+                   ) : (
+                     <div className="space-y-8">
+                       {formData.hotels.map((hotel: any, hotelIdx: number) => (
+                         <div key={hotelIdx} className="p-8 bg-ethio-bg rounded-2xl border border-gray-100">
+                           <div className="flex justify-between items-start mb-6">
+                             <h4 className="text-lg font-bold flex items-center gap-2">
+                               <Hotel className="w-5 h-5 text-secondary" />
+                               Hotel {hotelIdx + 1}
+                             </h4>
+                             {formData.hotels.length > 1 && (
+                               <Button variant="ghost" size="sm" leftIcon={Trash2} onClick={() => removeHotel(hotelIdx)} className="text-red-500">Remove</Button>
+                             )}
+                           </div>
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                             <DualLanguageField
+                               label="Hotel Name *"
+                               englishPlaceholder="e.g. Gondar Heritage Hotel"
+                               amharicPlaceholder="e.g. ጎንዳር ሆቴል"
+                               englishValue={hotel.name_en || ''}
+                               amharicValue={hotel.name_am || ''}
+                               onEnglishChange={(value) => updateHotel(hotelIdx, 'name_en', value)}
+                               onAmharicChange={(value) => updateHotel(hotelIdx, 'name_am', value)}
+                               showEnglish={languagePreference !== 'am'}
+                               showAmharic={languagePreference !== 'en'}
+                             />
+                             <div className="flex items-end gap-4">
+                               <div className="flex-1">
+                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Star Rating</label>
+                                 <div className="flex items-center gap-1 mt-2">
+                                   {[1,2,3,4,5].map(star => (
+                                     <Star
+                                       key={star}
+                                       className={`w-6 h-6 cursor-pointer transition-colors ${star <= (hotel.starRating || 3) ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`}
+                                       onClick={() => updateHotel(hotelIdx, 'starRating', star)}
+                                     />
+                                   ))}
+                                 </div>
+                               </div>
+                             </div>
+                           </div>
+                           <DualLanguageField
+                             label="Short Description *"
+                             textarea
+                             rows={3}
+                             englishPlaceholder="Brief description of the hotel..."
+                             amharicPlaceholder="ለሆቴል አጭር መግለጫ..."
+                             englishValue={hotel.description_en || ''}
+                             amharicValue={hotel.description_am || ''}
+                             onEnglishChange={(value) => updateHotel(hotelIdx, 'description_en', value)}
+                             onAmharicChange={(value) => updateHotel(hotelIdx, 'description_am', value)}
+                             showEnglish={languagePreference !== 'am'}
+                             showAmharic={languagePreference !== 'en'}
+                           />
+                           <DualLanguageField
+                             label="Full Description *"
+                             textarea
+                             rows={5}
+                             englishPlaceholder="Detailed information about the hotel..."
+                             amharicPlaceholder="ስለ ሆቴል ዝርዝር መረጃ..."
+                             englishValue={hotel.fullDescription_en || ''}
+                             amharicValue={hotel.fullDescription_am || ''}
+                             onEnglishChange={(value) => updateHotel(hotelIdx, 'fullDescription_en', value)}
+                             onAmharicChange={(value) => updateHotel(hotelIdx, 'fullDescription_am', value)}
+                             showEnglish={languagePreference !== 'am'}
+                             showAmharic={languagePreference !== 'en'}
+                           />
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                             <Input
+                               label="Cover Image URL"
+                               placeholder="https://example.com/hotel.jpg"
+                               value={hotel.image || ''}
+                               onChange={(e) => updateHotel(hotelIdx, 'image', e.target.value)}
+                             />
+                             <Input
+                               label="Address"
+                               placeholder="Hotel address"
+                               value={hotel.address || ''}
+                               onChange={(e) => updateHotel(hotelIdx, 'address', e.target.value)}
+                             />
+                           </div>
 
-                  {/* Other Services - Simple List */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {[
-                      { keyEn: 'culturalServices_en', keyAm: 'culturalServices_am', label: 'Cultural Services', icon: Music },
-                      { keyEn: 'specialAssistance_en', keyAm: 'specialAssistance_am', label: 'Special Assistance', icon: Heart },
-                      { keyEn: 'extras_en', keyAm: 'extras_am', label: 'Extras & Souvenirs', icon: Box }
-                    ].map(section => (
-                      <div key={section.keyEn} className="space-y-6">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-primary/5 text-primary rounded-lg"><section.icon className="w-5 h-5" /></div>
-                          <h4 className="font-bold text-primary">{section.label}</h4>
-                        </div>
-                        <div className="space-y-3">
-                          {/* Show bilingual items */}
-                          {(formData.services as any)[section.keyEn]?.map((itemEn: string, idx: number) => {
-                            const itemAm = (formData.services as any)[section.keyAm]?.[idx] || '';
-                            return (
-                              <div key={idx} className="p-4 bg-ethio-bg rounded-2xl group space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm font-medium text-gray-600">{itemEn}</span>
-                                  <button 
-                                    className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                                    onClick={() => {
-                                      const newServices = { ...formData.services };
-                                      (newServices as any)[section.keyEn] = (newServices as any)[section.keyEn].filter((_: any, i: number) => i !== idx);
-                                      if ((newServices as any)[section.keyAm]) {
-                                        (newServices as any)[section.keyAm] = (newServices as any)[section.keyAm].filter((_: any, i: number) => i !== idx);
-                                      }
-                                      setFormData({ ...formData, services: newServices });
-                                    }}
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                </div>
-                                {itemAm && <p className="text-xs text-gray-400" dir="rtl">{itemAm}</p>}
-                              </div>
-                            );
-                          })}
-                          {/* Bilingual Add Input */}
-                          <div className="space-y-2">
-                            <input 
-                              type="text"
-                              placeholder={`${section.label} (English)...`}
-                              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-                              id={`${section.keyEn}-input`}
-                            />
-                            <input 
-                              type="text"
-                              placeholder={`${section.label} (አማርኛ)...`}
-                              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-                              dir="rtl"
-                              id={`${section.keyAm}-input`}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  const enInput = document.getElementById(`${section.keyEn}-input`) as HTMLInputElement;
-                                  const amInput = document.getElementById(`${section.keyAm}-input`) as HTMLInputElement;
-                                  if (enInput?.value.trim() || amInput?.value.trim()) {
-                                    const newServices = { ...formData.services };
-                                    if (!newServices[section.keyEn]) newServices[section.keyEn] = [];
-                                    if (!newServices[section.keyAm]) newServices[section.keyAm] = [];
-                                    (newServices as any)[section.keyEn].push(enInput?.value.trim() || '');
-                                    (newServices as any)[section.keyAm].push(amInput?.value.trim() || '');
-                                    setFormData({ ...formData, services: newServices });
-                                    enInput.value = '';
-                                    amInput.value = '';
-                                  }
-                                }
-                              }}
-                            />
-                            <button 
-                              className="w-full px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 hover:bg-primary/90"
-                              onClick={() => {
-                                const enInput = document.getElementById(`${section.keyEn}-input`) as HTMLInputElement;
-                                const amInput = document.getElementById(`${section.keyAm}-input`) as HTMLInputElement;
-                                if (enInput?.value.trim() || amInput?.value.trim()) {
-                                  const newServices = { ...formData.services };
-                                  if (!newServices[section.keyEn]) newServices[section.keyEn] = [];
-                                  if (!newServices[section.keyAm]) newServices[section.keyAm] = [];
-                                  (newServices as any)[section.keyEn].push(enInput?.value.trim() || '');
-                                  (newServices as any)[section.keyAm].push(amInput?.value.trim() || '');
-                                  setFormData({ ...formData, services: newServices });
-                                  enInput.value = '';
-                                  amInput.value = '';
-                                }
-                              }}
-                            >
-                              <Plus className="w-4 h-4" /> Add Bilingual
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                           {/* Rooms Management */}
+                           <div className="mt-8 pt-6 border-t border-gray-200">
+                             <div className="flex justify-between items-center mb-4">
+                               <h4 className="text-lg font-bold">Room Types</h4>
+                               <Button variant="outline" size="sm" leftIcon={Plus} onClick={() => addRoom(hotelIdx)}>Add Room Type</Button>
+                             </div>
+                             {hotel.rooms && hotel.rooms.length > 0 ? (
+                               <div className="space-y-4">
+                                 {hotel.rooms.map((room: any, roomIdx: number) => (
+                                   <div key={roomIdx} className="p-6 bg-white rounded-xl border border-gray-100">
+                                     <div className="flex justify-between items-start mb-4">
+                                       <h5 className="font-medium text-primary">Room {roomIdx + 1}</h5>
+                                       {hotel.rooms.length > 1 && (
+                                         <Button variant="ghost" size="sm" leftIcon={Trash2} onClick={() => removeRoom(hotelIdx, roomIdx)} className="text-red-500">Remove</Button>
+                                       )}
+                                     </div>
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                       <DualLanguageField
+                                         label="Room Name *"
+                                         englishPlaceholder="e.g. Deluxe Double"
+                                         amharicPlaceholder="e.g. የመልካም ድርሻ"
+                                         englishValue={room.name_en || ''}
+                                         amharicValue={room.name_am || ''}
+                                         onEnglishChange={(value) => updateRoom(hotelIdx, roomIdx, 'name_en', value)}
+                                         onAmharicChange={(value) => updateRoom(hotelIdx, roomIdx, 'name_am', value)}
+                                         showEnglish={languagePreference !== 'am'}
+                                         showAmharic={languagePreference !== 'en'}
+                                       />
+                                       <Input
+                                         label="Capacity (guests)"
+                                         type="number"
+                                         min="1"
+                                         value={room.capacity || 1}
+                                         onChange={(e) => updateRoom(hotelIdx, roomIdx, 'capacity', parseInt(e.target.value) || 1)}
+                                       />
+                                     </div>
+                                     <DualLanguageField
+                                       label="Description"
+                                       textarea
+                                       rows={2}
+                                       englishPlaceholder="Room features and amenities..."
+                                       amharicPlaceholder="የክፍል ባህሪያት..."
+                                       englishValue={room.description_en || ''}
+                                       amharicValue={room.description_am || ''}
+                                       onEnglishChange={(value) => updateRoom(hotelIdx, roomIdx, 'description_en', value)}
+                                       onAmharicChange={(value) => updateRoom(hotelIdx, roomIdx, 'description_am', value)}
+                                       showEnglish={languagePreference !== 'am'}
+                                       showAmharic={languagePreference !== 'en'}
+                                     />
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                       <Input
+                                         label="Price per Night *"
+                                         type="number"
+                                         min="0"
+                                         value={room.pricePerNight || 0}
+                                         onChange={(e) => updateRoom(hotelIdx, roomIdx, 'pricePerNight', parseFloat(e.target.value) || 0)}
+                                       />
+                                       <Input
+                                         label="Available Rooms *"
+                                         type="number"
+                                         min="0"
+                                         value={room.availability || 0}
+                                         onChange={(e) => updateRoom(hotelIdx, roomIdx, 'availability', parseInt(e.target.value) || 0)}
+                                       />
+                                     </div>
+                                   </div>
+                                 ))}
+                               </div>
+                             ) : (
+                               <div className="text-center p-8 border-2 border-dashed border-gray-100 rounded-xl text-gray-400">
+                                 <p>No room types defined. Add at least one room for this hotel.</p>
+                               </div>
+                             )}
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   )}
+                 </div>
+               )}
 
-              {/* Step 6: Policies */}
-              {step === 6 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                  <div className="space-y-8">
-                    <h3 className="text-2xl font-serif font-bold text-primary">Legal & Policies</h3>
-                    <div className="space-y-6">
-                      <DualLanguageField
-                        label="Cancellation Policy"
-                        englishPlaceholder="e.g. Full refund up to 30 days before..."
-                        amharicPlaceholder="ምሳሌ፡ ከ30 ቀን በፊት ሙሉ መመለስ..."
-                        englishValue={formData.policies.cancellation_en}
-                        amharicValue={formData.policies.cancellation_am}
-                        onEnglishChange={(value) => setFormData({...formData, policies: {...formData.policies, cancellation_en: value}})}
-                        onAmharicChange={(value) => setFormData({...formData, policies: {...formData.policies, cancellation_am: value}})}
-                        textarea
-                        rows={4}
-                      />
-                      <DualLanguageField
-                        label="Booking Terms"
-                        englishPlaceholder="General terms and conditions..."
-                        amharicPlaceholder="አጠቃላይ ውል ሁኔታዎች..."
-                        englishValue={formData.policies.terms_en}
-                        amharicValue={formData.policies.terms_am}
-                        onEnglishChange={(value) => setFormData({...formData, policies: {...formData.policies, terms_en: value}})}
-                        onAmharicChange={(value) => setFormData({...formData, policies: {...formData.policies, terms_am: value}})}
-                        textarea
-                        rows={4}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-8 pt-16">
-                    <div className="space-y-6">
-                      <DualLanguageField
-                        label="Safety Rules"
-                        englishPlaceholder="On-site safety guidelines..."
-                        amharicPlaceholder="የቦታው ደህንነት መመሪያዎች..."
-                        englishValue={formData.policies.safety_en}
-                        amharicValue={formData.policies.safety_am}
-                        onEnglishChange={(value) => setFormData({...formData, policies: {...formData.policies, safety_en: value}})}
-                        onAmharicChange={(value) => setFormData({...formData, policies: {...formData.policies, safety_am: value}})}
-                        textarea
-                        rows={4}
-                      />
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Age Restriction</label>
-                        <textarea 
-                          className="w-full h-32 p-4 bg-ethio-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/10" 
-                          placeholder="e.g. All ages welcome, children under 5 free..."
-                          value={formData.policies.ageRestriction}
-                          onChange={e => setFormData({...formData, policies: {...formData.policies, ageRestriction: e.target.value}})}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+               {/* Step 4: Transportation */}
+               {step === 4 && (
+                 <div className="space-y-8">
+                   <div className="flex justify-between items-center">
+                     <h3 className="text-2xl font-serif font-bold text-primary">Transportation Options</h3>
+                     <Button variant="outline" leftIcon={Plus} onClick={addTransport}>Add Transport Option</Button>
+                   </div>
+                   {formData.transportation.length === 0 ? (
+                     <div className="text-center p-12 border-2 border-dashed border-gray-100 rounded-2xl">
+                       <Car className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                       <p className="text-gray-400 mb-4">No transport options added yet. Add at least one transport option to continue.</p>
+                       <Button variant="outline" leftIcon={Plus} onClick={addTransport}>Add Transport Option</Button>
+                     </div>
+                   ) : (
+                     <div className="space-y-6">
+                       {formData.transportation.map((transport: any, idx: number) => (
+                         <div key={idx} className="p-8 bg-ethio-bg rounded-2xl border border-gray-100">
+                           <div className="flex justify-between items-start mb-6">
+                             <h4 className="text-lg font-bold flex items-center gap-2">
+                               <Car className="w-5 h-5 text-secondary" />
+                               Transport {idx + 1}
+                             </h4>
+                             {formData.transportation.length > 1 && (
+                               <Button variant="ghost" size="sm" leftIcon={Trash2} onClick={() => removeTransport(idx)} className="text-red-500">Remove</Button>
+                             )}
+                           </div>
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                             <DualLanguageField
+                               label="Transport Type *"
+                               englishPlaceholder="e.g. Private Car, Shuttle Bus"
+                               amharicPlaceholder="e.g. ፕሪቫት መኪና፣ ሸልቱ ባስ"
+                               englishValue={transport.type_en || ''}
+                               amharicValue={transport.type_am || ''}
+                               onEnglishChange={(value) => updateTransport(idx, 'type_en', value)}
+                               onAmharicChange={(value) => updateTransport(idx, 'type_am', value)}
+                               showEnglish={languagePreference !== 'am'}
+                               showAmharic={languagePreference !== 'en'}
+                             />
+                             <Input
+                               label="Price per Unit"
+                               type="number"
+                               min="0"
+                               value={transport.price || 0}
+                               onChange={(e) => updateTransport(idx, 'price', parseFloat(e.target.value) || 0)}
+                             />
+                           </div>
+                           <DualLanguageField
+                             label="Description"
+                             textarea
+                             rows={3}
+                             englishPlaceholder="Describe the transport service..."
+                             amharicPlaceholder="የመጓጓዣ አገልግሎት መግለጫ..."
+                             englishValue={transport.description_en || ''}
+                             amharicValue={transport.description_am || ''}
+                             onEnglishChange={(value) => updateTransport(idx, 'description_en', value)}
+                             onAmharicChange={(value) => updateTransport(idx, 'description_am', value)}
+                             showEnglish={languagePreference !== 'am'}
+                             showAmharic={languagePreference !== 'en'}
+                           />
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                             <Input
+                               label="Available Units"
+                               type="number"
+                               min="0"
+                               value={transport.availability || 1}
+                               onChange={(e) => updateTransport(idx, 'availability', parseInt(e.target.value) || 1)}
+                             />
+                             <Input
+                               label="Passenger Capacity"
+                               type="number"
+                               min="0"
+                               value={transport.capacity || 0}
+                               onChange={(e) => updateTransport(idx, 'capacity', parseInt(e.target.value) || 0)}
+                             />
+                           </div>
+                           <Input
+                             label="Image URL"
+                             placeholder="https://example.com/transport.jpg"
+                             value={transport.image || ''}
+                             onChange={(e) => updateTransport(idx, 'image', e.target.value)}
+                           />
+                         </div>
+                       ))}
+                     </div>
+                   )}
+                 </div>
+               )}
 
-              {/* Step 7: Pricing */}
-              {step === 7 && (
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-16">
-                  <div className="lg:col-span-3 space-y-8">
-                    <h3 className="text-2xl font-serif font-bold text-primary">Ticket Pricing</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Input 
-                        label="Base Ticket Price" 
-                        type="number"
-                        value={formData.pricing.basePrice}
-                        onChange={e => setFormData({...formData, pricing: {...formData.pricing, basePrice: parseInt(e.target.value)}})}
-                      />
-                      <Input 
-                        label="VIP Ticket Price" 
-                        type="number"
-                        value={formData.pricing.vipPrice}
-                        onChange={e => setFormData({...formData, pricing: {...formData.pricing, vipPrice: parseInt(e.target.value)}})}
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <select 
-                        className="w-full bg-ethio-bg border-none rounded-2xl py-4 px-4 text-sm font-bold text-primary"
-                        value={formData.pricing.currency}
-                        onChange={e => setFormData({...formData, pricing: {...formData.pricing, currency: e.target.value}})}
-                      >
-                        <option>USD</option>
-                        <option>ETB</option>
-                        <option>EUR</option>
-                        <option>GBP</option>
-                      </select>
-                      <Input 
-                        label="Early Bird Discount (%)" 
-                        type="number"
-                        value={formData.pricing.earlyBird}
-                        onChange={e => setFormData({...formData, pricing: {...formData.pricing, earlyBird: parseInt(e.target.value)}})}
-                      />
-                      <Input 
-                        label="Group Discount (%)" 
-                        type="number"
-                        value={formData.pricing.groupDiscount}
-                        onChange={e => setFormData({...formData, pricing: {...formData.pricing, groupDiscount: parseInt(e.target.value)}})}
-                      />
-                    </div>
-                    <div className="bg-emerald-50 p-8 rounded-[32px] border border-emerald-100 flex items-start gap-4">
-                      <Info className="w-5 h-5 text-emerald-600 mt-1" />
-                      <div>
-                        <h4 className="font-bold text-emerald-900 text-sm mb-1">Pricing Strategy Tip</h4>
-                        <p className="text-emerald-700 text-xs leading-relaxed">Early bird discounts typically increase conversion by 25% in the first week of listing.</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="lg:col-span-2">
-                    <div className="sticky top-8">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-4 block">Price Breakdown Preview</label>
-                      <div className="bg-ethio-dark text-white p-10 rounded-[40px] shadow-2xl space-y-8">
-                        <div className="space-y-2">
-                          <p className="text-gray-400 text-xs uppercase tracking-widest font-bold">Base Ticket</p>
-                          <p className="text-4xl font-serif font-bold">{formData.pricing.currency} {formData.pricing.basePrice}</p>
-                        </div>
-                        <div className="space-y-4 pt-8 border-t border-white/10">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-400">Early Bird Price</span>
-                            <span className="text-emerald-400 font-bold">-{formData.pricing.earlyBird}%</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-400">Group Rate (5+)</span>
-                            <span className="text-emerald-400 font-bold">-{formData.pricing.groupDiscount}%</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-400">VIP Experience</span>
-                            <span className="font-bold">+{formData.pricing.currency} {formData.pricing.vipPrice - formData.pricing.basePrice}</span>
-                          </div>
-                        </div>
-                        <div className="pt-8 border-t border-white/10">
-                          <Button className="w-full bg-secondary hover:bg-secondary/90 text-white border-none h-14 rounded-2xl">Preview Checkout</Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+               {/* Step 5: Services */}
+               {step === 5 && (
+                 <div className="space-y-10">
+                   <h3 className="text-2xl font-serif font-bold text-primary">Services</h3>
 
-              {/* Step 8: Review & Publish */}
-              {step === 8 && (
-                <div className="space-y-16">
-                  <div className="text-center max-w-2xl mx-auto space-y-4">
-                    <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <CheckCircle2 className="w-10 h-10" />
-                    </div>
-                    <h3 className="text-4xl font-serif font-bold text-primary">Ready to Launch?</h3>
-                    <p className="text-gray-500">Review your festival details below. Once published, it will be visible to thousands of travelers worldwide.</p>
-                  </div>
+                   {/* Food Packages */}
+                   <section>
+                     <div className="flex justify-between items-center mb-4">
+                       <h4 className="text-lg font-bold text-primary">Food & Drink Packages</h4>
+                       <Button variant="outline" size="sm" leftIcon={Plus} onClick={addFoodPackage}>Add Package</Button>
+                     </div>
+                     {formData.services.foodPackages.length === 0 ? (
+                       <div className="text-center p-8 border-2 border-dashed border-gray-100 rounded-xl">
+                         <p className="text-gray-400 mb-4">No food packages added yet.</p>
+                         <Button variant="outline" size="sm" leftIcon={Plus} onClick={addFoodPackage}>Add Package</Button>
+                       </div>
+                     ) : (
+                       <div className="space-y-6">
+                         {formData.services.foodPackages.map((pkg: any, idx: number) => (
+                           <div key={idx} className="p-6 bg-ethio-bg rounded-2xl border border-gray-100">
+                             <div className="flex justify-between items-start mb-4">
+                               <h5 className="font-medium">Package {idx + 1}</h5>
+                               {formData.services.foodPackages.length > 1 && (
+                                 <Button variant="ghost" size="sm" leftIcon={Trash2} onClick={() => removeFoodPackage(idx)} className="text-red-500">Remove</Button>
+                               )}
+                             </div>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                               <DualLanguageField
+                                 label="Package Name *"
+                                 englishPlaceholder="e.g. Traditional Feast"
+                                 amharicPlaceholder="e.g. ባህላዊ ዓዲ"
+                                 englishValue={pkg.name_en || ''}
+                                 amharicValue={pkg.name_am || ''}
+                                 onEnglishChange={(value) => updateFoodPackage(idx, 'name_en', value)}
+                                 onAmharicChange={(value) => updateFoodPackage(idx, 'name_am', value)}
+                                 showEnglish={languagePreference !== 'am'}
+                                 showAmharic={languagePreference !== 'en'}
+                               />
+                               <Input
+                                 label="Price per Person"
+                                 type="number"
+                                 min="0"
+                                 value={pkg.pricePerPerson || 0}
+                                 onChange={(e) => updateFoodPackage(idx, 'pricePerPerson', parseFloat(e.target.value) || 0)}
+                               />
+                             </div>
+                             <DualLanguageField
+                               label="Description"
+                               textarea
+                               rows={3}
+                               englishPlaceholder="Describe the package..."
+                               amharicPlaceholder="ጥቅል መግለጫ..."
+                               englishValue={pkg.description_en || ''}
+                               amharicValue={pkg.description_am || ''}
+                               onEnglishChange={(value) => updateFoodPackage(idx, 'description_en', value)}
+                               onAmharicChange={(value) => updateFoodPackage(idx, 'description_am', value)}
+                               showEnglish={languagePreference !== 'am'}
+                               showAmharic={languagePreference !== 'en'}
+                             />
+                             <div className="mt-4">
+                               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Included Items (comma-separated)</label>
+                               <Input
+                                 placeholder="e.g. Injera, Doro Wat, Tej"
+                                 value={pkg.items ? pkg.items.join(', ') : ''}
+                                 onChange={(e) => updateFoodPackageItems(idx, e.target.value)}
+                               />
+                             </div>
+                           </div>
+                         ))}
+                       </div>
+                     )}
+                   </section>
 
-                  <div className="space-y-12 border-t border-gray-100 pt-16">
-                    {/* Hero Preview */}
-                    <div className="relative h-[500px] rounded-[60px] overflow-hidden shadow-2xl">
-                      <img src={formData.core.coverImage} className="w-full h-full object-cover" alt="" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                      <div className="absolute bottom-16 left-16 right-16 flex justify-between items-end">
-                        <div className="space-y-4">
-                          <Badge className="bg-secondary text-white border-none">Verified Festival</Badge>
-                          <h1 className="text-6xl font-serif font-bold text-white">{formData.core.name_en}</h1>
-                          <div className="flex items-center text-white/80 gap-8">
-                            <span className="flex items-center gap-2"><Calendar className="w-5 h-5" /> {formData.core.startDate} - {formData.core.endDate}</span>
-                            <span className="flex items-center gap-2"><MapPin className="w-5 h-5" /> {formData.core.locationName_en}</span>
-                          </div>
-                        </div>
-                        <div className="bg-white/10 backdrop-blur-xl p-8 rounded-[32px] border border-white/20 text-white">
-                          <p className="text-xs uppercase font-bold opacity-60 mb-1">Starting from</p>
-                          <p className="text-4xl font-serif font-bold">{formData.pricing.currency} {formData.pricing.basePrice}</p>
-                        </div>
-                      </div>
-                    </div>
+                   {/* Cultural Services */}
+                   <section>
+                     <h4 className="text-lg font-bold text-primary mb-4">Cultural Services</h4>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                       <div>
+                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">English Services (comma-separated)</label>
+                         <textarea
+                           rows={4}
+                           className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all mt-2"
+                           placeholder="e.g. Traditional dance performances, Craft workshops..."
+                           value={formData.services.culturalServices_en.join(', ')}
+                           onChange={(e) => updateServiceArray('culturalServices', 'en', e.target.value)}
+                         />
+                       </div>
+                       <div>
+                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Amharic Services (comma-separated)</label>
+                         <textarea
+                           rows={4}
+                           className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all mt-2"
+                           placeholder="e.g. የባህል አድራጎቶች፣ የእጅ ጥበብ ስራቶች..."
+                           value={formData.services.culturalServices_am.join(', ')}
+                           onChange={(e) => updateServiceArray('culturalServices', 'am', e.target.value)}
+                         />
+                       </div>
+                     </div>
+                   </section>
 
-                    {/* Content Preview Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                      <div className="lg:col-span-2 space-y-12">
-                        <section className="space-y-6">
-                          <h4 className="text-2xl font-serif font-bold text-primary">About the Festival</h4>
-                          <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">{formData.core.fullDescription_en}</p>
-                        </section>
+                   {/* Special Assistance */}
+                   <section>
+                     <h4 className="text-lg font-bold text-primary mb-4">Special Assistance</h4>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                       <div>
+                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">English (comma-separated)</label>
+                         <textarea
+                           rows={3}
+                           className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all mt-2"
+                           placeholder="e.g. Wheelchair access, Sign language interpreter..."
+                           value={formData.services.specialAssistance_en.join(', ')}
+                           onChange={(e) => updateServiceArray('specialAssistance', 'en', e.target.value)}
+                         />
+                       </div>
+                       <div>
+                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Amharic (comma-separated)</label>
+                         <textarea
+                           rows={3}
+                           className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all mt-2"
+                           placeholder="e.g. ለአካል ተገዢ መድረሻ፣ የምልክት ቋንቋ ትርጉም..."
+                           value={formData.services.specialAssistance_am.join(', ')}
+                           onChange={(e) => updateServiceArray('specialAssistance', 'am', e.target.value)}
+                         />
+                       </div>
+                     </div>
+                   </section>
 
-                        <section className="space-y-6">
-                          <h4 className="text-2xl font-serif font-bold text-primary">Accommodation Partners</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {formData.hotels.map(hotel => (
-                              <div key={hotel.id} className="bg-white border border-gray-100 rounded-[32px] overflow-hidden shadow-sm">
-                                <img src={hotel.image} className="w-full h-48 object-cover" alt="" />
-                                <div className="p-6">
-                                  <h5 className="font-bold text-primary">{hotel.name_en}</h5>
-                                  <div className="flex text-secondary mb-2">
-                                    {[...Array(hotel.starRating)].map((_, i) => <Star key={i} className="w-3 h-3 fill-current" />)}
-                                  </div>
-                                  <p className="text-xs text-gray-500">{hotel.address}</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </section>
-                      </div>
+                   {/* Extras */}
+                   <section>
+                     <h4 className="text-lg font-bold text-primary mb-4">Extra Services</h4>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                       <div>
+                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">English (comma-separated)</label>
+                         <textarea
+                           rows={3}
+                           className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all mt-2"
+                           placeholder="e.g. Photography, Souvenir shop, Guided tours..."
+                           value={formData.services.extras_en.join(', ')}
+                           onChange={(e) => updateServiceArray('extras', 'en', e.target.value)}
+                         />
+                       </div>
+                       <div>
+                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Amharic (comma-separated)</label>
+                         <textarea
+                           rows={3}
+                           className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all mt-2"
+                           placeholder="e.g. ፎቶግራፍ፣ ህዝባዊ መዝነት፣ የመምሪያ ጉዞች..."
+                           value={formData.services.extras_am.join(', ')}
+                           onChange={(e) => updateServiceArray('extras', 'am', e.target.value)}
+                         />
+                       </div>
+                     </div>
+                   </section>
+                 </div>
+               )}
 
-                      <div className="space-y-8">
-                        <div className="bg-ethio-bg p-8 rounded-[40px] space-y-6">
-                          <h4 className="font-bold text-primary">Quick Summary</h4>
-                          <div className="space-y-4">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">Days</span>
-                              <span className="font-bold">{formData.schedule.length}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">Hotels</span>
-                              <span className="font-bold">{formData.hotels.length}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">Transport</span>
-                              <span className="font-bold">{formData.transportation.length}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <Button size="lg" className="w-full h-16 rounded-2xl" onClick={handlePublish}>Publish Now</Button>
-                        <Button variant="outline" size="lg" className="w-full h-16 rounded-2xl" onClick={() => {
-                          alert('Saved as draft!');
-                          onCancel();
-                        }}>Save as Draft</Button>
-                        <Button variant="ghost" size="lg" className="w-full h-16 rounded-2xl" onClick={() => setStep(1)}>Edit Details</Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+               {/* Step 6: Policies */}
+               {step === 6 && (
+                 <div className="space-y-8">
+                   <h3 className="text-2xl font-serif font-bold text-primary">Policies & Terms</h3>
+                   <div className="grid grid-cols-1 gap-6">
+                     <DualLanguageField
+                       label="Cancellation Policy *"
+                       textarea
+                       rows={5}
+                       englishPlaceholder="Explain cancellation terms, refund policy..."
+                       amharicPlaceholder="የማቋረጫ ፖሊሲ መግለጫ..."
+                       englishValue={formData.policies.cancellation_en || ''}
+                       amharicValue={formData.policies.cancellation_am || ''}
+                       onEnglishChange={(value) => setFormData({ ...formData, policies: { ...formData.policies, cancellation_en: value } })}
+                       onAmharicChange={(value) => setFormData({ ...formData, policies: { ...formData.policies, cancellation_am: value } })}
+                       showEnglish={languagePreference !== 'am'}
+                       showAmharic={languagePreference !== 'en'}
+                     />
+                     <DualLanguageField
+                       label="Booking Terms *"
+                       textarea
+                       rows={5}
+                       englishPlaceholder="Terms and conditions for bookings..."
+                       amharicPlaceholder="ለቦኪንጎች ውሎች እና ውጤቶች..."
+                       englishValue={formData.policies.terms_en || ''}
+                       amharicValue={formData.policies.terms_am || ''}
+                       onEnglishChange={(value) => setFormData({ ...formData, policies: { ...formData.policies, terms_en: value } })}
+                       onAmharicChange={(value) => setFormData({ ...formData, policies: { ...formData.policies, terms_am: value } })}
+                       showEnglish={languagePreference !== 'am'}
+                       showAmharic={languagePreference !== 'en'}
+                     />
+                     <DualLanguageField
+                       label="Safety Rules"
+                       textarea
+                       rows={5}
+                       englishPlaceholder="Safety guidelines and rules..."
+                       amharicPlaceholder="የደህንነት መመሪያዎች እና ህጎች..."
+                       englishValue={formData.policies.safety_en || ''}
+                       amharicValue={formData.policies.safety_am || ''}
+                       onEnglishChange={(value) => setFormData({ ...formData, policies: { ...formData.policies, safety_en: value } })}
+                       onAmharicChange={(value) => setFormData({ ...formData, policies: { ...formData.policies, safety_am: value } })}
+                       showEnglish={languagePreference !== 'am'}
+                       showAmharic={languagePreference !== 'en'}
+                     />
+                     <Input
+                       label="Age Restriction"
+                       placeholder="e.g. 18+, All ages, etc."
+                       value={formData.policies.ageRestriction || ''}
+                       onChange={(e) => setFormData({ ...formData, policies: { ...formData.policies, ageRestriction: e.target.value } })}
+                     />
+                   </div>
+                 </div>
+               )}
+
+               {/* Step 7: Pricing */}
+               {step === 7 && (
+                 <div className="space-y-8">
+                   <h3 className="text-2xl font-serif font-bold text-primary">Pricing</h3>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
+                     <Input
+                       label="Base Ticket Price (ETB) *"
+                       type="number"
+                       min="0"
+                       value={formData.pricing.basePrice || 0}
+                       onChange={(e) => setFormData({ ...formData, pricing: { ...formData.pricing, basePrice: parseFloat(e.target.value) || 0 } })}
+                     />
+                     <Input
+                       label="VIP Ticket Price (ETB)"
+                       type="number"
+                       min="0"
+                       value={formData.pricing.vipPrice || 0}
+                       onChange={(e) => setFormData({ ...formData, pricing: { ...formData.pricing, vipPrice: parseFloat(e.target.value) || 0 } })}
+                     />
+                     <Input
+                       label="Early Bird Discount (%)"
+                       type="number"
+                       min="0"
+                       max="100"
+                       value={formData.pricing.earlyBird || 0}
+                       onChange={(e) => setFormData({ ...formData, pricing: { ...formData.pricing, earlyBird: parseFloat(e.target.value) || 0 } })}
+                     />
+                     <Input
+                       label="Group Discount (%)"
+                       type="number"
+                       min="0"
+                       max="100"
+                       value={formData.pricing.groupDiscount || 0}
+                       onChange={(e) => setFormData({ ...formData, pricing: { ...formData.pricing, groupDiscount: parseFloat(e.target.value) || 0 } })}
+                     />
+                     <div>
+                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Currency</label>
+                       <select
+                         value={formData.pricing.currency}
+                         onChange={(e) => setFormData({ ...formData, pricing: { ...formData.pricing, currency: e.target.value } })}
+                         className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                       >
+                         <option value="ETB">ETB - Ethiopian Birr</option>
+                         <option value="USD">USD - US Dollar</option>
+                         <option value="EUR">EUR - Euro</option>
+                       </select>
+                     </div>
+                   </div>
+                 </div>
+               )}
+
+               {/* Step 8: Review & Publish */}
+               {step === 8 && (
+                 <div className="space-y-8">
+                   <div className="text-center mb-8">
+                     <h3 className="text-2xl font-serif font-bold text-primary mb-2">Review & Publish</h3>
+                     <p className="text-gray-500">Review your festival details before publishing.</p>
+                   </div>
+
+                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                     {/* Core Info Summary */}
+                     <section className="bg-ethio-bg rounded-2xl p-6">
+                       <h4 className="text-lg font-bold text-primary mb-4">Core Information</h4>
+                       <div className="space-y-3 text-sm">
+                         <div><span className="font-bold">Festival Name:</span> {languagePreference !== 'am' ? formData.core.name_en || '(not provided)' : ''} {languagePreference === 'both' && formData.core.name_am ? '/' : ''} {languagePreference !== 'en' ? formData.core.name_am || '(not provided)' : ''}</div>
+                         <div><span className="font-bold">Dates:</span> {formData.core.startDate} - {formData.core.endDate}</div>
+                         <div><span className="font-bold">Location:</span> {languagePreference !== 'am' ? formData.core.locationName_en || '' : ''} {languagePreference === 'both' && formData.core.locationName_am ? '/' : ''} {languagePreference !== 'en' ? formData.core.locationName_am || '' : ''}</div>
+                         <div><span className="font-bold">Address:</span> {formData.core.address}</div>
+                       </div>
+                     </section>
+
+                     {/* Schedule Summary */}
+                     <section className="bg-ethio-bg rounded-2xl p-6">
+                       <h4 className="text-lg font-bold text-primary mb-4">Schedule ({formData.schedule.length} day(s))</h4>
+                       <ul className="space-y-2 text-sm">
+                         {formData.schedule.map((day: any, idx: number) => (
+                           <li key={idx} className="border-b border-gray-200 pb-2">
+                             <span className="font-bold">Day {day.day}:</span> {languagePreference !== 'am' ? day.title_en || '' : ''} {languagePreference === 'both' && day.title_am ? '/' : ''} {languagePreference !== 'en' ? day.title_am || '' : ''}
+                           </li>
+                         ))}
+                       </ul>
+                     </section>
+
+                     {/* Hotels Summary */}
+                     <section className="bg-ethio-bg rounded-2xl p-6">
+                       <h4 className="text-lg font-bold text-primary mb-4">Hotels ({formData.hotels.length})</h4>
+                       <div className="space-y-4 text-sm">
+                         {formData.hotels.map((hotel: any, idx: number) => (
+                           <div key={idx} className="border-b border-gray-200 pb-2">
+                             <div className="font-bold">{languagePreference !== 'am' ? hotel.name_en || 'Unnamed' : ''} {languagePreference === 'both' && hotel.name_am ? '/' : ''} {languagePreference !== 'en' ? hotel.name_am : ''}</div>
+                             <div>{hotel.starRating} stars</div>
+                             <div>{hotel.rooms?.length || 0} room types</div>
+                           </div>
+                         ))}
+                       </div>
+                     </section>
+
+                     {/* Transport Summary */}
+                     <section className="bg-ethio-bg rounded-2xl p-6">
+                       <h4 className="text-lg font-bold text-primary mb-4">Transportation ({formData.transportation.length})</h4>
+                       <div className="space-y-2 text-sm">
+                         {formData.transportation.map((t: any, idx: number) => (
+                           <div key={idx} className="border-b border-gray-200 pb-2">
+                             <span className="font-bold">{languagePreference !== 'am' ? t.type_en || 'Unnamed' : ''} {languagePreference === 'both' && t.type_am ? '/' : ''} {languagePreference !== 'en' ? t.type_am : ''}</span>
+                             <span className="ml-2 text-gray-500">- {t.availability} units, {t.price} ETB</span>
+                           </div>
+                         ))}
+                       </div>
+                     </section>
+
+                     {/* Services Summary */}
+                     <section className="bg-ethio-bg rounded-2xl p-6">
+                       <h4 className="text-lg font-bold text-primary mb-4">Services</h4>
+                       <div className="text-sm space-y-2">
+                         <div><span className="font-bold">Food Packages:</span> {formData.services.foodPackages.length}</div>
+                         <div><span className="font-bold">Cultural Services:</span> {formData.services.culturalServices_en.length} EN / {formData.services.culturalServices_am.length} AM</div>
+                         <div><span className="font-bold">Special Assistance:</span> {formData.services.specialAssistance_en.length} EN / {formData.services.specialAssistance_am.length} AM</div>
+                         <div><span className="font-bold">Extras:</span> {formData.services.extras_en.length} EN / {formData.services.extras_am.length} AM</div>
+                       </div>
+                     </section>
+
+                     {/* Policies Summary */}
+                     <section className="bg-ethio-bg rounded-2xl p-6">
+                       <h4 className="text-lg font-bold text-primary mb-4">Policies</h4>
+                       <div className="text-sm space-y-2">
+                         <div><span className="font-bold">Cancellation:</span> {formData.policies.cancellation_en ? 'Provided' : 'Not provided'}</div>
+                         <div><span className="font-bold">Terms:</span> {formData.policies.terms_en ? 'Provided' : 'Not provided'}</div>
+                         <div><span className="font-bold">Age Restriction:</span> {formData.policies.ageRestriction || 'None'}</div>
+                       </div>
+                     </section>
+
+                     {/* Pricing Summary */}
+                     <section className="bg-ethio-bg rounded-2xl p-6">
+                       <h4 className="text-lg font-bold text-primary mb-4">Pricing</h4>
+                       <div className="text-sm space-y-1">
+                         <div><span className="font-bold">Base Price:</span> {formData.pricing.basePrice} ETB</div>
+                         <div><span className="font-bold">VIP Price:</span> {formData.pricing.vipPrice} ETB</div>
+                         <div><span className="font-bold">Early Bird:</span> {formData.pricing.earlyBird}%</div>
+                         <div><span className="font-bold">Group Discount:</span> {formData.pricing.groupDiscount}%</div>
+                       </div>
+                     </section>
+                   </div>
+                 </div>
+               )}
             </motion.div>
           </AnimatePresence>
         </div>
-
-        <div className="mt-16 pt-10 border-t border-gray-50 flex justify-between items-center">
-          <Button 
-            variant="ghost" 
-            leftIcon={ChevronLeft} 
-            onClick={prevStep} 
-            disabled={step === 1}
-            className="px-8"
-          >
-            Previous Step
-          </Button>
-          <div className="flex items-center gap-4">
-            <p className="text-[10px] font-black uppercase text-gray-300 tracking-[0.2em]">Step {step} of 8</p>
-            <Button 
-              onClick={step === 8 ? handlePublish : nextStep}
-              rightIcon={step === 8 ? CheckCircle2 : ChevronRight}
-              className="px-12 h-14 rounded-2xl shadow-xl shadow-primary/10"
-            >
-              {step === 8 ? 'Confirm & Publish' : 'Continue to Next Step'}
-            </Button>
-          </div>
-        </div>
       </div>
-
-      {/* Map Picker Modal */}
-      <AnimatePresence>
-        {isMapModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsMapModalOpen(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative bg-white w-full max-w-4xl rounded-[48px] overflow-hidden shadow-2xl flex flex-col"
-            >
-              <div className="p-8 border-b border-gray-100 flex justify-between items-center">
-                <div>
-                  <h3 className="text-2xl font-serif font-bold text-primary">Select Exact Location</h3>
-                  <p className="text-xs text-gray-400">Click on the map to set the festival coordinates</p>
-                </div>
-                <button onClick={() => setIsMapModalOpen(false)} className="p-3 bg-gray-100 rounded-2xl hover:bg-gray-200 transition-colors">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <div className="relative h-[500px] bg-gray-100 cursor-crosshair group" onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                // Simple simulation of coordinate mapping
-                const lat = 9.0333 + (0.5 - y / rect.height) * 0.1;
-                const lng = 38.7500 + (x / rect.width - 0.5) * 0.1;
-                setFormData({
-                  ...formData,
-                  core: {
-                    ...formData.core,
-                    coordinates: { lat, lng },
-                    address: `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`
-                  }
-                });
-              }}>
-                <img src="https://picsum.photos/seed/ethiopia-map/1200/800" className="w-full h-full object-cover opacity-80" alt="Map" />
-                <div className="absolute inset-0 bg-primary/5 pointer-events-none" />
-                
-                {/* Simulated Pin */}
-                <motion.div 
-                  layoutId="map-pin"
-                  className="absolute pointer-events-none"
-                  style={{ 
-                    left: `${((formData.core.coordinates.lng - 38.7500) / 0.1 + 0.5) * 100}%`,
-                    top: `${(0.5 - (formData.core.coordinates.lat - 9.0333) / 0.1) * 100}%`
-                  }}
-                >
-                  <div className="relative -translate-x-1/2 -translate-y-full">
-                    <MapPin className="w-10 h-10 text-secondary fill-secondary/20 drop-shadow-lg animate-bounce" />
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-1 bg-black/20 rounded-full blur-[2px]" />
-                  </div>
-                </motion.div>
-
-                <div className="absolute bottom-6 left-6 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-white/20">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <MapIcon className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Current Selection</p>
-                      <p className="text-xs font-bold text-primary">
-                        {formData.core.coordinates.lat.toFixed(6)}, {formData.core.coordinates.lng.toFixed(6)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-8 bg-gray-50 flex justify-end gap-4">
-                <Button variant="outline" onClick={() => setIsMapModalOpen(false)}>Cancel</Button>
-                <Button onClick={() => setIsMapModalOpen(false)}>Confirm Location</Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

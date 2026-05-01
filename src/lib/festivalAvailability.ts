@@ -25,43 +25,13 @@ const normalizeId = (value: unknown) => {
   return String(value);
 };
 
-const buildRoomNameKey = (hotelName?: string, roomName?: string) =>
-  `${hotelName || ''}|${roomName || ''}`.toLowerCase().trim();
-
-const buildTransportNameKey = (transportType?: string) =>
-  (transportType || '').toLowerCase().trim();
-
-const incrementCounter = (counter: Record<string, number>, key: string) => {
-  if (!key) return;
-  counter[key] = (counter[key] || 0) + 1;
-};
-
 export function attachAvailabilityToFestival<T extends Record<string, any>>(
   festivalDocument: T,
   confirmedBookings: BookingLike[]
 ) {
   const festival = toPlainObject(festivalDocument);
 
-  const roomBookingsById: Record<string, number> = {};
-  const roomBookingsByName: Record<string, number> = {};
-  const transportBookingsById: Record<string, number> = {};
-  const transportBookingsByName: Record<string, number> = {};
-
-  confirmedBookings.forEach((booking) => {
-    const room = booking.bookingDetails?.room;
-    const transport = booking.bookingDetails?.transport;
-
-    if (room) {
-      incrementCounter(roomBookingsById, normalizeId(room.roomId));
-      incrementCounter(roomBookingsByName, buildRoomNameKey(room.hotelName, room.roomName));
-    }
-
-    if (transport) {
-      incrementCounter(transportBookingsById, normalizeId(transport.transportId));
-      incrementCounter(transportBookingsByName, buildTransportNameKey(transport.type));
-    }
-  });
-
+  // Use the stored `available` field directly (updated atomically on booking)
   const hotels = (festival.hotels || []).map((hotel: any) => {
     const hotelPlain = toPlainObject(hotel);
 
@@ -69,19 +39,12 @@ export function attachAvailabilityToFestival<T extends Record<string, any>>(
       ...hotelPlain,
       rooms: (hotelPlain.rooms || []).map((room: any) => {
         const roomPlain = toPlainObject(room);
-        const roomId = normalizeId(roomPlain._id || roomPlain.id);
-        const roomNameKey = buildRoomNameKey(hotelPlain.name, roomPlain.name);
-        const initialAvailability = Number(roomPlain.availability || 0);
-        const bookedCount = roomBookingsById[roomId] || roomBookingsByName[roomNameKey] || 0;
-        const remaining = Math.max(0, initialAvailability - bookedCount);
-
         return {
           ...roomPlain,
-          id: roomId || roomPlain.id,
-          initialAvailability,
-          bookedCount,
-          remaining,
-          isSoldOut: remaining <= 0,
+          id: String(roomPlain._id || roomPlain.id),
+          initialAvailability: Number(roomPlain.availability || 0),
+          available: Number(roomPlain.available || roomPlain.availability || 0),
+          isSoldOut: (Number(roomPlain.available || roomPlain.availability || 0)) <= 0,
         };
       }),
     };
@@ -89,19 +52,12 @@ export function attachAvailabilityToFestival<T extends Record<string, any>>(
 
   const transportation = (festival.transportation || []).map((transport: any) => {
     const transportPlain = toPlainObject(transport);
-    const transportId = normalizeId(transportPlain._id || transportPlain.id);
-    const transportNameKey = buildTransportNameKey(transportPlain.type);
-    const initialAvailability = Number(transportPlain.availability || 0);
-    const bookedCount = transportBookingsById[transportId] || transportBookingsByName[transportNameKey] || 0;
-    const remaining = Math.max(0, initialAvailability - bookedCount);
-
     return {
       ...transportPlain,
-      id: transportId || transportPlain.id,
-      initialAvailability,
-      bookedCount,
-      remaining,
-      isSoldOut: remaining <= 0,
+      id: String(transportPlain._id || transportPlain.id),
+      initialAvailability: Number(transportPlain.availability || 0),
+      available: Number(transportPlain.available || transportPlain.availability || 0),
+      isSoldOut: (Number(transportPlain.available || transportPlain.availability || 0)) <= 0,
     };
   });
 
@@ -136,8 +92,8 @@ export const findRoomAvailability = (
       const currentRoomId = normalizeId(room._id || room.id);
       const sameById = roomId && currentRoomId && roomId === currentRoomId;
       const sameByName =
-        buildRoomNameKey(hotel.name, room.name) ===
-        buildRoomNameKey(roomDetails.hotelName, roomDetails.roomName);
+        `${hotel.name || ''}|${room.name || ''}`.toLowerCase().trim() ===
+        `${hotel.name || ''}|${roomDetails.roomName || ''}`.toLowerCase().trim();
 
       if (sameById || sameByName) {
         return room;
@@ -163,8 +119,9 @@ export const findTransportAvailability = (
     const currentTransportId = normalizeId(transport._id || transport.id);
     const sameById = transportId && currentTransportId && transportId === currentTransportId;
     const sameByName =
-      buildTransportNameKey(transport.type) === buildTransportNameKey(transportDetails.type);
+      (transport.type || '').toLowerCase().trim() ===
+      (transportDetails.type || '').toLowerCase().trim();
 
     return sameById || sameByName;
   }) || null;
-};
+}

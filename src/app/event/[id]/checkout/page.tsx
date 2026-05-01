@@ -6,6 +6,8 @@ import { ArrowLeft, CreditCard, Smartphone, Lock, Check } from 'lucide-react';
 import { useBooking } from '@/context/BookingContext';
 import apiClient from '@/lib/apiClient';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { getLocalizedText } from '@/utils/getLocalizedText';
 
 export default function CheckoutPage() {
   const params = useParams();
@@ -28,6 +30,7 @@ export default function CheckoutPage() {
     setBookingId,
     clearBooking,
   } = useBooking();
+  const { language } = useLanguage();
   
   const [loading, setLoading] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<'chapa' | 'telebirr' | null>(null);
@@ -210,7 +213,7 @@ export default function CheckoutPage() {
               {selectedRoom && (
                 <div className="flex justify-between">
                   <div>
-                    <p className="font-medium">{selectedRoom.name}</p>
+                     <p className="font-medium">{getLocalizedText(selectedRoom, 'name', language)}</p>
                     <p className="text-sm text-gray-500">{hotelNights} night{hotelNights > 1 ? 's' : ''}</p>
                   </div>
                   <span className="font-bold">${getHotelTotal()}</span>
@@ -220,7 +223,7 @@ export default function CheckoutPage() {
               {selectedTransport && (
                 <div className="flex justify-between">
                   <div>
-                    <p className="font-medium">{selectedTransport.type}</p>
+                     <p className="font-medium">{getLocalizedText(selectedTransport, 'type', language)}</p>
                   </div>
                   <span className="font-bold">${getTransportTotal()}</span>
                 </div>

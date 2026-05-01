@@ -12,6 +12,7 @@ import {
 import { Button, Input } from "../components/UI";
 import { useAuth } from "../context/AuthContext";
 import { UserRole } from "../types";
+import { useLanguage } from "../context/LanguageContext";
 
 const readJsonSafely = async (response: Response) => {
   const rawBody = await response.text();
@@ -27,6 +28,7 @@ const readJsonSafely = async (response: Response) => {
 };
 
 export const LoginPage: React.FC = () => {
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>(UserRole.TOURIST);
@@ -74,107 +76,108 @@ export const LoginPage: React.FC = () => {
         } else {
           router.push(userRole === "admin" ? "/dashboard/admin/overview" : "/");
         }
-      } else {
-        alert(res.message || "Login failed. Please check your credentials.");
-      }
-    } catch (error: any) {
-      console.error("Login error:", error);
-      alert(error.message || "An unexpected error occurred during login.");
-    }
+       } else {
+         alert(res.message || t("auth.loginFailed"));
+       }
+     } catch (error: any) {
+       console.error("Login error:", error);
+       alert(error.message || t("auth.unexpectedError"));
+     }
   };
 
-  return (
-    <div className="min-h-[80vh] flex items-center justify-center p-4 bg-ethio-bg">
-      <div className="bg-white p-8 md:p-12 rounded-3xl shadow-xl max-w-md w-full border border-gray-100">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-serif font-bold text-primary mb-2">
-            Welcome Back
-          </h1>
-          <p className="text-gray-500">Sign in to your cultural hub account</p>
-        </div>
+   return (
+     <div className="min-h-[80vh] flex items-center justify-center p-4 bg-ethio-bg">
+       <div className="bg-white p-8 md:p-12 rounded-3xl shadow-xl max-w-md w-full border border-gray-100">
+         <div className="text-center mb-10">
+           <h1 className="text-3xl font-serif font-bold text-primary mb-2">
+             {t("auth.loginTitle")}
+           </h1>
+           <p className="text-gray-500">{t("auth.loginSubtitle")}</p>
+         </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">
-              Log in as
-            </label>
-            <div className="grid grid-cols-2 gap-2 p-1 bg-ethio-light rounded-xl">
-              {(Object.values(UserRole) as UserRole[]).map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setRole(r)}
-                  className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center ${
-                    role === r
-                      ? "bg-primary text-white shadow-md"
-                      : "text-gray-500 hover:bg-gray-200"
-                  }`}
-                >
-                  {r === UserRole.ADMIN && <ShieldAlert className="w-3 h-3 mr-1" />}
-                  {r}
-                </button>
-              ))}
-            </div>
-          </div>
+         <form onSubmit={handleLogin} className="space-y-6">
+           <div className="space-y-2">
+             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">
+               {t("auth.loginAs")}
+             </label>
+             <div className="grid grid-cols-2 gap-2 p-1 bg-ethio-light rounded-xl">
+               {(Object.values(UserRole) as UserRole[]).map((r) => (
+                 <button
+                   key={r}
+                   type="button"
+                   onClick={() => setRole(r)}
+                   className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center ${
+                     role === r
+                       ? "bg-primary text-white shadow-md"
+                       : "text-gray-500 hover:bg-gray-200"
+                   }`}
+                 >
+                   {r === UserRole.ADMIN && <ShieldAlert className="w-3 h-3 mr-1" />}
+                   {t(`auth.roles.${r.toLowerCase()}`)}
+                 </button>
+               ))}
+             </div>
+           </div>
 
-          <Input
-            label="Email Address"
-            type="email"
-            placeholder="name@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+           <Input
+             label={t("auth.email")}
+             type="email"
+             placeholder="name@example.com"
+             value={email}
+             onChange={(e) => setEmail(e.target.value)}
+             required
+           />
 
-          <div className="relative">
-            <Input
-              label="Password"
-              type={showPassword ? "text" : "password"}
-              placeholder="********"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 bottom-3 p-1 text-gray-400 hover:text-primary"
-            >
-              {showPassword ? (
-                <EyeOff className="w-5 h-5" />
-              ) : (
-                <Eye className="w-5 h-5" />
-              )}
-            </button>
-          </div>
+           <div className="relative">
+             <Input
+               label={t("auth.password")}
+               type={showPassword ? "text" : "password"}
+               placeholder="********"
+               value={password}
+               onChange={(e) => setPassword(e.target.value)}
+               required
+             />
+             <button
+               type="button"
+               onClick={() => setShowPassword(!showPassword)}
+               className="absolute right-3 bottom-3 p-1 text-gray-400 hover:text-primary"
+             >
+               {showPassword ? (
+                 <EyeOff className="w-5 h-5" />
+               ) : (
+                 <Eye className="w-5 h-5" />
+               )}
+             </button>
+           </div>
 
-          <div className="flex items-center justify-between text-sm">
-            <label className="flex items-center space-x-2 text-gray-600">
-              <input type="checkbox" className="rounded text-primary focus:ring-primary" />
-              <span>Remember me</span>
-            </label>
-            <a href="#" className="text-primary font-semibold hover:underline">
-              Forgot password?
-            </a>
-          </div>
+           <div className="flex items-center justify-between text-sm">
+             <label className="flex items-center space-x-2 text-gray-600">
+               <input type="checkbox" className="rounded text-primary focus:ring-primary" />
+               <span>{t("auth.rememberMe")}</span>
+             </label>
+             <a href="#" className="text-primary font-semibold hover:underline">
+               {t("auth.forgotPassword")}
+             </a>
+           </div>
 
-          <Button type="submit" className="w-full" size="lg">
-            Log In
-          </Button>
-        </form>
+           <Button type="submit" className="w-full" size="lg">
+             {t("auth.loginButton")}
+           </Button>
+         </form>
 
-        <div className="mt-8 pt-8 border-t border-gray-100 text-center text-sm text-gray-500">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-primary font-bold hover:underline">
-            Sign up for free
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-};
+         <div className="mt-8 pt-8 border-t border-gray-100 text-center text-sm text-gray-500">
+           {t("auth.noAccount")}{" "}
+           <Link href="/register" className="text-primary font-bold hover:underline">
+             {t("auth.register")}
+           </Link>
+         </div>
+       </div>
+     </div>
+   );
+ };
 
 export const RegisterPage: React.FC = () => {
+  const { t } = useLanguage();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -187,7 +190,7 @@ export const RegisterPage: React.FC = () => {
     e.preventDefault();
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match");
+      alert(t("auth.passwordsDontMatch"));
       return;
     }
 
@@ -218,98 +221,90 @@ export const RegisterPage: React.FC = () => {
       }).toString();
       router.push(`/register/verify?${query}`);
     } catch (error: any) {
-      alert(error.message || "An unexpected error occurred during registration.");
+      alert(error.message || t("auth.unexpectedError"));
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  return (
-    <div className="min-h-screen py-20 bg-ethio-bg flex items-center justify-center p-4">
-      <div className="bg-white p-8 md:p-12 rounded-3xl shadow-xl max-w-2xl w-full border border-gray-100">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-serif font-bold text-primary mb-2">
-            Join Ethio-Craft Hub
-          </h1>
-          <p className="text-gray-500">Select your role to get started</p>
-        </div>
+   return (
+     <div className="min-h-screen py-20 bg-ethio-bg flex items-center justify-center p-4">
+       <div className="bg-white p-8 md:p-12 rounded-3xl shadow-xl max-w-2xl w-full border border-gray-100">
+         <div className="text-center mb-10">
+           <h1 className="text-3xl font-serif font-bold text-primary mb-2">
+             {t("auth.registerTitle")}
+           </h1>
+           <p className="text-gray-500">{t("auth.registerSubtitle")}</p>
+         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-          {[
-            { id: UserRole.TOURIST, title: "Tourist", desc: "Browse and book", icon: MapPin },
-            { id: UserRole.ARTISAN, title: "Artisan", desc: "Sell your crafts", icon: Briefcase },
-            { id: UserRole.ORGANIZER, title: "Organizer", desc: "List festivals", icon: CalIcon },
-          ].map((r) => (
-            <button
-              key={r.id}
-              onClick={() => setRole(r.id as UserRole)}
-              className={`p-6 rounded-2xl text-left border-2 transition-all ${
-                role === r.id
-                  ? "border-primary bg-primary/5 ring-4 ring-primary/5"
-                  : "border-gray-100 hover:border-primary/50"
-              }`}
-            >
-              <r.icon className={`w-8 h-8 mb-4 ${role === r.id ? "text-primary" : "text-gray-400"}`} />
-              <h3 className="font-bold text-primary">{r.title}</h3>
-              <p className="text-xs text-gray-500">{r.desc}</p>
-            </button>
-          ))}
-        </div>
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+           {[
+             { id: UserRole.TOURIST, titleKey: "tourist", descKey: "browseDesc", icon: MapPin },
+             { id: UserRole.ARTISAN, titleKey: "artisan", descKey: "sellDesc", icon: Briefcase },
+             { id: UserRole.ORGANIZER, titleKey: "organizer", descKey: "listDesc", icon: CalIcon },
+           ].map((r) => (
+             <button
+               key={r.id}
+               onClick={() => setRole(r.id as UserRole)}
+               className={`p-6 rounded-2xl text-left border-2 transition-all ${
+                 role === r.id
+                   ? "border-primary bg-primary/5 ring-4 ring-primary/5"
+                   : "border-gray-100 hover:border-primary/50"
+               }`}
+             >
+               <r.icon className={`w-8 h-8 mb-4 ${role === r.id ? "text-primary" : "text-gray-400"}`} />
+               <h3 className="font-bold text-primary">{t(`auth.roles.${r.titleKey}`)}</h3>
+               <p className="text-xs text-gray-500">{t(`auth.descriptions.${r.descKey}`)}</p>
+             </button>
+           ))}
+         </div>
 
-        <form className="grid grid-cols-1 md:grid-cols-2 gap-6" onSubmit={handleRegister}>
-          <Input
-            label="Full Name"
-            placeholder="Abebe Bikila"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-          <Input
-            label="Email Address"
-            type="email"
-            placeholder="yourname@gmail.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <Input
-            label="Password"
-            type="password"
-            placeholder="********"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <Input
-            label="Confirm Password"
-            type="password"
-            placeholder="********"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-          />
+         <form className="grid grid-cols-1 md:grid-cols-2 gap-6" onSubmit={handleRegister}>
+           <Input
+             label={t("auth.fullName")}
+             placeholder="Abebe Bikila"
+             value={name}
+             onChange={(e) => setName(e.target.value)}
+             required
+           />
+           <Input
+             label={t("auth.email")}
+             type="email"
+             placeholder="yourname@gmail.com"
+             value={email}
+             onChange={(e) => setEmail(e.target.value)}
+             required
+           />
+           <Input
+             label={t("auth.password")}
+             type="password"
+             placeholder="********"
+             value={password}
+             onChange={(e) => setPassword(e.target.value)}
+             required
+           />
+           <Input
+             label={t("auth.confirmPassword")}
+             type="password"
+             placeholder="********"
+             value={confirmPassword}
+             onChange={(e) => setConfirmPassword(e.target.value)}
+             required
+           />
+           <div className="md:col-span-2">
+             <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+               {isSubmitting ? "..." : t("auth.continueButton")}
+             </Button>
+           </div>
+         </form>
 
-          <div className="md:col-span-2 space-y-4 pt-4">
-            <p className="text-[10px] text-gray-400 text-center leading-relaxed">
-              By creating an account, you agree to our Terms of Service and Privacy Policy.
-              We&apos;ll send you updates about authentic cultural products and festivals.
-            </p>
-            <p className="text-xs text-gray-500 text-center">
-              OTP verification is available for Gmail addresses only.
-            </p>
-            <Button type="submit" className="w-full" size="lg" isLoading={isSubmitting}>
-              Send OTP to continue
-            </Button>
-          </div>
-        </form>
-
-        <div className="mt-8 text-center text-sm text-gray-500">
-          Already have an account?{" "}
-          <Link href="/login" className="text-primary font-bold hover:underline">
-            Log in
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-};
+         <div className="mt-8 pt-8 border-t border-gray-100 text-center text-sm text-gray-500">
+           {t("auth.haveAccount")}{" "}
+           <Link href="/login" className="text-primary font-bold hover:underline">
+             {t("auth.signIn")}
+           </Link>
+         </div>
+       </div>
+     </div>
+   );
+ };

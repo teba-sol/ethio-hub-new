@@ -17,11 +17,14 @@ const getEarlyBirdExpiry = (festival: any) => {
 };
 
 export async function POST(request: NextRequest) {
+  const session = await (await connectDB()).startSession();
+  
   try {
-    await connectDB();
+    await session.startTransaction();
 
     const token = request.cookies.get('sessionToken')?.value;
     if (!token) {
+      await session.abortTransaction();
       return new NextResponse(
         JSON.stringify({ success: false, message: 'Authentication required' }),
         { status: 401, headers: { 'content-type': 'application/json' } }
@@ -33,6 +36,7 @@ export async function POST(request: NextRequest) {
     const touristId = payload.userId as string;
 
     if (!touristId) {
+      await session.abortTransaction();
       return new NextResponse(
         JSON.stringify({ success: false, message: 'Tourist ID not found in token' }),
         { status: 401, headers: { 'content-type': 'application/json' } }
@@ -43,14 +47,16 @@ export async function POST(request: NextRequest) {
     const { festivalId, ticketType, quantity, contactInfo, specialRequests, selectedRoom, selectedTransport } = body;
 
     if (!festivalId || !ticketType || !quantity || !contactInfo) {
+      await session.abortTransaction();
       return new NextResponse(
         JSON.stringify({ success: false, message: 'Missing required fields' }),
         { status: 400, headers: { 'content-type': 'application/json' } }
       );
     }
 
-    const festival = await Festival.findById(festivalId);
+    const festival = await Festival.findById(festivalId).session(session);
     if (!festival) {
+      await session.abortTransaction();
       return new NextResponse(
         JSON.stringify({ success: false, message: 'Festival not found' }),
         { status: 404, headers: { 'content-type': 'application/json' } }
@@ -58,15 +64,18 @@ export async function POST(request: NextRequest) {
     }
 
     if (!festival.isVerified || festival.status !== 'Published') {
+      await session.abortTransaction();
       return new NextResponse(
         JSON.stringify({ success: false, message: 'Festival is not available for booking' }),
         { status: 400, headers: { 'content-type': 'application/json' } }
       );
     }
 
+    // Check early bird window
     if (ticketType === 'earlyBird') {
       const earlyBirdExpiresAt = getEarlyBirdExpiry(festival);
       if (!earlyBirdExpiresAt || new Date() > earlyBirdExpiresAt) {
+        await session.abortTransaction();
         return new NextResponse(
           JSON.stringify({
             success: false,
@@ -77,7 +86,80 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ATOMIC INVENTORY CHECK & DECREMENT
     let unitPrice = festival.pricing?.basePrice || 0;
+    let ticketDecrementResult;
+
+    // 1. Decrement ticket type availability (atomic)
+    if (ticketType && quantity > 0) {
+      ticketDecrementResult = await Festival.updateOne(
+        { 
+          _id: festivalId, 
+          'ticketTypes.name': ticketType,
+          'ticketTypes.available': { $gte: quantity }
+        },
+        { $inc: { 'ticketTypes.$.available': -quantity } },
+        { arrayFilters: [{ 'elem.name': ticketType }], session }
+      );
+
+      if (!ticketDecrementResult || ticketDecrementResult.matchedCount === 0) {
+        await session.abortTransaction();
+        return new NextResponse(
+          JSON.stringify({ success: false, message: 'Not enough tickets available' }),
+          { status: 409, headers: { 'content-type': 'application/json' } }
+        );
+      }
+
+      // Get the ticket price
+      const ticketTypeObj = festival.ticketTypes?.find((t: any) => t.name === ticketType);
+      if (ticketTypeObj) {
+        unitPrice = ticketTypeObj.price || 0;
+      }
+    }
+
+    // 2. Decrement room availability (atomic)
+    if (selectedRoom && selectedRoom.roomId) {
+      const roomDecrementResult = await Festival.updateOne(
+        { 
+          _id: festivalId,
+          'hotels.rooms._id': selectedRoom.roomId,
+          'hotels.rooms.available': { $gte: 1 }
+        },
+        { $inc: { 'hotels.rooms.$.available': -1 } },
+        { arrayFilters: [{ 'elem._id': selectedRoom.roomId }], session }
+      );
+
+      if (!roomDecrementResult || roomDecrementResult.matchedCount === 0) {
+        await session.abortTransaction();
+        return new NextResponse(
+          JSON.stringify({ success: false, message: 'Room no longer available' }),
+          { status: 409, headers: { 'content-type': 'application/json' } }
+        );
+      }
+    }
+
+    // 3. Decrement transport availability (atomic)
+    if (selectedTransport && selectedTransport.transportId) {
+      const transportDecrementResult = await Festival.updateOne(
+        { 
+          _id: festivalId,
+          'transportation._id': selectedTransport.transportId,
+          'transportation.available': { $gte: 1 }
+        },
+        { $inc: { 'transportation.$.available': -1 } },
+        { arrayFilters: [{ 'elem._id': selectedTransport.transportId }], session }
+      );
+
+      if (!transportDecrementResult || transportDecrementResult.matchedCount === 0) {
+        await session.abortTransaction();
+        return new NextResponse(
+          JSON.stringify({ success: false, message: 'Transportation no longer available' }),
+          { status: 409, headers: { 'content-type': 'application/json' } }
+        );
+      }
+    }
+
+    // Calculate total price
     if (ticketType === 'vip') {
       unitPrice = festival.pricing?.vipPrice || festival.pricing?.basePrice * 2 || 0;
     } else if (ticketType === 'earlyBird') {
@@ -87,14 +169,15 @@ export async function POST(request: NextRequest) {
     let totalPrice = unitPrice * quantity;
 
     if (selectedRoom && selectedRoom.roomPrice) {
-      totalPrice += selectedRoom.roomPrice * quantity;
+      totalPrice += selectedRoom.roomPrice;
     }
 
     if (selectedTransport && selectedTransport.price) {
       totalPrice += selectedTransport.price;
     }
 
-    const booking = await Booking.create({
+    // Create booking
+    const booking = await Booking.create([{
       tourist: touristId,
       festival: festivalId,
       organizer: festival.organizer,
@@ -114,9 +197,11 @@ export async function POST(request: NextRequest) {
         room: selectedRoom,
         transport: selectedTransport,
       } : undefined,
-    });
+    }], { session });
 
-    const populatedBooking = await Booking.findById(booking._id)
+    await session.commitTransaction();
+
+    const populatedBooking = await Booking.findById(booking[0]._id)
       .populate('tourist', 'name email')
       .populate('festival', 'name startDate endDate')
       .populate('organizer', 'name email');
@@ -127,6 +212,7 @@ export async function POST(request: NextRequest) {
     );
 
   } catch (error: any) {
+    await session.abortTransaction();
     console.error('Error creating booking:', error);
     if (error.code === 'ERR_JWT_EXPIRED' || error.code === 'ERR_JWS_INVALID') {
       return new NextResponse(
@@ -144,5 +230,7 @@ export async function POST(request: NextRequest) {
       JSON.stringify({ success: false, message: 'Internal Server Error' }),
       { status: 500, headers: { 'content-type': 'application/json' } }
     );
+  } finally {
+    session.endSession();
   }
 }

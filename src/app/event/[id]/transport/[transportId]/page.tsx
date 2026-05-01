@@ -19,6 +19,8 @@ import { Button } from '@/components/UI';
 import { useBooking } from '@/context/BookingContext';
 import apiClient from '@/lib/apiClient';
 import { TransportOption } from '@/types';
+import { useLanguage } from '@/context/LanguageContext';
+import { getLocalizedText } from '@/utils/getLocalizedText';
 
 export default function TransportDetailPage() {
   const params = useParams();
@@ -32,6 +34,7 @@ export default function TransportDetailPage() {
     transportDays,
     setTransportDays,
   } = useBooking();
+  const { language, t } = useLanguage();
 
   const [transport, setTransport] = useState<TransportOption | null>(null);
   const [loading, setLoading] = useState(true);
@@ -125,7 +128,7 @@ export default function TransportDetailPage() {
             className="flex items-center gap-2 text-gray-500 hover:text-primary"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Transport</span>
+            <span>{t('common.backToTransport')}</span>
           </button>
         </div>
       </div>
@@ -138,7 +141,7 @@ export default function TransportDetailPage() {
                 {gallery.length > 0 ? (
                   <img
                     src={gallery[activeImageIndex]}
-                    alt={transport.type}
+                     alt={getLocalizedText(transport, 'type', language)}
                     className="w-full h-full object-cover cursor-pointer"
                     onClick={() => setLightboxOpen(true)}
                   />
@@ -172,7 +175,7 @@ export default function TransportDetailPage() {
                 <p className="text-sm text-gray-500 mb-2">{transport.provider}</p>
               )}
               <div className="flex items-center gap-3 mb-4">
-                <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900">{transport.type}</h1>
+                <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900">{getLocalizedText(transport, 'type', language)}</h1>
                 {isSoldOut ? (
                   <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">Sold out</span>
                 ) : remainingUnits <= 3 ? (
@@ -193,41 +196,41 @@ export default function TransportDetailPage() {
             </div>
 
             <div>
-              <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">About This Transport</h2>
+              <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">{t('transport.aboutThisTransport')}</h2>
               <p className="text-gray-600 leading-relaxed whitespace-pre-line">
-                {transport.description || 'No description available for this transport service.'}
+                {getLocalizedText(transport, 'description', language) || t('transport.noDescription')}
               </p>
             </div>
 
             <div>
-              <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">Vehicle Specifications</h2>
+              <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">{t('festival.vehicleSpecifications')}</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-gray-50 p-6 rounded-2xl">
                   <CarFront className="w-6 h-6 text-gray-400 mb-2" />
-                  <h3 className="font-bold text-gray-900">{transport.type}</h3>
-                  <p className="text-sm text-gray-500">Vehicle Type</p>
+                   <h3 className="font-bold text-gray-900">{getLocalizedText(transport, 'type', language)}</h3>
+                  <p className="text-sm text-gray-500">{t('transport.vehicleType')}</p>
                 </div>
                 <div className="bg-gray-50 p-6 rounded-2xl">
                   <Users className="w-6 h-6 text-gray-400 mb-2" />
                   <h3 className="font-bold text-gray-900">{transport.capacity || 5}</h3>
-                  <p className="text-sm text-gray-500">Passenger Capacity</p>
+                  <p className="text-sm text-gray-500">{t('transport.passengerCapacity')}</p>
                 </div>
                 <div className="bg-gray-50 p-6 rounded-2xl">
                   <Fuel className="w-6 h-6 text-gray-400 mb-2" />
-                  <h3 className="font-bold text-gray-900">Petrol/Diesel</h3>
-                  <p className="text-sm text-gray-500">Fuel Type</p>
+                  <h3 className="font-bold text-gray-900">{t('transport.fuelType')}</h3>
+                  <p className="text-sm text-gray-500">{t('transport.fuelType')}</p>
                 </div>
                 <div className="bg-gray-50 p-6 rounded-2xl">
                   <Gauge className="w-6 h-6 text-gray-400 mb-2" />
-                  <h3 className="font-bold text-gray-900">Automatic</h3>
-                  <p className="text-sm text-gray-500">Transmission</p>
+                  <h3 className="font-bold text-gray-900">{t('transport.transmission')}</h3>
+                  <p className="text-sm text-gray-500">{t('transport.transmission')}</p>
                 </div>
               </div>
             </div>
 
             {transport.pickupLocations && Array.isArray(transport.pickupLocations) && transport.pickupLocations.length > 0 && (
               <div>
-                <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">Pickup Locations</h2>
+                <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">{t('transport.pickupLocations')}</h2>
                 <div className="space-y-3">
                   {transport.pickupLocations.map((location: string, idx: number) => (
                     <div key={idx} className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
@@ -243,16 +246,16 @@ export default function TransportDetailPage() {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sticky top-6">
               <div className="space-y-4">
-                <div className="text-center mb-6">
-                  <p className="text-gray-500 text-sm">Starting from</p>
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-4xl font-bold text-primary">${transport.price}</span>
-                    <span className="text-gray-500">/day</span>
-                  </div>
-                </div>
+             <div className="text-center mb-6">
+               <p className="text-sm text-gray-500">{t('festival.startingFrom')}</p>
+               <div className="flex items-baseline justify-center gap-1">
+                 <span className="text-4xl font-bold text-primary">${transport.price}</span>
+                 <span className="text-gray-500">{t('festival.perDay')}</span>
+               </div>
+             </div>
 
-                <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 text-center">
-                  <p className="text-sm text-gray-500">Availability</p>
+             <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 text-center">
+               <p className="text-sm text-gray-500">{t('festival.availableUnits')}</p>
                   <p className={`mt-1 text-2xl font-bold ${isSoldOut ? 'text-red-600' : remainingUnits <= 3 ? 'text-amber-600' : 'text-gray-900'}`}>
                     {remainingUnits}
                   </p>
@@ -260,7 +263,7 @@ export default function TransportDetailPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Number of Days
+                    {t('transport.numberOfDays')}
                   </label>
                   <select
                     value={transportDays}
@@ -275,16 +278,16 @@ export default function TransportDetailPage() {
                   </select>
                 </div>
 
-                <div className="bg-gray-50 p-4 rounded-xl">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-600">${transport.price} x {transportDays} days</span>
-                    <span className="font-bold text-gray-900">${transport.price * transportDays}</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                    <span className="font-medium text-gray-900">Total</span>
-                    <span className="text-xl font-bold text-primary">${transport.price * transportDays}</span>
-                  </div>
-                </div>
+                 <div className="bg-gray-50 p-4 rounded-xl">
+                   <div className="flex justify-between items-center mb-2">
+                     <span className="text-gray-600">${transport.price} x {transportDays} {t('transport.days')}</span>
+                     <span className="font-bold text-gray-900">${transport.price * transportDays}</span>
+                   </div>
+                   <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                     <span className="font-medium text-gray-900">{t('common.total')}</span>
+                     <span className="text-xl font-bold text-primary">${transport.price * transportDays}</span>
+                   </div>
+                 </div>
 
                 <Button
                   className="w-full py-3"
@@ -292,7 +295,7 @@ export default function TransportDetailPage() {
                   disabled={isSoldOut}
                   variant={isCurrentTransportSelected ? 'outline' : 'primary'}
                 >
-                  {isSoldOut ? 'Sold Out' : isCurrentTransportSelected ? 'Remove Selection' : 'Select This Car'}
+                  {isSoldOut ? t('transport.soldOut') : isCurrentTransportSelected ? t('transport.removeSelection') : t('transport.selectThisCar')}
                 </Button>
 
                 <Button
@@ -300,11 +303,11 @@ export default function TransportDetailPage() {
                   onClick={handleContinue}
                   disabled={!selectedTransport}
                 >
-                  Continue to Tickets
+                  {t('common.continueToCheckout')}
                 </Button>
 
                 <p className="text-center text-xs text-gray-500">
-                  Free cancellation up to 24h before pickup
+                  {t('festival.freeCancellation')}
                 </p>
               </div>
             </div>

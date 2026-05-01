@@ -166,7 +166,7 @@ export default function EventPage() {
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-secondary" />
-                <span className="font-bold">{getLocalizedText(festival as any, 'locationName', language)}</span>
+                <span className="font-bold">{getLocalizedText(festival.location, 'name', language)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-secondary" />
@@ -294,20 +294,14 @@ export default function EventPage() {
                         <Utensils className="w-5 h-5 text-secondary" />
                         Included Services
                       </h3>
-                      <ul className="space-y-3">
-                        {festival.foodPackages?.map((item: string, idx: number) => (
-                          <li key={idx} className="flex items-center gap-3 text-gray-600">
-                            <Check className="w-4 h-4 text-green-500" />
-                            {item}
-                          </li>
-                        ))}
-                        {festival.culturalServices?.map((item: string, idx: number) => (
-                          <li key={idx} className="flex items-center gap-3 text-gray-600">
-                            <Music className="w-4 h-4 text-purple-500" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
+                        <ul className="space-y-3">
+                          {festival.foodPackages?.map((item: any, idx: number) => (
+                            <li key={idx} className="flex items-center gap-3 text-gray-600">
+                              <Check className="w-4 h-4 text-green-500" />
+                              {getLocalizedText(item, 'name', language)}
+                            </li>
+                          ))}
+                        </ul>
                     </div>
                   )}
                   
@@ -321,7 +315,7 @@ export default function EventPage() {
                         {festival.transportation.map((transport: any, idx: number) => (
                           <li key={idx} className="flex items-center gap-3 text-gray-600">
                             <Bus className="w-4 h-4 text-blue-500" />
-                            {transport.type} - ${transport.price}
+                            {getLocalizedText(transport, 'type', language)} - ${transport.price}
                           </li>
                         ))}
                       </ul>
@@ -379,12 +373,12 @@ export default function EventPage() {
                       <div className="flex items-center gap-3 mb-4">
                         <MapPin className="w-6 h-6 text-secondary" />
                         <div>
-                          <h3 className="font-bold text-primary">{festival.locationName}</h3>
+                               <h3 className="font-bold text-primary">{getLocalizedText(festival.location, 'name', language)}</h3>
                           <p className="text-gray-500 text-sm">{festival.address || 'Ethiopia'}</p>
                         </div>
                       </div>
                       <a 
-                        href={`https://maps.google.com/?q=${encodeURIComponent(festival.locationName)}`}
+                        href={`https://maps.google.com/?q=${encodeURIComponent(getLocalizedText(festival.location, 'name', language))}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary hover:underline text-sm font-bold"
@@ -401,7 +395,7 @@ export default function EventPage() {
                       scrolling="no" 
                       marginHeight={0} 
                       marginWidth={0} 
-                      src={`https://maps.google.com/maps?q=${encodeURIComponent(festival.locationName)}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
+                       src={`https://maps.google.com/maps?q=${encodeURIComponent(getLocalizedText(festival.location, 'name', language))}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
                       className="w-full h-full grayscale"
                     ></iframe>
                   </div>

@@ -7,23 +7,26 @@ import { ArrowLeft, MapPin, Star, SlidersHorizontal, Wifi, Waves, Utensils, Dumb
 import { useBooking } from '@/context/BookingContext';
 import apiClient from '@/lib/apiClient';
 import { Festival, HotelAccommodation } from '@/types';
+import { useLanguage } from '@/context/LanguageContext';
+import { getLocalizedText } from '@/utils/getLocalizedText';
 
 const FACILITIES = [
-  { id: 'wifi', label: 'Free WiFi', icon: Wifi },
-  { id: 'pool', label: 'Swimming Pool', icon: Waves },
-  { id: 'restaurant', label: 'Restaurant', icon: Utensils },
-  { id: 'gym', label: 'Fitness Center', icon: Dumbbell },
-  { id: 'parking', label: 'Free Parking', icon: Car },
-  { id: 'spa', label: 'Spa & Wellness', icon: Coffee },
+  { id: 'wifi', label: 'Free WiFi', labelKey: 'festival.freeWiFi', icon: Wifi },
+  { id: 'pool', label: 'Swimming Pool', labelKey: 'festival.swimmingPool', icon: Waves },
+  { id: 'restaurant', label: 'Restaurant', labelKey: 'festival.restaurant', icon: Utensils },
+  { id: 'gym', label: 'Fitness Center', labelKey: 'festival.fitnessCenter', icon: Dumbbell },
+  { id: 'parking', label: 'Free Parking', labelKey: 'festival.freeParking', icon: Car },
+  { id: 'spa', label: 'Spa & Wellness', labelKey: 'festival.spaWellness', icon: Coffee },
 ];
 
 export default function HotelsPage() {
   const params = useParams();
   const router = useRouter();
   const eventId = params?.id as string;
-  
+   
   const { setEvent, setSelectedHotel, setSelectedRoom } = useBooking();
-  
+  const { language, t } = useLanguage();
+
   const [festival, setFestival] = useState<Festival | null>(null);
   const [hotels, setHotels] = useState<HotelAccommodation[]>([]);
   const [filteredHotels, setFilteredHotels] = useState<HotelAccommodation[]>([]);
@@ -182,23 +185,23 @@ export default function HotelsPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="mb-8">
           <h1 className="text-4xl font-serif font-bold text-primary mb-2">
-            Select Your Accommodation
+            {t('festival.selectAccommodation')}
           </h1>
           <p className="text-gray-500 text-lg">
-            Choose from vetted partner hotels near {festival?.locationName}
+            {t('festival.chooseFromHotels')} {getLocalizedText(festival?.location, 'name', language)}
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl border border-gray-100 p-6 sticky top-24">
-              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-primary flex items-center gap-2">
                   <SlidersHorizontal className="w-4 h-4" />
-                  Filters
+                  {t('festival.filters')}
                 </h3>
                 <button 
                   onClick={() => setShowFilters(!showFilters)}
@@ -210,7 +213,7 @@ export default function HotelsPage() {
               
               <div className={`space-y-6 ${showFilters ? 'block' : 'hidden lg:block'}`}>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Price Range ($)</label>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">{t('festival.priceRange')}</label>
                   <div className="flex items-center gap-2">
                     <input 
                       type="number" 
@@ -231,7 +234,7 @@ export default function HotelsPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Hotel Star</label>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">{t('festival.hotelStar')}</label>
                   <div className="flex gap-2">
                     {[5, 4, 3, 2, 1].map(star => (
                       <button
@@ -251,41 +254,41 @@ export default function HotelsPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Facilities</label>
-                  <div className="space-y-2">
-                    {FACILITIES.map(facility => (
-                      <label 
-                        key={facility.id}
-                        className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all ${
-                          selectedFacilities.includes(facility.label)
-                            ? 'bg-primary/10 text-primary border border-primary'
-                            : 'hover:bg-gray-50 text-gray-600'
-                        }`}
-                      >
-                        <input 
-                          type="checkbox" 
-                          className="hidden"
-                          checked={selectedFacilities.includes(facility.label)}
-                          onChange={() => toggleFacility(facility.label)}
-                        />
-                        <facility.icon className="w-4 h-4" />
-                        <span className="text-sm">{facility.label}</span>
-                      </label>
-                    ))}
-                  </div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">{t('festival.facilities')}</label>
+                    <div className="space-y-2">
+                     {FACILITIES.map(facility => (
+                       <label 
+                         key={facility.id}
+                         className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all ${
+                           selectedFacilities.includes(facility.label)
+                             ? 'bg-primary/10 text-primary border border-primary'
+                             : 'hover:bg-gray-50 text-gray-600'
+                         }`}
+                       >
+                         <input 
+                           type="checkbox" 
+                           className="hidden"
+                           checked={selectedFacilities.includes(facility.label)}
+                           onChange={() => toggleFacility(facility.label)}
+                         />
+                         <facility.icon className="w-4 h-4" />
+                         <span className="text-sm">{t(facility.labelKey)}</span>
+                       </label>
+                     ))}
+                   </div>
                 </div>
 
                 {(selectedStars.length > 0 || selectedFacilities.length > 0 || priceRange[0] > 0 || priceRange[1] < 1000) && (
-                  <button
-                    onClick={() => {
-                      setSelectedStars([]);
-                      setSelectedFacilities([]);
-                      setPriceRange([0, 1000]);
-                    }}
-                    className="text-sm text-gray-500 hover:text-primary"
-                  >
-                    Clear all filters
-                  </button>
+                    <button
+                      onClick={() => {
+                        setSelectedStars([]);
+                        setSelectedFacilities([]);
+                        setPriceRange([0, 1000]);
+                      }}
+                      className="text-sm text-gray-500 hover:text-primary"
+                    >
+                      {t('common.clearAllFilters')}
+                    </button>
                 )}
               </div>
             </div>
@@ -294,18 +297,18 @@ export default function HotelsPage() {
           <div className="lg:col-span-3 space-y-4">
             <div className="flex items-center justify-between mb-4">
               <p className="text-gray-500 text-sm">
-                {filteredHotels.length} hotel{filteredHotels.length !== 1 ? 's' : ''} found
+                {filteredHotels.length} {filteredHotels.length === 1 ? t('festival.hotelFound') : t('festival.hotelsFound')}
               </p>
-              <select 
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
-              >
-                <option value="recommended">Recommended</option>
-                <option value="price_low">Price (Low to High)</option>
-                <option value="price_high">Price (High to Low)</option>
-                <option value="rating">Rating (High to Low)</option>
-              </select>
+                <select 
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="recommended">{t('festival.recommended')}</option>
+                  <option value="price_low">{t('common.priceLowToHigh')}</option>
+                  <option value="price_high">{t('common.priceHighToLow')}</option>
+                  <option value="rating">{t('common.ratingHighToLow')}</option>
+                </select>
             </div>
 
             {filteredHotels.map((hotel) => {
@@ -338,7 +341,7 @@ export default function HotelsPage() {
                     <div className="flex-1 p-5">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="text-lg font-bold text-primary">{hotel.name}</h3>
+                          <h3 className="text-lg font-bold text-primary">{getLocalizedText(hotel, 'name', language)}</h3>
                           <div className="flex items-center gap-2 mt-1">
                             {hotel.starRating && (
                               <div className="flex items-center gap-1">
@@ -396,7 +399,7 @@ export default function HotelsPage() {
                       
                       <div className="mt-4">
                         <span className="text-sm text-primary font-medium hover:underline">
-                          View Details & Select Room →
+                          {t('hotel.viewDetailsSelectRoom')}
                         </span>
                       </div>
                     </div>
@@ -430,7 +433,7 @@ export default function HotelsPage() {
                 }}
                 className="w-full mt-6 py-3 text-center text-gray-500 text-sm hover:text-primary border border-gray-200 rounded-xl"
               >
-                Skip hotel selection →
+                {t('festival.skipHotel')} →
               </button>
             )}
           </div>

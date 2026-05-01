@@ -10,16 +10,26 @@ export interface IScheduleItem extends Document {
   performers: string[];
 }
 
-// SIMPLIFIED: Room interface - only what you need
+export interface ITicketType {
+  name: string;           // For backward compatibility
+  name_en: string;
+  name_am: string;
+  price: number;
+  quantity: number;       // Total inventory
+  available: number;      // Available (decremented on booking)
+  benefits?: string[];
+}
+
 export interface IRoom extends Document {
   name: string;           // Room Name (for backward compatibility)
   name_en: string;
   name_am: string;
   image?: string;         // Room Image URL
-  bedType: string;        // Bed Type (e.g., "King Size")
+  bedType: string;        // Bed Type (e.g., "1-bedroom", "2-bedroom")
   capacity: number;       // Capacity (number of people)
   pricePerNight: number;  // Price per night
-  availability: number;   // Number of rooms available
+  availability: number;   // Number of rooms available (total)
+  available: number;      // Available rooms (decremented on booking)
   description?: string;    // Room description (for backward compatibility)
   description_en?: string;
   description_am?: string;
@@ -59,8 +69,9 @@ export interface ITransportation extends Document {
   description_en?: string;
   description_am?: string;
   image?: string;
-  availability?: number;
-  capacity?: number;
+  availability?: number;  // Total vehicles available
+  available?: number;     // Available vehicles (decremented on booking)
+  capacity?: number;      // Passenger capacity per vehicle
   pickupLocations?: string;
 }
 
@@ -120,6 +131,7 @@ export interface IFestival extends Document {
   reverificationRequested?: boolean;
   lastEditedAt?: Date;
   schedule: IScheduleItem[];
+  ticketTypes: ITicketType[];  // Ticket types with inventory
   hotels: IHotel[];
   transportation: ITransportation[];
   services: IServices;
@@ -139,16 +151,28 @@ const ScheduleItemSchema: Schema = new Schema({
   performers: [{ type: String }],
 });
 
+// Ticket Type Schema with inventory tracking
+const TicketTypeSchema: Schema = new Schema({
+  name: { type: String, required: true },
+  name_en: { type: String, required: true },
+  name_am: { type: String, required: true },
+  price: { type: Number, required: true },
+  quantity: { type: Number, required: true, default: 0 },     // Total inventory
+  available: { type: Number, required: true, default: 0 },     // Available (decremented on booking)
+  benefits: [{ type: String }],
+}, { _id: true });
+
 // SIMPLIFIED: Room Schema - with all fields
 const RoomSchema: Schema = new Schema({
   name: { type: String, required: true },           // Room Name
   name_en: { type: String, required: true },
   name_am: { type: String, required: true },
   image: { type: String },                           // Room Image URL
-  bedType: { type: String, default: 'King Size' },   // Bed Type
-  capacity: { type: Number, default: 2 }, // Capacity
-  pricePerNight: { type: Number },   // Price/Night
-  availability: { type: Number, default: 5 }, // Availability count
+  bedType: { type: String, default: '1-bedroom' },   // Bed Type: '1-bedroom', '2-bedroom', etc.
+  capacity: { type: Number, default: 2 },             // Capacity
+  pricePerNight: { type: Number },                   // Price/Night
+  availability: { type: Number, default: 5 },         // Total rooms available
+  available: { type: Number, default: 5 },            // Available rooms (decremented on booking)
   description: { type: String },                    // Room description
   description_en: { type: String },
   description_am: { type: String },
@@ -200,7 +224,8 @@ const TransportationSchema: Schema = new Schema({
   description_en: { type: String },
   description_am: { type: String },
   image: { type: String },
-  availability: { type: Number },
+  availability: { type: Number },       // Total vehicles available
+  available: { type: Number },          // Available vehicles (decremented on booking)
   capacity: { type: Number },
   features: [{ type: String }],
   pickupLocations: { type: String },
@@ -278,6 +303,7 @@ const FestivalSchema: Schema = new Schema(
     reverificationRequested: { type: Boolean, default: false },
     lastEditedAt: { type: Date },
     schedule: [ScheduleItemSchema],
+    ticketTypes: [TicketTypeSchema],     // Ticket types with inventory
     hotels: [HotelSchema],
     transportation: [TransportationSchema],
     services: ServicesSchema,

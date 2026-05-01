@@ -5,6 +5,7 @@ export interface IBooking extends Document {
   festival: mongoose.Types.ObjectId;
   organizer: mongoose.Types.ObjectId;
   ticketType: 'standard' | 'vip' | 'earlyBird';
+  ticketTypeName?: string;  // Store the ticket type name for inventory tracking
   quantity: number;
   totalPrice: number;
   currency: string;
