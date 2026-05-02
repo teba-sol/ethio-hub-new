@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Search, Filter, CheckCircle2, XCircle, Eye, AlertCircle, 
-  MapPin, Calendar, Clock, User, DollarSign, FileText, 
-  Shield, AlertTriangle, MoreVertical, ChevronDown, 
+import {
+  Search, Filter, CheckCircle2, XCircle, Eye, AlertCircle,
+  MapPin, Calendar, Clock, User, DollarSign, FileText,
+  Shield, AlertTriangle, MoreVertical, ChevronDown,
   CreditCard, Flag, History, Download, Ban, Check,
   LayoutGrid
 } from 'lucide-react';
 import { Button, Badge, Input } from '../../components/UI';
+
+// --- Helper Functions ---
+const getStringValue = (value: any): string => {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object' && 'en' in value) return String(value.en || '');
+  if (value && typeof value === 'object' && 'am' in value) return String(value.am || '');
+  return String(value || '');
+};
 
 // --- Types ---
 type VerificationStatus = 'Not Submitted' | 'Pending Review' | 'Under Review' | 'Approved' | 'Rejected';
@@ -276,8 +284,8 @@ export const AdminEventsPage: React.FC = () => {
      };
     const mappedStatus = statusMap[event.verificationStatus] || event.verificationStatus;
     const matchesStatus = filterStatus === 'All' || mappedStatus === filterStatus;
-    const matchesSearch = (event.title || event.eventName || '')?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          (event.organizerName || event.organizer?.name || '')?.toLowerCase().includes(searchQuery.toLowerCase());
+     const matchesSearch = getStringValue(event.title || event.eventName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           getStringValue(event.organizerName || event.organizer?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
     
     return matchesStatus && matchesSearch;
   });
@@ -353,7 +361,7 @@ export const AdminEventsPage: React.FC = () => {
         
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            You are asking <span className="font-bold text-gray-800">{event.organizer.name}</span> to resubmit documents for <span className="font-bold text-gray-800">{event.title}</span>.
+              You are asking <span className="font-bold text-gray-800">{getStringValue(event.organizer.name)}</span> to resubmit documents for <span className="font-bold text-gray-800">{getStringValue(event.title)}</span>.
           </p>
 
           <div>
@@ -388,10 +396,10 @@ export const AdminEventsPage: React.FC = () => {
         <div className="flex justify-between items-start mb-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xl">
-              {organizer.name.charAt(0)}
+               {getStringValue(organizer.name).charAt(0)}
             </div>
             <div>
-              <h3 className="font-bold text-gray-800 text-lg">{organizer.name}</h3>
+               <h3 className="font-bold text-gray-800 text-lg">{getStringValue(organizer.name)}</h3>
               <div className="flex items-center gap-2">
                 {organizer.isVerified ? 
                   <span className="text-xs font-bold text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Verified</span> :
@@ -460,7 +468,7 @@ export const AdminEventsPage: React.FC = () => {
         
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            You are rejecting <span className="font-bold text-gray-800">{event.title}</span>. 
+             You are rejecting <span className="font-bold text-gray-800">{getStringValue(event.title)}</span>.
             This action will notify the organizer.
           </p>
 
@@ -520,7 +528,7 @@ export const AdminEventsPage: React.FC = () => {
         
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            Are you sure you want to approve <span className="font-bold text-gray-800">{event.title}</span>? 
+             Are you sure you want to approve <span className="font-bold text-gray-800">{getStringValue(event.title)}</span>?
             This will make the event live on the platform immediately.
           </p>
 
@@ -667,8 +675,8 @@ export const AdminEventsPage: React.FC = () => {
                   <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                     <FileText className="w-4 h-4" /> Core Information
                   </h3>
-                  <h1 className="text-3xl font-serif font-bold text-gray-900 mb-4">{event.title}</h1>
-                  <p className="text-gray-600 leading-relaxed mb-6">{event.description}</p>
+                   <h1 className="text-3xl font-serif font-bold text-gray-900 mb-4">{getStringValue(event.title)}</h1>
+                   <p className="text-gray-600 leading-relaxed mb-6">{getStringValue(event.description)}</p>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                     <div>
@@ -867,10 +875,10 @@ export const AdminEventsPage: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-4 mb-6">
                     <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xl">
-                      {event.organizer.name.charAt(0)}
+                       {getStringValue(event.organizer.name).charAt(0)}
                     </div>
                     <div>
-                      <p className="font-bold text-gray-900">{event.organizer.name}</p>
+                       <p className="font-bold text-gray-900">{getStringValue(event.organizer.name)}</p>
                       <p className="text-xs text-gray-500">{event.organizer.email}</p>
                     </div>
                   </div>
@@ -1105,17 +1113,17 @@ export const AdminEventsPage: React.FC = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-sm shrink-0">
-                        {(event.organizer?.name || 'U').charAt(0)}
+                        {getStringValue(event.organizer?.name).charAt(0) || 'U'}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-bold text-gray-800 truncate">{event.organizer?.name || 'Unknown'}</p>
+                        <p className="text-sm font-bold text-gray-800 truncate">{getStringValue(event.organizer?.name) || 'Unknown'}</p>
                         <p className="text-[10px] text-gray-500 truncate">{event.organizer?.email || ''}</p>
                         <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-tighter">{event.organizer?.role || 'Organizer'}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-sm font-bold text-gray-800">{event.title || event.eventName || 'Untitled'}</p>
+                     <p className="text-sm font-bold text-gray-800">{getStringValue(event.title || event.eventName || 'Untitled')}</p>
                     <p className="text-[10px] text-gray-500 flex items-center gap-1">
                       <MapPin className="w-3 h-3" /> {event.location?.city || 'N/A'}
                     </p>
