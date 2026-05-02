@@ -16,7 +16,11 @@ export default function TicketsPage() {
   const router = useRouter();
   const eventId = params?.id as string;
   
-  const { setEvent, ticketSelection, setTicketSelection } = useBooking();
+  const { 
+    setEvent, 
+    ticketSelection, 
+    setTicketSelection,
+  } = useBooking();
   
   const [festival, setFestival] = useState<Festival | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,6 +94,94 @@ export default function TicketsPage() {
     return basePrice;
   };
 
+  const handlePayment = async () => {
+    if (!ticketSelection) return;
+    
+    const grandTotal = getGrandTotal();
+    const serviceFee = getServiceFee();
+    
+    if (!grandTotal || grandTotal <= 0) {
+      alert('Invalid total amount. Please check your booking.');
+      return;
+    }
+    
+    setProcessingPayment(true);
+    
+    try {
+      const hasHotel = !!(selectedRoom && checkIn && checkOut);
+      
+      const bookingResponse = await apiClient.post('/api/tourist/bookings', {
+        festivalId: eventId,
+        ticketType: ticketSelection.type,
+        quantity: ticketSelection.quantity,
+        totalPrice: grandTotal,
+        currency: 'USD',
+        hasHotelBooking: hasHotel,
+        touristServiceFee: serviceFee,
+        bookingDetails: {
+          ...(selectedRoom ? {
+            room: {
+              hotelId: selectedHotel?._id || selectedHotel?.id || '',
+              roomId: selectedRoom._id || selectedRoom.id,
+              hotelName: selectedHotel?.name || '',
+              roomName: selectedRoom.name,
+              roomPrice: selectedRoom.pricePerNight,
+            },
+          } : {}),
+          ...(selectedTransport ? {
+            transport: {
+              transportId: selectedTransport._id || selectedTransport.id,
+              type: selectedTransport.type,
+              price: selectedTransport.price,
+            },
+          } : {}),
+        },
+        contactInfo: {
+          fullName: 'Guest',
+          email: 'guest@email.com',
+          phone: '0000000000',
+        },
+      });
+
+      if (bookingResponse.success && bookingResponse.booking?._id) {
+        const bookingId = bookingResponse.booking._id;
+        
+        const response = await fetch('/api/payment/chapa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bookingId: bookingId,
+            amount: Number(grandTotal),
+            currency: 'ETB',
+            email: 'guest@email.com',
+            firstName: 'Guest',
+            lastName: 'User',
+            phone: '0912345678',
+            description: `Festival booking`,
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          if (data.checkoutUrl) {
+            window.location.href = data.checkoutUrl;
+          } else {
+            router.push(`/pay-result?status=success&bookingId=${bookingId}`);
+          }
+        } else {
+          router.push(`/payment-success?bookingId=${bookingId}&status=success`);
+        }
+      } else {
+        alert('Failed to create booking');
+      }
+    } catch (e) {
+      console.error('Payment error:', e);
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
   const TICKET_TYPES = [
     {
       type: 'vip' as const,
@@ -149,7 +241,7 @@ export default function TicketsPage() {
         {/* Page Header */}
         <div className="mb-12">
           <h1 className="text-4xl font-serif font-bold text-primary mb-4">
-            Select Your Tickets
+            Book Your Experience
           </h1>
           
         </div>

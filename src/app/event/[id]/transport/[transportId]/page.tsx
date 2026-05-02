@@ -302,9 +302,23 @@ export default function TransportDetailPage() {
                   className="w-full py-3"
                   onClick={handleContinue}
                   disabled={!selectedTransport}
-                 >
-                   {t('festival.continueToCheckout')}
-                 </button>
+                >
+                  {t('festival.continueToCheckout')}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {lightboxOpen && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center">
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-6 right-6 p-3 text-white hover:bg-white/20 rounded-full transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
           <button
             onClick={() => setActiveImageIndex(Math.max(0, activeImageIndex - 1))}
             className="absolute left-6 p-3 text-white hover:bg-white/20 rounded-full transition-colors"

@@ -45,11 +45,26 @@ export default function HotelsPage() {
           apiClient.get(`/api/festivals/${eventId}`),
           apiClient.get(`/api/festivals/${eventId}/availability`),
         ]);
-        const festivalData = festRes?.festival || festRes;
+        
+        if (!festRes || !festRes.success) {
+          console.error('Festival fetch failed:', festRes);
+          setLoading(false);
+          return;
+        }
+        
+        const festivalData = festRes?.festival;
         
         if (festivalData) {
           setFestival(festivalData);
           setEvent(festivalData);
+        }
+        
+        if (!availabilityRes || !availabilityRes.success) {
+          console.error('Availability fetch failed:', availabilityRes);
+          setHotels([]);
+          setFilteredHotels([]);
+          setLoading(false);
+          return;
         }
         
         const hotelsData = availabilityRes?.hotels || festivalData?.hotels || [];

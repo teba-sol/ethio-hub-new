@@ -60,18 +60,20 @@ export const PriceSummary: React.FC<PriceSummaryProps> = ({ eventId }) => {
         )}
         
         {/* Hotel */}
-        {(selectedRoom && checkIn && checkOut) ? (
+        {selectedRoom ? (
           <div className="space-y-2">
             <div className="flex justify-between items-start">
               <div>
                 <p className="font-medium text-gray-900">
-                  {selectedHotel?.name || selectedRoom.name}
+                  {selectedHotel?.name || selectedRoom.name || 'Selected Hotel'}
                 </p>
                 <p className="text-sm text-gray-500">
-                  {guests} guest{guests > 1 ? 's' : ''} × {hotelNights} night{hotelNights > 1 ? 's' : ''} × ${selectedRoom.pricePerNight}
+                  {guests > 0 ? `${guests} guest${guests > 1 ? 's' : ''} × ` : ''}{hotelNights > 0 ? `${hotelNights} night${hotelNights > 1 ? 's' : ''} × ` : ''}${selectedRoom.pricePerNight}/night
                 </p>
               </div>
-              <span className="font-bold text-primary">${selectedRoom.pricePerNight * hotelNights * guests}</span>
+              <span className="font-bold text-primary">
+                ${checkIn && checkOut ? selectedRoom.pricePerNight * hotelNights * guests : selectedRoom.pricePerNight}
+              </span>
             </div>
             
             {/* Food Packages */}
@@ -104,7 +106,7 @@ export const PriceSummary: React.FC<PriceSummaryProps> = ({ eventId }) => {
           <div className="flex justify-between items-start">
             <div>
               <p className="font-medium text-gray-900">
-                {selectedTransport.type}
+                {selectedTransport.type || 'Selected Transport'}
               </p>
               <p className="text-sm text-gray-500">
                 {transportDays} day{transportDays > 1 ? 's' : ''} × ${selectedTransport.price}

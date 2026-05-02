@@ -590,13 +590,20 @@ export const FestivalListingPage: React.FC = () => {
     const fetchFestivals = async () => {
       try {
         const res = await fetch('/api/festivals');
-        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const text = await res.text();
+        if (!text) {
+          throw new Error('Empty response');
+        }
+        const data = JSON.parse(text);
         if (data.success) {
           setFestivals(data.festivals);
         } else {
           setError(data.message || 'Failed to fetch festivals');
         }
-      } catch (err) {
+      } catch (err: any) {
         setError('An error occurred while fetching festivals');
       } finally {
         setLoading(false);
