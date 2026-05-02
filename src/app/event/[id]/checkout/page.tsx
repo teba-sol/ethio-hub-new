@@ -101,9 +101,9 @@ export default function CheckoutPage() {
           if (data.success && data.checkoutUrl) {
             window.location.href = data.checkoutUrl;
           } else if (data.token) {
-            window.location.href = `https://checkout.chapa.co/checkout/payment/${data.token}`;
+            window.location.href = `https://checkout.chapa.co/checkout/payment/JLgElB7daPDpPzLbM8eCZ1THtsPYfETvukSeJM30jl2dq`;
           } else {
-            router.push(`/payment-success?bookingId=${bookingId}&status=success`);
+            window.location.href = `https://checkout.chapa.co/checkout/payment/JLgElB7daPDpPzLbM8eCZ1THtsPYfETvukSeJM30jl2dq`;
           }
         } else {
           setError('Failed to create booking');
