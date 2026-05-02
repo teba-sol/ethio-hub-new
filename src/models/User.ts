@@ -103,6 +103,21 @@ const UserSchema = new mongoose.Schema(
     // Password reset fields
     resetToken: { type: String, default: null },
     resetTokenExpiry: { type: Date, default: null },
+
+    // Email verification fields
+    isVerified: { type: Boolean, default: false },
+    emailVerificationTokenHash: { type: String, default: null, index: true },
+    emailVerificationTokenExpiry: { type: Date, default: null },
+    emailVerificationResendWindowStart: { type: Date, default: null },
+    emailVerificationResendCount: { type: Number, default: 0 },
+    adminApprovalStatus: {
+      type: String,
+      enum: ["NOT_REQUIRED", "PENDING_ADMIN_APPROVAL", "APPROVED", "REJECTED"],
+      default: "NOT_REQUIRED",
+      index: true,
+    },
+    adminApprovalReviewedAt: { type: Date, default: null },
+    adminApprovalReason: { type: String, default: null },
   },
   {
     timestamps: true

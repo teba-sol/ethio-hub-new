@@ -4,9 +4,37 @@ import {
   MapPin, Calendar, Clock, User, DollarSign, FileText,
   Shield, AlertTriangle, MoreVertical, ChevronDown,
   CreditCard, Flag, History, Download, Ban, Check,
-  LayoutGrid
+  LayoutGrid,
 } from 'lucide-react';
 import { Button, Badge, Input } from '../../components/UI';
+import { useLanguage } from '@/context/LanguageContext';
+import { getLocalizedText } from '@/utils/getLocalizedText';
+
+// --- Helpers ---
+const getString = (val: any, language?: string): string => {
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+  if (val && typeof val === 'object') {
+    if (language) {
+      const localized = getLocalizedText(val, 'name', language as any) || 
+                     getLocalizedText(val, 'title', language as any) ||
+                     getLocalizedText(val, 'description', language as any);
+      if (localized) return localized;
+    }
+    if (val.en) return String(val.en);
+    if (val.am) return String(val.am);
+    if (val.name_en) return String(val.name_en);
+    if (val.name) return getString(val.name);
+    if (val.title_en) return String(val.title_en);
+    if (val.title) return getString(val.title);
+    if (val.description_en) return String(val.description_en);
+    if (val.description) return getString(val.description);
+    if (val.type_en) return String(val.type_en);
+    if (val.type) return getString(val.type);
+    return '';
+  }
+  return String(val || '');
+};
 
 // --- Helper Functions ---
 const getStringValue = (value: any): string => {
@@ -17,7 +45,7 @@ const getStringValue = (value: any): string => {
 };
 
 // --- Types ---
-type VerificationStatus = 'Not Submitted' | 'Pending Review' | 'Under Review' | 'Approved' | 'Rejected';
+type VerificationStatus = 'Not Submitted' | 'Pending Approval' | 'Under Review' | 'Approved' | 'Rejected';
 type AccountStatus = 'Active' | 'Suspended' | 'Deleted';
 
 interface VerificationDocument {
@@ -75,9 +103,9 @@ interface Event {
   ticketTypes: TicketType[];
   vipTicketPrice: number;
   capacity: number;
-  schedule: { time: string; activity: string }[];
-  hotels: { name: string; distance: string; price: string }[];
-  transportation: { type: string; provider: string; details: string }[];
+  schedule: { time: string; activity: string; title?: string; title_en?: string }[];
+  hotels: { name: string; distance?: string; address?: string; price?: string; pricing?: string }[];
+  transportation: { type: string; provider: string; details: string; type_en?: string; description?: string; description_en?: string }[];
   services: string[];
   policies: string[];
   termsAndConditions: string;
@@ -162,20 +190,21 @@ const MOCK_EVENTS: Event[] = Array.from({ length: 8 }).map((_, i) => ({
     accountName: i % 3 === 0 ? 'Addis Events PLC' : 'Cultural Heritage Tours'
   },
   submittedAt: new Date(Date.now() - i * 3600000 * 5).toLocaleString(),
-  status: i === 0 ? 'Pending Review' : i % 3 === 0 ? 'Approved' : i % 4 === 0 ? 'Under Review' : 'Rejected',
+  status: i === 0 ? 'Pending Approval' : i % 3 === 0 ? 'Approved' : i % 4 === 0 ? 'Under Review' : 'Rejected',
   documents: [
     { id: 'D1', name: 'Business License', type: 'License', url: '#', thumbnail: 'https://picsum.photos/seed/doc1/100/100', expiryDate: '2026-12-31', uploadedAt: '2025-10-20' },
     { id: 'D2', name: 'Event Permit', type: 'Permit', url: '#', thumbnail: 'https://picsum.photos/seed/doc2/100/100', uploadedAt: '2025-10-20' }
   ],
   riskBadges: i === 1 ? ['New Organizer', 'High Capacity'] : i === 3 ? ['High Ticket Price'] : [],
   verificationHistory: [
-    { date: '2025-10-20 10:00 AM', action: 'Pending Review', by: 'System' }
+    { date: '2025-10-20 10:00 AM', action: 'Pending Approval', by: 'System' }
   ],
   reviewedAt: i % 3 === 0 ? '2025-10-21 02:00 PM' : undefined,
   reviewedBy: i % 3 === 0 ? 'Admin Sarah' : undefined
 }));
 
 export const AdminEventsPage: React.FC = () => {
+  const { t } = useLanguage();
   const [filterStatus, setFilterStatus] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
@@ -241,6 +270,38 @@ export const AdminEventsPage: React.FC = () => {
     }
   };
 
+  const handleStartReview = async (event: any) => {
+    const isPendingApproval = ['pending_approval', 'Pending Approval'].includes(event.verificationStatus || event.status);
+    if (!isPendingApproval) {
+      setViewEvent(event);
+      return;
+    }
+
+    const previousEvents = [...events];
+    setEvents(prev => prev.map(ev =>
+      ev.id === event.id ? { ...ev, verificationStatus: 'under_review', status: 'under_review' } : ev
+    ));
+
+    setActionLoading(event.id);
+    try {
+      const res = await fetch(`/api/admin/events/${event.id}/start-review`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setViewEvent({ ...event, verificationStatus: 'under_review', status: 'under_review' });
+        fetchEvents();
+      } else {
+        setEvents(previousEvents);
+        alert(data.message || 'Failed to start review');
+      }
+    } catch (error) {
+      setEvents(previousEvents);
+      console.error('Failed to start review:', error);
+      alert('Failed to start review');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleReject = async (id: string) => {
     if (!rejectionReason.trim()) return;
     
@@ -276,7 +337,7 @@ export const AdminEventsPage: React.FC = () => {
 
   const filteredEvents = events.filter((event: any) => {
      const statusMap: Record<string, string> = {
-         'pending_approval': 'Pending Review',
+       'pending_approval': 'Pending Approval',
        'under_review': 'Under Review',
        'approved': 'Approved',
        'rejected': 'Rejected',
@@ -284,8 +345,8 @@ export const AdminEventsPage: React.FC = () => {
      };
     const mappedStatus = statusMap[event.verificationStatus] || event.verificationStatus;
     const matchesStatus = filterStatus === 'All' || mappedStatus === filterStatus;
-     const matchesSearch = getStringValue(event.title || event.eventName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           getStringValue(event.organizerName || event.organizer?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = getString(event.title || event.eventName || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           getString(event.organizerName || event.organizer?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
     
     return matchesStatus && matchesSearch;
   });
@@ -349,64 +410,64 @@ export const AdminEventsPage: React.FC = () => {
     return (totalPotentialRevenue * event.commissionRate) / 100;
   };
 
-  const ResubmitModal = ({ event, onClose }: { event: Event; onClose: () => void }) => (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <AlertCircle className="w-6 h-6 text-amber-500" /> Request Resubmission
-          </h2>
-          <button onClick={onClose}><XCircle className="w-6 h-6 text-gray-400 hover:text-gray-600" /></button>
-        </div>
-        
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-              You are asking <span className="font-bold text-gray-800">{getStringValue(event.organizer.name)}</span> to resubmit documents for <span className="font-bold text-gray-800">{getStringValue(event.title)}</span>.
-          </p>
+   const ResubmitModal = ({ event, onClose }: { event: Event; onClose: () => void }) => (
+     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+       <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6">
+         <div className="flex justify-between items-center mb-6">
+           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+             <AlertCircle className="w-6 h-6 text-amber-500" /> {t("admin.requestResubmission")}
+           </h2>
+           <button onClick={onClose}><XCircle className="w-6 h-6 text-gray-400 hover:text-gray-600" /></button>
+         </div>
+         
+         <div className="space-y-4">
+           <p className="text-sm text-gray-600">
+             {t("admin.resubmit.youAreAsking")} <span className="font-bold text-gray-800">{getString(event.organizer.name)}</span> {t("admin.resubmit.toResubmit")} <span className="font-bold text-gray-800">{getString(event.title)}</span>.
+           </p>
 
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Items to Correct <span className="text-red-500">*</span></label>
-            <textarea 
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 outline-none min-h-[120px]"
-              placeholder="List the documents or information that need correction..."
-              value={resubmissionNote}
-              onChange={(e) => setResubmissionNote(e.target.value)}
-            />
-          </div>
+           <div>
+             <label className="block text-sm font-bold text-gray-700 mb-1">{t("admin.itemsToCorrect")} <span className="text-red-500">*</span></label>
+             <textarea 
+               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 outline-none min-h-[120px]"
+               placeholder={t("admin.itemsToCorrectPlaceholder")}
+               value={resubmissionNote}
+               onChange={(e) => setResubmissionNote(e.target.value)}
+             />
+           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Button variant="ghost" onClick={onClose}>Cancel</Button>
-            <Button className="bg-amber-500 hover:bg-amber-600 border-amber-500 text-white" onClick={() => {
-              console.log('Resubmission Requested:', event.id, resubmissionNote);
-              onClose();
-            }}>
-              Send Request
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+           <div className="flex justify-end gap-3 pt-4">
+             <Button variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
+             <Button className="bg-amber-500 hover:bg-amber-600 border-amber-500 text-white" onClick={() => {
+               console.log('Resubmission Requested:', event.id, resubmissionNote);
+               onClose();
+             }}>
+               {t("admin.sendRequest")}
+             </Button>
+           </div>
+         </div>
+       </div>
+     </div>
+   );
 
   // --- Modals ---
 
-  const OrganizerProfileModal = ({ organizer, onClose }: { organizer: OrganizerProfile; onClose: () => void }) => (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
-        <div className="flex justify-between items-start mb-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xl">
-               {getStringValue(organizer.name).charAt(0)}
-            </div>
-            <div>
-               <h3 className="font-bold text-gray-800 text-lg">{getStringValue(organizer.name)}</h3>
+   const OrganizerProfileModal = ({ organizer, onClose }: { organizer: OrganizerProfile; onClose: () => void }) => (
+     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+       <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
+         <div className="flex justify-between items-start mb-6">
+           <div className="flex items-center gap-4">
+             <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xl">
+               {getString(organizer.name).charAt(0)}
+             </div>
+             <div>
+               <h3 className="font-bold text-gray-800 text-lg">{getString(organizer.name)}</h3>
               <div className="flex items-center gap-2">
                 {organizer.isVerified ? 
                   <span className="text-xs font-bold text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Verified</span> :
                   <span className="text-xs font-bold text-gray-500">Unverified</span>
                 }
                 <span className={`text-xs px-2 py-0.5 rounded-full ${organizer.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                  {organizer.status}
+                  {getString(organizer.status)}
                 </span>
               </div>
             </div>
@@ -418,7 +479,7 @@ export const AdminEventsPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 bg-gray-50 rounded-xl">
               <p className="text-xs text-gray-500 uppercase font-bold">Past Events</p>
-              <p className="text-xl font-bold text-gray-800">{organizer.pastEvents}</p>
+              <p className="text-xl font-bold text-gray-800">{getString(organizer.pastEvents)}</p>
             </div>
             <div className="p-3 bg-gray-50 rounded-xl">
               <p className="text-xs text-gray-500 uppercase font-bold">Total Revenue</p>
@@ -427,13 +488,13 @@ export const AdminEventsPage: React.FC = () => {
             <div className="p-3 bg-gray-50 rounded-xl">
               <p className="text-xs text-gray-500 uppercase font-bold">Cancel Rate</p>
               <p className={`text-xl font-bold ${parseInt(organizer.cancellationRate) > 10 ? 'text-red-600' : 'text-emerald-600'}`}>
-                {organizer.cancellationRate}
+                {getString(organizer.cancellationRate)}
               </p>
             </div>
             <div className="p-3 bg-gray-50 rounded-xl">
               <p className="text-xs text-gray-500 uppercase font-bold">Reports</p>
               <p className={`text-xl font-bold ${organizer.reportHistory > 0 ? 'text-red-600' : 'text-gray-800'}`}>
-                {organizer.reportHistory}
+                {getString(organizer.reportHistory)}
               </p>
             </div>
           </div>
@@ -456,120 +517,129 @@ export const AdminEventsPage: React.FC = () => {
     </div>
   );
 
-  const RejectionModal = ({ event, onClose }: { event: Event; onClose: () => void }) => (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <XCircle className="w-6 h-6 text-red-500" /> Reject Event
-          </h2>
-          <button onClick={onClose}><XCircle className="w-6 h-6 text-gray-400 hover:text-gray-600" /></button>
-        </div>
-        
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-             You are rejecting <span className="font-bold text-gray-800">{getStringValue(event.title)}</span>.
-            This action will notify the organizer.
-          </p>
+   const RejectionModal = ({ event, onClose }: { event: Event; onClose: () => void }) => (
+     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+       <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6">
+         <div className="flex justify-between items-center mb-6">
+           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+             <XCircle className="w-6 h-6 text-red-500" /> {t("admin.rejectEvent")}
+           </h2>
+           <button onClick={onClose}><XCircle className="w-6 h-6 text-gray-400 hover:text-gray-600" /></button>
+         </div>
+         
+         <div className="space-y-4">
+           <p className="text-sm text-gray-600">
+             {t("admin.youAreRejecting")} <span className="font-bold text-gray-800">{getString(event.title)}</span>. {t("admin.willNotifyOrganizer")}
+           </p>
 
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Reason for Rejection <span className="text-red-500">*</span></label>
-            <select 
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500/20 outline-none"
-              value={rejectionType}
-              onChange={(e) => setRejectionType(e.target.value)}
-            >
-              <option value="Incomplete information">Incomplete information</option>
-              <option value="Invalid location">Invalid location</option>
-              <option value="Suspicious activity">Suspicious activity</option>
-              <option value="Policy violation">Policy violation</option>
-              <option value="Duplicate event">Duplicate event</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
+           <div>
+             <label className="block text-sm font-bold text-gray-700 mb-1">{t("admin.reasonForRejection")} <span className="text-red-500">*</span></label>
+             <select 
+               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500/20 outline-none"
+               value={rejectionType}
+               onChange={(e) => setRejectionType(e.target.value)}
+             >
+               <option value="Incomplete information">{t("admin.reasons.incompleteInfo")}</option>
+               <option value="Invalid location">{t("admin.reasons.invalidLocation")}</option>
+               <option value="Suspicious activity">{t("admin.reasons.suspiciousActivity")}</option>
+               <option value="Policy violation">{t("admin.reasons.policyViolation")}</option>
+               <option value="Duplicate event">{t("admin.reasons.duplicateEvent")}</option>
+               <option value="Other">{t("admin.reasons.other")}</option>
+             </select>
+           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Custom Message to Organizer</label>
-            <textarea 
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500/20 outline-none min-h-[100px]"
-              placeholder="Provide specific details about why this event was rejected..."
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-            />
-          </div>
+           <div>
+             <label className="block text-sm font-bold text-gray-700 mb-1">{t("admin.customMessage")}</label>
+             <textarea 
+               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500/20 outline-none min-h-[100px]"
+               placeholder={t("admin.customMessagePlaceholder")}
+               value={rejectionReason}
+               onChange={(e) => setRejectionReason(e.target.value)}
+             />
+           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Button variant="ghost" onClick={onClose}>Cancel</Button>
-            <Button className="bg-red-500 hover:bg-red-600 border-red-500 text-white" onClick={() => {
-              if (rejectionReason.trim()) {
-                handleReject(event.id);
-                onClose();
-              } else {
-                alert('Please provide a rejection reason');
-              }
-            }}>
-              Confirm Rejection
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+           <div className="flex justify-end gap-3 pt-4">
+             <Button variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
+             <Button className="bg-red-500 hover:bg-red-600 border-red-500 text-white" onClick={() => {
+               if (rejectionReason.trim()) {
+                 handleReject(event.id);
+                 onClose();
+               } else {
+                 alert(t('messages.saving') || 'Please provide a rejection reason');
+               }
+             }}>
+               {t("admin.confirmRejection")}
+             </Button>
+           </div>
+         </div>
+       </div>
+     </div>
+   );
 
-  const ApprovalModal = ({ event, onClose }: { event: Event; onClose: () => void }) => (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <CheckCircle2 className="w-6 h-6 text-emerald-500" /> Approve Event
-          </h2>
-          <button onClick={onClose}><XCircle className="w-6 h-6 text-gray-400 hover:text-gray-600" /></button>
-        </div>
-        
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-             Are you sure you want to approve <span className="font-bold text-gray-800">{getStringValue(event.title)}</span>?
-            This will make the event live on the platform immediately.
-          </p>
+   const ApprovalModal = ({ event, onClose }: { event: Event; onClose: () => void }) => (
+     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+       <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6">
+         <div className="flex justify-between items-center mb-6">
+           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+             <CheckCircle2 className="w-6 h-6 text-emerald-500" /> {t("admin.approveEvent")}
+           </h2>
+           <button onClick={onClose}><XCircle className="w-6 h-6 text-gray-400 hover:text-gray-600" /></button>
+         </div>
+         
+         <div className="space-y-4">
+           <p className="text-sm text-gray-600">
+             {t("admin.approveConfirmation").replace('{event}', getString(event.title))}
+           </p>
 
-          <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-emerald-800 font-medium">Commission Rate:</span>
-              <span className="font-bold text-emerald-900">{event.commissionRate}%</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-emerald-800 font-medium">Est. Total Commission:</span>
-              <span className="font-bold text-emerald-900">ETB {calculateEstimatedCommission(event).toLocaleString()}</span>
-            </div>
-          </div>
+           <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+             <div className="flex justify-between text-sm mb-1">
+               <span className="text-emerald-800 font-medium">{t("admin.commissionRate")}:</span>
+               <span className="font-bold text-emerald-900">{getString(event.commissionRate)}%</span>
+             </div>
+             <div className="flex justify-between text-sm">
+               <span className="text-emerald-800 font-medium">{t("admin.estimatedCommission")}:</span>
+               <span className="font-bold text-emerald-900">ETB {calculateEstimatedCommission(event).toLocaleString()}</span>
+             </div>
+           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Optional Note to Organizer</label>
-            <textarea 
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 outline-none min-h-[80px]"
-              placeholder="Good luck with your event!..."
-              value={approvalNote}
-              onChange={(e) => setApprovalNote(e.target.value)}
-            />
-          </div>
+           <div>
+             <label className="block text-sm font-bold text-gray-700 mb-1">{t("admin.optionalNote")}</label>
+             <textarea 
+               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 outline-none min-h-[80px]"
+               placeholder={t("admin.optionalNotePlaceholder")}
+               value={approvalNote}
+               onChange={(e) => setApprovalNote(e.target.value)}
+             />
+           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Button variant="ghost" onClick={onClose}>Cancel</Button>
-            <Button className="bg-emerald-500 hover:bg-emerald-600 border-emerald-500 text-white" onClick={() => {
-              handleApprove(event.id);
-              onClose();
-            }}>
-              Confirm Approval
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+           <div className="flex justify-end gap-3 pt-4">
+             <Button variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
+             <Button className="bg-emerald-500 hover:bg-emerald-600 border-emerald-500 text-white" onClick={() => {
+               handleApprove(event.id);
+               onClose();
+             }}>
+               {t("admin.confirmApproval")}
+             </Button>
+           </div>
+         </div>
+       </div>
+     </div>
+   );
 
   const EventDetailsModal = ({ event, onClose }: { event: Event; onClose: () => void }) => {
-    const statusSteps = ['Pending Review', 'Under Review', 'Approved'];
-    const currentStepIndex = statusSteps.indexOf(event.status === 'Rejected' ? 'Under Review' : event.status);
+    const statusSteps = ['pendingApproval', 'underReview', 'published'];
+    const normalizedStatus = ((event as any).verificationStatus || event.status) as string;
+    const stepStatusMap: Record<string, string> = {
+      pending_approval: 'pendingApproval',
+      'Pending Approval': 'pendingApproval',
+      under_review: 'underReview',
+      'Under Review': 'underReview',
+      approved: 'published',
+      Approved: 'published',
+      rejected: 'underReview',
+      Rejected: 'underReview',
+    };
+    const currentStepIndex = Math.max(0, statusSteps.indexOf(stepStatusMap[normalizedStatus] || 'pendingApproval'));
 
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -577,17 +647,17 @@ export const AdminEventsPage: React.FC = () => {
           {/* Modal Header */}
           <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white z-10">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800">Event Verification Details</h2>
-              <p className="text-sm text-gray-500">ID: {event.id} • Submitted: {event.submittedAt}</p>
+              <h2 className="text-2xl font-bold text-gray-800">{t("events.eventDetails")}</h2>
+              <p className="text-sm text-gray-500">ID: {getString(event.id)} • Submitted: {getString(event.submittedAt)}</p>
             </div>
             <div className="flex gap-2">
-       {['pending_approval', 'under_review'].includes((event as any).verificationStatus || event.status) && (
-         <>
-           <Button variant="outline" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => setResubmitEvent(event)}>Request Resubmission</Button>
-           <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => setRejectEvent(event)}>Reject</Button>
-           <Button className="bg-emerald-500 hover:bg-emerald-600 border-emerald-500" onClick={() => setApproveEvent(event)}>Approve</Button>
-         </>
-       )}
+        {['pending_approval', 'under_review'].includes((event as any).verificationStatus || event.status) && (
+          <>
+            <Button variant="outline" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => setResubmitEvent(event)}>{t("admin.requestResubmission")}</Button>
+            <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => setRejectEvent(event)}>{t("admin.reject")}</Button>
+            <Button className="bg-emerald-500 hover:bg-emerald-600 border-emerald-500" onClick={() => setApproveEvent(event)}>{t("admin.approve")}</Button>
+          </>
+        )}
               <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full ml-2">
                 <XCircle className="w-6 h-6 text-gray-400" />
               </button>
@@ -601,23 +671,23 @@ export const AdminEventsPage: React.FC = () => {
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-sm font-bold text-red-700">Rejection Reason</p>
-                    <p className="text-xs text-red-600 mt-1">{(event as any).rejectionReason}</p>
+                    <p className="text-sm font-bold text-red-700">{t("admin.rejectionReason")}</p>
+                    <p className="text-xs text-red-600 mt-1">{getString((event as any).rejectionReason)}</p>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Re-verification Banner */}
-            {(event as any).isEditedAfterApproval && (event as any).verificationStatus === 'Pending Review' && (
+            {(event as any).isEditedAfterApproval && ['Pending Approval', 'pending_approval'].includes((event as any).verificationStatus) && (
               <div className="mb-6 p-4 bg-amber-50 border border-amber-100 rounded-2xl">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-sm font-bold text-amber-700">Re-verification Required</p>
-                    <p className="text-xs text-amber-600 mt-1">Organizer made changes to this published event. Please review the updates.</p>
+                    <p className="text-sm font-bold text-amber-700">{t("status.pendingReVerification")}</p>
+                    <p className="text-xs text-amber-600 mt-1">{t("admin.organizerChanges")}</p>
                     {(event as any).lastEditedAt && (
-                      <p className="text-[10px] text-amber-500 mt-1">Last edited: {new Date((event as any).lastEditedAt).toLocaleString()}</p>
+                      <p className="text-[10px] text-amber-500 mt-1">{t("admin.lastEdited")} {new Date((event as any).lastEditedAt).toLocaleString()}</p>
                     )}
                   </div>
                 </div>
@@ -642,9 +712,9 @@ export const AdminEventsPage: React.FC = () => {
                     }`}>
                       {idx < currentStepIndex ? <Check className="w-5 h-5" /> : <span className="text-xs font-bold">{idx + 1}</span>}
                     </div>
-                    <span className={`text-[10px] font-bold mt-2 uppercase tracking-widest ${idx <= currentStepIndex ? 'text-emerald-600' : 'text-gray-400'}`}>
-                      {step}
-                    </span>
+                     <span className={`text-[10px] font-bold mt-2 uppercase tracking-widest ${idx <= currentStepIndex ? 'text-emerald-600' : 'text-gray-400'}`}>
+                       {t(`status.${step}`)}
+                     </span>
                   </div>
                 ))}
               </div>
@@ -653,11 +723,11 @@ export const AdminEventsPage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Left Column: Event Media & Core Info (8 cols) */}
               <div className="lg:col-span-8 space-y-8">
-                {/* Media Gallery */}
-                <div className="space-y-4">
-                  <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
-                    <LayoutGrid className="w-5 h-5 text-primary" /> Event Media
-                  </h3>
+                 {/* Media Gallery */}
+                 <div className="space-y-4">
+                   <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
+                     <LayoutGrid className="w-5 h-5 text-primary" /> {t("events.sections.media")}
+                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="md:col-span-3">
                       <img src={event.bannerImage} className="w-full h-80 object-cover rounded-2xl shadow-sm" alt="Banner" />
@@ -673,82 +743,82 @@ export const AdminEventsPage: React.FC = () => {
                 {/* Core Information */}
                 <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
                   <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <FileText className="w-4 h-4" /> Core Information
+                    <FileText className="w-4 h-4" /> {t("events.sections.coreInfo")}
                   </h3>
-                   <h1 className="text-3xl font-serif font-bold text-gray-900 mb-4">{getStringValue(event.title)}</h1>
-                   <p className="text-gray-600 leading-relaxed mb-6">{getStringValue(event.description)}</p>
-                  
+                  <h1 className="text-3xl font-serif font-bold text-gray-900 mb-4">{getString(event.title)}</h1>
+                  <p className="text-gray-600 leading-relaxed mb-6">{getString(event.description)}</p>
+                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                     <div>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Date</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t("events.date")}</p>
                       <p className="text-sm font-bold text-gray-800 flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-primary" /> {event.date}
+                         <Calendar className="w-3.5 h-3.5 text-primary" /> {getString(event.date)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Time</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t("events.time")}</p>
                       <p className="text-sm font-bold text-gray-800 flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-primary" /> {event.time}
+                         <Clock className="w-3.5 h-3.5 text-primary" /> {getString(event.time)}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Location</p>
-                      <p className="text-sm font-bold text-gray-800 flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-primary" /> {event.location.city}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Capacity</p>
-                      <p className="text-sm font-bold text-gray-800 flex items-center gap-1">
-                        <Shield className="w-3.5 h-3.5 text-primary" /> {event.capacity}
-                      </p>
-                    </div>
+                     <div>
+                       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t("events.location")}</p>
+                       <p className="text-sm font-bold text-gray-800 flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-primary" /> {getString(event.location.city)}
+                       </p>
+                     </div>
+                     <div>
+                       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t("events.capacity")}</p>
+                       <p className="text-sm font-bold text-gray-800 flex items-center gap-1">
+                         <Shield className="w-3.5 h-3.5 text-primary" /> {getString(event.capacity)}
+                       </p>
+                     </div>
                   </div>
                 </div>
 
                 {/* Schedule & Logistics */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                      <Clock className="w-4 h-4" /> Event Schedule
-                    </h3>
+                   <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                     <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                       <Clock className="w-4 h-4" /> {t("events.sections.schedule")}
+                     </h3>
                     <div className="space-y-4">
                       {event.schedule.map((item, i) => (
                         <div key={i} className="flex justify-between items-center p-3 hover:bg-gray-50 rounded-xl transition-colors border border-transparent hover:border-gray-100">
-                          <span className="text-xs font-bold text-primary">{item.time}</span>
-                          <span className="text-xs text-gray-700 font-medium">{item.activity}</span>
+                          <span className="text-xs font-bold text-primary">{getString(item.time)}</span>
+                          <span className="text-xs text-gray-700 font-medium">{getString(item.activity || item.title || item.title_en)}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   <div className="space-y-6">
-                    <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                      <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <MapPin className="w-4 h-4" /> Partner Hotels
-                      </h3>
+                     <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                       <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                         <MapPin className="w-4 h-4" /> {t("events.sections.hotels")}
+                       </h3>
                       <div className="space-y-4">
                        {Array.isArray(event.hotels) ? event.hotels.map((h, i) => (
                              <div key={i} className="text-xs flex justify-between items-center p-2 bg-gray-50 rounded-lg">
                                <div>
-                                 <p className="font-bold text-gray-800">{h.name}</p>
-                                 <p className="text-[10px] text-gray-500">{h.distance}</p>
+                                 <p className="font-bold text-gray-800">{getString(h.name)}</p>
+                                 <p className="text-[10px] text-gray-500">{getString(h.distance || h.address)}</p>
                                </div>
-                               <span className="font-bold text-primary">{h.price}</span>
+                               <span className="font-bold text-primary">{getString(h.price || h.pricing || '')}</span>
                              </div>
                            )) : []}
                       </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                      <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <Flag className="w-4 h-4" /> Transportation
-                      </h3>
+                     <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                       <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                         <Flag className="w-4 h-4" /> {t("events.sections.transportation")}
+                       </h3>
                       <div className="space-y-3">
                          {Array.isArray(event.transportation) ? event.transportation.map((t, i) => (
                            <div key={i} className="p-3 bg-gray-50 rounded-xl">
-                             <p className="text-[10px] font-bold text-primary uppercase mb-1">{t.type} • {t.provider}</p>
-                             <p className="text-[10px] text-gray-600 leading-tight">{t.details}</p>
+                             <p className="text-[10px] font-bold text-primary uppercase mb-1">{getString(t.type || t.type_en)} • {getString(t.provider)}</p>
+                             <p className="text-[10px] text-gray-600 leading-tight">{getString(t.details || t.description || t.description_en)}</p>
                            </div>
                          )) : []}
                       </div>
@@ -759,7 +829,7 @@ export const AdminEventsPage: React.FC = () => {
                 {/* Documents Section */}
                 <div className="space-y-4">
                   <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-primary" /> Submitted Documents
+                    <FileText className="w-5 h-5 text-primary" /> {t("events.submittedDocuments")}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {event.documents.map((doc) => (
@@ -768,19 +838,19 @@ export const AdminEventsPage: React.FC = () => {
                           <img src={doc.thumbnail} className="w-full h-full object-cover" alt="" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-bold text-gray-800 text-sm truncate">{doc.name}</p>
-                          <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{doc.type}</p>
+                          <p className="font-bold text-gray-800 text-sm truncate">{getString(doc.name)}</p>
+                          <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{getString(doc.type)}</p>
                           {doc.expiryDate && (
                             <p className="text-[10px] text-amber-600 font-bold mt-1 flex items-center gap-1">
-                              <AlertCircle className="w-3 h-3" /> Expires: {doc.expiryDate}
+                              <AlertCircle className="w-3 h-3" /> Expires: {getString(doc.expiryDate)}
                             </p>
                           )}
                         </div>
                         <div className="flex flex-col gap-2">
-                          <button className="p-2 bg-gray-50 text-gray-500 hover:bg-primary hover:text-white rounded-lg transition-all">
+                          <button className="p-2 bg-gray-50 text-gray-500 hover:bg-primary hover:text-white rounded-lg transition-all" title={t("documents.preview")}>
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button className="p-2 bg-gray-50 text-gray-500 hover:bg-primary hover:text-white rounded-lg transition-all">
+                          <button className="p-2 bg-gray-50 text-gray-500 hover:bg-primary hover:text-white rounded-lg transition-all" title={t("documents.download")}>
                             <Download className="w-4 h-4" />
                           </button>
                         </div>
@@ -802,18 +872,18 @@ export const AdminEventsPage: React.FC = () => {
                     {event.ticketTypes.map((ticket, i) => (
                       <div key={i} className="flex justify-between items-end border-b border-white/10 pb-4">
                         <div>
-                          <p className="text-xs text-gray-400 font-bold uppercase">{ticket.name} Ticket</p>
+                          <p className="text-xs text-gray-400 font-bold uppercase">{getString(ticket.name)} Ticket</p>
                           <p className="text-2xl font-bold">ETB {ticket.price.toLocaleString()}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-[10px] text-gray-500">Allocation</p>
-                          <p className="text-sm font-bold">{ticket.quantity}</p>
+                          <p className="text-sm font-bold">{getString(ticket.quantity)}</p>
                         </div>
                       </div>
                     ))}
                     <div className="pt-2">
                       <div className="flex justify-between text-sm text-emerald-400 font-bold">
-                        <span>Platform Commission ({event.commissionRate}%)</span>
+                        <span>Platform Commission ({getString(event.commissionRate)}%)</span>
                         <span>ETB {calculateEstimatedCommission(event).toLocaleString()}</span>
                       </div>
                     </div>
@@ -852,13 +922,13 @@ export const AdminEventsPage: React.FC = () => {
                             ))}
                          </div>
                        </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Event Policies</p>
+                       <div>
+                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">{t("events.eventPolicies")}</p>
                         <ul className="space-y-3">
                           {(event.policies || []).map((p, i) => (
                             <li key={i} className="text-xs text-gray-600 flex items-start gap-3">
                               <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0"></div>
-                              {p}
+                              {getString(p)}
                             </li>
                           ))}
                         </ul>
@@ -870,27 +940,27 @@ export const AdminEventsPage: React.FC = () => {
                 {/* Organizer Card */}
                 <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-gray-800">Organizer Info</h3>
-                    <Button size="sm" variant="ghost" onClick={() => setViewOrganizer(event.organizer)}>View Profile</Button>
+                    <h3 className="font-bold text-gray-800">{t("events.sections.organizerInfo")}</h3>
+                    <Button size="sm" variant="ghost" onClick={() => setViewOrganizer(event.organizer)}>{t("admin.viewProfile")}</Button>
                   </div>
                   <div className="flex items-center gap-4 mb-6">
                     <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xl">
-                       {getStringValue(event.organizer.name).charAt(0)}
+                      {getString(event.organizer.name).charAt(0)}
                     </div>
                     <div>
-                       <p className="font-bold text-gray-900">{getStringValue(event.organizer.name)}</p>
-                      <p className="text-xs text-gray-500">{event.organizer.email}</p>
+                       <p className="font-bold text-gray-900">{getString(event.organizer.name)}</p>
+                      <p className="text-xs text-gray-500">{getString(event.organizer.email)}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-gray-50 p-3 rounded-xl text-center">
-                      <p className="text-[10px] text-gray-400 font-bold uppercase">Past Events</p>
-                      <p className="text-lg font-bold text-gray-800">{event.organizer.pastEvents}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">{t("events.pastEvents")}</p>
+                      <p className="text-lg font-bold text-gray-800">{getString(event.organizer.pastEvents)}</p>
                     </div>
                     <div className="bg-gray-50 p-3 rounded-xl text-center">
-                      <p className="text-[10px] text-gray-400 font-bold uppercase">Verified</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">{t("events.verified")}</p>
                       <p className={`text-lg font-bold ${event.organizer.isVerified ? 'text-emerald-600' : 'text-gray-400'}`}>
-                        {event.organizer.isVerified ? 'Yes' : 'No'}
+                        {event.organizer.isVerified ? t("common.yes") : t("common.no")}
                       </p>
                     </div>
                   </div>
@@ -899,18 +969,18 @@ export const AdminEventsPage: React.FC = () => {
                 {/* Risk Indicators */}
                 <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
                   <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <Shield className="w-4 h-4" /> Risk Analysis
+                    <Shield className="w-4 h-4" /> {t("events.sections.risk")}
                   </h3>
                   <div className="space-y-3">
                     {event.riskBadges.length > 0 ? (
                       event.riskBadges.map((badge, idx) => (
                         <div key={idx} className="flex items-center gap-3 p-3 bg-amber-50 text-amber-700 rounded-xl text-xs font-bold border border-amber-100">
-                          <AlertTriangle className="w-4 h-4 shrink-0" /> {badge}
+                          <AlertTriangle className="w-4 h-4 shrink-0" /> {getString(badge)}
                         </div>
                       ))
                     ) : (
                       <div className="flex items-center gap-3 p-3 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold border border-emerald-100">
-                        <CheckCircle2 className="w-4 h-4 shrink-0" /> Low Risk Detected
+                        <CheckCircle2 className="w-4 h-4 shrink-0" /> {t("events.lowRisk")}
                       </div>
                     )}
                   </div>
@@ -935,8 +1005,8 @@ export const AdminEventsPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-serif font-bold text-gray-800">Event Verification</h1>
-          <p className="text-gray-500 text-sm">Review, approve, and audit event submissions.</p>
+          <h1 className="text-3xl font-serif font-bold text-gray-800">{t("admin.eventVerifications")}</h1>
+          <p className="text-gray-500 text-sm">{t("admin.eventVerificationDesc")}</p>
         </div>
         
         {/* Bulk Actions */}
@@ -961,7 +1031,7 @@ export const AdminEventsPage: React.FC = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input 
             type="text" 
-            placeholder="Search events, organizers, or email..." 
+            placeholder={t("common.search") + "..."} 
             className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/20"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -970,10 +1040,10 @@ export const AdminEventsPage: React.FC = () => {
         
         <div className="flex flex-wrap gap-2 w-full xl:w-auto">
           <select className="px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 border-none cursor-pointer hover:bg-gray-100">
-            <option>All Cities</option>
-            <option>Addis Ababa</option>
-            <option>Gondar</option>
-            <option>Lalibela</option>
+            <option value="All">All Cities</option>
+            <option value="Addis Ababa">Addis Ababa</option>
+            <option value="Gondar">Gondar</option>
+            <option value="Lalibela">Lalibela</option>
           </select>
           <div className="w-px h-8 bg-gray-200 mx-2 hidden xl:block"></div>
           
@@ -985,11 +1055,11 @@ export const AdminEventsPage: React.FC = () => {
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="pl-9 pr-8 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 border-none cursor-pointer hover:bg-gray-100 appearance-none"
               >
-                <option value="All">All Status</option>
-                <option value="Pending Review">Pending Review</option>
-                <option value="Under Review">Under Review</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
+                <option value="All">{t("common.all")}</option>
+                <option value="Pending Approval">{t("status.pendingApproval")}</option>
+                <option value="Under Review">{t("status.underReview")}</option>
+                <option value="Approved">{t("status.approved")}</option>
+                <option value="Rejected">{t("status.rejected")}</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             </div>
@@ -1072,8 +1142,8 @@ export const AdminEventsPage: React.FC = () => {
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
               <Calendar className="w-8 h-8 text-gray-400" />
             </div>
-            <h3 className="text-lg font-bold text-gray-800 mb-2">No Events Found</h3>
-            <p className="text-gray-500 text-sm">No events match your current filters.</p>
+             <h3 className="text-lg font-bold text-gray-800 mb-2">{t("common.noResults")}</h3>
+             <p className="text-gray-500 text-sm">{t("events.noMatchFilters")}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -1091,12 +1161,12 @@ export const AdminEventsPage: React.FC = () => {
                       }}
                     />
                   </th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">User / Organizer</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Event Title</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Submitted On</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Documents</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest text-right">Actions</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">{t("admin.organizer")}</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">{t("events.title")}</th>
+                <th className="px-6 py4 text-xs font-bold text-gray-500 uppercase tracking-widest">{t("admin.submittedOn")}</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">{t("admin.documents")}</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">{t("admin.status")}</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest text-right">{t("admin.actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -1110,40 +1180,40 @@ export const AdminEventsPage: React.FC = () => {
                       onChange={() => toggleSelectEvent(event.id)}
                     />
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-sm shrink-0">
-                        {getStringValue(event.organizer?.name).charAt(0) || 'U'}
-                      </div>
+                   <td className="px-6 py-4">
+                     <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-sm shrink-0">
+                         {getString(event.organizer?.name || 'U').charAt(0)}
+                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-bold text-gray-800 truncate">{getStringValue(event.organizer?.name) || 'Unknown'}</p>
-                        <p className="text-[10px] text-gray-500 truncate">{event.organizer?.email || ''}</p>
-                        <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-tighter">{event.organizer?.role || 'Organizer'}</p>
+                         <p className="text-sm font-bold text-gray-800 truncate">{getString(event.organizer?.name || 'Unknown')}</p>
+                         <p className="text-[10px] text-gray-500 truncate">{getString(event.organizer?.email || '')}</p>
+                         <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-tighter">{getString(event.organizer?.role || 'Organizer')}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                     <p className="text-sm font-bold text-gray-800">{getStringValue(event.title || event.eventName || 'Untitled')}</p>
+                    <p className="text-sm font-bold text-gray-800">{getString(event.title || event.eventName || 'Untitled')}</p>
                     <p className="text-[10px] text-gray-500 flex items-center gap-1">
-                      <MapPin className="w-3 h-3" /> {event.location?.city || 'N/A'}
+                       <MapPin className="w-3 h-3" /> {getString(event.location?.city || 'N/A')}
                     </p>
                   </td>
                   <td className="px-6 py-4">
                     <p className="text-sm text-gray-600">{formatDate(event.submittedAt)}</p>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="bg-gray-50">
-                        {(event.documents?.length || 0)} Files
-                      </Badge>
-                      <button 
-                        className="p-1.5 text-gray-400 hover:text-primary transition-colors"
-                        title="Preview Documents"
-                        onClick={() => setViewEvent(event)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="bg-gray-50">
+                          {(event.documents?.length || 0)} {t("documents.files")}
+                        </Badge>
+                        <button 
+                          className="p-1.5 text-gray-400 hover:text-primary transition-colors"
+                          title={t("documents.preview")}
+                          onClick={() => handleStartReview(event)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
                   </td>
                   <td className="px-6 py-4">
                    <Badge variant={
@@ -1151,26 +1221,26 @@ export const AdminEventsPage: React.FC = () => {
                        event.verificationStatus === 'rejected' || event.verificationStatus === 'Rejected' ? 'error' : 
                        event.verificationStatus === 'under_review' || event.verificationStatus === 'Under Review' ? 'info' : 
                        (event.verificationStatus === 'pending_approval' || event.verificationStatus === 'Pending Approval') ? 'warning' : 'secondary'
-                     }>
-                       {event.verificationStatus === 'approved' ? 'Published' : 
-                        event.verificationStatus === 'rejected' ? 'Rejected' : 
-                        event.verificationStatus === 'under_review' ? 'Under Review' : 
-                        (event.verificationStatus === 'pending_approval' || event.verificationStatus === 'Pending Approval') ? 
-                          ((event as any).reverificationRequested ? 'Pending Re-verification' : 'Pending Review') : 
-                        event.status || 'Draft'}
-                     </Badge>
+                      }>
+                        {event.verificationStatus === 'approved' || event.verificationStatus === 'Approved' ? t("status.published") : 
+                         event.verificationStatus === 'rejected' || event.verificationStatus === 'Rejected' ? t("status.rejected") : 
+                         event.verificationStatus === 'under_review' || event.verificationStatus === 'Under Review' ? t("status.underReview") : 
+                         (event.verificationStatus === 'pending_approval' || event.verificationStatus === 'Pending Approval') ? 
+                           ((event as any).reverificationRequested ? t("status.pendingReVerification") : t("status.pendingApproval")) : 
+                           getString(event.status) || t("status.draft")}
+                      </Badge>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2 items-center">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest"
-                        onClick={() => setViewEvent(event)}
-                      >
-                        Review
-                      </Button>
-                      {['Pending Review', 'Under Review', 'pending_review', 'under_review'].includes(event.status) ? (
+                       <Button 
+                         variant="ghost" 
+                         size="sm" 
+                         className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest"
+                         onClick={() => handleStartReview(event)}
+                       >
+                         {t("admin.review")}
+                       </Button>
+                      {['Pending Approval', 'Under Review', 'pending_approval', 'under_review'].includes(event.status) ? (
                         <div className="relative">
                           <button 
                             className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 bg-gray-50"
@@ -1183,26 +1253,26 @@ export const AdminEventsPage: React.FC = () => {
                           </button>
                           {openActionMenu === event.id && (
                             <div className="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-20">
-                              <button 
-                                className="w-full text-left px-4 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 flex items-center gap-2"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setApproveEvent(event);
-                                  setOpenActionMenu(null);
-                                }}
-                              >
-                                <Check className="w-3.5 h-3.5" /> Approve Submission
-                              </button>
-                              <button 
-                                className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setRejectEvent(event);
-                                  setOpenActionMenu(null);
-                                }}
-                              >
-                                <Ban className="w-3.5 h-3.5" /> Reject Submission
-                              </button>
+                               <button 
+                                 className="w-full text-left px-4 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 flex items-center gap-2"
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   setApproveEvent(event);
+                                   setOpenActionMenu(null);
+                                 }}
+                               >
+                                 <Check className="w-3.5 h-3.5" /> {t("admin.approve")}
+                               </button>
+                               <button 
+                                 className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   setRejectEvent(event);
+                                   setOpenActionMenu(null);
+                                 }}
+                               >
+                                 <Ban className="w-3.5 h-3.5" /> {t("admin.reject")}
+                               </button>
                             </div>
                           )}
                         </div>

@@ -16,6 +16,8 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { Festival, HotelAccommodation, Review } from '../../types';
 import { Button, Badge, VerifiedBadge, Input } from '../UI';
+import { useLanguage } from '../../context/LanguageContext';
+import { getLocalizedText } from '../../utils/getLocalizedText';
 import { MOCK_FESTIVALS } from '../../data/constants';
 import { 
   CartesianGrid, Tooltip, 
@@ -167,15 +169,41 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
 
        // Strip incomplete array entries with empty required fields
        if (Array.isArray(dataToSave.transportation)) {
-         dataToSave.transportation = dataToSave.transportation.filter((t: any) => t.type?.trim());
+         dataToSave.transportation = dataToSave.transportation
+           .filter((t: any) => t.type?.trim())
+           .map((t: any) => ({
+             ...t,
+             type: String(t?.type || '').trim(),
+             capacity: Number.isFinite(Number(t?.capacity)) ? Number(t.capacity) : 0,
+             price: Number.isFinite(Number(t?.price)) ? Number(t.price) : 0,
+             availability: Number.isFinite(Number(t?.availability)) ? Number(t.availability) : 0,
+             description: String(t?.description || '').trim(),
+             pickupLocations: String(t?.pickupLocations || '').trim(),
+           }));
        }
        if (Array.isArray(dataToSave.hotels)) {
           dataToSave.hotels = dataToSave.hotels
             .filter((h: any) => h.name?.trim())
-            .map((h: any) => ({
-              ...h,
-              rooms: (h.rooms || []).filter((r: any) => r.name?.trim()),
-            }));
+            .map((h: any) => {
+              const sourceRooms = Array.isArray(h.rooms) ? h.rooms : [];
+              const normalizedRooms = sourceRooms
+                .filter((r: any) => hasMeaningfulRoomData(r))
+                .map((r: any, roomIndex: number) => ({
+                  ...r,
+                  name: String(r?.name || '').trim() || `Room ${roomIndex + 1}`,
+                  bedType: String(r?.bedType || '').trim() || 'King Size',
+                  capacity: Number.isFinite(Number(r?.capacity)) ? Number(r.capacity) : 2,
+                  pricePerNight: Number.isFinite(Number(r?.pricePerNight)) ? Number(r.pricePerNight) : 0,
+                  availability: Number.isFinite(Number(r?.availability)) ? Number(r.availability) : 0,
+                  sqm: Number.isFinite(Number(r?.sqm)) ? Number(r.sqm) : 30,
+                  amenities: Array.isArray(r?.amenities) ? r.amenities : [],
+                }));
+
+              return {
+                ...h,
+                rooms: normalizedRooms,
+              };
+            });
         }
        if (Array.isArray(dataToSave.schedule)) {
          dataToSave.schedule = dataToSave.schedule.filter((s: any) => s.title?.trim());
@@ -243,6 +271,28 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
       ...prev,
       [parent]: prev[parent].filter((_: any, i: number) => i !== index)
     }));
+  };
+
+  const parseNumberInput = (value: string, fallback = 0) => {
+    if (value.trim() === '') return fallback;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
+  const hasMeaningfulRoomData = (room: any) => {
+    if (!room || typeof room !== 'object') return false;
+
+    const textFields = ['name', 'description', 'image', 'bedType'];
+    const hasText = textFields.some((field) => String(room[field] || '').trim().length > 0);
+
+    const numericFields = ['capacity', 'pricePerNight', 'availability', 'sqm'];
+    const hasNumeric = numericFields.some((field) => {
+      const value = Number(room[field]);
+      return Number.isFinite(value) && value > 0;
+    });
+
+    const hasAmenities = Array.isArray(room.amenities) && room.amenities.length > 0;
+    return hasText || hasNumeric || hasAmenities;
   };
 
   const handleDeleteEvent = async () => {
@@ -746,7 +796,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                       <input
                         type="number"
                         value={day.day}
-                        onChange={(e) => handleArrayChange('schedule', idx, 'day', parseInt(e.target.value))}
+                        onChange={(e) => handleArrayChange('schedule', idx, 'day', parseNumberInput(e.target.value))}
                         className="text-2xl font-serif font-bold bg-transparent text-white text-center w-12"
                       />
                     ) : (
@@ -943,7 +993,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                     <input
                       type="number"
                       value={hotel.starRating}
-                      onChange={(e) => handleArrayChange('hotels', idx, 'starRating', parseInt(e.target.value))}
+                      onChange={(e) => handleArrayChange('hotels', idx, 'starRating', parseNumberInput(e.target.value))}
                       className="w-24 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                       min={1}
                       max={5}
@@ -1283,7 +1333,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                           />
                           <div className="absolute top-3 right-3">
                             <Badge className="bg-white/95 backdrop-blur-sm text-primary text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg">
-                              {room.availability} left
+                              {room.remaining ?? room.availability ?? 0} left
                             </Badge>
                           </div>
                         </>
@@ -1346,7 +1396,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                               value={room.capacity}
                               onChange={(e) => {
                                 const newRooms = [...hotel.rooms];
-                                newRooms[rIdx] = { ...newRooms[rIdx], capacity: parseInt(e.target.value) };
+                                newRooms[rIdx] = { ...newRooms[rIdx], capacity: parseNumberInput(e.target.value) };
                                 handleArrayChange('hotels', idx, 'rooms', newRooms);
                               }}
                               className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
@@ -1363,7 +1413,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                               value={room.sqm || 30}
                               onChange={(e) => {
                                 const newRooms = [...hotel.rooms];
-                                newRooms[rIdx] = { ...newRooms[rIdx], sqm: parseInt(e.target.value) };
+                                newRooms[rIdx] = { ...newRooms[rIdx], sqm: parseNumberInput(e.target.value) };
                                 handleArrayChange('hotels', idx, 'rooms', newRooms);
                               }}
                               className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
@@ -1377,16 +1427,23 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                           {isEditing ? (
                             <input
                               type="number"
-                              value={room.availability || 5}
+                              value={room.availability ?? ''}
                               onChange={(e) => {
                                 const newRooms = [...hotel.rooms];
-                                newRooms[rIdx] = { ...newRooms[rIdx], availabilityCount: parseInt(e.target.value) };
+                                newRooms[rIdx] = { ...newRooms[rIdx], availability: parseNumberInput(e.target.value) };
                                 handleArrayChange('hotels', idx, 'rooms', newRooms);
                               }}
                               className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                             />
                           ) : (
-                            <p className="font-semibold text-gray-800 text-sm">{room.availability || 5} rooms</p>
+                            <div className="space-y-1">
+                              <p className="font-semibold text-gray-800 text-sm">
+                                {room.remaining ?? room.availability ?? 0} remaining
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {room.initialAvailability ?? room.availability ?? 0} total, {room.bookedCount ?? 0} booked
+                              </p>
+                            </div>
                           )}
                         </div>
                         <div className="col-span-2">
@@ -1394,10 +1451,10 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                           {isEditing ? (
                             <input
                               type="number"
-                              value={room.pricePerNight}
+                              value={Number.isFinite(Number(room.pricePerNight)) ? Number(room.pricePerNight) : 0}
                               onChange={(e) => {
                                 const newRooms = [...hotel.rooms];
-                                newRooms[rIdx] = { ...newRooms[rIdx], pricePerNight: parseInt(e.target.value) };
+                                newRooms[rIdx] = { ...newRooms[rIdx], pricePerNight: parseNumberInput(e.target.value) };
                                 handleArrayChange('hotels', idx, 'rooms', newRooms);
                               }}
                               className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
@@ -1599,12 +1656,12 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                         <input
                           type="number"
                           value={transport.availability}
-                          onChange={(e) => handleArrayChange('transportation', idx, 'availability', parseInt(e.target.value))}
+                          onChange={(e) => handleArrayChange('transportation', idx, 'availability', parseNumberInput(e.target.value))}
                           className="w-20 p-1 bg-gray-50 border border-gray-200 rounded-lg text-xs"
                         />
                       ) : (
                         <Badge variant="outline" className="text-emerald-600 border-emerald-100 bg-emerald-50">
-                          {transport.availability} Units
+                          {transport.remaining ?? transport.availability ?? 0} Units
                         </Badge>
                       )}
                     </div>
@@ -1628,11 +1685,16 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                           <input
                             type="number"
                             value={transport.capacity}
-                            onChange={(e) => handleArrayChange('transportation', idx, 'capacity', parseInt(e.target.value))}
+                            onChange={(e) => handleArrayChange('transportation', idx, 'capacity', parseNumberInput(e.target.value))}
                             className="w-full p-1 bg-gray-50 border border-gray-200 rounded-lg text-xs"
                           />
                         ) : (
-                          <p className="font-bold text-primary">{transport.capacity} Passengers</p>
+                          <div className="space-y-1">
+                            <p className="font-bold text-primary">{transport.capacity} Passengers</p>
+                            <p className="text-[10px] text-gray-500">
+                              {transport.initialAvailability ?? transport.availability ?? 0} total, {transport.bookedCount ?? 0} booked
+                            </p>
+                          </div>
                         )}
                       </div>
                       <div>
@@ -1641,7 +1703,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                           <input
                             type="number"
                             value={transport.price}
-                            onChange={(e) => handleArrayChange('transportation', idx, 'price', parseInt(e.target.value))}
+                            onChange={(e) => handleArrayChange('transportation', idx, 'price', parseNumberInput(e.target.value))}
                             className="w-full p-1 bg-gray-50 border border-gray-200 rounded-lg text-xs"
                           />
                         ) : (
@@ -1792,7 +1854,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                           value={item.pricePerPerson || ''}
                           onChange={(e) => {
                             const newPackages = [...(currentData.services?.foodPackages || [])];
-                            newPackages[i] = { ...newPackages[i], pricePerPerson: parseInt(e.target.value) || 0 };
+                            newPackages[i] = { ...newPackages[i], pricePerPerson: parseNumberInput(e.target.value) };
                             handleNestedChange('services', 'foodPackages', newPackages);
                           }}
                           className="text-xs bg-transparent border border-gray-200 rounded px-2 py-1 w-20"
@@ -2058,7 +2120,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   <input
                     type="number"
                     value={currentData.pricing?.basePrice || 0}
-                    onChange={(e) => handleNestedChange('pricing', 'basePrice', parseInt(e.target.value))}
+                    onChange={(e) => handleNestedChange('pricing', 'basePrice', parseNumberInput(e.target.value))}
                     className="text-5xl font-serif font-bold bg-transparent border-b border-white/30 text-white w-full"
                   />
                 ) : (
@@ -2082,7 +2144,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   <input
                     type="number"
                     value={currentData.pricing?.vipPrice || 0}
-                    onChange={(e) => handleNestedChange('pricing', 'vipPrice', parseInt(e.target.value))}
+                    onChange={(e) => handleNestedChange('pricing', 'vipPrice', parseNumberInput(e.target.value))}
                     className="text-5xl font-serif font-bold bg-transparent border-b border-white/30 text-white w-full"
                   />
                 ) : (
@@ -2124,7 +2186,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                       <input
                         type="number"
                         value={currentData.pricing?.earlyBird || 0}
-                        onChange={(e) => handleNestedChange('pricing', 'earlyBird', parseInt(e.target.value))}
+                        onChange={(e) => handleNestedChange('pricing', 'earlyBird', parseNumberInput(e.target.value))}
                         className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                       />
                     ) : (
@@ -2138,7 +2200,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                       <input
                         type="number"
                         value={currentData.pricing?.groupDiscount || 0}
-                        onChange={(e) => handleNestedChange('pricing', 'groupDiscount', parseInt(e.target.value))}
+                        onChange={(e) => handleNestedChange('pricing', 'groupDiscount', parseNumberInput(e.target.value))}
                         className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                       />
                     ) : (
@@ -2245,7 +2307,10 @@ export const OrganizerOverview: React.FC = () => {
   
   const activeListings = analytics?.festivals?.published || festivals.length;
   const totalAttendees = analytics?.bookings?.confirmed || 0;
-  const totalRevenue = analytics?.revenue?.total || 0;
+  // Split payment breakdown
+  const grossRevenue = analytics?.revenue?.gross || 0;
+  const platformFee = analytics?.revenue?.platformFee || 0;
+  const netEarnings = analytics?.revenue?.net || grossRevenue;
   
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) return `ETB ${(amount / 1000000).toFixed(1)}M`;
@@ -2300,16 +2365,21 @@ export const OrganizerOverview: React.FC = () => {
           </button>
        </div>
 
-       {/* Stats Grid */}
-       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[
+{/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+         {[
           { label: 'Active Listings', val: activeListings.toString(), icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
           { label: 'Global Attendees', val: formatNumber(totalAttendees), icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Aggregate Revenue', val: formatCurrency(totalRevenue), icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50' },
+          { label: 'Net Earnings (10% fee)', val: formatCurrency(netEarnings), icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50', tooltip: `Gross: ${formatCurrency(grossRevenue)} | Platform Fee: ${formatCurrency(platformFee)}` },
         ].map((stat, i) => (
-          <div key={`stat-${i}`} className="bg-white p-8 rounded-3xl border border-gray-100 flex items-center justify-between shadow-sm">
+          <div key={`stat-${i}`} className="bg-white p-8 rounded-3xl border border-gray-100 flex items-center justify-between shadow-sm relative group">
             <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{stat.label}</p><p className="text-2xl font-bold text-primary">{stat.val}</p></div>
             <div className={`p-4 ${stat.bg} rounded-[20px]`}><stat.icon className={`w-6 h-6 ${stat.color}`} /></div>
+            {stat.tooltip && (
+              <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs p-2 rounded whitespace-nowrap z-50">
+                {stat.tooltip}
+              </div>
+            )}
           </div>
         ))}
          <div className="bg-white p-8 rounded-3xl border border-gray-100 flex flex-col justify-between relative overflow-hidden shadow-sm">
@@ -2782,6 +2852,27 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
                     <div className="text-right">
                       <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Fixed Rate</p>
                       <p className="text-lg font-bold text-primary">ETB {booking.bookingDetails.transport.price}</p>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Fee Breakdown */}
+              {booking.status === 'confirmed' && (
+                <section className="bg-emerald-50 p-8 rounded-[40px] border border-emerald-100 space-y-4">
+                  <h3 className="text-lg font-serif font-bold text-emerald-800">Your Earnings Breakdown</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-white p-4 rounded-2xl">
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Gross Amount</p>
+                      <p className="text-xl font-bold text-primary">ETB {booking.totalPrice}</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-2xl">
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Platform Fee ({booking.commissionPercent || 10}%)</p>
+                      <p className="text-xl font-bold text-red-500">- ETB {booking.platformFee || 0}</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-2xl">
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">You Receive</p>
+                      <p className="text-xl font-bold text-emerald-600">ETB {booking.organizerAmount || (booking.totalPrice - (booking.platformFee || 0))}</p>
                     </div>
                   </div>
                 </section>
@@ -3298,6 +3389,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { language } = useLanguage();
 
   useEffect(() => {
     const fetchFestivals = async () => {
@@ -3425,11 +3517,11 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
             {festivals.map(festival => (
               <div key={festival._id} onClick={() => onManageEvent(festival._id)} className="bg-white border border-gray-100 rounded-[32px] overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 group cursor-pointer">
                 <div className="h-48 overflow-hidden">
-                  <img src={festival.coverImage || `https://picsum.photos/seed/${festival._id}/600/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={festival.name} />
+                  <img src={festival.coverImage || `https://picsum.photos/seed/${festival._id}/600/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={getLocalizedText(festival, 'name', language)} />
                 </div>
                 <div className="p-6 space-y-4">
                   <div className="flex justify-between items-start">
-                    <h4 className="text-lg font-serif font-bold text-primary leading-tight pr-4">{festival.name}</h4>
+                    <h4 className="text-lg font-serif font-bold text-primary leading-tight pr-4">{getLocalizedText(festival, 'name', language)}</h4>
                     <Badge variant={new Date(festival.startDate) > new Date() ? 'secondary' : 'success'}>
                       {new Date(festival.startDate) > new Date() ? 'Upcoming' : 'Live'}
                     </Badge>

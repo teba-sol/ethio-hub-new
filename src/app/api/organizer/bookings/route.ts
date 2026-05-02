@@ -3,6 +3,7 @@ import { connectDB } from '../../../../lib/mongodb';
 import Booking from '../../../../models/booking.model';
 import Festival from '../../../../models/festival.model';
 import * as jose from 'jose';
+import { attachAvailabilityToFestival, findRoomAvailability, findTransportAvailability } from '../../../../lib/festivalAvailability';
 
 export async function GET(request: NextRequest) {
   try {
@@ -61,11 +62,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const session = await (await connectDB()).startSession();
+
   try {
-    await connectDB();
+    await session.startTransaction();
 
     const token = request.cookies.get('sessionToken')?.value;
     if (!token) {
+      await session.abortTransaction();
       return new NextResponse(
         JSON.stringify({ success: false, message: 'Authentication required' }),
         { status: 401, headers: { 'content-type': 'application/json' } }
@@ -77,6 +81,7 @@ export async function PUT(request: NextRequest) {
     const organizerId = payload.userId as string;
 
     if (!organizerId) {
+      await session.abortTransaction();
       return new NextResponse(
         JSON.stringify({ success: false, message: 'Organizer ID not found in token' }),
         { status: 401, headers: { 'content-type': 'application/json' } }
@@ -87,14 +92,16 @@ export async function PUT(request: NextRequest) {
     const { bookingId, status, paymentStatus } = body;
 
     if (!bookingId) {
+      await session.abortTransaction();
       return new NextResponse(
         JSON.stringify({ success: false, message: 'Booking ID is required' }),
         { status: 400, headers: { 'content-type': 'application/json' } }
       );
     }
 
-    const booking = await Booking.findOne({ _id: bookingId, organizer: organizerId });
+    const booking = await Booking.findOne({ _id: bookingId, organizer: organizerId }).session(session);
     if (!booking) {
+      await session.abortTransaction();
       return new NextResponse(
         JSON.stringify({ success: false, message: 'Booking not found or you do not have permission' }),
         { status: 404, headers: { 'content-type': 'application/json' } }
@@ -102,9 +109,78 @@ export async function PUT(request: NextRequest) {
     }
 
     const updateData: any = {};
+
     if (status && ['pending', 'confirmed', 'cancelled', 'completed'].includes(status)) {
+      // Handle inventory restoration on cancellation
+      if (status === 'cancelled' && booking.status !== 'cancelled') {
+        // Restore ticket availability
+        if (booking.ticketType && booking.quantity > 0) {
+          await Festival.updateOne(
+            { _id: booking.festival, 'ticketTypes.name': booking.ticketType },
+            { $inc: { 'ticketTypes.$.available': booking.quantity } },
+            { arrayFilters: [{ 'elem.name': booking.ticketType }], session }
+          );
+        }
+
+        // Restore room availability
+        if (booking.bookingDetails?.room?.roomId) {
+          await Festival.updateOne(
+            { _id: booking.festival, 'hotels.rooms._id': booking.bookingDetails.room.roomId },
+            { $inc: { 'hotels.rooms.$.available': 1 } },
+            { arrayFilters: [{ 'elem._id': booking.bookingDetails.room.roomId }], session }
+          );
+        }
+
+        // Restore transport availability
+        if (booking.bookingDetails?.transport?.transportId) {
+          await Festival.updateOne(
+            { _id: booking.festival, 'transportation._id': booking.bookingDetails.transport.transportId },
+            { $inc: { 'transportation.$.available': 1 } },
+            { arrayFilters: [{ 'elem._id': booking.bookingDetails.transport.transportId }], session }
+          );
+        }
+      }
+
+      // Handle inventory check on confirmation
+      if (status === 'confirmed' && booking.status !== 'confirmed' && booking.status !== 'completed') {
+        const festival = await Festival.findById(booking.festival).session(session);
+        if (!festival) {
+          await session.abortTransaction();
+          return new NextResponse(
+            JSON.stringify({ success: false, message: 'Festival not found for this booking' }),
+            { status: 404, headers: { 'content-type': 'application/json' } }
+          );
+        }
+
+        const confirmedBookings = await Booking.find({
+          festival: booking.festival,
+          status: { $in: ['confirmed', 'completed'] },
+        }).lean().session(session);
+
+        const festivalWithAvailability = attachAvailabilityToFestival(festival, confirmedBookings);
+        const selectedRoomAvailability = findRoomAvailability(festivalWithAvailability, booking.bookingDetails?.room);
+        const selectedTransportAvailability = findTransportAvailability(festivalWithAvailability, booking.bookingDetails?.transport);
+
+        if (booking.bookingDetails?.room && (!selectedRoomAvailability || selectedRoomAvailability.available <= 0)) {
+          await session.abortTransaction();
+          return new NextResponse(
+            JSON.stringify({ success: false, message: 'The selected room is no longer available' }),
+            { status: 409, headers: { 'content-type': 'application/json' } }
+          );
+        }
+
+        if (booking.bookingDetails?.transport && (!selectedTransportAvailability || selectedTransportAvailability.available <= 0)) {
+          await session.abortTransaction();
+          return new NextResponse(
+            JSON.stringify({ success: false, message: 'The selected car is no longer available' }),
+            { status: 409, headers: { 'content-type': 'application/json' } }
+          );
+        }
+      }
+
       updateData.status = status;
     }
+
     if (paymentStatus && ['pending', 'paid', 'refunded'].includes(paymentStatus)) {
       updateData.paymentStatus = paymentStatus;
     }
@@ -112,8 +188,10 @@ export async function PUT(request: NextRequest) {
     const updatedBooking = await Booking.findByIdAndUpdate(
       bookingId,
       { $set: updateData },
-      { new: true }
+      { new: true, session }
     ).populate('tourist', 'name email').populate('festival', 'name');
+
+    await session.commitTransaction();
 
     return new NextResponse(
       JSON.stringify({ success: true, booking: updatedBooking }),
@@ -121,6 +199,7 @@ export async function PUT(request: NextRequest) {
     );
 
   } catch (error: any) {
+    await session.abortTransaction();
     if (error.code === 'ERR_JWT_EXPIRED' || error.code === 'ERR_JWS_INVALID') {
       return new NextResponse(
         JSON.stringify({ success: false, message: 'Authentication failed: Invalid token' }),
@@ -138,5 +217,7 @@ export async function PUT(request: NextRequest) {
       JSON.stringify({ success: false, message: 'Internal Server Error' }),
       { status: 500, headers: { 'content-type': 'application/json' } }
     );
+  } finally {
+    session.endSession();
   }
 }

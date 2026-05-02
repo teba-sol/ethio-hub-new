@@ -7,17 +7,19 @@ import {
   Heart, Settings, HelpCircle, Ticket
 } from 'lucide-react';
 import { Header, Footer } from '../Layout';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const TouristLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   const menuItems = [
-    { path: '/dashboard/tourist/orders', name: 'My Orders', icon: ShoppingBag },
-    { path: '/dashboard/tourist/bookings', name: 'My Bookings', icon: Ticket },
-    { path: '/dashboard/tourist/payments', name: 'Payments', icon: CreditCard },
-    { path: '/dashboard/tourist/wishlist', name: 'Wish List', icon: Heart },
-    { path: '/dashboard/tourist/settings', name: 'Settings', icon: Settings },
-    { path: '/dashboard/tourist/help', name: 'Help Center', icon: HelpCircle },
+    { path: '/dashboard/tourist/orders', nameKey: 'dashboard.myOrders', icon: ShoppingBag },
+    { path: '/dashboard/tourist/bookings', nameKey: 'dashboard.myBookings', icon: Ticket },
+    { path: '/dashboard/tourist/payments', nameKey: 'dashboard.payments', icon: CreditCard },
+    { path: '/dashboard/tourist/wishlist', nameKey: 'dashboard.wishlist', icon: Heart },
+    { path: '/dashboard/tourist/settings', nameKey: 'dashboard.settings', icon: Settings },
+    { path: '/dashboard/tourist/help', nameKey: 'dashboard.helpCenter', icon: HelpCircle },
   ];
 
   return (
@@ -30,7 +32,7 @@ export const TouristLayout: React.FC<{ children?: React.ReactNode }> = ({ childr
             <aside className="w-full lg:w-64 shrink-0">
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-24">
                 <div className="p-4 bg-ethio-dark text-white">
-                  <h2 className="font-serif font-bold text-lg">My Dashboard</h2>
+                  <h2 className="font-serif font-bold text-lg">{t('dashboard.overview')}</h2>
                   <p className="text-xs text-gray-400">Manage your account</p>
                 </div>
                 <nav className="p-2 space-y-1">
@@ -47,7 +49,7 @@ export const TouristLayout: React.FC<{ children?: React.ReactNode }> = ({ childr
                         }`}
                       >
                         <item.icon className={`w-5 h-5 ${isActive ? 'text-primary' : 'text-gray-400'}`} />
-                        {item.name}
+                        {t(item.nameKey)}
                       </Link>
                     );
                   })}

@@ -4,8 +4,15 @@ import { connectDB } from '@/lib/mongodb';
 import Product from '@/models/artisan/product.model';
 import User from '@/models/User';
 import { cookies } from 'next/headers';
+import { isProductCompleteForReview } from '@/lib/reviewAutomation';
+import { queueAdminReviewEmail } from '@/lib/adminApproval';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
+
+const textValue = (...values: unknown[]) => {
+  const value = values.find((item) => typeof item === 'string' && item.trim());
+  return typeof value === 'string' ? value.trim() : '';
+};
 
 async function getAuthenticatedUser() {
   try {
@@ -89,9 +96,14 @@ export async function PUT(
 
     const {
       name,
+      name_en,
+      name_am,
       images,
       description,
+      description_en,
+      description_am,
       material,
+      materials,
       handmadeBy,
       region,
       careInstructions,
@@ -108,10 +120,26 @@ export async function PUT(
       status,
     } = body;
 
-    if (name !== undefined) product.name = name;
+    const normalizedNameEn = textValue(name_en, name);
+    const normalizedNameAm = textValue(name_am);
+    const normalizedDescriptionEn = textValue(description_en, description);
+    const normalizedDescriptionAm = textValue(description_am);
+
+    if (!normalizedNameEn || !normalizedNameAm || !normalizedDescriptionEn || !normalizedDescriptionAm) {
+      return NextResponse.json(
+        { message: 'English and Amharic name and description are required.' },
+        { status: 400 }
+      );
+    }
+
+    product.name = normalizedNameEn;
+    product.name_en = normalizedNameEn;
+    product.name_am = normalizedNameAm;
     if (images !== undefined) product.images = images;
-    if (description !== undefined) product.description = description;
-    if (material !== undefined) product.material = material;
+    product.description = normalizedDescriptionEn;
+    product.description_en = normalizedDescriptionEn;
+    product.description_am = normalizedDescriptionAm;
+    if (material !== undefined || materials !== undefined) product.material = material ?? materials;
     if (handmadeBy !== undefined) product.handmadeBy = handmadeBy;
     if (region !== undefined) product.region = region;
     if (careInstructions !== undefined) product.careInstructions = careInstructions;
@@ -137,7 +165,25 @@ export async function PUT(
       }
     }
 
+    if (
+      product.verificationStatus !== 'Pending' &&
+      isProductCompleteForReview(product)
+    ) {
+      product.verificationStatus = 'Pending';
+      product.rejectionReason = undefined;
+    }
+
     await product.save();
+
+    if (product.verificationStatus === 'Pending') {
+      await queueAdminReviewEmail({
+        subjectType: 'product',
+        subjectId: product._id.toString(),
+        subjectLabel: product.name || 'Product',
+        submittedByEmail: user.email || 'unknown@unknown.local',
+        submittedByName: user.name || 'Artisan',
+      }).catch(() => null);
+    }
 
     return NextResponse.json({
       message: 'Product updated successfully',

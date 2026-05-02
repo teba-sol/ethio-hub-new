@@ -11,13 +11,16 @@ import {
 import apiClient from '@/lib/apiClient';
 import { Festival } from '@/types';
 import { useBooking } from '@/context/BookingContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { getLocalizedText } from '@/utils/getLocalizedText';
 
 export default function EventPage() {
   const params = useParams();
   const router = useRouter();
   const eventId = params?.id as string;
   
-  const { setEvent } = useBooking();
+   const { setEvent } = useBooking();
+   const { language, t } = useLanguage();
   
   const [festival, setFestival] = useState<Festival | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,13 +85,13 @@ export default function EventPage() {
     );
   }
 
-  if (!festival) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <p className="text-white">Event not found</p>
-      </div>
-    );
-  }
+   if (!festival) {
+     return (
+       <div className="min-h-screen flex items-center justify-center bg-black">
+         <p className="text-white">{t('festival.eventNotFound')}</p>
+       </div>
+     );
+   }
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', { 
@@ -114,7 +117,7 @@ export default function EventPage() {
         >
           <img 
             src={getActiveImage()} 
-            alt={festival.name}
+            alt={getLocalizedText(festival, 'name', language)}
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
@@ -129,27 +132,27 @@ export default function EventPage() {
           )}
         </div>
         
-        {/* Back button */}
-        <div className="absolute top-6 left-6 z-10">
-          <Link href="/festivals" className="flex items-center gap-2 text-white/80 hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-bold text-sm uppercase tracking-widest">All Events</span>
-          </Link>
-        </div>
+         {/* Back button */}
+         <div className="absolute top-6 left-6 z-10">
+           <Link href="/festivals" className="flex items-center gap-2 text-white/80 hover:text-white">
+             <ArrowLeft className="w-5 h-5" />
+             <span className="text-sm font-bold uppercase tracking-widest">{t('festival.allEvents')}</span>
+           </Link>
+         </div>
         
         {/* Content overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
           <div className="max-w-7xl mx-auto">
             {/* Badge */}
-            {festival.isVerified && (
-              <div className="inline-flex items-center gap-1 bg-secondary px-3 py-1 rounded-full mb-4">
-                <Star className="w-3 h-3 text-primary fill-primary" />
-                <span className="text-xs font-bold text-primary uppercase">Vetted Experience</span>
-              </div>
-            )}
+             {festival.isVerified && (
+               <div className="inline-flex items-center gap-1 bg-secondary px-3 py-1 rounded-full mb-4">
+                 <Star className="w-3 h-3 text-primary fill-primary" />
+                 <span className="text-xs font-bold text-primary uppercase">{t('festival.vettedExperience')}</span>
+               </div>
+             )}
             
             <h1 className="text-4xl md:text-6xl font-serif font-bold mb-4 max-w-3xl">
-              {festival.name}
+              {getLocalizedText(festival, 'name', language)}
             </h1>
             
             <div className="flex flex-wrap gap-6 text-white/90">
@@ -163,12 +166,12 @@ export default function EventPage() {
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-secondary" />
-                <span className="font-bold">{festival.locationName}</span>
+                <span className="font-bold">{getLocalizedText(festival.location, 'name', language)}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-secondary" />
-                <span className="font-bold">{festival.ticketsAvailable} spots left</span>
-              </div>
+               <div className="flex items-center gap-2">
+                 <Users className="w-5 h-5 text-secondary" />
+                 <span className="font-bold">{t('festival.spotsLeft').replace('{count}', String(festival.ticketsAvailable || 0))}</span>
+               </div>
             </div>
           </div>
         </div>
@@ -208,8 +211,8 @@ export default function EventPage() {
                   onClick={() => openLightbox(0)}
                   className="flex-shrink-0 w-24 h-16 md:w-32 md:h-20 rounded-lg bg-white/10 border border-white/20 flex flex-col items-center justify-center cursor-pointer hover:bg-white/20 transition-colors"
                 >
-                  <Play className="w-6 h-6 text-white" />
-                  <span className="text-[10px] font-bold text-white mt-1">View All</span>
+                   <Play className="w-6 h-6 text-white" />
+                   <span className="text-[10px] font-bold text-white mt-1">{t('common.viewAll')}</span>
                 </button>
               )}
             </div>
@@ -222,35 +225,35 @@ export default function EventPage() {
         <div className="max-w-7xl mx-auto px-6 py-12">
           {/* Quick Info Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-            <div className="bg-white p-6 rounded-2xl">
-              <h3 className="font-bold text-primary mb-2">Starting from</h3>
-              <p className="text-4xl font-bold text-primary">${festival.baseTicketPrice}</p>
-              <p className="text-gray-500 text-sm">per person</p>
-            </div>
-            <div className="bg-white p-6 rounded-2xl">
-              <h3 className="font-bold text-primary mb-2">Available Tickets</h3>
-              <p className="text-4xl font-bold text-primary">{festival.ticketsAvailable}</p>
-              <p className="text-gray-500 text-sm">spots available</p>
-            </div>
-            <div className="bg-white p-6 rounded-2xl">
-              <h3 className="font-bold text-primary mb-2">Duration</h3>
-              <p className="text-4xl font-bold text-primary">{duration}</p>
-              <p className="text-gray-500 text-sm">days</p>
-            </div>
-            <div className="bg-white p-6 rounded-2xl">
-              <h3 className="font-bold text-primary mb-2">Category</h3>
-              <p className="text-2xl font-bold text-primary capitalize">Cultural</p>
-              <p className="text-gray-500 text-sm">event type</p>
-            </div>
+               <div className="bg-white p-6 rounded-2xl">
+                 <h3 className="font-bold text-primary mb-2">{t('festival.startingFrom')}</h3>
+                 <p className="text-4xl font-bold text-primary">${festival.baseTicketPrice}</p>
+                 <p className="text-gray-500 text-sm">{t('festival.perPerson')}</p>
+               </div>
+             <div className="bg-white p-6 rounded-2xl">
+               <h3 className="font-bold text-primary mb-2">{t('festival.availableTickets')}</h3>
+               <p className="text-4xl font-bold text-primary">{festival.ticketsAvailable}</p>
+               <p className="text-gray-500 text-sm">{t('festival.spotsAvailable')}</p>
+             </div>
+             <div className="bg-white p-6 rounded-2xl">
+               <h3 className="font-bold text-primary mb-2">{t('festival.duration')}</h3>
+               <p className="text-4xl font-bold text-primary">{duration}</p>
+               <p className="text-gray-500 text-sm">{t('festival.days')}</p>
+             </div>
+             <div className="bg-white p-6 rounded-2xl">
+               <h3 className="font-bold text-primary mb-2">{t('common.category')}</h3>
+               <p className="text-2xl font-bold text-primary capitalize">Cultural</p>
+               <p className="text-gray-500 text-sm">{t('festival.eventType')}</p>
+             </div>
           </div>
 
           {/* Tabs */}
           <div className="flex overflow-x-auto gap-2 mb-8 pb-2">
             {[
-              { id: 'about', label: 'About', icon: Star },
-              { id: 'schedule', label: 'Schedule', icon: Calendar },
-              { id: 'location', label: 'Location', icon: MapPin },
-              { id: 'organizer', label: 'Organizer', icon: Shield },
+              { id: 'about', label: t('festival.tabs.about'), icon: Star },
+              { id: 'schedule', label: t('festival.tabs.schedule'), icon: Calendar },
+              { id: 'location', label: t('festival.tabs.location'), icon: MapPin },
+              { id: 'organizer', label: t('festival.tabs.organizer'), icon: Shield },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -272,16 +275,16 @@ export default function EventPage() {
             {activeTab === 'about' && (
               <div className="space-y-8">
                 <div>
-                  <h2 className="text-2xl font-bold text-primary mb-4">About This Experience</h2>
-                  <p className="text-gray-600 leading-relaxed text-lg">{festival.fullDescription}</p>
+                   <h2 className="text-2xl font-bold text-primary mb-4">{t('festival.aboutThisExperience')}</h2>
+                  <p className="text-gray-600 leading-relaxed text-lg">{getLocalizedText(festival, 'fullDescription', language)}</p>
                 </div>
                 
-                {festival.shortDescription && (
-                  <div className="bg-ethio-bg p-6 rounded-2xl">
-                    <h3 className="font-bold text-primary mb-2">Quick Overview</h3>
-                    <p className="text-gray-600">{festival.shortDescription}</p>
-                  </div>
-                )}
+                 {festival.shortDescription_en && (
+                   <div className="bg-ethio-bg p-6 rounded-2xl">
+                     <h3 className="font-bold text-primary mb-2">{t('festival.quickOverview')}</h3>
+                     <p className="text-gray-600">{getLocalizedText(festival, 'shortDescription', language)}</p>
+                   </div>
+                 )}
 
                 {/* What's Included */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -309,16 +312,16 @@ export default function EventPage() {
                   )}
                   
                   {festival.transportation && festival.transportation.length > 0 && (
-                    <div>
-                      <h3 className="font-bold text-primary mb-4 flex items-center gap-2">
-                        <Bus className="w-5 h-5 text-secondary" />
-                        Transport Options
-                      </h3>
+                     <div>
+                       <h3 className="font-bold text-primary mb-4 flex items-center gap-2">
+                         <Bus className="w-5 h-5 text-secondary" />
+                         {t('festival.transportOptions')}
+                       </h3>
                       <ul className="space-y-3">
                         {festival.transportation.map((transport: any, idx: number) => (
                           <li key={idx} className="flex items-center gap-3 text-gray-600">
                             <Bus className="w-4 h-4 text-blue-500" />
-                            {transport.type} - ${transport.price}
+                            {getLocalizedText(transport, 'type', language)} - ${transport.price}
                           </li>
                         ))}
                       </ul>
@@ -326,68 +329,68 @@ export default function EventPage() {
                   )}
                 </div>
 
-                {/* Policies */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t">
-                  <div className="bg-red-50 p-6 rounded-2xl">
-                    <h3 className="font-bold text-red-800 mb-2">Cancellation Policy</h3>
-                    <p className="text-red-700 text-sm">{festival.cancellationPolicy || 'Standard cancellation policy applies'}</p>
-                  </div>
-                  <div className="bg-blue-50 p-6 rounded-2xl">
-                    <h3 className="font-bold text-blue-800 mb-2">Age Restriction</h3>
-                    <p className="text-blue-700 text-sm">{festival.ageRestriction || 'All ages welcome'}</p>
-                  </div>
-                </div>
+                 {/* Policies */}
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t">
+                   <div className="bg-red-50 p-6 rounded-2xl">
+                     <h3 className="font-bold text-red-800 mb-2">{t('festival.cancellationPolicyTitle')}</h3>
+                     <p className="text-red-700 text-sm">{getLocalizedText(festival, 'cancellation', language) || t('festival.standardCancellation')}</p>
+                   </div>
+                   <div className="bg-blue-50 p-6 rounded-2xl">
+                     <h3 className="font-bold text-blue-800 mb-2">{t('festival.ageRestrictionTitle')}</h3>
+                     <p className="text-blue-700 text-sm">{festival.ageRestriction || t('festival.allAgesWelcome')}</p>
+                   </div>
+                 </div>
               </div>
             )}
 
-            {activeTab === 'schedule' && (
-              <div>
-                <h2 className="text-2xl font-bold text-primary mb-6">Event Schedule</h2>
+             {activeTab === 'schedule' && (
+               <div>
+                 <h2 className="text-2xl font-bold text-primary mb-6">{t('festival.eventSchedule')}</h2>
                 {festival.schedule && festival.schedule.length > 0 ? (
                   <div className="space-y-6">
                     {festival.schedule.map((day: any, idx: number) => (
                       <div key={idx} className="flex gap-6 p-6 bg-ethio-bg rounded-2xl">
-                        <div className="w-20 h-20 bg-primary rounded-2xl flex flex-col items-center justify-center text-white flex-shrink-0">
-                          <span className="text-xs font-bold uppercase">Day</span>
-                          <span className="text-3xl font-bold">{day.day}</span>
-                        </div>
+                         <div className="w-20 h-20 bg-primary rounded-2xl flex flex-col items-center justify-center text-white flex-shrink-0">
+                           <span className="text-xs font-bold uppercase">{t('festival.dayLabel')}</span>
+                           <span className="text-3xl font-bold">{day.day}</span>
+                         </div>
                         <div className="flex-1">
-                          <h3 className="text-xl font-bold text-primary mb-2">{day.title}</h3>
-                          <p className="text-gray-600">{day.activities}</p>
+                          <h3 className="text-xl font-bold text-primary mb-2">{getLocalizedText(day, 'title', language)}</h3>
+                          <p className="text-gray-600">{getLocalizedText(day, 'activities', language)}</p>
                         </div>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="text-center py-12 text-gray-500">
-                    <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Schedule will be announced soon</p>
-                  </div>
-                )}
+                 ) : (
+                   <div className="text-center py-12 text-gray-500">
+                     <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                     <p>{t('festival.scheduleComingSoon')}</p>
+                   </div>
+                 )}
               </div>
             )}
 
-            {activeTab === 'location' && (
-              <div>
-                <h2 className="text-2xl font-bold text-primary mb-6">Event Location</h2>
+             {activeTab === 'location' && (
+               <div>
+                 <h2 className="text-2xl font-bold text-primary mb-6">{t('festival.eventLocation')}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
                     <div className="bg-ethio-bg p-6 rounded-2xl mb-6">
                       <div className="flex items-center gap-3 mb-4">
                         <MapPin className="w-6 h-6 text-secondary" />
                         <div>
-                          <h3 className="font-bold text-primary">{festival.locationName}</h3>
+                               <h3 className="font-bold text-primary">{getLocalizedText(festival.location, 'name', language)}</h3>
                           <p className="text-gray-500 text-sm">{festival.address || 'Ethiopia'}</p>
                         </div>
                       </div>
-                      <a 
-                        href={`https://maps.google.com/?q=${encodeURIComponent(festival.locationName)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline text-sm font-bold"
-                      >
-                        View on Google Maps →
-                      </a>
+                       <a 
+                         href={`https://maps.google.com/?q=${encodeURIComponent(getLocalizedText(festival.location, 'name', language))}`}
+                         target="_blank"
+                         rel="noopener noreferrer"
+                         className="text-primary hover:underline text-sm font-bold"
+                       >
+                         {t('festival.viewOnMap')} →
+                       </a>
                     </div>
                   </div>
                   <div className="h-[400px] rounded-2xl overflow-hidden">
@@ -398,7 +401,7 @@ export default function EventPage() {
                       scrolling="no" 
                       marginHeight={0} 
                       marginWidth={0} 
-                      src={`https://maps.google.com/maps?q=${encodeURIComponent(festival.locationName)}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
+                       src={`https://maps.google.com/maps?q=${encodeURIComponent(getLocalizedText(festival.location, 'name', language))}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
                       className="w-full h-full grayscale"
                     ></iframe>
                   </div>
@@ -406,9 +409,9 @@ export default function EventPage() {
               </div>
             )}
 
-            {activeTab === 'organizer' && (
-              <div>
-                <h2 className="text-2xl font-bold text-primary mb-6">Event Organizer</h2>
+             {activeTab === 'organizer' && (
+               <div>
+                 <h2 className="text-2xl font-bold text-primary mb-6">{t('festival.eventOrganizer')}</h2>
                 {(festival as any).organizer ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="bg-ethio-bg p-6 rounded-2xl">
@@ -417,8 +420,8 @@ export default function EventPage() {
                           {(festival as any).organizer?.name?.charAt(0) || 'O'}
                         </div>
                         <div>
-                          <h3 className="text-xl font-bold text-primary">{(festival as any).organizer?.name}</h3>
-                          <p className="text-gray-500">Verified Organizer</p>
+                           <h3 className="text-xl font-bold text-primary">{(festival as any).organizer?.name}</h3>
+                           <p className="text-gray-500">{t('festival.verifiedOrganizer')}</p>
                         </div>
                       </div>
                       {(festival as any).organizer?.description && (
@@ -448,12 +451,12 @@ export default function EventPage() {
                       )}
                     </div>
                   </div>
-                ) : (
-                  <div className="text-center py-12 text-gray-500">
-                    <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Organizer information will be available soon</p>
-                  </div>
-                )}
+                 ) : (
+                   <div className="text-center py-12 text-gray-500">
+                     <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                     <p>{t('festival.organizerInfoSoon')}</p>
+                   </div>
+                 )}
               </div>
             )}
           </div>
@@ -508,7 +511,7 @@ export default function EventPage() {
           <div className="max-w-5xl max-h-[80vh] px-20" onClick={() => nextImage()}>
             <img 
               src={allImages[lightboxIndex]} 
-              alt={`${festival.name} - Image ${lightboxIndex + 1}`}
+              alt={`${getLocalizedText(festival, 'name', language)} - Image ${lightboxIndex + 1}`}
               className="max-w-full max-h-[80vh] object-contain cursor-pointer"
             />
             <div className="text-center text-white mt-4">

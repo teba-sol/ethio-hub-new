@@ -6,6 +6,8 @@ import { ArrowLeft, CreditCard, Smartphone, Lock, Check } from 'lucide-react';
 import { useBooking } from '@/context/BookingContext';
 import apiClient from '@/lib/apiClient';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { getLocalizedText } from '@/utils/getLocalizedText';
 
 export default function CheckoutPage() {
   const params = useParams();
@@ -15,6 +17,7 @@ export default function CheckoutPage() {
   const { user, isAuthenticated } = useAuth();
   const {
     ticketSelection,
+    selectedHotel,
     selectedRoom,
     checkIn,
     checkOut,
@@ -22,22 +25,32 @@ export default function CheckoutPage() {
     getTicketTotal,
     getHotelTotal,
     getTransportTotal,
+    getServiceFee,
     getGrandTotal,
     setBookingId,
     clearBooking,
   } = useBooking();
+  const { language } = useLanguage();
   
   const [loading, setLoading] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<'chapa' | 'telebirr' | null>(null);
+  const [hasHotel] = useState(() => !!(selectedRoom && checkIn && checkOut));
 
   const hotelNights = checkIn && checkOut 
     ? Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))
     : 0;
   
   const grandTotal = getGrandTotal();
+  const serviceFee = getServiceFee();
+  const baseTotal = getTicketTotal() + getHotelTotal() + getTransportTotal();
 
   const handlePayment = async () => {
     if (!selectedMethod) return;
+    
+    if (!grandTotal || grandTotal <= 0) {
+      alert('Invalid total amount. Please check your booking.');
+      return;
+    }
     
     setLoading(true);
     
@@ -49,6 +62,26 @@ export default function CheckoutPage() {
         quantity: ticketSelection?.quantity,
         totalPrice: grandTotal,
         currency: 'USD',
+        hasHotelBooking: hasHotel,
+        touristServiceFee: serviceFee,
+        bookingDetails: {
+          ...(selectedRoom ? {
+            room: {
+              hotelId: selectedHotel?._id || selectedHotel?.id || '',
+              roomId: selectedRoom._id || selectedRoom.id,
+              hotelName: selectedHotel?.name || '',
+              roomName: selectedRoom.name,
+              roomPrice: selectedRoom.pricePerNight,
+            },
+          } : {}),
+          ...(selectedTransport ? {
+            transport: {
+              transportId: selectedTransport._id || selectedTransport.id,
+              type: selectedTransport.type,
+              price: selectedTransport.price,
+            },
+          } : {}),
+        },
         contactInfo: {
           fullName: user?.name || 'Guest',
           email: user?.email || 'guest@email.com',
@@ -56,30 +89,71 @@ export default function CheckoutPage() {
         },
       });
 
-      if (bookingResponse.success) {
-        const bookingId = bookingResponse.booking?._id;
+      if (bookingResponse.success && bookingResponse.booking?._id) {
+        const bookingId = bookingResponse.booking._id;
+        console.log('Booking created:', bookingId);
         setBookingId(bookingId);
+        
+        // Store in session storage for recovery
+        try {
+          sessionStorage.setItem('pendingBooking', bookingId);
+        } catch (e) {
+          console.log('Session storage not available');
+        }
         
         if (selectedMethod === 'chapa') {
           // Initialize Chapa payment
+          console.log('Initializing Chapa payment for:', bookingId, 'amount:', grandTotal);
+          
           const response = await fetch('/api/payment/chapa', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               bookingId: bookingId,
-              amount: grandTotal,
+              amount: Number(grandTotal),
               currency: 'ETB',
               email: user?.email || 'guest@email.com',
-              firstName: user?.name?.split(' ')[0] || 'Guest',
-              lastName: user?.name?.split(' ')[1] || 'User',
+              firstName: String(user?.name?.split(' ')[0] || 'Guest'),
+              lastName: String(user?.name?.split(' ')[1] || 'User'),
               phone: '0912345678',
               description: `Festival booking`,
             }),
           });
           
           const data = await response.json();
-          if (data.success && data.checkoutUrl) {
-            window.open(data.checkoutUrl, '_blank');
+          console.log('Chapa init response:', data);
+          
+          if (data.success) {
+            // Mark booking as paid immediately (before redirect)
+            try {
+              const confirmResponse = await fetch('/api/tourist/bookings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  bookingId: bookingId,
+                  action: 'confirm',
+                  paymentMethod: 'chapa',
+                  paymentStatus: 'paid'
+                }),
+              });
+              const confirmData = await confirmResponse.json();
+              if (!confirmResponse.ok || !confirmData.success) {
+                alert(confirmData.message || 'The selected room or car is no longer available.');
+                setLoading(false);
+                return;
+              }
+              console.log('Booking confirmed as paid');
+            } catch (e) {
+              console.log('Confirm error:', e);
+            }
+            
+            // If we have a checkout URL, go to Chapa, otherwise show success
+            if (data.checkoutUrl) {
+              window.location.href = data.checkoutUrl;
+            } else {
+              // No checkout URL - show success directly
+              router.push(`/pay-result?status=success&bookingId=${bookingId}`);
+            }
           } else {
             // If Chapa fails, just confirm
             router.push(`/payment-success?bookingId=${bookingId}&status=success`);
@@ -137,7 +211,7 @@ export default function CheckoutPage() {
               {selectedRoom && (
                 <div className="flex justify-between">
                   <div>
-                    <p className="font-medium">{selectedRoom.name}</p>
+                     <p className="font-medium">{getLocalizedText(selectedRoom, 'name', language)}</p>
                     <p className="text-sm text-gray-500">{hotelNights} night{hotelNights > 1 ? 's' : ''}</p>
                   </div>
                   <span className="font-bold">${getHotelTotal()}</span>
@@ -147,9 +221,19 @@ export default function CheckoutPage() {
               {selectedTransport && (
                 <div className="flex justify-between">
                   <div>
-                    <p className="font-medium">{selectedTransport.type}</p>
+                     <p className="font-medium">{getLocalizedText(selectedTransport, 'type', language)}</p>
                   </div>
                   <span className="font-bold">${getTransportTotal()}</span>
+                </div>
+              )}
+              
+              {serviceFee > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <div>
+                    <p className="font-medium">Service Fee (5%)</p>
+                    <p className="text-xs text-gray-400">Platform processing fee</p>
+                  </div>
+                  <span className="font-bold">+${serviceFee}</span>
                 </div>
               )}
               

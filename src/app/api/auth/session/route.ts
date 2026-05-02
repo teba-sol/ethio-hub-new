@@ -37,6 +37,7 @@ return new NextResponse(
           name: user.name, 
           email: user.email, 
           role: user.role,
+          isVerified: !!user.isVerified,
           artisanStatus: user.artisanStatus,
           organizerStatus: user.organizerStatus,
           organizerProfile: user.organizerProfile || null,

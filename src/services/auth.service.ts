@@ -19,6 +19,18 @@ export const login = async (credentials: { email: string; password: string }) =>
   if (!isValidPassword) {
     throw new Error('Invalid credentials');
   }
+
+  if (!user.isVerified) {
+    throw new Error("Please verify your email before logging in");
+  }
+
+  if (user.adminApprovalStatus === 'PENDING_ADMIN_APPROVAL') {
+    throw new Error('Your account is pending admin approval.');
+  }
+
+  if (user.adminApprovalStatus === 'REJECTED') {
+    throw new Error('Your account was rejected by admin review.');
+  }
   
   const token = await new SignJWT({ 
     userId: user._id.toString(),
@@ -40,6 +52,7 @@ return {
       email: freshUser.email, 
       role: freshUser.role, 
       name: freshUser.name,
+      isVerified: !!freshUser.isVerified,
       artisanStatus: freshUser.artisanStatus || 'Not Submitted',
       organizerStatus: freshUser.organizerStatus || 'Not Submitted',
       organizerProfile: freshUser.organizerProfile || null,
@@ -63,6 +76,7 @@ export const register = async (userData: { email: string; password: string; name
     ...userData,
     password: hashedPassword,
     role,
+    isVerified: false,
   };
 
   if (role === 'organizer') {
@@ -90,6 +104,7 @@ export const register = async (userData: { email: string; password: string; name
       email: newUser.email, 
       role: newUser.role, 
       name: newUser.name,
+      isVerified: !!newUser.isVerified,
       artisanStatus: newUser.artisanStatus || 'Not Submitted',
       organizerStatus: newUser.organizerStatus || 'Not Submitted',
     } 

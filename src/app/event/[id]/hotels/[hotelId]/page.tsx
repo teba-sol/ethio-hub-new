@@ -7,22 +7,23 @@ import {
   ArrowLeft, MapPin, Star, Wifi, Car, Coffee as CoffeeIcon, Dumbbell, Waves, 
   Utensils, Sparkles, Check, X, ChevronLeft, ChevronRight, Users, Maximize,
   BedDouble, Calendar, ChevronDown, Minus, Plus, ExternalLink, Facebook, Twitter,
+  AlertCircle,
   Linkedin, Mail, Shield, Image as ImageIcon
 } from 'lucide-react';
 import { Button } from '@/components/UI';
 import { useBooking } from '@/context/BookingContext';
-import { PriceSummary } from '@/components/booking/PriceSummary';
+import { useLanguage } from '@/context/LanguageContext';
 import apiClient from '@/lib/apiClient';
-import { Festival, HotelAccommodation, RoomType, FoodPackage } from '@/types';
+import { getLocalizedText } from '@/utils/getLocalizedText';
+import { Festival, HotelAccommodation, RoomType } from '@/types';
 
 export default function HotelDetailPage() {
   const params = useParams();
   const router = useRouter();
   const eventId = params?.id as string;
   const hotelId = params?.hotelId as string;
-  
+   
   const { 
-    selectedHotel, 
     setSelectedHotel,
     selectedRoom,
     setSelectedRoom,
@@ -33,10 +34,10 @@ export default function HotelDetailPage() {
     guests,
     setGuests,
     selectedFoodPackages,
-    toggleFoodPackage,
+    selectFoodPackage,
     clearFoodPackages
   } = useBooking();
-  
+  const { language, t } = useLanguage();
   const [festival, setFestival] = useState<Festival | null>(null);
   const [hotel, setHotel] = useState<HotelAccommodation | null>(null);
   const [allHotels, setAllHotels] = useState<HotelAccommodation[]>([]);
@@ -47,29 +48,51 @@ export default function HotelDetailPage() {
   const [showGuestSelector, setShowGuestSelector] = useState(false);
   const [showEnquiryModal, setShowEnquiryModal] = useState(false);
   const [enquiryMessage, setEnquiryMessage] = useState('');
+  const [guestSelectionConfirmed, setGuestSelectionConfirmed] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  const normalizeHotel = (hotelData: any, hotelIndex = 0): HotelAccommodation => ({
+    ...hotelData,
+    id: hotelData._id || hotelData.id || `hotel-${hotelIndex}`,
+    rooms: (hotelData.rooms || []).map((room: any, roomIndex: number) => ({
+      ...room,
+      id: room._id || room.id || `room-${hotelIndex}-${roomIndex}`,
+    })),
+  });
+
+  useEffect(() => {
+    setSelectedRoom(null);
+    clearFoodPackages();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const festRes = await apiClient.get(`/api/festivals/${eventId}`);
+        const [festRes, availabilityRes] = await Promise.all([
+          apiClient.get(`/api/festivals/${eventId}`),
+          apiClient.get(`/api/festivals/${eventId}/availability`),
+        ]);
         const festivalData = festRes?.festival || festRes;
         
         if (festivalData) {
           setFestival(festivalData);
-          setAllHotels(festivalData.hotels || []);
+          const normalizedHotels = ((availabilityRes?.hotels || festivalData.hotels) || []).map((hotel: any, index: number) =>
+            normalizeHotel(hotel, index)
+          );
+
+          setAllHotels(normalizedHotels);
           
           // Find the specific hotel - normalize IDs first
-          const hotels = festivalData.hotels || [];
-          let hotelData = hotels.find((h: any) => {
-            const hId = h._id || h.id || '';
+          let hotelData = normalizedHotels.find((h: any) => {
+            const hId = h.id || '';
             return hId === hotelId || hId === `hotel-${hotelId}`;
           });
           
           // Fallback to index-based lookup
           if (!hotelData) {
             const idx = parseInt(hotelId);
-            if (!isNaN(idx) && hotels[idx]) {
-              hotelData = hotels[idx];
+            if (!isNaN(idx) && normalizedHotels[idx]) {
+              hotelData = normalizedHotels[idx];
             }
           }
           
@@ -95,6 +118,10 @@ export default function HotelDetailPage() {
   }).slice(0, 3);
 
   const handleSelectRoom = (room: RoomType) => {
+    if ((room.remaining ?? room.availability ?? 0) <= 0) {
+      return;
+    }
+
     if (selectedRoom?.id === room.id) {
       setSelectedRoom(null);
     } else {
@@ -102,10 +129,19 @@ export default function HotelDetailPage() {
     }
   };
 
-  const handleContinue = () => {
-    if (selectedRoom) {
-      router.push(`/event/${eventId}/transport`);
+  const handleContinue = (destination: 'transport' | 'tickets') => {
+    if (!selectedRoom) return;
+
+    if (missingSelections.length > 0) {
+      setValidationErrors(missingSelections);
+      return;
     }
+
+    router.push(
+      destination === 'transport'
+        ? `/event/${eventId}/transport`
+        : `/event/${eventId}/tickets`
+    );
   };
 
   const formatShortDate = (date: Date | null) => {
@@ -120,6 +156,45 @@ export default function HotelDetailPage() {
   };
 
   const gallery = hotel?.gallery?.length ? hotel.gallery : hotel?.image ? [hotel.image] : [];
+  const foodPackages = (((festival as any)?.services?.foodPackages || []) as any[]).map((pkg, index) => ({
+    ...pkg,
+    id: pkg._id || pkg.id || `food-package-${index}`,
+  }));
+  const requiresFoodPackage = foodPackages.length > 0;
+  const missingSelections = [
+    !selectedRoom ? 'Room selection' : null,
+    !checkIn ? 'Check-in date' : null,
+    !checkOut ? 'Check-out date' : null,
+    !guestSelectionConfirmed ? 'Guest selection' : null,
+    requiresFoodPackage && selectedFoodPackages.length === 0 ? 'Food & Drink package' : null,
+  ].filter(Boolean) as string[];
+
+  useEffect(() => {
+    setValidationErrors((prev) => (prev.length > 0 ? [] : prev));
+  }, [selectedRoom, checkIn, checkOut, guestSelectionConfirmed, selectedFoodPackages.length]);
+
+  const renderValidationNotice = () => {
+    if (validationErrors.length === 0) return null;
+
+    return (
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-700 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-semibold text-amber-900">Complete your booking details before continuing</p>
+            <p className="text-sm text-amber-800 mt-1">
+              Please review the following item{validationErrors.length > 1 ? 's' : ''}:
+            </p>
+            <ul className="mt-2 space-y-1 list-disc list-inside text-sm text-amber-800">
+              {validationErrors.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -152,7 +227,7 @@ export default function HotelDetailPage() {
             className="flex items-center gap-2 text-gray-500 hover:text-primary"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Hotels</span>
+            <span>{t('common.backToHotels')}</span>
           </button>
         </div>
       </div>
@@ -165,18 +240,18 @@ export default function HotelDetailPage() {
               <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
             ))}
           </div>
-          <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 mb-3">{hotel.name}</h1>
-          <div className="flex items-center gap-2 text-gray-600">
-            <MapPin className="w-4 h-4" />
-            <span className="text-sm">{hotel.address}</span>
+           <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 mb-3">{getLocalizedText(hotel, 'name', language)}</h1>
+           <div className="flex items-center gap-2 text-gray-600">
+             <MapPin className="w-4 h-4" />
+             <span className="text-sm">{getLocalizedText(hotel, 'address', language)}</span>
             <a 
               href={`https://maps.google.com/?q=${encodeURIComponent(hotel.address)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:underline text-sm ml-2 flex items-center gap-1"
-            >
-              View on map <ExternalLink className="w-3 h-3" />
-            </a>
+               className="text-primary hover:underline text-sm ml-2 flex items-center gap-1"
+             >
+                 {t('common.viewOnMap')} <ExternalLink className="w-3 h-3" />
+               </a>
           </div>
         </div>
 
@@ -260,38 +335,44 @@ export default function HotelDetailPage() {
 
             {/* Description Section */}
             <div>
-              <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">Description</h2>
+              <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">{t('hotel.description')}</h2>
               <p className="text-gray-600 leading-relaxed whitespace-pre-line">
-                {hotel.fullDescription || hotel.description || 'No description available.'}
+                {getLocalizedText(hotel, 'fullDescription', language) || getLocalizedText(hotel, 'description', language) || t('hotel.noDescription')}
               </p>
             </div>
 
             {/* Select Your Room Section */}
-            <div id="select-room">
-              <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Select Your Room</h2>
+             <div id="select-room">
+               <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">{t('hotel.selectRoom')}</h2>
               
               <div className="space-y-4">
                 {(hotel.rooms || []).map((room) => {
                   const isSelected = selectedRoom?.id === room.id;
+                  const remainingRooms = room.remaining ?? room.availability ?? 0;
+                  const isSoldOut = remainingRooms <= 0;
                   return (
                     <div 
                       key={room.id}
                       onClick={() => handleSelectRoom(room)}
-                      className={`cursor-pointer bg-gray-50 rounded-2xl p-6 border-2 transition-all ${
-                        isSelected ? 'border-primary bg-primary/5' : 'border-transparent hover:border-gray-200'
+                      className={`bg-gray-50 rounded-2xl p-6 border-2 transition-all ${
+                        isSoldOut
+                          ? 'cursor-not-allowed border-red-100 opacity-70'
+                          : isSelected
+                            ? 'cursor-pointer border-primary bg-primary/5'
+                            : 'cursor-pointer border-transparent hover:border-gray-200'
                       }`}
                     >
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div className="md:col-span-1">
                           <img 
                             src={room.image || 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=300&fit=crop'} 
-                            alt={room.name}
+                            alt={getLocalizedText(room, 'name', language)}
                             className="w-full h-32 md:h-24 object-cover rounded-xl"
                           />
                         </div>
                         <div className="md:col-span-2">
-                          <h3 className="text-lg font-bold text-gray-900 mb-1">{room.name}</h3>
-                          <p className="text-gray-600 text-sm mb-3">{room.description}</p>
+                           <h3 className="text-lg font-bold text-gray-900 mb-1">{getLocalizedText(room, 'name', language)}</h3>
+                           <p className="text-gray-600 text-sm mb-3">{getLocalizedText(room, 'description', language)}</p>
                           <div className="flex flex-wrap gap-3">
                             <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200">
                               <Maximize className="w-3.5 h-3.5" /> {room.sqm || 30} m²
@@ -321,9 +402,17 @@ export default function HotelDetailPage() {
                             <div className="text-2xl font-bold text-primary">${room.pricePerNight}</div>
                             <div className="text-sm text-gray-500">/night</div>
                           </div>
-                          {room.availability > 0 && room.availability <= 3 && (
+                          {isSoldOut ? (
+                            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-2">
+                              Sold out
+                            </span>
+                          ) : remainingRooms <= 3 ? (
                             <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full mt-2">
-                              Only {room.availability} left
+                              Only {remainingRooms} left
+                            </span>
+                          ) : (
+                            <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full mt-2">
+                              {remainingRooms} rooms available
                             </span>
                           )}
                           {isSelected && (
@@ -345,21 +434,21 @@ export default function HotelDetailPage() {
               )}
             </div>
 
-            {/* Food & Drink Packages Section - from Event Services */}
-            {(festival as any)?.services?.foodPackages && (festival as any).services.foodPackages.length > 0 && (
-              <div>
-                <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Food & Drink Packages</h2>
-                <p className="text-gray-500 text-sm mb-4">Enhance your stay with our meal packages available for this event</p>
+             {/* Food & Drink Packages Section - from Event Services */}
+             {foodPackages.length > 0 && (
+               <div>
+                 <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">{t('hotel.foodPackages')}</h2>
+                 <p className="text-gray-500 text-sm mb-4">{t('hotel.enhanceStay')}</p>
                 
                 <div className="space-y-3">
-                  {(festival as any).services.foodPackages.map((pkg: any) => {
+                  {foodPackages.map((pkg: any) => {
                     const isSelected = selectedFoodPackages.some(p => p.id === pkg.id);
                     const totalPrice = pkg.pricePerPerson * guests;
                     
                     return (
                       <div
                         key={pkg.id}
-                        onClick={() => toggleFoodPackage(pkg)}
+                        onClick={() => selectFoodPackage(pkg)}
                         className={`cursor-pointer rounded-xl p-5 border-2 transition-all ${
                           isSelected 
                             ? 'border-primary bg-primary/5' 
@@ -403,6 +492,27 @@ export default function HotelDetailPage() {
                 </div>
               </div>
             )}
+
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              {renderValidationNotice()}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Button 
+                  className={`w-full py-3 ${validationErrors.length > 0 ? 'mt-4' : ''}`}
+                  onClick={() => handleContinue('transport')}
+                  disabled={!selectedRoom}
+                >
+                  {selectedRoom ? 'Continue to Transport' : 'Select a Room'}
+                </Button>
+                <Button
+                  className={`w-full py-3 ${validationErrors.length > 0 ? 'mt-4' : ''}`}
+                  onClick={() => handleContinue('tickets')}
+                  disabled={!selectedRoom}
+                  variant="outline"
+                >
+                  Continue Without Transport
+                </Button>
+              </div>
+            </div>
 
             {/* Facilities Section */}
             {hotel.facilities && hotel.facilities.length > 0 && (
@@ -631,14 +741,20 @@ export default function HotelDetailPage() {
                       </div>
                       <div className="flex items-center gap-3">
                         <button 
-                          onClick={() => setGuests(Math.max(1, guests - 1))}
+                          onClick={() => {
+                            setGuestSelectionConfirmed(true);
+                            setGuests(Math.max(0, guests - 1));
+                          }}
                           className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center"
                         >
                           <Minus className="w-4 h-4" />
                         </button>
                         <span className="w-6 text-center font-medium">{guests}</span>
                         <button 
-                          onClick={() => setGuests(Math.min(10, guests + 1))}
+                          onClick={() => {
+                            setGuestSelectionConfirmed(true);
+                            setGuests(Math.min(10, guests + 1));
+                          }}
                           className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center"
                         >
                           <Plus className="w-4 h-4" />
@@ -693,18 +809,27 @@ export default function HotelDetailPage() {
                     <span className="text-gray-500 text-sm"> /night</span>
                   </div>
                   <div className="text-right text-sm text-gray-500">
-                    {selectedRoom?.availability || hotel.rooms?.[0]?.availability || 0} rooms left
+                    {selectedRoom?.remaining ?? selectedRoom?.availability ?? hotel.rooms?.[0]?.remaining ?? hotel.rooms?.[0]?.availability ?? 0} rooms left
                   </div>
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-6">
+              <div className="space-y-3">
+                {renderValidationNotice()}
                 <Button 
-                  className="flex-1 py-3" 
-                  onClick={handleContinue}
+                  className={`w-full py-3 ${validationErrors.length > 0 ? 'mt-4' : ''}`}
+                  onClick={() => handleContinue('transport')}
                   disabled={!selectedRoom}
                 >
                   {selectedRoom ? 'Continue to Transport' : 'Select a Room'}
+                </Button>
+                <Button
+                  className="w-full py-3"
+                  onClick={() => handleContinue('tickets')}
+                  disabled={!selectedRoom}
+                  variant="outline"
+                >
+                  Continue Without Transport
                 </Button>
               </div>
             </div>

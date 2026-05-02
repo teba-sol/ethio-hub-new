@@ -30,6 +30,7 @@ interface BookingContextType {
     addFoodPackage: (pkg: FoodPackage) => void;
     removeFoodPackage: (pkgId: string) => void;
     toggleFoodPackage: (pkg: FoodPackage) => void;
+  selectFoodPackage: (pkg: FoodPackage) => void;
   
   // Transport
   selectedTransport: TransportOption | null;
@@ -46,6 +47,7 @@ interface BookingContextType {
   getHotelTotal: () => number;
   getFoodPackageTotal: () => number;
   getTransportTotal: () => number;
+  getServiceFee: () => number;
   getGrandTotal: () => number;
   
   // Booking ID (after confirmation)
@@ -59,7 +61,7 @@ interface BookingContextType {
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
 export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Event
+  // Initialize all state with safe defaults
   const [event, setEvent] = useState<Festival | null>(null);
   
   // Hotel & Room
@@ -67,7 +69,7 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [selectedRoom, setSelectedRoom] = useState<RoomType | null>(null);
   const [checkIn, setCheckIn] = useState<Date | null>(null);
   const [checkOut, setCheckOut] = useState<Date | null>(null);
-  const [guests, setGuests] = useState(1);
+  const [guests, setGuests] = useState(0);
   const [selectedFoodPackages, setSelectedFoodPackages] = useState<FoodPackage[]>([]);
   
   // Transport
@@ -85,6 +87,16 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
     ? Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)))
     : 0;
   
+  // Service fee calculation (5% for tourists when NOT booking hotel)
+  const hasHotelBooking = () => {
+    return !!(selectedRoom && checkIn && checkOut);
+  };
+
+  const getServiceFee = () => {
+    if (!ticketSelection) return 0;
+    return Math.round(getTicketTotal() * 0.05 * 100) / 100;
+  };
+
   // Pricing calculations
   const getTicketTotal = () => {
     if (!ticketSelection) return 0;
@@ -94,15 +106,15 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
   const getHotelTotal = () => {
     if (!selectedRoom || !checkIn || !checkOut) return 0;
     const roomTotal = selectedRoom.pricePerNight * hotelNights * guests;
-    const foodTotal = selectedFoodPackages.reduce(
-      (sum, pkg) => sum + pkg.pricePerPerson * guests, 0
+    const foodTotal = (selectedFoodPackages || []).reduce(
+      (sum: number, pkg: any) => sum + (pkg?.pricePerPerson || 0) * guests, 0
     );
     return roomTotal + foodTotal;
   };
   
   const getFoodPackageTotal = () => {
-    return selectedFoodPackages.reduce(
-      (sum, pkg) => sum + pkg.pricePerPerson * guests, 0
+    return (selectedFoodPackages || []).reduce(
+      (sum: number, pkg: any) => sum + (pkg?.pricePerPerson || 0) * guests, 0
     );
   };
   
@@ -112,7 +124,7 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
   
   const getGrandTotal = () => {
-    return getTicketTotal() + getHotelTotal() + getTransportTotal();
+    return getTicketTotal() + getHotelTotal() + getTransportTotal() + getServiceFee();
   };
   
   const clearFoodPackages = () => {
@@ -120,10 +132,7 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
   
   const addFoodPackage = (pkg: FoodPackage) => {
-    setSelectedFoodPackages(prev => {
-      if (prev.find(p => p.id === pkg.id)) return prev;
-      return [...prev, pkg];
-    });
+    setSelectedFoodPackages([pkg]);
   };
   
   const removeFoodPackage = (pkgId: string) => {
@@ -131,11 +140,16 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
   
   const toggleFoodPackage = (pkg: FoodPackage) => {
-    if (selectedFoodPackages.find(p => p.id === pkg.id)) {
+    if (!selectedFoodPackages || !Array.isArray(selectedFoodPackages)) return;
+    if (selectedFoodPackages.find((p: any) => p.id === pkg.id)) {
       removeFoodPackage(pkg.id);
     } else {
-      addFoodPackage(pkg);
+      setSelectedFoodPackages([pkg]);
     }
+  };
+  
+  const selectFoodPackage = (pkg: FoodPackage) => {
+    setSelectedFoodPackages([pkg]);
   };
   
   // Clear all selections
@@ -145,7 +159,7 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
     setSelectedRoom(null);
     setCheckIn(null);
     setCheckOut(null);
-    setGuests(1);
+    setGuests(0);
     setSelectedFoodPackages([]);
     setSelectedTransport(null);
     setTransportDays(1);
@@ -172,6 +186,7 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
       addFoodPackage,
       removeFoodPackage,
       toggleFoodPackage,
+      selectFoodPackage,
       selectedTransport,
       setSelectedTransport,
       transportDays,
@@ -182,6 +197,7 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
       getHotelTotal,
       getFoodPackageTotal,
       getTransportTotal,
+      getServiceFee,
       getGrandTotal,
       bookingId,
       setBookingId,

@@ -31,11 +31,14 @@ import {
   Check,
   Moon,
   Sun,
+  FileQuestion
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
+import { useLanguage, LanguageProvider } from "../context/LanguageContext";
 import { UserRole } from "../types";
 import { Button } from "./UI";
+import LanguageToggle from "./LanguageToggle";
 
 const CartDrawer: React.FC = () => {
   const {
@@ -48,6 +51,7 @@ const CartDrawer: React.FC = () => {
     clearCart,
   } = useCart();
   const { user, isAuthenticated } = useAuth();
+  const { t } = useLanguage();
   const router = useRouter();
   const [checkoutStep, setCheckoutStep] = useState<
     "cart" | "success"
@@ -131,18 +135,18 @@ const CartDrawer: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {checkoutStep === "cart" && (
             <>
-              {cart.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-60">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                    <ShoppingCart className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <p className="text-gray-500 font-medium">
-                    Your cart is empty
-                  </p>
-                  <Button variant="outline" onClick={toggleCart}>
-                    Continue Shopping
-                  </Button>
-                </div>
+               {cart.length === 0 ? (
+                 <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-60">
+                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                     <ShoppingCart className="w-8 h-8 text-gray-400" />
+                   </div>
+                   <p className="text-gray-500 font-medium">
+                     {t("cart.emptyCart")}
+                   </p>
+                   <Button variant="outline" onClick={toggleCart}>
+                     {t("cart.continueShopping")}
+                   </Button>
+                 </div>
               ) : (
                 cart.map((item) => (
                   <div key={item.id} className="flex gap-4 group">
@@ -211,16 +215,15 @@ const CartDrawer: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-2xl font-bold text-primary mb-2">
-                  Order Confirmed!
+                  {t("cart.orderConfirmed")}
                 </h3>
                 <p className="text-gray-500 text-sm max-w-xs mx-auto">
-                  Thank you for your purchase. A confirmation email has been
-                  sent to you.
+                  {t("cart.orderConfirmedMsg")}
                 </p>
               </div>
               <div className="bg-gray-50 p-4 rounded-xl w-full max-w-xs">
                 <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">
-                  Transaction ID
+                  {t("cart.transactionId")}
                 </p>
                 <p className="font-mono font-bold text-primary">
                   TXN-{Math.random().toString(36).substr(2, 9).toUpperCase()}
@@ -234,20 +237,20 @@ const CartDrawer: React.FC = () => {
           checkoutStep !== "success" &&
           (
             <div className="p-6 border-t border-gray-100 bg-gray-50/50 space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm text-gray-500">
-                  <span>Subtotal</span>
-                  <span>${cartTotal}</span>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm text-gray-500">
+                    <span>{t("cart.subtotal")}</span>
+                    <span>${cartTotal}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-gray-500">
+                    <span>{t("cart.shipping")}</span>
+                    <span>Calculated at checkout</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold text-primary pt-2 border-t border-gray-200">
+                    <span>{t("cart.total")}</span>
+                    <span>${cartTotal}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-sm text-gray-500">
-                  <span>Shipping</span>
-                  <span>Calculated at checkout</span>
-                </div>
-                <div className="flex justify-between text-lg font-bold text-primary pt-2 border-t border-gray-200">
-                  <span>Total</span>
-                  <span>${cartTotal}</span>
-                </div>
-              </div>
 
               {checkoutStep === "cart" ? (
                 <Button
@@ -281,10 +284,10 @@ const CartDrawer: React.FC = () => {
               </div>
 
               <h3 className="text-xl font-serif font-bold text-primary mb-2">
-                Login Required
+                {t("header.loginRequired")}
               </h3>
               <p className="text-gray-500 text-sm mb-6">
-                Please login as a Tourist to proceed to checkout.
+                {t("header.loginDesc")}
               </p>
 
               <div className="grid grid-cols-2 gap-3">
@@ -293,7 +296,7 @@ const CartDrawer: React.FC = () => {
                   size="sm"
                   onClick={() => setShowLoginPrompt(false)}
                 >
-                  Cancel
+                  {t("header.cancel")}
                 </Button>
                 <Button
                   size="sm"
@@ -302,7 +305,7 @@ const CartDrawer: React.FC = () => {
                     router.push("/login");
                   }}
                 >
-                  Login Now
+                  {t("header.loginNow")}
                 </Button>
               </div>
             </div>
@@ -325,7 +328,20 @@ const MenuLink = ({ icon: Icon, label, to }: any) => (
 
 const UserMenu: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
+  const { t } = useLanguage();
   const router = useRouter();
+
+  const getDashboardHomePath = () => {
+    if (!user) return "/login";
+    const role = user.role.toLowerCase();
+    const dashboardHomeByRole: Record<string, string> = {
+      tourist: "/dashboard/tourist/settings",
+      organizer: "/dashboard/organizer/overview",
+      artisan: "/dashboard/artisan/overview",
+      admin: "/dashboard/admin/overview",
+    };
+    return dashboardHomeByRole[role] || "/dashboard";
+  };
 
   const getDashboardPath = (path: string) => {
     if (!user) return "#";
@@ -336,18 +352,14 @@ const UserMenu: React.FC = () => {
   return (
     <div className="relative group z-50 mr-4">
       <Link
-        href={
-          isAuthenticated
-            ? `/dashboard/${user?.role.toLowerCase()}/overview`
-            : "/login"
-        }
+        href={isAuthenticated ? getDashboardHomePath() : "/login"}
         className="flex items-center gap-2 hover:bg-gray-50 px-3 py-2 rounded-full transition-all"
       >
         <UserIcon className="w-6 h-6 text-gray-700" />
         <div className="flex flex-col text-xs leading-tight">
-          <span className="text-gray-500 font-medium">Welcome</span>
+          <span className="text-gray-500 font-medium">{t("header.welcome")}</span>
           <span className="font-bold text-gray-900">
-            {isAuthenticated ? user?.name?.split(" ")[0] : "Sign in / Register"}
+            {isAuthenticated ? user?.name?.split(" ")[0] : t("header.signInRegister")}
           </span>
         </div>
       </Link>
@@ -360,15 +372,15 @@ const UserMenu: React.FC = () => {
                 className="w-full rounded-full font-bold mb-3 shadow-lg shadow-primary/20"
                 onClick={() => router.push("/login")}
               >
-                Sign in
+                {t("auth.signIn")}
               </Button>
               <div className="text-xs text-gray-500">
-                New here?{" "}
+                {t("header.newHere")}{" "}
                 <Link
                   href="/register"
                   className="text-primary font-bold hover:underline"
                 >
-                  Register
+                  {t("auth.register")}
                 </Link>
               </div>
             </div>
@@ -380,14 +392,14 @@ const UserMenu: React.FC = () => {
               <p className="font-bold text-gray-900 mb-3 line-clamp-1">
                 {user?.name}
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={logout}
-                className="rounded-full w-full border-gray-200"
-              >
-                Sign Out
-              </Button>
+               <Button
+                 variant="outline"
+                 size="sm"
+                 onClick={logout}
+                 className="rounded-full w-full border-gray-200"
+               >
+                 {t("header.signOut")}
+               </Button>
             </div>
           )}
 
@@ -395,22 +407,22 @@ const UserMenu: React.FC = () => {
             <div className="space-y-0.5">
               <MenuLink
                 icon={FileText}
-                label="My Orders"
+                label={t("header.myOrders")}
                 to={getDashboardPath("orders")}
               />
               <MenuLink
                 icon={MessageSquare}
-                label="Message Center"
+                label={t("header.messageCenter")}
                 to={getDashboardPath("messages")}
               />
               <MenuLink
                 icon={CreditCard}
-                label="Payment"
+                label={t("header.payments")}
                 to={getDashboardPath("payments")}
               />
               <MenuLink
                 icon={Heart}
-                label="Wish List"
+                label={t("header.wishlist")}
                 to={getDashboardPath("wishlist")}
               />
             </div>
@@ -418,17 +430,17 @@ const UserMenu: React.FC = () => {
             <div className="space-y-0.5">
               <MenuLink
                 icon={Settings}
-                label="Settings"
+                label={t("header.settings")}
                 to={getDashboardPath("settings")}
               />
               <MenuLink
                 icon={HelpCircle}
-                label="Help Center"
+                label={t("header.helpCenter")}
                 to={getDashboardPath("help")}
               />
               <MenuLink
                 icon={AlertCircle}
-                label="Disputes"
+                label={t("header.disputes")}
                 to={getDashboardPath("disputes")}
               />
             </div>
@@ -509,34 +521,8 @@ const ThemeToggle = () => {
   );
 };
 
-const LanguageSwitcher = () => {
-  const [lang, setLang] = React.useState("en");
-
-  React.useEffect(() => {
-    const savedLang = localStorage.getItem("lang") || "en";
-    setLang(savedLang);
-  }, []);
-
-  const toggleLang = () => {
-    const newLang = lang === "en" ? "am" : "en";
-    setLang(newLang);
-    localStorage.setItem("lang", newLang);
-  };
-
-  return (
-    <button
-      onClick={toggleLang}
-      className="p-2 text-gray-400 hover:text-primary transition-colors relative ml-2 group flex items-center gap-1.5"
-      aria-label="Toggle Language"
-    >
-      <span className="text-xs font-bold uppercase tracking-wider">
-        {lang === "en" ? "Eng / Amh" : "Amh / Eng"}
-      </span>
-    </button>
-  );
-};
-
 export const Header: React.FC = () => {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const { user, logout, isAuthenticated } = useAuth();
   const { cartCount, toggleCart } = useCart();
@@ -544,10 +530,10 @@ export const Header: React.FC = () => {
   const router = useRouter();
 
   const navLinks = [
-    { name: "Heritage", path: "/" },
-    { name: "Marketplace", path: "/products" },
-    { name: "Festivals", path: "/festivals" },
-    { name: "Our Mission", path: "/about" },
+    { name: t("nav.heritage"), path: "/" },
+    { name: t("nav.products"), path: "/products" },
+    { name: t("nav.festivals"), path: "/festivals" },
+    { name: t("nav.about"), path: "/about" },
   ];
 
   const isActive = (path: string) => pathname === path;
@@ -584,7 +570,7 @@ export const Header: React.FC = () => {
           <div className="hidden md:flex items-center">
             <SearchBar />
 
-            <LanguageSwitcher />
+            <LanguageToggle />
             <ThemeToggle />
 
             <button
@@ -607,7 +593,7 @@ export const Header: React.FC = () => {
 
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center">
-            <LanguageSwitcher />
+            <LanguageToggle />
             <ThemeToggle />
             <button
               onClick={() => setIsOpen(!isOpen)}
@@ -653,7 +639,7 @@ export const Header: React.FC = () => {
                       router.push("/login");
                     }}
                   >
-                    Login
+                    {t("auth.signIn")}
                   </Button>
                   <Button
                     variant="primary"
@@ -663,7 +649,7 @@ export const Header: React.FC = () => {
                       router.push("/register");
                     }}
                   >
-                    Join Hub
+                    {t("auth.register")}
                   </Button>
                 </>
               ) : (
@@ -673,7 +659,7 @@ export const Header: React.FC = () => {
                   className="col-span-2"
                 >
                   <Button className="w-full rounded-2xl py-4">
-                    Go to Dashboard
+                    {t("nav.dashboard")}
                   </Button>
                 </Link>
               )}
@@ -685,144 +671,146 @@ export const Header: React.FC = () => {
   );
 };
 
-export const Footer: React.FC = () => (
-  <footer className="bg-ethio-dark text-white pt-12 md:pt-24 pb-12">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-16 mb-20">
-        <div className="space-y-8">
-          <span className="text-3xl font-bold font-serif text-secondary tracking-tight">
-            Ethio<span className="text-white">-Craft</span> Hub
-          </span>
-          <p className="text-gray-400 text-lg leading-relaxed font-light">
-            Preserving centuries of Ethiopian craftsmanship through a secure,
-            unified marketplace aligned with the Digital Ethiopia 2025 strategy.
-          </p>
-          <div className="flex space-x-4">
-            <a
-              href="#"
-              className="p-3 bg-white/5 rounded-2xl hover:bg-secondary/20 transition-all"
-              aria-label="Facebook"
-            >
-              <Facebook className="w-5 h-5" />
-            </a>
-            <a
-              href="#"
-              className="p-3 bg-white/5 rounded-2xl hover:bg-secondary/20 transition-all"
-              aria-label="Instagram"
-            >
-              <Instagram className="w-5 h-5" />
-            </a>
-            <a
-              href="#"
-              className="p-3 bg-white/5 rounded-2xl hover:bg-secondary/20 transition-all"
-              aria-label="Twitter"
-            >
-              <Twitter className="w-5 h-5" />
-            </a>
+export const Footer: React.FC = () => {
+  const { t } = useLanguage();
+  
+  return (
+    <footer className="bg-ethio-dark text-white pt-12 md:pt-24 pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-16 mb-20">
+          <div className="space-y-8">
+            <span className="text-3xl font-bold font-serif text-secondary tracking-tight">
+              Ethio<span className="text-white">-Craft</span> Hub
+            </span>
+            <p className="text-gray-400 text-lg leading-relaxed font-light">
+              {t("footer.tagline")}
+            </p>
+            <div className="flex space-x-4">
+              <a
+                href="#"
+                className="p-3 bg-white/5 rounded-2xl hover:bg-secondary/20 transition-all"
+                aria-label="Facebook"
+              >
+                <Facebook className="w-5 h-5" />
+              </a>
+              <a
+                href="#"
+                className="p-3 bg-white/5 rounded-2xl hover:bg-secondary/20 transition-all"
+                aria-label="Instagram"
+              >
+                <Instagram className="w-5 h-5" />
+              </a>
+              <a
+                href="#"
+                className="p-3 bg-white/5 rounded-2xl hover:bg-secondary/20 transition-all"
+                aria-label="Twitter"
+              >
+                <Twitter className="w-5 h-5" />
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-serif text-xl font-bold mb-8 text-secondary">
+              {t("footer.heritageExplorer")}
+            </h4>
+            <ul className="space-y-4 text-gray-400 text-sm font-medium">
+              <li>
+                <Link
+                  href="/products"
+                  className="hover:text-white transition-colors"
+                >
+                  {t("footer.curatedMarketplace")}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/festivals"
+                  className="hover:text-white transition-colors"
+                >
+                  {t("footer.sacredCelebrations")}
+                </Link>
+              </li>
+              <li>
+                <Link href="/about" className="hover:text-white transition-colors">
+                  {t("footer.artisanStories")}
+                </Link>
+              </li>
+              <li>
+                <Link href="/about" className="hover:text-white transition-colors">
+                  {t("footer.regionalGuides")}
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-serif text-xl font-bold mb-8 text-secondary">
+              {t("footer.supportTrust")}
+            </h4>
+            <ul className="space-y-4 text-gray-400 text-sm font-medium">
+              <li>
+                <a href="#" className="hover:text-white transition-colors">
+                  {t("footer.helpCenter")}
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-white transition-colors">
+                  {t("footer.authenticityShield")}
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-white transition-colors">
+                  {t("footer.shippingReturns")}
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-white transition-colors">
+                  {t("footer.contactOffice")}
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-serif text-xl font-bold mb-8 text-secondary">
+              {t("footer.hubDispatch")}
+            </h4>
+            <p className="text-gray-400 text-sm mb-6 leading-relaxed">
+              {t("footer.newsletterText")}
+            </p>
+            <div className="flex flex-col space-y-3">
+              <input
+                type="email"
+                placeholder={t("footer.emailPlaceholder")}
+                className="bg-white/5 border border-white/10 px-5 py-4 rounded-2xl focus:outline-none focus:border-secondary transition-all text-sm"
+              />
+              <Button
+                size="md"
+                variant="secondary"
+                className="rounded-2xl py-4 font-bold shadow-xl shadow-secondary/10"
+              >
+                {t("footer.subscribe")}
+              </Button>
+            </div>
           </div>
         </div>
-
-        <div>
-          <h4 className="font-serif text-xl font-bold mb-8 text-secondary">
-            Heritage Explorer
-          </h4>
-          <ul className="space-y-4 text-gray-400 text-sm font-medium">
-            <li>
-              <Link
-                href="/products"
-                className="hover:text-white transition-colors"
-              >
-                Curated Marketplace
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/festivals"
-                className="hover:text-white transition-colors"
-              >
-                Sacred Celebrations
-              </Link>
-            </li>
-            <li>
-              <Link href="/about" className="hover:text-white transition-colors">
-                Artisan Stories
-              </Link>
-            </li>
-            <li>
-              <Link href="/about" className="hover:text-white transition-colors">
-                Regional Guides
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        <div>
-          <h4 className="font-serif text-xl font-bold mb-8 text-secondary">
-            Support & Trust
-          </h4>
-          <ul className="space-y-4 text-gray-400 text-sm font-medium">
-            <li>
-              <a href="#" className="hover:text-white transition-colors">
-                Help Center
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:text-white transition-colors">
-                Authenticity Shield
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:text-white transition-colors">
-                Shipping & Returns
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:text-white transition-colors">
-                Contact Heritage Office
-              </a>
-            </li>
-          </ul>
-        </div>
-
-        <div>
-          <h4 className="font-serif text-xl font-bold mb-8 text-secondary">
-            Hub Dispatch
-          </h4>
-          <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-            Join 50,000+ explorers getting early access to festival tickets and
-            new artifact arrivals.
-          </p>
-          <div className="flex flex-col space-y-3">
-            <input
-              type="email"
-              placeholder="Guardian email address"
-              className="bg-white/5 border border-white/10 px-5 py-4 rounded-2xl focus:outline-none focus:border-secondary transition-all text-sm"
-            />
-            <Button
-              size="md"
-              variant="secondary"
-              className="rounded-2xl py-4 font-bold shadow-xl shadow-secondary/10"
-            >
-              Subscribe
-            </Button>
+        <div className="border-t border-white/5 pt-10 flex flex-col md:flex-row justify-between items-center text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 gap-8">
+          <p>{t("footer.copyright")}</p>
+          <div className="flex space-x-8">
+            <a href="#" className="hover:text-white transition-colors">
+              {t("footer.privacy")}
+            </a>
+            <a href="#" className="hover:text-white transition-colors">
+              {t("footer.terms")}
+            </a>
+            <div className="flex items-center space-x-2 cursor-pointer hover:text-white transition-colors">
+              <Globe className="w-3.5 h-3.5" />
+              <span>{t("footer.international")} / EN</span>
+            </div>
           </div>
         </div>
       </div>
-      <div className="border-t border-white/5 pt-10 flex flex-col md:flex-row justify-between items-center text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 gap-8">
-        <p>&copy; 2025 Ethio-Craft Hub • A Cultural Unified Network</p>
-        <div className="flex space-x-8">
-          <a href="#" className="hover:text-white transition-colors">
-            Privacy
-          </a>
-          <a href="#" className="hover:text-white transition-colors">
-            Terms
-          </a>
-          <div className="flex items-center space-x-2 cursor-pointer hover:text-white transition-colors">
-            <Globe className="w-3.5 h-3.5" />
-            <span>International / EN</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </footer>
-);
+    </footer>
+  );
+};

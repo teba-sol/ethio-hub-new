@@ -38,9 +38,12 @@ export async function GET(request: NextRequest) {
     const publishedFestivals = festivals.filter(f => f.status === 'Published').length;
     const totalBookings = bookings.length;
     const confirmedBookings = bookings.filter(b => b.status === 'confirmed').length;
-    const totalRevenue = bookings
-      .filter(b => b.paymentStatus === 'paid')
-      .reduce((sum, b) => sum + b.totalPrice, 0);
+    
+    // Calculate revenue with split payment breakdown
+    const paidBookings = bookings.filter(b => b.paymentStatus === 'paid');
+    const grossRevenue = paidBookings.reduce((sum, b) => sum + b.totalPrice, 0);
+    const platformFeeTotal = paidBookings.reduce((sum, b) => sum + (b.platformFee || 0), 0);
+    const organizerEarnings = paidBookings.reduce((sum, b) => sum + (b.organizerAmount || b.totalPrice), 0);
 
     const avgRating = reviews.length > 0 
       ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length 
@@ -82,7 +85,9 @@ export async function GET(request: NextRequest) {
             cancelled: bookings.filter(b => b.status === 'cancelled').length,
           },
           revenue: {
-            total: totalRevenue,
+            gross: grossRevenue,
+            platformFee: platformFeeTotal,
+            net: organizerEarnings,
             currency: 'ETB',
           },
           reviews: {

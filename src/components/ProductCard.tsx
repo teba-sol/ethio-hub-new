@@ -7,15 +7,21 @@ import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
+import { useLanguage } from '../context/LanguageContext';
+import { getLocalizedText } from '../utils/getLocalizedText';
 
 export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { user } = useAuth();
+  const { language } = useLanguage();
   const lowStock = product.stock && product.stock < 10;
 
   const isWishlisted = isInWishlist(product.id);
   const isTourist = user?.role === UserRole.TOURIST;
+
+  const productName = getLocalizedText(product as any, 'name', language);
+  const artisanName = getLocalizedText(product as any, 'artisanName' as any, language) || product.artisanName || '';
 
   const handleWishlistClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -34,7 +40,7 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
         <Link href={`/products/${product.id}`}>
           <img 
             src={product.images[0]} 
-            alt={product.name} 
+            alt={productName} 
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
         </Link>
@@ -42,20 +48,20 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
           className={`absolute top-4 right-4 p-2.5 bg-white/90 backdrop-blur rounded-full transition-colors shadow-sm ${
             isWishlisted && isTourist ? 'text-red-500 hover:text-red-600' : 'text-gray-400 hover:text-accent'
           }`}
-          aria-label={`Add ${product.name} to wishlist`}
+          aria-label={`Add ${productName} to wishlist`}
           onClick={handleWishlistClick}
         >
           <Heart className={`w-5 h-5 ${isWishlisted && isTourist ? 'fill-current' : ''}`} />
         </button>
-        {(product.isVerified || (product as any).verificationStatus === 'Approved') && (
+        {(product as any).isVerified || (product as any).verificationStatus === 'Approved' && (
           <div className="absolute bottom-4 left-4">
             <VerifiedBadge />
           </div>
         )}
         {lowStock && (
            <div className="absolute top-4 left-4 bg-red-500 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
-             Only {product.stock} left
-           </div>
+              Only {product.stock} left
+            </div>
         )}
       </div>
       <div className="p-6 flex flex-col flex-1">
@@ -68,11 +74,11 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
         </div>
         
         <h3 className="text-lg font-serif font-bold text-primary group-hover:text-secondary transition-colors mb-1">
-          <Link href={`/products/${product.id}`}>{product.name}</Link>
+          <Link href={`/products/${product.id}`}>{productName}</Link>
         </h3>
         
         <Link href={`/products?artisan=${product.artisanId}`} className="text-xs text-gray-500 hover:text-primary transition-colors font-medium mb-3 block">
-          By: {product.artisanName}
+          By: {artisanName}
         </Link>
 
         <div className="flex items-center text-[10px] text-gray-400 mb-4">

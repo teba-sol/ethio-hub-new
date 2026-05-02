@@ -2,23 +2,26 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Users } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { TicketCard } from '@/components/booking/TicketCard';
 import { PriceSummary } from '@/components/booking/PriceSummary';
 import { useBooking } from '@/context/BookingContext';
 import apiClient from '@/lib/apiClient';
 import { Festival } from '@/types';
 
+const EARLY_BIRD_WINDOW_HOURS = Number(process.env.NEXT_PUBLIC_EARLY_BIRD_WINDOW_HOURS || 5);
+
 export default function TicketsPage() {
   const params = useParams();
   const router = useRouter();
   const eventId = params?.id as string;
   
-  const { setEvent, ticketSelection, setTicketSelection, setGuests } = useBooking();
+  const { setEvent, ticketSelection, setTicketSelection } = useBooking();
   
   const [festival, setFestival] = useState<Festival | null>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
+  const [nowMs, setNowMs] = useState(Date.now());
 
   useEffect(() => {
     const fetchData = async () => {
@@ -40,7 +43,30 @@ export default function TicketsPage() {
     fetchData();
   }, [eventId]);
 
+  useEffect(() => {
+    const timer = setInterval(() => setNowMs(Date.now()), 60 * 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const postedAtRaw = (festival as any)?.createdAt || festival?.submittedAt;
+  const postedAt = postedAtRaw ? new Date(postedAtRaw) : null;
+  const hasValidPostedAt = !!postedAt && !Number.isNaN(postedAt.getTime());
+  const earlyBirdExpiresAt = hasValidPostedAt
+    ? new Date(postedAt!.getTime() + EARLY_BIRD_WINDOW_HOURS * 60 * 60 * 1000)
+    : null;
+  const isEarlyBirdAvailable = !earlyBirdExpiresAt || nowMs <= earlyBirdExpiresAt.getTime();
+
+  useEffect(() => {
+    if (ticketSelection?.type === 'earlyBird' && !isEarlyBirdAvailable) {
+      setTicketSelection(null);
+    }
+  }, [ticketSelection, isEarlyBirdAvailable, setTicketSelection]);
+
   const handleSelect = (type: 'vip' | 'standard' | 'earlyBird') => {
+    if (type === 'earlyBird' && !isEarlyBirdAvailable) {
+      return;
+    }
+
     const basePrice = festival?.baseTicketPrice || 50;
     let price = 0;
     if (type === 'vip') price = festival?.vipTicketPrice || basePrice * 2;
@@ -125,25 +151,7 @@ export default function TicketsPage() {
           <h1 className="text-4xl font-serif font-bold text-primary mb-4">
             Select Your Tickets
           </h1>
-          <div className="flex items-center gap-4 text-gray-500">
-            <Users className="w-5 h-5" />
-            <span>How many guests?</span>
-            <div className="flex items-center gap-2 ml-4">
-              <button
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center font-bold"
-              >
-                -
-              </button>
-              <span className="w-12 text-center font-bold">{quantity}</span>
-              <button
-                onClick={() => setQuantity(quantity + 1)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center font-bold"
-              >
-                +
-              </button>
-            </div>
-          </div>
+          
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -158,6 +166,12 @@ export default function TicketsPage() {
                   price={getTicketPrice(ticket.type)}
                   benefits={ticket.benefits}
                   isSelected={ticketSelection?.type === ticket.type}
+                  disabled={ticket.type === 'earlyBird' && !isEarlyBirdAvailable}
+                  disabledReason={
+                    ticket.type === 'earlyBird' && !isEarlyBirdAvailable
+                      ? `Early Bird closed. This offer is only available for ${EARLY_BIRD_WINDOW_HOURS} hours after posting.`
+                      : undefined
+                  }
                   onSelect={() => handleSelect(ticket.type)}
                 />
               ))}

@@ -4,8 +4,15 @@ import { connectDB } from '@/lib/mongodb';
 import Product from '@/models/artisan/product.model';
 import User from '@/models/User';
 import { cookies } from 'next/headers';
+import { isProductCompleteForReview } from '@/lib/reviewAutomation';
+import { queueAdminReviewEmail } from '@/lib/adminApproval';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
+
+const textValue = (...values: unknown[]) => {
+  const value = values.find((item) => typeof item === 'string' && item.trim());
+  return typeof value === 'string' ? value.trim() : '';
+};
 
 async function getAuthenticatedUser(req: Request) {
   try {
@@ -86,9 +93,14 @@ export async function POST(req: Request) {
 
     const {
       name,
+      name_en,
+      name_am,
       images,
       description,
+      description_en,
+      description_am,
       material,
+      materials,
       handmadeBy,
       region,
       careInstructions,
@@ -105,9 +117,14 @@ export async function POST(req: Request) {
       status,
     } = body;
 
-    if (!name || !description || !price || !stock || !category || !deliveryTime || !shippingFee) {
+    const normalizedNameEn = textValue(name_en, name);
+    const normalizedNameAm = textValue(name_am);
+    const normalizedDescriptionEn = textValue(description_en, description);
+    const normalizedDescriptionAm = textValue(description_am);
+
+    if (!normalizedNameEn || !normalizedNameAm || !normalizedDescriptionEn || !normalizedDescriptionAm || !price || !stock || !category || !deliveryTime || !shippingFee) {
       return NextResponse.json(
-        { message: 'Missing required fields' },
+        { message: 'English and Amharic name and description are required, along with pricing and inventory fields.' },
         { status: 400 }
       );
     }
@@ -118,12 +135,28 @@ export async function POST(req: Request) {
       ? (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()) : tags)
       : [];
 
+    const shouldAutoPending = isProductCompleteForReview({
+      name_en: normalizedNameEn,
+      name_am: normalizedNameAm,
+      description_en: normalizedDescriptionEn,
+      description_am: normalizedDescriptionAm,
+      price: Number(price),
+      stock: Number(stock),
+      category,
+      deliveryTime,
+      shippingFee,
+    });
+
     const product = await Product.create({
       artisanId: user._id,
-      name,
+      name: normalizedNameEn,
+      name_en: normalizedNameEn,
+      name_am: normalizedNameAm,
       images: images || [],
-      description,
-      material,
+      description: normalizedDescriptionEn,
+      description_en: normalizedDescriptionEn,
+      description_am: normalizedDescriptionAm,
+      material: material ?? materials,
       handmadeBy,
       region,
       careInstructions,
@@ -138,8 +171,19 @@ export async function POST(req: Request) {
       deliveryTime,
       shippingFee,
       status: productStatus,
-      verificationStatus: productStatus === 'Published' ? 'Pending' : undefined,
+      verificationStatus:
+        productStatus === 'Published' || shouldAutoPending ? 'Pending' : undefined,
     });
+
+    if (product.verificationStatus === 'Pending') {
+      await queueAdminReviewEmail({
+        subjectType: 'product',
+        subjectId: product._id.toString(),
+        subjectLabel: product.name || 'Product',
+        submittedByEmail: user.email || 'unknown@unknown.local',
+        submittedByName: user.name || 'Artisan',
+      }).catch(() => null);
+    }
 
     return NextResponse.json(
       {

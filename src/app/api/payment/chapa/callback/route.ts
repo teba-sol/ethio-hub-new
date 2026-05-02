@@ -14,9 +14,9 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const txRef = searchParams.get('trx_ref') || searchParams.get('tx_ref');
-    const status = searchParams.get('status');
+    const status = searchParams.get('status') || searchParams.get('Status');
 
-    console.log('Chapa callback received:', { txRef, status });
+    console.log('Chapa callback received:', { txRef, status, fullParams: Object.fromEntries(searchParams.entries()) });
 
     if (!txRef) {
       return NextResponse.redirect(new URL('/?payment=error', request.url));
@@ -49,7 +49,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.redirect(new URL('/?payment=failed', request.url));
+    // Payment failed - redirect to root with failed param
+    return NextResponse.redirect(new URL('/payment/success?status=failed', request.url));
 
   } catch (error: any) {
     console.error('Chapa callback error:', error);

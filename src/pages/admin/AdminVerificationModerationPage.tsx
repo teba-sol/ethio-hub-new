@@ -7,6 +7,7 @@ import {
 import { AdminUserVerificationPage } from './AdminUserVerificationPage';
 import { AdminEventsPage } from './AdminEventsPage';
 import { AdminProductsPage } from './AdminProductsPage';
+import { useLanguage } from '@/context/LanguageContext';
 
 type TabType = 'users' | 'events' | 'products';
 
@@ -18,28 +19,14 @@ interface VerificationStats {
 }
 
 export const AdminVerificationModerationPage: React.FC = () => {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabType>('users');
   const [stats, setStats] = useState<VerificationStats>({ pending: 0, underReview: 0, approved: 0, rejected: 0 });
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await fetch('/api/admin/verification/stats');
-        const data = await res.json();
-        if (data.success) {
-          setStats(data.stats);
-        }
-      } catch (error) {
-        console.error('Failed to fetch stats:', error);
-      }
-    };
-    fetchStats();
-  }, []);
-
   const tabs = [
-    { id: 'users', name: 'User Verifications', icon: ShieldCheck, color: 'text-blue-500', bg: 'bg-blue-50' },
-    { id: 'events', name: 'Event Verifications', icon: CalendarCheck, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-    { id: 'products', name: 'Product Verifications', icon: PackageCheck, color: 'text-purple-500', bg: 'bg-purple-50' },
+    { id: 'users', name: t("admin.userVerifications"), icon: ShieldCheck, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { id: 'events', name: t("admin.eventVerifications"), icon: CalendarCheck, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    { id: 'products', name: t("admin.productVerifications"), icon: PackageCheck, color: 'text-purple-500', bg: 'bg-purple-50' },
   ];
 
   return (
@@ -47,7 +34,7 @@ export const AdminVerificationModerationPage: React.FC = () => {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-serif font-bold text-gray-800">Verification & Moderation</h1>
+          <h1 className="text-3xl font-serif font-bold text-gray-800">{t("admin.verificationModeration")}</h1>
           <p className="text-gray-500 text-sm">Centralized hub for approving users, events, and products.</p>
         </div>
         <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm">
@@ -75,11 +62,11 @@ export const AdminVerificationModerationPage: React.FC = () => {
             <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pending Users</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t("admin.pendingUsers")}</p>
             <p className="text-2xl font-bold text-gray-800">{stats.pending}</p>
           </div>
           <div className="ml-auto">
-            <Badge variant="warning">Action Required</Badge>
+            <Badge variant="warning">{t("messages.actionRequired")}</Badge>
           </div>
         </div>
         <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
@@ -87,11 +74,11 @@ export const AdminVerificationModerationPage: React.FC = () => {
             <CalendarCheck className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pending Events</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t("admin.pendingEvents")}</p>
             <p className="text-2xl font-bold text-gray-800">8</p>
           </div>
           <div className="ml-auto">
-            <Badge variant="warning">Action Required</Badge>
+            <Badge variant="warning">{t("messages.actionRequired")}</Badge>
           </div>
         </div>
         <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
@@ -99,11 +86,11 @@ export const AdminVerificationModerationPage: React.FC = () => {
             <PackageCheck className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pending Products</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t("admin.pendingProducts")}</p>
             <p className="text-2xl font-bold text-gray-800">15</p>
           </div>
           <div className="ml-auto">
-            <Badge variant="warning">Action Required</Badge>
+            <Badge variant="warning">{t("messages.actionRequired")}</Badge>
           </div>
         </div>
       </div>

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '../../../../lib/mongodb';
 import Festival from '../../../../models/festival.model';
+import Booking from '../../../../models/booking.model';
 import mongoose from 'mongoose';
+import { attachAvailabilityToFestival } from '../../../../lib/festivalAvailability';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -35,8 +37,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       displayStatus = 'ended';
     }
 
+    const confirmedBookings = await Booking.find({
+      festival: id,
+      status: { $in: ['confirmed', 'completed'] },
+    }).lean();
+
     const festivalWithDisplay = {
-      ...festival.toObject(),
+      ...attachAvailabilityToFestival(festival, confirmedBookings),
       displayStatus
     };
 

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Key, Loader2, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '../../components/UI';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function ResetPasswordPage() {
+  const { t } = useLanguage();
   const router = useRouter();
   const [token, setToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -23,15 +25,15 @@ export default function ResetPasswordPage() {
 
   const handleReset = async () => {
     if (!token) {
-      setMessage({ type: 'error', text: 'Invalid reset token' });
+      setMessage({ type: 'error', text: t('auth.invalidToken') });
       return;
     }
     if (newPassword !== confirmPassword) {
-      setMessage({ type: 'error', text: 'Passwords do not match' });
+      setMessage({ type: 'error', text: t('auth.passwordsDontMatch') });
       return;
     }
     if (newPassword.length < 6) {
-      setMessage({ type: 'error', text: 'Password must be at least 6 characters' });
+      setMessage({ type: 'error', text: t('auth.passwordMinLength') });
       return;
     }
 
@@ -49,13 +51,13 @@ export default function ResetPasswordPage() {
       const data = await res.json();
       if (data.success) {
         setSuccess(true);
-        setMessage({ type: 'success', text: 'Password reset successfully!' });
+        setMessage({ type: 'success', text: t('auth.resetSuccessMessage') });
         setTimeout(() => router.push('/login'), 3000);
       } else {
-        setMessage({ type: 'error', text: data.message || 'Failed to reset password' });
+        setMessage({ type: 'error', text: data.message || t('auth.unexpectedError') });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Network error. Please try again.' });
+      setMessage({ type: 'error', text: t('auth.unexpectedError') });
     } finally {
       setLoading(false);
     }
@@ -68,9 +70,9 @@ export default function ResetPasswordPage() {
           <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="w-8 h-8 text-emerald-500" />
           </div>
-          <h2 className="text-2xl font-serif font-bold text-primary mb-2">Password Reset!</h2>
-          <p className="text-gray-500 mb-4">Your password has been reset successfully.</p>
-          <p className="text-sm text-gray-400">Redirecting to login...</p>
+          <h2 className="text-2xl font-serif font-bold text-primary mb-2">{t('auth.resetSuccessMessage')}</h2>
+          <p className="text-gray-500 mb-4">{t('auth.passwordResetConfirmation')}</p>
+          <p className="text-sm text-gray-400">{t('auth.redirectingToLogin')}</p>
         </div>
       </div>
     );
@@ -83,8 +85,8 @@ export default function ResetPasswordPage() {
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <Key className="w-8 h-8 text-primary" />
           </div>
-          <h2 className="text-2xl font-serif font-bold text-primary">Reset Password</h2>
-          <p className="text-gray-500 mt-2">Enter your new password below</p>
+          <h2 className="text-2xl font-serif font-bold text-primary">{t('auth.resetPasswordTitle')}</h2>
+          <p className="text-gray-500 mt-2">{t('auth.resetPasswordSubtitle')}</p>
         </div>
 
         <div className="space-y-4">
@@ -96,7 +98,7 @@ export default function ResetPasswordPage() {
           )}
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">New Password</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t('auth.newPasswordLabel')}</label>
             <div className="relative">
               <input 
                 type={showPassword ? 'text' : 'password'} 
@@ -116,7 +118,7 @@ export default function ResetPasswordPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Confirm Password</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t('auth.confirmNewPasswordLabel')}</label>
             <input 
               type={showPassword ? 'text' : 'password'} 
               value={confirmPassword}
@@ -133,12 +135,12 @@ export default function ResetPasswordPage() {
             disabled={loading || !newPassword || !confirmPassword}
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Key className="w-4 h-4 mr-2" />}
-            Reset Password
+            {t('auth.resetPasswordButton')}
           </Button>
         </div>
 
         <p className="text-xs text-gray-400 mt-4 text-center">
-          Remember your password? <a href="/login" className="text-primary font-bold hover:underline">Login</a>
+          {t('auth.rememberPassword')} <a href="/login" className="text-primary font-bold hover:underline">{t('auth.loginLink')}</a>
         </p>
       </div>
     </div>

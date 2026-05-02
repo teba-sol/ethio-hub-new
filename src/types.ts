@@ -54,9 +54,14 @@ export interface User {
 
 export interface Product {
   id: string;
-  name: string;
-  description: string;
-  culturalStory: string;
+  name: string; // For backward compatibility
+  name_en: string;
+  name_am: string;
+  description: string; // For backward compatibility
+  description_en: string;
+  description_am: string;
+  culturalStory_en?: string;
+  culturalStory_am?: string;
   price: number;
   category: string;
   artisanId: string;
@@ -67,7 +72,11 @@ export interface Product {
   status: 'Pending' | 'Approved' | 'Rejected';
   stock: number;
   sku: string;
-  material: string;
+  material?: string;
+  material_en?: string;
+  material_am?: string;
+  careInstructions_en?: string;
+  careInstructions_am?: string;
   isHandmade: boolean;
   productionTime: number;
   shippingLocations: string[];
@@ -80,8 +89,12 @@ export interface Product {
 export interface RoomType {
   id: string;
   _id?: string;
-  name: string;
-  description: string;
+  name: string; // For backward compatibility
+  name_en: string;
+  name_am: string;
+  description: string; // For backward compatibility
+  description_en: string;
+  description_am: string;
   capacity: number;
   pricePerNight: number;
   availability: number;
@@ -89,25 +102,39 @@ export interface RoomType {
   sqm: number;
   amenities: string[];
   bedType: string;
+  initialAvailability?: number;
+  bookedCount?: number;
+  remaining?: number;
+  isSoldOut?: boolean;
 }
 
 export interface FoodPackage {
   id: string;
   _id?: string;
-  name: string;
-  description: string;
+  name: string; // For backward compatibility
+  name_en: string;
+  name_am: string;
+  description: string; // For backward compatibility
+  description_en: string;
+  description_am: string;
   pricePerPerson: number;
   items: string[];
 }
 
 export interface HotelAccommodation {
   id: string;
-  name: string;
+  name: string; // For backward compatibility
+  name_en: string;
+  name_am: string;
   image: string;
   address: string;
   starRating: number;
-  description: string;
-  fullDescription: string;
+  description: string; // For backward compatibility
+  description_en: string;
+  description_am: string;
+  fullDescription: string; // For backward compatibility
+  fullDescription_en: string;
+  fullDescription_am: string;
   policies: string;
   checkInTime: string;
   checkOutTime: string;
@@ -118,29 +145,44 @@ export interface HotelAccommodation {
 
 export interface TransportOption {
   id: string;
-  type: 'Private Car' | 'VIP SUV' | 'Shuttle Bus' | 'Luxury Coach' | 'Helicopter Transfer';
+  _id?: string;
+  type: 'Private Car' | 'VIP SUV' | 'Shuttle Bus' | 'Luxury Coach' | 'Helicopter Transfer'; // For backward compatibility
+  type_en: string;
+  type_am: string;
   provider?: string;
   image: string;
   price: number;
   availability?: number;
   capacity?: number;
   features?: string[];
-  description: string;
+  description: string; // For backward compatibility
+  description_en: string;
+  description_am: string;
   pickupLocations?: string[];
+  initialAvailability?: number;
+  bookedCount?: number;
+  remaining?: number;
+  isSoldOut?: boolean;
 }
 
 export interface Festival {
   id: string;
   _id?: string;
-  name: string;
+  name: string; // For backward compatibility
+  name_en: string;
+  name_am: string;
   slug: string;
   startDate: string;
   endDate: string;
   locationName: string;
   address: string;
   coordinates: { lat: number; lng: number };
-  shortDescription: string;
-  fullDescription: string;
+  shortDescription: string; // For backward compatibility
+  shortDescription_en: string;
+  shortDescription_am: string;
+  fullDescription: string; // For backward compatibility
+  fullDescription_en: string;
+  fullDescription_am: string;
   coverImage: string;
   gallery: string[];
   schedule: { day: number; title: string; activities: string }[];
