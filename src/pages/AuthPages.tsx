@@ -304,9 +304,7 @@ export const RegisterPage: React.FC = () => {
                {isSubmitting ? "..." : t("auth.continueButton")}
              </Button>
            </div>
-         </form>
-
-          <div className="md:col-span-2 space-y-4 pt-4">
+<div className="md:col-span-2 space-y-4 pt-4">
             <p className="text-[10px] text-gray-400 text-center leading-relaxed">
               By creating an account, you agree to our Terms of Service and Privacy Policy.
               We&apos;ll send you updates about authentic cultural products and festivals.
