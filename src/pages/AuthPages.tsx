@@ -276,11 +276,7 @@ export const RegisterPage: React.FC = () => {
              onChange={(e) => setConfirmPassword(e.target.value)}
              required
            />
-           <div className="md:col-span-2">
-             <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
-               {isSubmitting ? "..." : t("auth.continueButton")}
-             </Button>
-           </div>
+
 <div className="md:col-span-2 space-y-4 pt-4">
             <p className="text-[10px] text-gray-400 text-center leading-relaxed">
               By creating an account, you agree to our Terms of Service and Privacy Policy.
