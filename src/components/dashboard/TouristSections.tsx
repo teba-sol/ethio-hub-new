@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Button, Input, Badge } from '../UI';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import apiClient from '../../lib/apiClient';
 
 // Mock Data
@@ -698,6 +699,7 @@ export const TouristPaymentsView: React.FC = () => {
 export const TouristSettingsView: React.FC = () => {
   const { user, logout, updateUser } = useAuth();
   const router = useRouter();
+  const { t } = useLanguage();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -835,45 +837,45 @@ export const TouristSettingsView: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <h2 className="text-3xl font-serif font-bold text-primary">Account Settings</h2>
+      <h2 className="text-3xl font-serif font-bold text-primary">{t('settings.accountSettings')}</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2 space-y-8">
           <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-            <h3 className="text-xl font-bold text-primary mb-6">Profile Information</h3>
+            <h3 className="text-xl font-bold text-primary mb-6">{t('settings.profileInformation')}</h3>
             <form onSubmit={handleProfileSave}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Input 
-                  label="Full Name" 
+                  label={t('settings.fullName')}
                   value={profileForm.name}
                   onChange={(e) => setProfileForm({...profileForm, name: e.target.value})}
                 />
-                <Input label="Email Address" value={user?.email || ""} disabled />
+                <Input label={t('settings.emailAddress')} value={user?.email || ""} disabled />
                 <Input 
-                  label="Phone Number" 
+                  label={t('settings.phoneNumber')}
                   value={profileForm.phone}
                   onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
                   placeholder="+251 911 234 567"
                 />
                 <Input 
-                  label="Country" 
+                  label={t('settings.country')}
                   value={profileForm.country}
                   onChange={(e) => setProfileForm({...profileForm, country: e.target.value})}
                   placeholder="Ethiopia"
                 />
                 <Input 
-                  label="Nationality" 
+                  label={t('settings.nationality')}
                   value={profileForm.nationality}
                   onChange={(e) => setProfileForm({...profileForm, nationality: e.target.value})}
                   placeholder="Ethiopian"
                 />
                 <Input 
-                  label="Date of Birth" 
+                  label={t('settings.dateOfBirth')}
                   type="date"
                   value={profileForm.dateOfBirth}
                   onChange={(e) => setProfileForm({...profileForm, dateOfBirth: e.target.value})}
                 />
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Profile Photo</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.profilePhoto')}</label>
                   <div className="flex items-center gap-4">
                     <input
                       type="file"
@@ -888,43 +890,43 @@ export const TouristSettingsView: React.FC = () => {
                       disabled={uploadingImage}
                       className="px-4 py-2 bg-primary text-white rounded-lg font-medium text-sm hover:bg-primary/90 disabled:opacity-50"
                     >
-                      {uploadingImage ? 'Uploading...' : 'Choose Image'}
+                      {uploadingImage ? 'Uploading...' : t('settings.chooseImage')}
                     </button>
                     {profileForm.profileImage && (
-                      <span className="text-sm text-green-600">Image uploaded!</span>
+                      <span className="text-sm text-green-600">{t('settings.imageUploaded')}</span>
                     )}
                   </div>
                   {profileForm.profileImage && (
                     <div className="mt-4 w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200">
-                      <img src={profileForm.profileImage} alt="Preview" className="w-full h-full object-cover" />
+                      <img src={profileForm.profileImage} alt={t('settings.preview')} className="w-full h-full object-cover" />
                     </div>
                   )}
                 </div>
               </div>
               <div className="mt-8 flex justify-end">
                 <Button type="submit" disabled={savingProfile}>
-                  {savingProfile ? 'Saving...' : 'Save Changes'}
+                  {savingProfile ? 'Saving...' : t('settings.saveChanges')}
                 </Button>
               </div>
             </form>
           </section>
 
           <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-            <h3 className="text-xl font-bold text-primary mb-6">Security</h3>
+            <h3 className="text-xl font-bold text-primary mb-6">{t('settings.security')}</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
                 <div>
-                  <p className="font-bold text-primary">Password</p>
-                  <p className="text-xs text-gray-500">Last changed 3 months ago</p>
+                  <p className="font-bold text-primary">{t('settings.password')}</p>
+                  <p className="text-xs text-gray-500">{t('settings.lastChanged')}</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setShowPasswordModal(true)}>Update</Button>
+                <Button variant="outline" size="sm" onClick={() => setShowPasswordModal(true)}>{t('settings.update')}</Button>
               </div>
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
                 <div>
-                  <p className="font-bold text-primary">Two-Factor Authentication</p>
-                  <p className="text-xs text-gray-500">Add an extra layer of security</p>
+                  <p className="font-bold text-primary">{t('settings.twoFactorAuth')}</p>
+                  <p className="text-xs text-gray-500">{t('settings.addExtraLayer')}</p>
                 </div>
-                <Button variant="outline" size="sm">Enable</Button>
+                <Button variant="outline" size="sm">{t('settings.enable')}</Button>
               </div>
             </div>
           </section>
@@ -934,25 +936,25 @@ export const TouristSettingsView: React.FC = () => {
           <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
             <div className="flex flex-col items-center text-center">
               <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg mb-4">
-                <img src={profileForm.profileImage || "https://ui-avatars.com/api/?name=" + encodeURIComponent(profileForm.name || 'Tourist')} alt="Profile" className="w-full h-full object-cover" />
+                <img src={profileForm.profileImage || "https://ui-avatars.com/api/?name=" + encodeURIComponent(profileForm.name || 'Tourist')} alt={t('settings.profile')} className="w-full h-full object-cover" />
               </div>
-              <p className="text-xs text-gray-500">Upload a photo above</p>
+              <p className="text-xs text-gray-500">{t('settings.uploadPhoto')}</p>
             </div>
           </section>
           
           <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-            <h3 className="text-lg font-bold text-primary mb-4">Preferences</h3>
+            <h3 className="text-lg font-bold text-primary mb-4">{t('settings.preferences')}</h3>
             <div className="space-y-3">
               <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm text-gray-600">Email Notifications</span>
+                <span className="text-sm text-gray-600">{t('settings.emailNotifications')}</span>
                 <input type="checkbox" defaultChecked className="toggle" />
               </label>
               <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm text-gray-600">SMS Alerts</span>
+                <span className="text-sm text-gray-600">{t('settings.smsAlerts')}</span>
                 <input type="checkbox" className="toggle" />
               </label>
               <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm text-gray-600">Newsletter</span>
+                <span className="text-sm text-gray-600">{t('settings.newsletter')}</span>
                 <input type="checkbox" defaultChecked className="toggle" />
               </label>
             </div>

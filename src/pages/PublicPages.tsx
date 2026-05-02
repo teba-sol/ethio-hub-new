@@ -12,6 +12,8 @@ import {
   Shield, Sparkles, Maximize as MaximizeIcon, BedDouble, Truck as TruckIcon, Fuel, Settings, Gauge, CircleDollarSign
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { HeroVideo } from '@/components/HeroVideo';
+import type { Festival } from '../types';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -32,9 +34,234 @@ import { UserRole } from '../types';
 import apiClient from '../lib/apiClient';
 import { useContentLanguage } from '@/hooks/useContentLanguage';
 
+const festivalAndProductImageBase = '/uploads/avatars/festivalandproductimage';
+
+const localFestivalImages = [
+  `${festivalAndProductImageBase}/festivalimage1.webp`,
+  `${festivalAndProductImageBase}/festivalimage2.avif`,
+  `${festivalAndProductImageBase}/event3.webp`,
+];
+
+const localProductImages = [
+  `${festivalAndProductImageBase}/product%20image%201.webp`,
+  `${festivalAndProductImageBase}/clothproduct2.webp`,
+  `${festivalAndProductImageBase}/product3.webp`,
+];
+
+const heritageRailImages = [
+  localProductImages[0],
+  localFestivalImages[0],
+  localProductImages[1],
+  localFestivalImages[1],
+];
+
+const exploreLeftRailImages = [
+  localProductImages[0],
+  localFestivalImages[0],
+  localProductImages[1],
+  localFestivalImages[2],
+];
+
+const exploreRightRailImages = [
+  localFestivalImages[1],
+  localProductImages[2],
+  localFestivalImages[2],
+  localProductImages[1],
+];
+
+const localFallbackFestivals: Festival[] = [
+  {
+    id: 'meskel-2026',
+    name: 'Meskel 2026',
+    name_en: 'Meskel 2026',
+    name_am: 'መስቀል 2019',
+    slug: 'meskel-2026',
+    startDate: '2026-09-27T12:00:00.000Z',
+    endDate: '2026-09-28T18:00:00.000Z',
+    locationName: 'Meskel Square, Addis Ababa',
+    address: 'Meskel Square, Addis Ababa',
+    coordinates: { lat: 9.0105, lng: 38.7612 },
+    shortDescription: 'The Finding of the True Cross celebration with the Demera bonfire, hymns, and public processions.',
+    shortDescription_en: 'The Finding of the True Cross celebration with the Demera bonfire, hymns, and public processions.',
+    shortDescription_am: 'የመስቀል ደመራ በዓል በዝማሬ፣ በሰልፍ እና በባህላዊ ክብር።',
+    fullDescription: '',
+    fullDescription_en: '',
+    fullDescription_am: '',
+    coverImage: localFestivalImages[1],
+    gallery: [],
+    schedule: [],
+    mainActivities: 'Demera bonfire, chants, processions',
+    performances: [],
+    hotels: [],
+    transportation: [],
+    foodPackages: [],
+    culturalServices: [],
+    baseTicketPrice: 500,
+    currency: 'ETB',
+    cancellationPolicy: '',
+    bookingTerms: '',
+    organizerId: '',
+    isVerified: true,
+    ticketsAvailable: 300,
+    status: 'Published',
+    verificationStatus: 'Approved',
+  },
+  {
+    id: 'irreecha-2026',
+    name: 'Irreecha 2026',
+    name_en: 'Irreecha 2026',
+    name_am: 'ኢሬቻ 2019',
+    slug: 'irreecha-2026',
+    startDate: '2026-10-04T08:00:00.000Z',
+    endDate: '2026-10-04T18:00:00.000Z',
+    locationName: 'Hora Finfinne, Addis Ababa',
+    address: 'Hora Finfinne, Addis Ababa',
+    coordinates: { lat: 9.034, lng: 38.75 },
+    shortDescription: 'A thanksgiving festival celebrated with Oromo cultural dress, songs, blessings, and community gatherings.',
+    shortDescription_en: 'A thanksgiving festival celebrated with Oromo cultural dress, songs, blessings, and community gatherings.',
+    shortDescription_am: 'በኦሮሞ ባህላዊ አልባሳት፣ በመዝሙር እና በምስጋና የሚከበር በዓል።',
+    fullDescription: '',
+    fullDescription_en: '',
+    fullDescription_am: '',
+    coverImage: localFestivalImages[2],
+    gallery: [],
+    schedule: [],
+    mainActivities: 'Blessings, music, cultural gathering',
+    performances: [],
+    hotels: [],
+    transportation: [],
+    foodPackages: [],
+    culturalServices: [],
+    baseTicketPrice: 350,
+    currency: 'ETB',
+    cancellationPolicy: '',
+    bookingTerms: '',
+    organizerId: '',
+    isVerified: true,
+    ticketsAvailable: 220,
+    status: 'Published',
+    verificationStatus: 'Approved',
+  },
+  {
+    id: 'timket-2027',
+    name: 'Timket 2027',
+    name_en: 'Timket 2027',
+    name_am: 'ጥምቀት 2019',
+    slug: 'timket-2027',
+    startDate: '2027-01-19T06:00:00.000Z',
+    endDate: '2027-01-20T18:00:00.000Z',
+    locationName: 'Gondar, Ethiopia',
+    address: 'Fasilides Bath, Gondar',
+    coordinates: { lat: 12.6075, lng: 37.4611 },
+    shortDescription: 'Ethiopian Epiphany marked by tabot processions, white ceremonial dress, and water blessings.',
+    shortDescription_en: 'Ethiopian Epiphany marked by tabot processions, white ceremonial dress, and water blessings.',
+    shortDescription_am: 'በታቦት ሰልፍ፣ በነጭ ባህላዊ ልብስ እና በውሃ ቡራኬ የሚታወቅ የጥምቀት በዓል።',
+    fullDescription: '',
+    fullDescription_en: '',
+    fullDescription_am: '',
+    coverImage: localFestivalImages[0],
+    gallery: [],
+    schedule: [],
+    mainActivities: 'Tabot processions, hymns, water blessing',
+    performances: [],
+    hotels: [],
+    transportation: [],
+    foodPackages: [],
+    culturalServices: [],
+    baseTicketPrice: 650,
+    currency: 'ETB',
+    cancellationPolicy: '',
+    bookingTerms: '',
+    organizerId: '',
+    isVerified: true,
+    ticketsAvailable: 180,
+    status: 'Published',
+    verificationStatus: 'Approved',
+  },
+];
+
+const normalizeFestival = (festival: any, index = 0): Festival => ({
+  id: festival.id || festival._id || festival.slug || `festival-${index}`,
+  _id: festival._id,
+  name: festival.name || festival.name_en || 'Cultural Festival',
+  name_en: festival.name_en || festival.name || 'Cultural Festival',
+  name_am: festival.name_am || festival.name || 'የባህል በዓል',
+  slug: festival.slug || festival._id || `festival-${index}`,
+  startDate: festival.startDate,
+  endDate: festival.endDate || festival.startDate,
+  locationName: festival.locationName || festival.location?.name || festival.location?.name_en || 'Ethiopia',
+  address: festival.locationAddress || festival.address || festival.location?.address || '',
+  coordinates: festival.coordinates || festival.location?.coordinates || { lat: 9.03, lng: 38.74 },
+  shortDescription: festival.shortDescription || festival.shortDescription_en || 'A verified cultural experience from Ethio Craft Hub.',
+  shortDescription_en: festival.shortDescription_en || festival.shortDescription || 'A verified cultural experience from Ethio Craft Hub.',
+  shortDescription_am: festival.shortDescription_am || festival.shortDescription || 'በኢትዮ ክራፍት ሀብ የተረጋገጠ የባህል ተሞክሮ።',
+  fullDescription: festival.fullDescription || festival.fullDescription_en || '',
+  fullDescription_en: festival.fullDescription_en || festival.fullDescription || '',
+  fullDescription_am: festival.fullDescription_am || festival.fullDescription || '',
+  coverImage: localFestivalImages[index % localFestivalImages.length] || festival.coverImage || festival.gallery?.[0],
+  gallery: festival.gallery || [],
+  schedule: festival.schedule || [],
+  mainActivities: festival.mainActivities || '',
+  performances: festival.performances || [],
+  hotels: festival.hotels || [],
+  transportation: festival.transportation || [],
+  foodPackages: festival.foodPackages || festival.services?.foodPackages || [],
+  culturalServices: festival.culturalServices || festival.services?.culturalServices || [],
+  baseTicketPrice: festival.baseTicketPrice || festival.pricing?.basePrice || 0,
+  vipTicketPrice: festival.vipTicketPrice || festival.pricing?.vipPrice,
+  currency: festival.currency || festival.pricing?.currency || 'ETB',
+  cancellationPolicy: festival.cancellationPolicy || festival.policies?.cancellation || '',
+  bookingTerms: festival.bookingTerms || festival.policies?.terms || '',
+  safetyRules: festival.safetyRules || festival.policies?.safety,
+  ageRestriction: festival.ageRestriction || festival.policies?.ageRestriction,
+  organizerId: festival.organizerId || festival.organizer?._id || festival.organizer || '',
+  isVerified: festival.isVerified ?? festival.verificationStatus === 'Approved',
+  ticketsAvailable: festival.ticketsAvailable || festival.ticketTypes?.reduce((sum: number, ticket: any) => sum + (ticket.available || 0), 0) || 0,
+  status: festival.status || 'Published',
+  verificationStatus: festival.verificationStatus || 'Approved',
+  submittedAt: festival.submittedAt,
+  reviewedAt: festival.reviewedAt,
+});
+
+const toSearchableText = (value: any): string => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'object') {
+    return [
+      value.en,
+      value.am,
+      value.name,
+      value.name_en,
+      value.name_am,
+      value.title,
+      value.title_en,
+      value.title_am,
+    ]
+      .filter(Boolean)
+      .join(' ');
+  }
+  return String(value);
+};
+
+const isUnsplashImage = (path: string) => path.includes('images.unsplash.com') || path.includes('unsplash.com');
+
+const getLocalProductImages = (images: string[] | undefined, index = 0) => {
+  const cleanImages = (images || []).filter((image) => image && !isUnsplashImage(image));
+  return cleanImages.length > 0 ? cleanImages : [localProductImages[index % localProductImages.length]];
+};
+
+const withLocalProductFallbacks = (products: any[]) =>
+  products.map((product, index) => ({
+    ...product,
+    images: getLocalProductImages(product.images, index),
+  }));
+
 export const Homepage: React.FC = () => {
   const { t } = useLanguage();
   const [products, setProducts] = useState<any[]>([]);
+  const [festivals, setFestivals] = useState<Festival[]>([]);
+  const [festivalLoading, setFestivalLoading] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,7 +270,7 @@ export const Homepage: React.FC = () => {
         const res = await fetch('/api/public/products');
         const data = await res.json();
         if (data.products) {
-          const mappedProducts = data.products.map((p: any) => ({
+          const mappedProducts = data.products.map((p: any, index: number) => ({
             id: p._id,
             name: p.name,
             name_en: p.name_en || p.name,
@@ -56,7 +283,7 @@ export const Homepage: React.FC = () => {
             category: p.category,
             artisanId: p.artisanId?._id || p.artisanId,
             artisanName: p.artisanId?.name || 'Unknown Artisan',
-            images: p.images && p.images.length > 0 ? p.images : ['/placeholder-product.jpg'],
+            images: getLocalProductImages(p.images, index),
             isVerified: p.verificationStatus === 'Approved',
             rating: 4.5,
             stock: p.stock,
@@ -76,7 +303,7 @@ export const Homepage: React.FC = () => {
         }
       } catch (error) {
         console.error('Error fetching products:', error);
-        setProducts(MOCK_PRODUCTS);
+        setProducts(withLocalProductFallbacks(MOCK_PRODUCTS));
       } finally {
         setLoading(false);
       }
@@ -84,31 +311,40 @@ export const Homepage: React.FC = () => {
     fetchProducts();
   }, []);
 
-  const filteredProducts = products;
-  const newArrivals = [...products].reverse().slice(0, 5);
-  const topRated = [...products].sort((a, b) => b.rating - a.rating).slice(0, 5);
+  useEffect(() => {
+    const fetchUpcomingFestivals = async () => {
+      try {
+        const res = await fetch('/api/festivals?status=upcoming');
+        const data = await res.json();
+        const apiFestivals = Array.isArray(data.festivals) ? data.festivals : [];
+        const normalized = apiFestivals
+          .map((festival: any, index: number) => normalizeFestival(festival, index))
+          .filter((festival: Festival) => new Date(festival.startDate).getTime() >= Date.now())
+          .sort((a: Festival, b: Festival) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
 
-  const filteredFestivals = MOCK_FESTIVALS;
-  const liveEvents = filteredFestivals.slice(0, 1);
-  const upcomingEvents = filteredFestivals.slice(1);
+        setFestivals(normalized.length > 0 ? normalized : localFallbackFestivals);
+      } catch (error) {
+        console.error('Error fetching festivals:', error);
+        setFestivals(localFallbackFestivals);
+      } finally {
+        setFestivalLoading(false);
+      }
+    };
+    fetchUpcomingFestivals();
+  }, []);
+
+  const filteredProducts = products;
+  const landingProducts = filteredProducts.slice(0, 4).map((product, index) => ({
+    ...product,
+    images: [localProductImages[index % localProductImages.length]],
+  }));
+
+  const upcomingEvents = festivals.slice(0, 3);
 
   return (
     <main className="flex flex-col">
-      <section className="relative min-h-[80vh] flex items-center overflow-hidden bg-ethio-dark">
-        <div className="absolute inset-0 z-0">
-          <img src="https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?q=80&w=2070&auto=format&fit=crop" className="w-full h-full object-cover opacity-60 scale-105" alt="Ethiopian Heritage" />
-          <div className="absolute inset-0 bg-gradient-to-b from-ethio-dark/60 to-ethio-dark" />
-        </div>
-        <div className="relative z-10 max-w-7xl mx-auto px-6 text-white w-full text-center">
-          <div className="max-w-3xl mx-auto space-y-8 animate-in zoom-in duration-700">
-            <Badge variant="info" className="py-2 px-6 bg-secondary text-primary border-none uppercase tracking-[0.2em] font-bold text-[10px]">{t("home.unifiedPlatform")}</Badge>
-            <h1 className="text-4xl sm:text-5xl md:text-7xl font-serif font-bold leading-tight tracking-tight">{t("home.discoverHeart")} <br /> <span className="text-secondary italic">{t("home.ethiopianHeritage")}</span></h1>
-            <p className="text-gray-200 text-lg leading-relaxed font-light max-w-2xl mx-auto">
-              {t("home.experienceSoul")} {t("home.fromVibrant")} {t("home.secureSpot")}
-            </p>
-          </div>
-        </div>
-      </section>
+      {/* Hero Video Section */}
+      <HeroVideo />
 
       <section className="py-12 bg-white border-b border-gray-100 -mt-10 relative z-20">
         <div className="max-w-7xl mx-auto px-6">
@@ -129,28 +365,32 @@ export const Homepage: React.FC = () => {
         </div>
       </section>
 
-      {/* Top Rated Section */}
-      <section className="py-16 bg-white border-b border-gray-100">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="flex flex-col md:flex-row justify-between md:items-end mb-10 gap-4">
-              <div className="space-y-2 animate-in slide-in-from-left duration-700">
-                <div className="flex items-center gap-2 mb-2">
-                  <Star className="w-5 h-5 text-secondary fill-current" />
-                  <span className="text-xs font-bold uppercase tracking-widest text-secondary">{t("home.communityFavorites")}</span>
+      {/* Artifact Preview Section */}
+      <section className="relative overflow-hidden border-b border-gray-100 bg-gradient-to-br from-ethio-bg via-white to-secondary/10 py-16 md:py-24">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-secondary/50 to-transparent" />
+          <div className="max-w-7xl mx-auto px-6 relative">
+            <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-secondary shadow-sm">
+                  <Box className="h-4 w-4" />
+                  {t('home.curatedMarketplace')}
                 </div>
-                <h2 className="text-4xl font-serif font-bold text-primary tracking-tight">{t("home.topRatedCollections")}</h2>
-                <p className="text-gray-500 max-w-lg text-lg font-light">{t("home.highlyAcclaimed")}</p>
+                <h2 className="text-4xl font-serif font-bold text-primary tracking-tight">{t("home.masterArtisanCatalog")}</h2>
+                <p className="text-gray-500 max-w-lg text-lg font-light">{t("home.directTrade")}</p>
               </div>
-              <Link href="/products" className="self-start md:self-auto">
+              <Link href="/products">
                 <Button variant="ghost" className="text-primary font-bold text-sm group p-0 hover:bg-transparent">
-                  Explore Top Rated <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  View All Artifacts <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
             </div>
-            
-            <div className="flex overflow-x-auto pb-8 -mx-6 px-6 scrollbar-hide snap-x snap-mandatory gap-6">
-              {topRated.map((p, i) => (
-                <div key={p.id} className="min-w-[280px] md:min-w-[340px] snap-center animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: `${i * 100}ms` }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {landingProducts.map((p, i) => (
+                <div
+                  key={p.id}
+                  className={`artifact-showcase-card group ${i % 2 === 0 ? 'artifact-enter-left' : 'artifact-enter-right'}`}
+                  style={{ animationDelay: `${i * 120}ms` }}
+                >
                   <ProductCard product={p} />
                 </div>
               ))}
@@ -158,63 +398,178 @@ export const Homepage: React.FC = () => {
           </div>
       </section>
 
-      {/* Standard Product Grid Section */}
-      <section className="py-12 md:py-24 bg-ethio-bg border-b border-gray-100">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
-              <div className="space-y-2">
-                <h2 className="text-4xl font-serif font-bold text-primary tracking-tight">{t("home.masterArtisanCatalog")}</h2>
-                <p className="text-gray-500 max-w-lg text-lg font-light">{t("home.directTrade")}</p>
+      {/* Explore Ethiopia Inspired Section */}
+      <section className="relative overflow-hidden bg-white py-20 md:py-28">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-secondary/60 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-ethio-bg/80 to-transparent" />
+        <div className="max-w-7xl mx-auto px-6 relative">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-16 items-center">
+            <div className="relative hidden min-h-[680px] overflow-hidden md:block">
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-20 bg-gradient-to-b from-white to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-20 bg-gradient-to-t from-white to-transparent" />
+
+              <div className="absolute left-0 top-0 h-full w-[39%] overflow-hidden">
+                <div className="explore-rail-up space-y-5">
+                  {[...exploreLeftRailImages, ...exploreLeftRailImages].map((image, index) => (
+                    <div key={`${image}-left-${index}`} className={`overflow-hidden rounded-[28px] shadow-2xl shadow-black/15 ${index % 2 === 0 ? 'h-56' : 'h-44'}`}>
+                      <img src={image} alt="Ethiopian handmade craft" className="h-full w-full object-cover" />
+                    </div>
+                  ))}
+                </div>
               </div>
-              <Link href="/products"><Button variant="ghost" className="text-primary font-bold text-sm group p-0 hover:bg-transparent">View All Artifacts <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" /></Button></Link>
+
+              <div className="absolute right-0 top-0 h-full w-[39%] overflow-hidden">
+                <div className="explore-rail-down space-y-5">
+                  {[...exploreRightRailImages, ...exploreRightRailImages].map((image, index) => (
+                    <div key={`${image}-right-${index}`} className={`overflow-hidden rounded-[28px] shadow-2xl shadow-black/15 ${index % 2 === 0 ? 'h-44' : 'h-56'}`}>
+                      <img src={image} alt="Ethiopian market and festival detail" className="h-full w-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="absolute left-1/2 top-1/2 z-20 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white p-4 shadow-2xl">
+                <div className="rounded-full bg-ethio-dark px-5 py-7 text-center text-white">
+                  <p className="text-[10px] uppercase tracking-[0.28em] text-secondary">Ethio Craft</p>
+                  <p className="mt-2 font-serif text-2xl font-bold leading-none">Hub</p>
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {filteredProducts.slice(0, 8).map(p => <ProductCard key={p.id} product={p} />)}
+
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-3 rounded-full bg-secondary/10 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.24em] text-secondary">
+                <Sparkles className="h-4 w-4" />
+                {t('home.craftCelebrationMeet')}
+              </div>
+              <div className="space-y-4">
+                <p className="text-sm font-bold uppercase tracking-[0.34em] text-gray-400">{t('home.letsExploreEthiopia')}</p>
+                <h2 className="font-serif text-4xl font-bold leading-tight tracking-tight text-primary md:text-6xl">
+                  {t('home.whereHeritageAwaits')}
+                </h2>
+                <p className="max-w-2xl text-lg font-light leading-relaxed text-gray-500">
+                  {t('home.discoverHandmade')}
+                </p>
+              </div>
+              <div className="flex flex-col gap-4 sm:flex-row">
+                <Link href="/products">
+                  <Button className="rounded-full px-8 py-4 font-bold uppercase tracking-widest text-xs">
+                    {t('home.discoverCrafts')}
+                  </Button>
+                </Link>
+                <Link href="/festivals">
+                  <Button variant="outline" className="rounded-full px-8 py-4 font-bold uppercase tracking-widest text-xs">
+                    {t('home.exploreFestivals')}
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
-      </section>
-
-      {/* Cultural Events Intro Text */}
-      <section className="py-12 md:py-16 bg-white text-center">
-        <div className="max-w-4xl mx-auto px-6 space-y-6">
-          <div className="w-16 h-1 bg-secondary mx-auto rounded-full"></div>
-          <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary">Experience the Soul of Ethiopia</h2>
-          <p className="text-gray-500 text-lg leading-relaxed font-light">
-            From the vibrant processions of Timket to the mesmerizing bonfires of Meskel, immerse yourself in living history. 
-            Secure your spot at these sacred gatherings with verified local support.
-          </p>
         </div>
       </section>
 
-      {/* Live / Happening Now Events */}
-      {liveEvents.length > 0 && (
-        <section className="py-12 bg-white">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="flex items-center gap-4 mb-10">
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-              <h2 className="text-3xl font-serif font-bold text-primary tracking-tight">Live / Happening Now</h2>
+      {/* Upcoming Festivals */}
+      <section className="relative overflow-hidden bg-ethio-bg py-16 md:py-24">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-secondary/60 to-transparent" />
+        <div className="max-w-7xl mx-auto px-6 relative">
+          <div className="mb-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-3">
+                <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.24em] text-secondary">
+                  <Calendar className="h-4 w-4" />
+                  {t('home.upcomingEventsFestivals')}
+                </div>
+              <h2 className="font-serif text-4xl font-bold tracking-tight text-primary md:text-5xl">{t('home.bookInLandOfOrigins')}</h2>
+                <p className="max-w-2xl text-gray-500">
+                  {t('home.reserveFestivalPass')}
+                </p>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-              {liveEvents.map(f => <FestivalCard key={f.id} festival={f} />)}
-            </div>
+            <Link href="/festivals">
+              <Button variant="outline" className="rounded-full px-7 py-3 font-bold uppercase tracking-widest text-xs">
+                View All Festivals <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           </div>
-        </section>
-      )}
 
-      {/* Upcoming Events */}
-      {upcomingEvents.length > 0 && (
-        <section className="py-12 bg-white pb-24">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="flex items-center gap-4 mb-10">
-              <Calendar className="w-6 h-6 text-secondary" />
-              <h2 className="text-3xl font-serif font-bold text-primary tracking-tight">Upcoming Events</h2>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            {festivalLoading && [1, 2, 3].map((item) => (
+              <div key={item} className="h-[430px] animate-pulse rounded-[28px] bg-white" />
+            ))}
+
+            {!festivalLoading && upcomingEvents.map((festival, index) => (
+              <article key={festival.id} className="group overflow-hidden rounded-[28px] bg-white shadow-xl shadow-black/5 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl">
+                <Link href={`/event/${festival.id}`} className="block">
+                  <div className="relative h-64 overflow-hidden">
+                    <img src={localFestivalImages[index % localFestivalImages.length]} alt={festival.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                    <div className="absolute left-5 top-5 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
+                      {festival.currency} {festival.baseTicketPrice || 0}
+                    </div>
+                    <div className="absolute bottom-5 left-5 right-5 text-white">
+                      <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-secondary">
+                        <Calendar className="h-4 w-4" />
+                        {formatDate(festival.startDate)}
+                      </p>
+                      <h3 className="line-clamp-2 font-serif text-3xl font-bold leading-tight">{festival.name}</h3>
+                    </div>
+                  </div>
+                </Link>
+                <div className="space-y-5 p-6">
+                  <div className="space-y-3">
+                    <p className="flex items-center gap-2 text-sm font-medium text-gray-500">
+                      <MapPin className="h-4 w-4 text-secondary" />
+                      <span className="line-clamp-1">{festival.locationName}</span>
+                    </p>
+                    <p className="line-clamp-2 text-sm leading-relaxed text-gray-500">{festival.shortDescription}</p>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-gray-100 pt-5">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Starting at</p>
+                      <p className="font-serif text-2xl font-bold text-primary">{festival.currency} {festival.baseTicketPrice || 0}</p>
+                    </div>
+                    <Link href={`/event/${festival.id}`}>
+                      <Button className="rounded-full px-6 py-3 text-[10px] font-bold uppercase tracking-widest">
+                        Book Now
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Timeless Craft Traditions */}
+      <section className="bg-ethio-dark py-20 text-white md:py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+            <div className="space-y-4">
+              <p className="text-xs font-bold uppercase tracking-[0.32em] text-secondary">Timeless Attractions</p>
+              <h2 className="font-serif text-4xl font-bold tracking-tight md:text-5xl">Timeless Craft Traditions</h2>
+              <p className="max-w-xl text-lg font-light leading-relaxed text-gray-300">
+                From woven cotton and coffee ceremony clayware to silver crosses and Harari baskets, every product carries a place, a maker, and a cultural memory.
+              </p>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-              {upcomingEvents.map(f => <FestivalCard key={f.id} festival={f} />)}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {[
+                { title: 'Woven Textiles', meta: 'Dorze, Shema, Gabi', image: heritageRailImages[1] },
+                { title: 'Coffee Ceremony', meta: 'Jebena and serving sets', image: heritageRailImages[0] },
+                { title: 'Heritage Jewelry', meta: 'Silver crosses and beadwork', image: heritageRailImages[2] },
+              ].map((item) => (
+                <Link href="/products" key={item.title} className="group overflow-hidden rounded-[24px] bg-white/5">
+                  <div className="relative aspect-[4/5] overflow-hidden">
+                    <img src={item.image} alt={item.title} className="h-full w-full object-cover opacity-85 transition-transform duration-700 group-hover:scale-110" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                    <div className="absolute bottom-0 p-5">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-secondary">{item.meta}</p>
+                      <h3 className="mt-2 font-serif text-2xl font-bold">{item.title}</h3>
+                    </div>
+                  </div>
+                </Link>
+              ))}
             </div>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
       {/* Why Choose Us */}
       <section className="py-12 md:py-24 bg-ethio-dark text-white">
@@ -302,7 +657,7 @@ export const AboutPage: React.FC = () => {
                     </div>
                 </div>
                 <div className="relative h-[500px] rounded-[32px] overflow-hidden shadow-2xl group">
-                    <img src="https://images.unsplash.com/photo-1493246507139-91e8fad9978e?q=80&w=2070&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-1000" alt="Artisan at work" />
+                    <img src={localProductImages[0]} className="absolute inset-0 w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-1000" alt="Artisan at work" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 text-white">
                         <p className="font-serif text-2xl italic">{t("home.preservingSoul")}</p>
@@ -343,10 +698,10 @@ export const AboutPage: React.FC = () => {
             <h2 className="text-4xl font-serif font-bold text-primary mb-16">{t("home.guidedByExperts")}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                 {[
-                    { name: "Dr. Abebe Kebede", role: t("home.directorHeritage"), img: "https://images.unsplash.com/photo-1531384441138-2736e62e0919?q=80&w=1974&auto=format&fit=crop" },
-                    { name: "Sara Tadesse", role: t("home.headArtisanRelations"), img: "https://images.unsplash.com/photo-1589156280159-27698a70f29e?q=80&w=1972&auto=format&fit=crop" },
-                    { name: "Dawit Haile", role: t("home.leadTechArchitect"), img: "https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?q=80&w=1935&auto=format&fit=crop" },
-                    { name: "Marta Girma", role: t("home.globalLogistics"), img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=1976&auto=format&fit=crop" }
+                    { name: "Dr. Abebe Kebede", role: t("home.directorHeritage"), img: localFestivalImages[0] },
+                    { name: "Sara Tadesse", role: t("home.headArtisanRelations"), img: localProductImages[1] },
+                    { name: "Dawit Haile", role: t("home.leadTechArchitect"), img: localFestivalImages[1] },
+                    { name: "Marta Girma", role: t("home.globalLogistics"), img: localProductImages[2] }
                 ].map((member, i) => (
                     <div key={i} className="group">
                         <div className="relative overflow-hidden rounded-[32px] mb-6 aspect-[3/4]">
@@ -385,7 +740,7 @@ export const ProductListingPage: React.FC = () => {
         const res = await fetch(`/api/public/products?${categoryParam}${searchParam}${artisanParamStr}`);
         const data = await res.json();
         if (data.products) {
-          const mappedProducts = data.products.map((p: any) => ({
+          const mappedProducts = data.products.map((p: any, index: number) => ({
             id: p._id,
             name: p.name,
             name_en: p.name_en || p.name,
@@ -398,7 +753,7 @@ export const ProductListingPage: React.FC = () => {
             category: p.category,
             artisanId: p.artisanId?._id || p.artisanId,
             artisanName: p.artisanId?.name || 'Unknown Artisan',
-            images: p.images && p.images.length > 0 ? p.images : ['/placeholder-product.jpg'],
+            images: getLocalProductImages(p.images, index),
             isVerified: p.verificationStatus === 'Approved',
             rating: 4.5,
             stock: p.stock,
@@ -418,7 +773,7 @@ export const ProductListingPage: React.FC = () => {
         }
       } catch (error) {
         console.error('Error fetching products:', error);
-        setProducts(MOCK_PRODUCTS);
+        setProducts(withLocalProductFallbacks(MOCK_PRODUCTS));
       } finally {
         setLoading(false);
       }
@@ -605,12 +960,13 @@ export const FestivalListingPage: React.FC = () => {
     fetchFestivals();
   }, []);
 
-  const enhancedFestivals = festivals.map((f: any) => {
+  const enhancedFestivals = festivals.map((f: any, index: number) => {
     let type = "Cultural";
-    if (f.name?.includes("Timket") || f.name?.includes("Meskel") || f.name?.includes("Gena") || f.name?.includes("Fasika")) type = "Religious";
-    else if (f.name?.includes("Adwa")) type = "Historical";
-    else if (f.name?.includes("Irreecha")) type = "Harvest";
-    else if (f.name?.includes("Enkutatash")) type = "New Year";
+    const festivalName = toSearchableText(f.name || f.name_en || f.name_am);
+    if (festivalName.includes("Timket") || festivalName.includes("Meskel") || festivalName.includes("Gena") || festivalName.includes("Fasika")) type = "Religious";
+    else if (festivalName.includes("Adwa")) type = "Historical";
+    else if (festivalName.includes("Irreecha")) type = "Harvest";
+    else if (festivalName.includes("Enkutatash")) type = "New Year";
     
     return { 
       ...f, 
@@ -619,13 +975,13 @@ export const FestivalListingPage: React.FC = () => {
       locationName: f.locationName || f.location?.name || '',
       locationName_en: f.locationName_en || f.location?.name_en || f.location?.name || '',
       locationName_am: f.locationName_am || f.location?.name_am || f.location?.name || '',
-      coverImage: f.coverImage || f.gallery?.[0] || 'https://images.unsplash.com/photo-1532566086724-4c4c7713437c?q=80&w=1200&auto=format&fit=crop',
+      coverImage: localFestivalImages[index % localFestivalImages.length] || f.coverImage || f.gallery?.[0],
     };
   });
 
   const filteredFestivals = enhancedFestivals.filter((f: any) => {
-    const localizedName = getLocalizedField(f, 'name');
-    const localizedLocation = getLocalizedField(f, 'locationName');
+    const localizedName = toSearchableText(getLocalizedField(f, 'name'));
+    const localizedLocation = toSearchableText(getLocalizedField(f, 'locationName'));
     const matchesSearch = localizedName.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           localizedLocation.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === "All" || f.type === selectedType;
@@ -657,7 +1013,7 @@ export const FestivalListingPage: React.FC = () => {
       <div className="relative h-[60vh] min-h-[500px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
           <img 
-            src="https://images.unsplash.com/photo-1532566086724-4c4c7713437c?q=80&w=2070&auto=format&fit=crop" 
+            src={localFestivalImages[0]} 
             className="w-full h-full object-cover" 
             alt="Ethiopian Festival" 
           />
@@ -925,7 +1281,7 @@ export const ProductDetailPage: React.FC = () => {
             category: p.category,
             artisanId: p.artisanId?._id || p.artisanId,
             artisanName: p.artisanId?.name || 'Unknown Artisan',
-            images: p.images && p.images.length > 0 ? p.images : ['/placeholder-product.jpg'],
+            images: getLocalProductImages(p.images),
             isVerified: p.verificationStatus === 'Approved',
             rating: 4.5,
             stock: p.stock,
@@ -950,7 +1306,7 @@ export const ProductDetailPage: React.FC = () => {
         }
       } catch (error) {
         console.error('Error fetching product:', error);
-        setProduct(MOCK_PRODUCTS.find(p => p.id === id) || MOCK_PRODUCTS[0]);
+        setProduct(withLocalProductFallbacks([MOCK_PRODUCTS.find(p => p.id === id) || MOCK_PRODUCTS[0]])[0]);
       } finally {
         setLoading(false);
       }
@@ -1464,7 +1820,7 @@ export const FestivalDetailPage: React.FC = () => {
   const [contactInfo, setContactInfo] = useState({ fullName: '', email: '', phone: '' });
 
   const getImageUrl = (path: string | undefined | null) => {
-    if (!path || path === '') return 'https://images.unsplash.com/photo-1533174072545-7a4b6dad2cf7?w=800&h=400&fit=crop';
+    if (!path || path === '') return localFestivalImages[0];
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
     if (path.startsWith('/uploads/')) {
       const baseUrl = window.location.origin;
@@ -1539,8 +1895,8 @@ export const FestivalDetailPage: React.FC = () => {
             fullDescription: f.fullDescription,
             fullDescription_en: f.fullDescription_en || f.fullDescription,
             fullDescription_am: f.fullDescription_am || f.fullDescription,
-            coverImage: f.coverImage || '',
-            gallery: f.gallery || [],
+            coverImage: localFestivalImages[0],
+            gallery: f.gallery?.length ? f.gallery : localFestivalImages,
             schedule: f.schedule || [],
             mainActivities: '',
             performances: [],
@@ -2221,7 +2577,7 @@ export const FestivalDetailPage: React.FC = () => {
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <div className="md:col-span-1">
                               <img 
-                                src={room.image ? getImageUrl(room.image) : 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=300&fit=crop'} 
+                                src={room.image ? getImageUrl(room.image) : localFestivalImages[1]} 
                                 alt={roomName}
                                 className="w-full h-40 md:h-full object-cover rounded-xl"
                               />

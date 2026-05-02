@@ -212,6 +212,36 @@ export const translations: Record<Language, TranslationDictionary> = {
       helpCenter: "Help Center",
       approved: "Approved"
     },
+
+    // Tourist Settings (Original English)
+    settings: {
+      accountSettings: "Account Settings",
+      profileInformation: "Profile Information",
+      fullName: "Full Name",
+      emailAddress: "Email Address",
+      phoneNumber: "Phone Number",
+      country: "Country",
+      nationality: "Nationality",
+      dateOfBirth: "Date of Birth",
+      profilePhoto: "Profile Photo",
+      chooseImage: "Choose Image",
+      imageUploaded: "Image uploaded!",
+      preview: "Preview",
+      saveChanges: "Save Changes",
+      security: "Security",
+      password: "Password",
+      lastChanged: "Last changed 3 months ago",
+      update: "Update",
+      twoFactorAuth: "Two-Factor Authentication",
+      addExtraLayer: "Add an extra layer of security",
+      enable: "Enable",
+      profile: "Profile",
+      uploadPhoto: "Upload a photo above",
+      preferences: "Preferences",
+      emailNotifications: "Email Notifications",
+      smsAlerts: "SMS Alerts",
+      newsletter: "Newsletter"
+    },
     // Admin (Original English)
     admin: {
       verificationModeration: "Verification & Moderation",
@@ -460,9 +490,19 @@ export const translations: Record<Language, TranslationDictionary> = {
       actionRequired: "Action Required"
     },
     // Public Pages (Original English)
-    home: {
-      unifiedPlatform: "Unified Cultural Platform",
-      discoverHeart: "Discover the Heart of",
+  home: {
+    unifiedPlatform: "Unified Cultural Platform",
+    curatedMarketplace: "Curated artisan market",
+    craftCelebrationMeet: "Where craft and celebration meet",
+    letsExploreEthiopia: "Let's Explore Ethiopia",
+    whereHeritageAwaits: "Where heritage awaits",
+    discoverHandmade: "Discover handmade Ethiopian cultural products, book festival experiences, and meet the artisans and organizers keeping living traditions moving from market stalls to grand public celebrations.",
+    bookInLandOfOrigins: "Book in the land of origins",
+    reserveFestivalPass: "Reserve a festival pass, explore local services, and plan cultural experiences around Ethiopia's living celebrations.",
+    upcomingEventsFestivals: "Upcoming Events & Festivals",
+    discoverCrafts: "Discover Crafts",
+    exploreFestivals: "Explore Festivals",
+    discoverHeart: "Discover the Heart of",
       ethiopianHeritage: "Ethiopian Heritage.",
       verifiedArtisans: "Verified Artisans",
       annualFestivals: "Annual Festivals",
@@ -553,20 +593,19 @@ export const translations: Record<Language, TranslationDictionary> = {
        results: " results",
        resultsShowing: "Showing {count} results"
      },
-    festival: {
-      hero: {
-        badge: "Official Holiday Directory",
-        titleLine1: "Experience the Sacred",
-        titleLine2: "Traditions of Ethiopia",
-        description: "Join millions in celebrating Ethiopia's ancient religious festivals, historical commemorations, and vibrant cultural holidays."
-      },
-      searchPlaceholder: "Search festivals or locations...",
-      types: {
-        religious: "Religious",
-        historical: "Historical",
-        harvest: "Harvest",
-        newyear: "New Year"
-      },
+      festival: {
+        hero: {
+          badge: "Official Holiday Directory",
+          titleLine1: "Experience the Sacred",
+          titleLine2: "Traditions of Ethiopia",
+          description: "Join millions in celebrating Ethiopia's ancient religious festivals, historical commemorations, and vibrant cultural holidays."
+        },
+        searchPlaceholder: "Search festivals or locations...",
+        types: {
+          religious: "Religious",
+          culturaltraditional: "Cultural / Traditional",
+          nationalpublicholidays: "National / Public Holidays"
+        },
       featured: {
         heading: "Featured Celebration",
         badge: "Trending Now"
@@ -792,7 +831,7 @@ export const translations: Record<Language, TranslationDictionary> = {
 
   // ራስጌ (Header)
   header: {
-    searchPlaceholder: "ፈልግ...",
+    searchPlaceholder: "ፈልግ ወይገል...",
     welcome: "እንኳን ደህና መጣችሁ",
     signInRegister: "ግባ / ተመዝገብ",
     newHere: "አዲስ ነዎት?",
@@ -1413,10 +1452,9 @@ export const translations: Record<Language, TranslationDictionary> = {
   },
   searchPlaceholder: "በዓላትን ወይም አካባቢዎችን ይፈልጉ...",
   types: {
-    religious: "ሃይማኖታዊ",
-    historical: "ታሪካዊ",
-    harvest: "መሸምወዝ",
-    newyear: "አዲስ ዓመት"
+    religious: "ሃይስኖታ",
+    culturaltraditional: "ባህላዊ / ባህላዊ",
+    nationalpublicholidays: "ብሔራ / የሕብሰት ቀንዎች"
   },
   featured: {
     heading: "የተመረጠ በዓላት",
@@ -1549,13 +1587,41 @@ export const translations: Record<Language, TranslationDictionary> = {
     }
   },
   guidelineNote: "ይህ ግምገማ የማህበረሰባችንን መመሪያ የሚያሟላ መሆኑን እንፈትሻለን። የማያሟላ ከሆነ፣ እናስወግደዋለን።",
-  cancel: "ይቅር",
-  submit: "አስገባ"
-}
+    cancel: "ይቅር",
+    submit: "አስገባ"
+  },
+
+  // Tourist Settings
+  settings: {
+    accountSettings: "የመለያ ቅንብሮች",
+    profileInformation: "የመገለጫ መረጃ",
+    fullName: "ሙሉ ስም",
+    emailAddress: "የኢሜይል አድራሻ",
+    phoneNumber: "የስልክ ቁር",
+    country: "አገር",
+    nationality: "ዜጋኝነት",
+    dateOfBirth: "የትልድ ቀን",
+    profilePhoto: "የመገለጫ ፎቶ",
+    chooseImage: "ምስኔ ምረጥ",
+    imageUploaded: "ምስኔ ተሰቀኮል!",
+    preview: "ቅድም",
+    saveChanges: "�ግርዎችን አቅት",
+    security: "ደህንት",
+    password: "የይለፍድ ቃል",
+    lastChanged: "መጨረሪያ ቀን",
+    update: "አስማምር",
+    twoFactorAuth: "ሁለ-ፋክተር ማውተንቲኬን",
+    addExtraLayer: "ተጨማ ደላው የደህንት �ይጨምሩ",
+    enable: "ነቅት",
+    profile: "መገለጫ",
+    uploadPhoto: "ምስኔ አስግት",
+    preferences: "ምድርዎች",
+    emailNotifications: "የኢሜይል ማሳወቂያዎች",
+    smsAlerts: "የSMS ማንቂቶዎች",
+    newsletter: "ዜውስለትተር"
+  }
 }  
-
+  
 };  
-
-
 
 export default translations;

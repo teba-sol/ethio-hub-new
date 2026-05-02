@@ -36,20 +36,21 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [languagePreference, setLanguagePreference] = useState<'both' | 'en' | 'am'>('both');
   const [formData, setFormData] = useState({
-    core: { 
-      name_en: '', 
+    core: {
+      name_en: '',
       name_am: '',
-      slug: '', 
-      startDate: '', 
-      endDate: '', 
-      locationName_en: '', 
+      slug: '',
+      type: 'CulturalTraditional' as 'Religious' | 'CulturalTraditional' | 'NationalPublicHolidays',
+      startDate: '',
+      endDate: '',
+      locationName_en: '',
       locationName_am: '',
-      address: '', 
-      shortDescription_en: '', 
+      address: '',
+      shortDescription_en: '',
       shortDescription_am: '',
-      fullDescription_en: '', 
+      fullDescription_en: '',
       fullDescription_am: '',
-      coverImage: 'https://picsum.photos/seed/ethio-cover/1920/1080', 
+      coverImage: 'https://picsum.photos/seed/ethio-cover/1920/1080',
       gallery: [] as string[],
       coordinates: { lat: 9.0333, lng: 38.7500 }
     },
@@ -503,25 +504,40 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <DualLanguageField
-                        label="Festival Name *"
-                        englishPlaceholder="e.g. Timket 2025"
-                        amharicPlaceholder="ቲምኬት 2025"
-                        englishValue={formData.core.name_en}
-                        amharicValue={formData.core.name_am}
-                        onEnglishChange={(value) => setFormData({...formData, core: {...formData.core, name_en: value}})}
-                        onAmharicChange={(value) => setFormData({...formData, core: {...formData.core, name_am: value}})}
-                        showEnglish={languagePreference !== 'am'}
-                        showAmharic={languagePreference !== 'en'}
-                      />
-                      <Input 
-                        label="Slug" 
-                        value={formData.core.slug} 
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <DualLanguageField
+                          label="Festival Name *"
+                          englishPlaceholder="e.g. Timket 2025"
+                          amharicPlaceholder="ቲምኬት 2025"
+                          englishValue={formData.core.name_en}
+                          amharicValue={formData.core.name_am}
+                          onEnglishChange={(value) => setFormData({...formData, core: {...formData.core, name_en: value}})}
+                          onAmharicChange={(value) => setFormData({...formData, core: {...formData.core, name_am: value}})}
+                          showEnglish={languagePreference !== 'am'}
+                          showAmharic={languagePreference !== 'en'}
+                        />
+                        <Input
+                          label="Slug"
+                          value={formData.core.slug}
+                          readOnly
+                          className="bg-gray-50"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Festival Type *</label>
+                          <select
+                            value={formData.core.type}
+                            onChange={(e) => setFormData({...formData, core: {...formData.core, type: e.target.value as 'Religious' | 'CulturalTraditional' | 'NationalPublicHolidays'}})}
+                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
+                          >
+                            <option value="Religious">Religious</option>
+                            <option value="CulturalTraditional">Cultural / Traditional</option>
+                            <option value="NationalPublicHolidays">National / Public Holidays</option>
+                          </select>
+                        </div>
+                      </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <Input 

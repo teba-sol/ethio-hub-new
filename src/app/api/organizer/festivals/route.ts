@@ -277,27 +277,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { 
-      name,
-      name_en,
-      name_am,
-      shortDescription,
-      shortDescription_en,
-      shortDescription_am,
-      fullDescription,
-      fullDescription_en,
-      fullDescription_am,
-      startDate, 
-      endDate, 
-      location, 
-      coverImage, 
-      gallery,
-      schedule,
-      hotels,
-      transportation,
-      services,
-       policies,
-      pricing,
+    const {
+      name, name_en, name_am,
+      type,
+      shortDescription, shortDescription_en, shortDescription_am,
+      fullDescription, fullDescription_en, fullDescription_am,
+      startDate, endDate, location,
+      coverImage, gallery, schedule,
+      hotels, transportation, services, policies, pricing,
       verificationStatus
     } = body;
 
@@ -368,6 +355,7 @@ export async function POST(request: NextRequest) {
       name: normalizedNameEn || normalizedNameAm || 'Untitled draft festival',
       name_en: normalizedNameEn || normalizedNameAm || 'Untitled draft festival',
       name_am: normalizedNameAm || normalizedNameEn || 'Untitled draft festival',
+      type: type || 'CulturalTraditional',
       shortDescription: normalizedShortEn || normalizedShortAm || 'Draft festival description',
       shortDescription_en: normalizedShortEn || normalizedShortAm || 'Draft festival description',
       shortDescription_am: normalizedShortAm || normalizedShortEn || 'Draft festival description',

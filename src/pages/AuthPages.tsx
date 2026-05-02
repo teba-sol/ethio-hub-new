@@ -150,15 +150,15 @@ export const LoginPage: React.FC = () => {
              </button>
            </div>
 
-           <div className="flex items-center justify-between text-sm">
-             <label className="flex items-center space-x-2 text-gray-600">
-               <input type="checkbox" className="rounded text-primary focus:ring-primary" />
-               <span>{t("auth.rememberMe")}</span>
-             </label>
-             <a href="#" className="text-primary font-semibold hover:underline">
-               {t("auth.forgotPassword")}
-             </a>
-           </div>
+            <div className="flex items-center justify-between text-sm">
+              <label className="flex items-center space-x-2 text-gray-600">
+                <input type="checkbox" className="rounded text-primary focus:ring-primary" />
+                <span>{t("auth.rememberMe")}</span>
+              </label>
+              <a href="/auth/forgot-password" className="text-primary font-semibold hover:underline">
+                {t("auth.forgotPassword")}
+              </a>
+            </div>
 
            <Button type="submit" className="w-full" size="lg">
              {t("auth.loginButton")}
