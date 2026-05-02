@@ -7,10 +7,10 @@ import {
   Eye,
   EyeOff,
   Calendar as CalIcon,
-  ShieldAlert,
 } from "lucide-react";
 import { Button, Input } from "../components/UI";
 import { useAuth } from "../context/AuthContext";
+
 import { UserRole } from "../types";
 import { useLanguage } from "../context/LanguageContext";
 
@@ -31,7 +31,6 @@ export const LoginPage: React.FC = () => {
   const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>(UserRole.TOURIST);
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
@@ -96,28 +95,6 @@ export const LoginPage: React.FC = () => {
          </div>
 
          <form onSubmit={handleLogin} className="space-y-6">
-           <div className="space-y-2">
-             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">
-               {t("auth.loginAs")}
-             </label>
-             <div className="grid grid-cols-2 gap-2 p-1 bg-ethio-light rounded-xl">
-               {(Object.values(UserRole) as UserRole[]).map((r) => (
-                 <button
-                   key={r}
-                   type="button"
-                   onClick={() => setRole(r)}
-                   className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center ${
-                     role === r
-                       ? "bg-primary text-white shadow-md"
-                       : "text-gray-500 hover:bg-gray-200"
-                   }`}
-                 >
-                   {r === UserRole.ADMIN && <ShieldAlert className="w-3 h-3 mr-1" />}
-                   {t(`auth.roles.${r.toLowerCase()}`)}
-                 </button>
-               ))}
-             </div>
-           </div>
 
            <Input
              label={t("auth.email")}
