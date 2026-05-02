@@ -259,6 +259,7 @@ const withLocalProductFallbacks = (products: any[]) =>
 
 export const Homepage: React.FC = () => {
   const { t } = useLanguage();
+  const { getLocalizedField } = useContentLanguage();
   const [products, setProducts] = useState<any[]>([]);
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [festivalLoading, setFestivalLoading] = useState(true);
@@ -498,7 +499,7 @@ export const Homepage: React.FC = () => {
               <article key={festival.id} className="group overflow-hidden rounded-[28px] bg-white shadow-xl shadow-black/5 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl">
                 <Link href={`/event/${festival.id}`} className="block">
                   <div className="relative h-64 overflow-hidden">
-                    <img src={localFestivalImages[index % localFestivalImages.length]} alt={festival.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    <img src={localFestivalImages[index % localFestivalImages.length]} alt={getLocalizedField(festival, 'name')} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                     <div className="absolute left-5 top-5 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
                       {festival.currency} {festival.baseTicketPrice || 0}
@@ -508,7 +509,7 @@ export const Homepage: React.FC = () => {
                         <Calendar className="h-4 w-4" />
                         {formatDate(festival.startDate)}
                       </p>
-                      <h3 className="line-clamp-2 font-serif text-3xl font-bold leading-tight">{festival.name}</h3>
+                      <h3 className="line-clamp-2 font-serif text-3xl font-bold leading-tight">{getLocalizedField(festival, 'name')}</h3>
                     </div>
                   </div>
                 </Link>
@@ -516,9 +517,9 @@ export const Homepage: React.FC = () => {
                   <div className="space-y-3">
                     <p className="flex items-center gap-2 text-sm font-medium text-gray-500">
                       <MapPin className="h-4 w-4 text-secondary" />
-                      <span className="line-clamp-1">{festival.locationName}</span>
+                      <span className="line-clamp-1">{getLocalizedField(festival, 'locationName')}</span>
                     </p>
-                    <p className="line-clamp-2 text-sm leading-relaxed text-gray-500">{festival.shortDescription}</p>
+                    <p className="line-clamp-2 text-sm leading-relaxed text-gray-500">{getLocalizedField(festival, 'shortDescription')}</p>
                   </div>
                   <div className="flex items-center justify-between border-t border-gray-100 pt-5">
                     <div>

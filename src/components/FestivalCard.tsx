@@ -15,9 +15,21 @@ export const FestivalCard: React.FC<{ festival: Festival }> = ({ festival }) => 
 
   const name = getLocalizedText(festival, 'name', language);
   const shortDesc = getLocalizedText(festival, 'shortDescription', language);
-  const locationName = getLocalizedText(festival as any, 'locationName' as any, language) || 
-    (festival as any).location?.name_en || (festival as any).location?.name_am || 
-    (festival as any).location?.name || '';
+
+  // Handle location name which might be a nested object or flat fields
+  let locationName = getLocalizedText(festival as any, 'locationName' as any, language);
+  if (!locationName && (festival as any).location) {
+    const location = (festival as any).location;
+    if (typeof location === 'object' && location.name) {
+      if (typeof location.name === 'object') {
+        locationName = location.name[language] || location.name.en || '';
+      } else {
+        locationName = location.name;
+      }
+    } else {
+      locationName = location.name_en || location.name_am || location.name || '';
+    }
+  }
 
   return (
     <article className="group relative h-[420px] rounded-3xl overflow-hidden shadow-md border border-white/10">

@@ -3528,11 +3528,11 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
                   </div>
                   <div className="text-xs text-gray-400 font-bold uppercase tracking-wider space-y-2">
                     <p className="flex items-center gap-2"><Calendar className="w-3 h-3 text-secondary" /> {new Date(festival.startDate).toLocaleDateString()} - {new Date(festival.endDate).toLocaleDateString()}</p>
-                    <p className="flex items-center gap-2"><MapPin className="w-3 h-3 text-secondary" /> {festival.locationName}</p>
+                    <p className="flex items-center gap-2"><MapPin className="w-3 h-3 text-secondary" /> {getLocalizedText(festival, 'locationName', language)}</p>
                   </div>
                   <div className="pt-4 border-t border-gray-100 flex flex-col gap-2">
-                    <div className="flex gap-2">
-                      <Button variant="primary" size="sm" className="flex-1" onClick={() => onManageEvent(festival._id)}>Manage</Button>
+                  <div className="flex gap-2">
+                   <Button variant="primary" size="sm" className="flex-1" onClick={() => onManageEvent(festival._id)}>Manage</Button>
                       <Button variant="outline" size="sm" className="flex-1" disabled={festival.verificationStatus === 'Approved'}>View Public</Button>
                     </div>
                      {[(festival as any).verificationStatus === 'Draft', (festival as any).verificationStatus === 'Rejected'].includes(true) && (
@@ -3643,6 +3643,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
 export const OrganizerDashboard: React.FC = () => {
   const router = useRouter();
   const { user } = useAuth();
+  const { language } = useLanguage();
   const navigate = (to: string) => router.push(to);
 
   const [analytics, setAnalytics] = useState<any>(null);
@@ -3694,11 +3695,11 @@ export const OrganizerDashboard: React.FC = () => {
           {festivals.map((festival) => (
             <div key={festival._id} className="bg-white rounded-[32px] overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 group">
               <div className="h-48 overflow-hidden">
-                <img src={festival.coverImage || 'https://images.unsplash.com/photo-1533174072545-7a4b6dad2cf7?w=800&h=400&fit=crop'} alt={festival.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <img src={festival.coverImage || 'https://images.unsplash.com/photo-1533174072545-7a4b6dad2cf7?w=800&h=400&fit=crop'} alt={getLocalizedText(festival, 'name', language)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
               </div>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-lg font-bold text-primary line-clamp-1">{festival.name}</h3>
+                  <h3 className="text-lg font-bold text-primary line-clamp-1">{getLocalizedText(festival, 'name', language)}</h3>
                   <Badge variant={festival.status === 'published' ? 'success' : 'warning'}>{festival.status}</Badge>
                 </div>
                 <p className="text-xs text-gray-400 mb-3">{festival.startDate ? new Date(festival.startDate).toLocaleDateString() : 'TBA'}</p>
