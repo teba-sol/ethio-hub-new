@@ -77,7 +77,7 @@ interface TransactionDetails {
 }
 
 interface WalletPanelProps {
-  userType: 'artisan' | 'admin';
+  userType: 'artisan' | 'admin' | 'organizer';
   title?: string;
   showWithdraw?: boolean;
 }
@@ -122,7 +122,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
       setLoading(true);
       setError(null);
 
-      const endpoint = userType === 'admin' ? '/api/admin/wallet' : '/api/artisan/wallet';
+      const endpoint = userType === 'admin' ? '/api/admin/wallet' : userType === 'organizer' ? '/api/organizer/wallet' : '/api/artisan/wallet';
       const res = await fetch(`${endpoint}?page=${pageNum}&limit=10`);
       const data = await res.json();
 
@@ -184,7 +184,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
     setWithdrawError(null);
 
     try {
-      const endpoint = userType === 'admin' ? '/api/admin/wallet/withdraw' : '/api/artisan/wallet/withdraw';
+      const endpoint = userType === 'admin' ? '/api/admin/wallet/withdraw' : userType === 'organizer' ? '/api/organizer/wallet/withdraw' : '/api/artisan/wallet/withdraw';
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -397,9 +397,9 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                     <th className="px-6 py-4 text-left">Details</th>
                     <th className="px-6 py-4 text-right">Amount</th>
                     <th className="px-6 py-4 text-center">Status</th>
-                    {(userType === 'artisan' || userType === 'admin') && (
-                      <th className="px-6 py-4 text-center">View Detail</th>
-                    )}
+{(userType === 'artisan' || userType === 'admin' || userType === 'organizer') && (
+                       <th className="px-6 py-4 text-center">View Detail</th>
+                     )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -442,19 +442,19 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                           {tx.status}
                         </Badge>
                       </td>
-                      {(userType === 'artisan' || userType === 'admin') && (
-                        <td className="px-6 py-4 text-center">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            leftIcon={Eye}
-                            onClick={() => setSelectedTransaction(tx)}
-                            className="text-xs"
-                          >
-                            View
-                          </Button>
-                        </td>
-                      )}
+{(userType === 'artisan' || userType === 'admin' || userType === 'organizer') && (
+                         <td className="px-6 py-4 text-center">
+                           <Button
+                             variant="ghost"
+                             size="sm"
+                             leftIcon={Eye}
+                             onClick={() => setSelectedTransaction(tx)}
+                             className="text-xs"
+                           >
+                             View
+                           </Button>
+                         </td>
+                       )}
                     </tr>
                   ))}
                 </tbody>
@@ -487,7 +487,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
       </div>
 
       {/* Transaction Detail Modal */}
-      {(userType === 'artisan' || userType === 'admin') && selectedTransaction && (
+      {(userType === 'artisan' || userType === 'admin' || userType === 'organizer') && selectedTransaction && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
           onClick={() => setSelectedTransaction(null)}
