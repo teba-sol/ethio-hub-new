@@ -42,6 +42,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
       slug: '', 
       startDate: '', 
       endDate: '', 
+      totalCapacity: 0,
       locationName_en: '', 
       locationName_am: '',
       address: '', 
@@ -359,6 +360,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
         fullDescription_am: languagePreference === 'am' ? formData.core.fullDescription_am : undefined,
         startDate: formData.core.startDate,
         endDate: formData.core.endDate,
+        totalCapacity: formData.core.totalCapacity,
         location: {
           name_en: formData.core.locationName_en,
           name_am: languagePreference === 'am' ? formData.core.locationName_am : undefined,
@@ -539,6 +541,14 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Input 
+                        label="Total Capacity *"
+                        type="number"
+                        min="1"
+                        placeholder="Maximum number of tourists"
+                        value={formData.core.totalCapacity || ''}
+                        onChange={e => setFormData({...formData, core: {...formData.core, totalCapacity: parseInt(e.target.value) || 0}})}
+                      />
                       <DualLanguageField
                         label="Location Name *"
                         englishPlaceholder="e.g. Gondar, Ethiopia"

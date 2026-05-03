@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    const body = await request.json();
+const body = await request.json();
     const { 
       name,
       name_en,
@@ -296,9 +296,10 @@ export async function POST(request: NextRequest) {
       hotels,
       transportation,
       services,
-       policies,
+      policies,
       pricing,
-      verificationStatus
+      verificationStatus,
+      totalCapacity
     } = body;
 
     const requestedStatus = verificationStatus === 'Pending Approval' ? 'Pending Approval' : 'Draft';
@@ -376,6 +377,7 @@ export async function POST(request: NextRequest) {
       fullDescription_am: normalizedFullAm || normalizedFullEn || 'Draft festival description',
       startDate: startDate || new Date(),
       endDate: endDate || startDate || new Date(),
+      totalCapacity: Number(totalCapacity) || 0,
       location: {
         ...(location || {}),
         name: normalizedLocationNameEn || normalizedLocationNameAm || 'Draft location',

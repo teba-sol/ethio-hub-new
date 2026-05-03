@@ -109,6 +109,7 @@ export interface IFestival extends Document {
   fullDescription_am: string;
   startDate: Date;
   endDate: Date;
+  totalCapacity: number;
   location: {
     name: string; // for backward compatibility
     name_en: string;
@@ -266,6 +267,7 @@ const FestivalSchema: Schema = new Schema(
     fullDescription_am: { type: String, required: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
+    totalCapacity: { type: Number, default: 0 },
     location: {
   name: { type: String },
       name_en: { type: String, required: true },
