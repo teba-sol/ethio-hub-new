@@ -604,7 +604,10 @@ export const translations: Record<Language, TranslationDictionary> = {
         types: {
           religious: "Religious",
           culturaltraditional: "Cultural / Traditional",
-          nationalpublicholidays: "National / Public Holidays"
+          nationalpublicholidays: "National / Public Holidays",
+          historical: "Historical",
+          harvest: "Harvest",
+          newyear: "New Year"
         },
       featured: {
         heading: "Featured Celebration",
@@ -1452,9 +1455,12 @@ export const translations: Record<Language, TranslationDictionary> = {
   },
   searchPlaceholder: "በዓላትን ወይም አካባቢዎችን ይፈልጉ...",
   types: {
-    religious: "ሃይስኖታ",
-    culturaltraditional: "ባህላዊ / ባህላዊ",
-    nationalpublicholidays: "ብሔራ / የሕብሰት ቀንዎች"
+    religious: "ሃይስኖ",
+    culturaltraditional: "ባህላ / ባህላዊ",
+    nationalpublicholidays: "ብሔራ / የህዝብ ቀን",
+    historical: "ታሪካ",
+    harvest: "ምርት",
+    newyear: "አዲ ስም"
   },
   featured: {
     heading: "የተመረጠ በዓላት",
