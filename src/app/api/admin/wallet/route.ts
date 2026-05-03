@@ -15,6 +15,8 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const role = searchParams.get('role'); // 'artisan' or 'organizer'
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
     const skip = (page - 1) * limit;
 
     // Find admin user
@@ -38,18 +40,30 @@ export async function GET(request: NextRequest) {
 
     // Build filter
     const filter: any = { type: 'ADMIN_COMMISSION' };
-    if (role) {
+    if (role && role !== 'all') {
       filter['metadata.role'] = role;
     }
 
-    // Get separate totals for artisan and organizer (All statuses = Total Earned)
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) {
+        filter.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        filter.createdAt.$lte = end;
+      }
+    }
+
+    // Get separate totals for artisan and organizer (COMPLETED only = Total Earned)
     const [artisanTotal, organizerTotal] = await Promise.all([
       Transaction.aggregate([
-        { $match: { type: 'ADMIN_COMMISSION', 'metadata.role': 'artisan' } },
+        { $match: { type: 'ADMIN_COMMISSION', 'metadata.role': 'artisan', status: 'COMPLETED' } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
       Transaction.aggregate([
-        { $match: { type: 'ADMIN_COMMISSION', 'metadata.role': 'organizer' } },
+        { $match: { type: 'ADMIN_COMMISSION', 'metadata.role': 'organizer', status: 'COMPLETED' } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ])
     ]);

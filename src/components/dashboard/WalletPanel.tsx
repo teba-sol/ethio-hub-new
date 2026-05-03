@@ -118,21 +118,27 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [page, setPage] = useState(1);
   const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showCommissionBreakdown, setShowCommissionBreakdown] = useState(false);
+  const [showDateFilter, setShowDateFilter] = useState(false);
 
-  const fetchWallet = async (pageNum: number = 1, role: string = 'all') => {
+  const fetchWallet = async (pageNum: number = 1, role: string = 'all', dates = dateRange) => {
     try {
       setLoading(true);
       setError(null);
 
       const endpoint = userType === 'admin' ? '/api/admin/wallet' : userType === 'organizer' ? '/api/organizer/wallet' : '/api/artisan/wallet';
       const roleParam = role !== 'all' ? `&role=${role}` : '';
-      const res = await fetch(`${endpoint}?page=${pageNum}&limit=10${roleParam}`);
+      let dateParam = '';
+      if (dates.start) dateParam += `&startDate=${dates.start}`;
+      if (dates.end) dateParam += `&endDate=${dates.end}`;
+      
+      const res = await fetch(`${endpoint}?page=${pageNum}&limit=10${roleParam}${dateParam}`);
       const data = await res.json();
 
       if (data.success) {
@@ -148,8 +154,8 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
   };
 
   useEffect(() => {
-    fetchWallet(page, roleFilter);
-  }, [page, roleFilter]);
+    fetchWallet(page, roleFilter, dateRange);
+  }, [page, roleFilter, dateRange]);
 
   const formatCurrency = (amount: number) => {
     return `ETB ${(amount || 0).toLocaleString()}`;
@@ -203,6 +209,12 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
       const data = await res.json();
 
       if (data.success) {
+        if (userType === 'admin' && data.checkoutUrl) {
+          // Redirect admin to Chapa for withdrawal confirmation
+          window.location.href = data.checkoutUrl;
+          return;
+        }
+        
         setWithdrawSuccess(true);
         setWithdrawAmount('');
         setTimeout(() => {
@@ -321,7 +333,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
             )}
           </div>
           <p className="text-2xl font-bold text-primary">{formatCurrency(wallet.lifetimeEarned)}</p>
-          <p className="text-xs text-gray-400 mt-1">Lifetime platform earnings</p>
+          <p className="text-xs text-gray-400 mt-1">{userType === 'admin' ? 'Total cleared commission' : 'Lifetime platform earnings'}</p>
         </div>
       </div>
 
@@ -335,7 +347,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
               <span className="text-xs font-bold text-blue-500 uppercase tracking-wider">Total from Artisan</span>
             </div>
             <p className="text-2xl font-bold text-primary">{formatCurrency(wallet.artisanTotalEarned || 0)}</p>
-            <p className="text-xs text-blue-400 mt-1">Total commission from product sales</p>
+            <p className="text-xs text-blue-400 mt-1">Total cleared commission from product sales</p>
           </div>
           
           <div className="bg-gradient-to-br from-white to-purple-50/30 p-6 rounded-2xl border border-purple-100 shadow-sm hover:shadow-md transition-all">
@@ -346,13 +358,13 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
               <span className="text-xs font-bold text-purple-500 uppercase tracking-wider">Total from Organizer</span>
             </div>
             <p className="text-2xl font-bold text-primary">{formatCurrency(wallet.organizerTotalEarned || 0)}</p>
-            <p className="text-xs text-purple-400 mt-1">Total commission from festival bookings</p>
+            <p className="text-xs text-purple-400 mt-1">Total cleared commission from festival bookings</p>
           </div>
         </div>
       )}
 
-      {/* Withdraw Section (Artisan only) */}
-      {showWithdraw && (
+      {/* Withdraw Section (Artisan, Organizer, and Admin) */}
+      {(showWithdraw || userType === 'admin') && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100">
             <h3 className="text-xl font-bold text-primary mb-4">Withdraw via Chapa</h3>
@@ -422,26 +434,70 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
 
       {/* Transactions Table */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-        <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="p-6 border-b border-gray-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <h3 className="text-xl font-bold text-primary">Recent Transactions</h3>
           
-          {userType === 'admin' && (
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-500 font-medium">Filter by Role:</span>
-              <select
-                value={roleFilter}
-                onChange={(e) => {
-                  setRoleFilter(e.target.value);
-                  setPage(1);
-                }}
-                className="px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
-              >
-                <option value="all">All Roles</option>
-                <option value="artisan">Artisan (Products)</option>
-                <option value="organizer">Organizer (Festivals)</option>
-              </select>
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Date Range Toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDateFilter(!showDateFilter)}
+              className={`text-xs font-bold ${showDateFilter ? 'text-primary bg-primary/5' : 'text-gray-500'}`}
+              leftIcon={Clock}
+            >
+              {showDateFilter ? 'Hide Dates' : 'Filter by Date'}
+            </Button>
+
+            {/* Date Range Filter */}
+            {showDateFilter && (
+              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2 duration-200">
+                <span className="text-sm text-gray-500 font-medium">Date:</span>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="date"
+                    value={dateRange.start}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                    className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
+                  />
+                  <span className="text-gray-400">-</span>
+                  <input
+                    type="date"
+                    value={dateRange.end}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                    className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
+                  />
+                  {(dateRange.start || dateRange.end) && (
+                    <button
+                      onClick={() => setDateRange({ start: '', end: '' })}
+                      className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-red-500 transition-colors"
+                      title="Clear dates"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {userType === 'admin' && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 font-medium">Role:</span>
+                <select
+                  value={roleFilter}
+                  onChange={(e) => {
+                    setRoleFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
+                >
+                  <option value="all">All Roles</option>
+                  <option value="artisan">Artisan (Products)</option>
+                  <option value="organizer">Organizer (Festivals)</option>
+                </select>
+              </div>
+            )}
+          </div>
         </div>
 
         {transactions.length === 0 ? (
