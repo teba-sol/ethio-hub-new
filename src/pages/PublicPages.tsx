@@ -88,43 +88,7 @@ const localFallbackFestivals: Festival[] = [
     fullDescription: '',
     fullDescription_en: '',
     fullDescription_am: '',
-    coverImage: localFestivalImages[1],
-    gallery: [],
-    schedule: [],
-    mainActivities: 'Demera bonfire, chants, processions',
-    performances: [],
-    hotels: [],
-    transportation: [],
-    foodPackages: [],
-    culturalServices: [],
-    baseTicketPrice: 500,
-    currency: 'ETB',
-    cancellationPolicy: '',
-    bookingTerms: '',
-    organizerId: '',
-    isVerified: true,
-    ticketsAvailable: 300,
-    status: 'Published',
-    verificationStatus: 'Approved',
-  },
-  {
-    id: 'irreecha-2026',
-    name: 'Irreecha 2026',
-    name_en: 'Irreecha 2026',
-    name_am: 'ኢሬቻ 2019',
-    slug: 'irreecha-2026',
-    startDate: '2026-10-04T08:00:00.000Z',
-    endDate: '2026-10-04T18:00:00.000Z',
-    locationName: 'Hora Finfinne, Addis Ababa',
-    address: 'Hora Finfinne, Addis Ababa',
-    coordinates: { lat: 9.034, lng: 38.75 },
-    shortDescription: 'A thanksgiving festival celebrated with Oromo cultural dress, songs, blessings, and community gatherings.',
-    shortDescription_en: 'A thanksgiving festival celebrated with Oromo cultural dress, songs, blessings, and community gatherings.',
-    shortDescription_am: 'በኦሮሞ ባህላዊ አልባሳት፣ በመዝሙር እና በምስጋና የሚከበር በዓል።',
-    fullDescription: '',
-    fullDescription_en: '',
-    fullDescription_am: '',
-    coverImage: localFestivalImages[2],
+    coverImage: '',
     gallery: [],
     schedule: [],
     mainActivities: 'Blessings, music, cultural gathering',
@@ -199,7 +163,7 @@ const normalizeFestival = (festival: any, index = 0): Festival => ({
   fullDescription: festival.fullDescription || festival.fullDescription_en || '',
   fullDescription_en: festival.fullDescription_en || festival.fullDescription || '',
   fullDescription_am: festival.fullDescription_am || festival.fullDescription || '',
-  coverImage: localFestivalImages[index % localFestivalImages.length] || festival.coverImage || festival.gallery?.[0],
+  coverImage: festival.coverImage || festival.gallery?.[0] || '',
   gallery: festival.gallery || [],
   schedule: festival.schedule || [],
   mainActivities: festival.mainActivities || '',
@@ -499,7 +463,7 @@ export const Homepage: React.FC = () => {
               <article key={festival.id} className="group overflow-hidden rounded-[28px] bg-white shadow-xl shadow-black/5 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl">
                 <Link href={`/event/${festival.id}`} className="block">
                   <div className="relative h-64 overflow-hidden">
-                    <img src={localFestivalImages[index % localFestivalImages.length]} alt={festival.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    <img src={festival.coverImage || ''} alt={festival.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                     <div className="absolute left-5 top-5 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
                       {festival.currency} {festival.baseTicketPrice || 0}
@@ -1128,7 +1092,7 @@ export const ProductListingPage: React.FC = () => {
       locationName: f.locationName || f.location?.name || '',
       locationName_en: f.locationName_en || f.location?.name_en || f.location?.name || '',
       locationName_am: f.locationName_am || f.location?.name_am || f.location?.name || '',
-      coverImage: localFestivalImages[index % localFestivalImages.length] || f.coverImage || f.gallery?.[0],
+       coverImage: f.coverImage || f.gallery?.[0] || '',
     };
   });
 
@@ -1974,12 +1938,8 @@ export const FestivalDetailPage: React.FC = () => {
   const [contactInfo, setContactInfo] = useState({ fullName: '', email: '', phone: '' });
 
 const getImageUrl = (path: string | undefined | null) => {
-    if (!path || path === '') return localFestivalImages[0];
+    if (!path || path === '') return '';
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    if (path.startsWith('/uploads/')) {
-      const baseUrl = window.location.origin;
-      return `${baseUrl}${path}`;
-    }
     if (path.startsWith('ethio-hub/')) {
       return getCloudinaryImageUrl(path, { width: 800 });
     }
@@ -2052,8 +2012,8 @@ const getImageUrl = (path: string | undefined | null) => {
             fullDescription: f.fullDescription,
             fullDescription_en: f.fullDescription_en || f.fullDescription,
             fullDescription_am: f.fullDescription_am || f.fullDescription,
-            coverImage: localFestivalImages[0],
-            gallery: f.gallery?.length ? f.gallery : localFestivalImages,
+    coverImage: '',
+            gallery: f.gallery?.length ? f.gallery : [],
             schedule: f.schedule || [],
             mainActivities: '',
             performances: [],
@@ -2734,7 +2694,7 @@ const getImageUrl = (path: string | undefined | null) => {
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <div className="md:col-span-1">
                               <img 
-                                src={room.image ? getImageUrl(room.image) : localFestivalImages[1]} 
+                                src={room.image ? getImageUrl(room.image) : ''} 
                                 alt={roomName}
                                 className="w-full h-40 md:h-full object-cover rounded-xl"
                               />

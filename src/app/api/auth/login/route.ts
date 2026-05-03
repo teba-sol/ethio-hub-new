@@ -5,9 +5,8 @@ import { serialize } from "cookie";
 import { applyRateLimit, getRequestIp } from "../../../../lib/rateLimit";
 
 export async function POST(request: NextRequest) {
-  await connectDB();
-
   try {
+    await connectDB();
     const body = await request.json();
     const email = String(body?.email || "").trim().toLowerCase();
     const ip = getRequestIp(request);
@@ -43,6 +42,10 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error: any) {
-    return NextResponse.json({ message: error.message }, { status: 400 });
+    console.error('Login error:', error);
+    return NextResponse.json(
+      { success: false, message: error.message || 'Login failed' },
+      { status: 400 }
+    );
   }
 }
