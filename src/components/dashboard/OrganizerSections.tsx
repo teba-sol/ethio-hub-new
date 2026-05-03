@@ -2725,8 +2725,7 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
           </div>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" leftIcon={Printer}>Print Invoice</Button>
-          <Button variant="primary" leftIcon={QrCode}>View QR Code</Button>
+          {/* Unnecessary buttons removed */}
         </div>
       </header>
 
@@ -2737,7 +2736,6 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
             {[
               { id: 'overview', label: 'Overview', icon: Info },
               { id: 'payment', label: 'Payment Details', icon: CreditCard },
-              { id: 'history', label: 'Activity Log', icon: History },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -2777,106 +2775,120 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
                     </p>
                   </div>
                 </div>
-                {booking.specialRequests && (
-                  <div className="pt-4 border-t border-gray-50">
-                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Special Requests</p>
-                    <p className="text-sm text-gray-600 italic">"{booking.specialRequests}"</p>
+                <div className="pt-4 border-t border-gray-50 grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Booking Date & Time</p>
+                    <p className="text-sm font-bold text-primary">
+                      {new Date(booking.createdAt).toLocaleDateString()} at {new Date(booking.createdAt).toLocaleTimeString()}
+                    </p>
                   </div>
-                )}
+                  {booking.specialRequests && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Special Requests</p>
+                      <p className="text-sm text-gray-600 italic">"{booking.specialRequests}"</p>
+                    </div>
+                  )}
+                </div>
               </section>
 
-              {/* Event Ticket */}
+              {/* Event Ticket & Detailed Booking Information */}
               <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
                 <h3 className="text-lg font-serif font-bold text-primary flex items-center gap-2">
-                  <Ticket className="w-5 h-5 text-secondary" /> Event Ticket
+                  <Ticket className="w-5 h-5 text-secondary" /> Detailed Booking Information
                 </h3>
+                
+                {/* Main Event Ticket */}
                 <div className="bg-ethio-bg/30 p-6 rounded-3xl border border-gray-50 flex flex-col md:flex-row justify-between gap-6">
                   <div className="space-y-4">
                     <div>
                       <h4 className="text-xl font-serif font-bold text-primary">{booking.festival?.name || 'Festival'}</h4>
                       <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
-                        Date: {booking.festival?.startDate ? new Date(booking.festival.startDate).toLocaleDateString() : 'TBD'}
+                        Event Date: {booking.festival?.startDate ? new Date(booking.festival.startDate).toLocaleDateString() : 'TBD'}
                       </p>
                     </div>
                     <Badge variant="secondary" className="bg-primary text-white border-none capitalize">{booking.ticketType} x{booking.quantity}</Badge>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-right">
                     <div>
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Quantity</p>
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Qty</p>
                       <p className="text-lg font-bold text-primary">x{booking.quantity}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Price</p>
-                      <p className="text-lg font-bold text-primary">ETB {booking.totalPrice / booking.quantity}</p>
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Rate (Net)</p>
+                      <p className="text-lg font-bold text-primary">ETB {(booking.organizerAmount / booking.quantity).toLocaleString()}</p>
                     </div>
                     <div className="col-span-2 md:col-span-1">
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Subtotal</p>
-                      <p className="text-lg font-bold text-secondary">ETB {booking.totalPrice}</p>
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Total Earned</p>
+                      <p className="text-lg font-bold text-secondary">ETB {booking.organizerAmount?.toLocaleString() || (booking.totalPrice * 0.9).toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
+
+                {/* Accommodation Details */}
+                {booking.bookingDetails?.room && (
+                  <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-amber-50 rounded-xl text-amber-600">
+                        <Hotel className="w-5 h-5" />
+                      </div>
+                      <h4 className="text-lg font-bold text-primary">Accommodation Booking</h4>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-4">
+                        <div>
+                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Hotel Name</p>
+                          <p className="text-lg font-bold text-primary">{booking.bookingDetails.room.hotelName}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Room Type & Services</p>
+                          <p className="text-sm font-bold text-secondary">{booking.bookingDetails.room.roomName}</p>
+                          <p className="text-xs text-gray-500 mt-1">Includes all standard amenities and breakfast.</p>
+                        </div>
+                      </div>
+                      <div className="text-right space-y-4">
+                        <div>
+                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Price Per Night</p>
+                          <p className="text-xl font-bold text-primary">ETB {booking.bookingDetails.room.roomPrice?.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Transport Details */}
+                {booking.bookingDetails?.transport && (
+                  <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-50 rounded-xl text-blue-600">
+                        <Car className="w-5 h-5" />
+                      </div>
+                      <h4 className="text-lg font-bold text-primary">Transportation Details</h4>
+                    </div>
+                    <div className="flex flex-col md:flex-row gap-8">
+                      {booking.bookingDetails.transport.image && (
+                        <div className="w-full md:w-48 h-32 rounded-2xl overflow-hidden border border-gray-100">
+                          <img 
+                            src={booking.bookingDetails.transport.image} 
+                            alt={booking.bookingDetails.transport.type}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 flex justify-between items-start">
+                        <div>
+                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Vehicle Type</p>
+                          <h4 className="text-xl font-bold text-primary">{booking.bookingDetails.transport.type}</h4>
+                          <p className="text-sm text-gray-500 mt-1">Private Transfer - Selected Option</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Fixed Rate</p>
+                          <p className="text-xl font-bold text-primary">ETB {booking.bookingDetails.transport.price?.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </section>
-
-              {/* Accommodation */}
-              {booking.bookingDetails?.room && (
-                <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
-                  <h3 className="text-lg font-serif font-bold text-primary flex items-center gap-2">
-                    <Hotel className="w-5 h-5 text-secondary" /> Accommodation
-                  </h3>
-                  <div className="space-y-6">
-                    <div className="flex flex-col md:flex-row justify-between gap-6">
-                      <div>
-                        <h4 className="text-xl font-serif font-bold text-primary">{booking.bookingDetails.room.hotelName}</h4>
-                        <p className="text-sm font-bold text-secondary">{booking.bookingDetails.room.roomName}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Per Night</p>
-                        <p className="text-lg font-bold text-primary">ETB {booking.bookingDetails.room.roomPrice}</p>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {/* Transport */}
-              {booking.bookingDetails?.transport && (
-                <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
-                  <h3 className="text-lg font-serif font-bold text-primary flex items-center gap-2">
-                    <Car className="w-5 h-5 text-secondary" /> Transport
-                  </h3>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h4 className="text-xl font-serif font-bold text-primary">{booking.bookingDetails.transport.type}</h4>
-                      <p className="text-sm text-gray-500">Private Transfer</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Fixed Rate</p>
-                      <p className="text-lg font-bold text-primary">ETB {booking.bookingDetails.transport.price}</p>
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {/* Fee Breakdown */}
-              {booking.status === 'confirmed' && (
-                <section className="bg-emerald-50 p-8 rounded-[40px] border border-emerald-100 space-y-4">
-                  <h3 className="text-lg font-serif font-bold text-emerald-800">Your Earnings Breakdown</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white p-4 rounded-2xl">
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Gross Amount</p>
-                      <p className="text-xl font-bold text-primary">ETB {booking.totalPrice}</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-2xl">
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Platform Fee ({booking.commissionPercent || 10}%)</p>
-                      <p className="text-xl font-bold text-red-500">- ETB {booking.platformFee || 0}</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-2xl">
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">You Receive</p>
-                      <p className="text-xl font-bold text-emerald-600">ETB {booking.organizerAmount || (booking.totalPrice - (booking.platformFee || 0))}</p>
-                    </div>
-                  </div>
-                </section>
-              )}
             </div>
           )}
 
@@ -2955,30 +2967,6 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
         {/* Sidebar */}
         <aside className="space-y-6">
           <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
-            <h3 className="text-lg font-serif font-bold text-primary mb-4">Booking Actions</h3>
-            <div className="space-y-3">
-              {booking.status === 'pending' && (
-                <>
-                  <Button className="w-full" onClick={() => handleStatusUpdate('confirmed')} disabled={updating}>
-                    {updating ? 'Processing...' : 'Confirm Booking'}
-                  </Button>
-                  <Button variant="outline" className="w-full text-red-500 border-red-200 hover:bg-red-50" onClick={() => handleStatusUpdate('cancelled')} disabled={updating}>
-                    Cancel Booking
-                  </Button>
-                </>
-              )}
-              {booking.status === 'confirmed' && (
-                <Button variant="outline" className="w-full text-red-500 border-red-200 hover:bg-red-50" onClick={() => handleStatusUpdate('cancelled')} disabled={updating}>
-                  Cancel Booking
-                </Button>
-              )}
-              {booking.status === 'cancelled' && (
-                <div className="text-center text-gray-500 text-sm">This booking has been cancelled</div>
-              )}
-            </div>
-          </div>
-          
-          <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
             <h3 className="text-lg font-serif font-bold text-primary mb-4">Quick Stats</h3>
             <div className="space-y-4">
               <div className="flex justify-between">
@@ -2986,12 +2974,12 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
                 <span className="font-bold text-primary">{booking.quantity}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Total</span>
-                <span className="font-bold text-primary">{booking.currency} {booking.totalPrice}</span>
+                <span className="text-gray-500 text-sm">Total Earned</span>
+                <span className="font-bold text-secondary">ETB {booking.organizerAmount?.toLocaleString() || (booking.totalPrice * 0.9).toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 text-sm">Guest</span>
-                <span className="font-bold text-primary">{booking.tourist?.name || 'Guest'}</span>
+                <span className="font-bold text-primary">{booking.contactInfo?.fullName || 'Guest'}</span>
               </div>
             </div>
           </div>
@@ -3011,17 +2999,23 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
   const [showDateRange, setShowDateRange] = useState(false);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [bookings, setBookings] = useState<any[]>([]);
+  const [festivals, setFestivals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchBookings = async () => {
+    const fetchData = async () => {
       try {
-        const response = await apiClient.get('/api/organizer/bookings');
-        if (response.success) {
-          setBookings(response.bookings);
-        } else {
-          setError(response.message || 'Failed to fetch bookings');
+        const [bookingsRes, festivalsRes] = await Promise.all([
+          apiClient.get('/api/organizer/bookings'),
+          apiClient.get('/api/organizer/festivals')
+        ]);
+
+        if (bookingsRes.success) {
+          setBookings(bookingsRes.bookings);
+        }
+        if (festivalsRes.success) {
+          setFestivals(festivalsRes.festivals);
         }
       } catch (err: any) {
         setError(err.message || 'An error occurred');
@@ -3029,7 +3023,7 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
         setLoading(false);
       }
     };
-    fetchBookings();
+    fetchData();
   }, []);
 
   const handleExportCSV = () => {
@@ -3057,12 +3051,30 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
   };
 
   const filteredBookings = bookings.filter(b => {
-    const guestName = b.contactInfo?.fullName || '';
-    const eventName = b.festival?.name || '';
-    if (searchQuery && !b._id?.toLowerCase().includes(searchQuery.toLowerCase()) && !guestName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (eventFilter !== 'All Events' && eventName !== eventFilter) return false;
+    const guestName = (b.contactInfo?.fullName || '').toLowerCase();
+    const guestEmail = (b.contactInfo?.email || '').toLowerCase();
+    const eventName = (b.festival?.name || '').toLowerCase();
+    const bookingId = (b._id || '').toLowerCase();
+    const query = searchQuery.toLowerCase();
+
+    // Search filter: ID, Name, Email, or Event Name
+    const matchesSearch = !searchQuery || 
+      bookingId.includes(query) || 
+      guestName.includes(query) || 
+      guestEmail.includes(query) || 
+      eventName.includes(query);
+
+    if (!matchesSearch) return false;
+
+    // Event filter
+    if (eventFilter !== 'All Events' && b.festival?.name !== eventFilter) return false;
+    
+    // Status filter
     if (statusFilter !== 'All' && b.status !== statusFilter.toLowerCase()) return false;
+    
+    // Ticket Type filter
     if (ticketTypeFilter !== 'All' && b.ticketType !== ticketTypeFilter.toLowerCase()) return false;
+    
     return true;
   });
 
@@ -3098,9 +3110,27 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
     }
   };
 
-  const totalTickets = filteredBookings.reduce((acc, b) => acc + (b.quantity || 0), 0);
-  const confirmedBookings = filteredBookings.filter(b => b.status === 'confirmed').reduce((acc, b) => acc + (b.quantity || 0), 0);
-  const totalRevenue = filteredBookings.reduce((acc, b) => acc + (b.totalPrice || 0), 0);
+  const totalTicketsSold = filteredBookings.reduce((acc, b) => acc + (b.quantity || 0), 0);
+  const confirmedTicketsCount = filteredBookings.filter(b => b.status === 'confirmed').reduce((acc, b) => acc + (b.quantity || 0), 0);
+  const netIncomeValue = filteredBookings
+    .filter(b => b.status === 'confirmed')
+    .reduce((acc, b) => {
+      // Use pre-calculated organizerAmount if available, else calculate manually (90%)
+      const amount = b.organizerAmount || (b.totalPrice ? b.totalPrice * 0.9 : 0);
+      return acc + amount;
+    }, 0);
+
+  // Total Capacity Calculation
+  let totalCapacityValue = 0;
+  if (eventFilter === 'All Events') {
+    totalCapacityValue = festivals.reduce((acc, f) => {
+      const festivalCapacity = f.ticketTypes?.reduce((tAcc: number, t: any) => tAcc + (t.capacity || 0), 0) || 0;
+      return acc + festivalCapacity;
+    }, 0);
+  } else {
+    const selectedFestival = festivals.find(f => f.name === eventFilter);
+    totalCapacityValue = selectedFestival?.ticketTypes?.reduce((tAcc: number, t: any) => tAcc + (t.capacity || 0), 0) || 0;
+  }
 
   if (loading) {
     return <div className="text-center p-10">Loading bookings...</div>;
@@ -3122,42 +3152,72 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
         </div>
       </header>
 
+      {/* Event Context Banner */}
+      <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-2xl bg-primary/10 text-primary">
+            <Info className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-0.5">Active Scope</p>
+            <h3 className="text-xl font-serif font-bold text-primary">
+              {eventFilter === 'All Events' ? 'All Published Events' : `Event: ${eventFilter}`}
+            </h3>
+          </div>
+        </div>
+        <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-ethio-bg rounded-xl border border-gray-100">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+          <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Live Monitoring</span>
+        </div>
+      </div>
+
       {/* Real-Time Check-in Counter & Payout Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-blue-50 text-blue-600">
-            <Ticket className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Total Tickets</p>
-            <p className="text-xl font-bold text-primary">{totalTickets}</p>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600">
-            <UserCheck className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Confirmed</p>
-            <p className="text-xl font-bold text-primary">{confirmedBookings}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
+              <Ticket className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Total Capacity</p>
+              <p className="text-2xl font-bold text-primary">{totalCapacityValue.toLocaleString()}</p>
+            </div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-amber-50 text-amber-600">
-            <Users className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Remaining</p>
-            <p className="text-xl font-bold text-primary">{totalTickets - confirmedBookings}</p>
+        
+        <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+              <UserCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Booked Ticket</p>
+              <p className="text-2xl font-bold text-primary">{confirmedTicketsCount.toLocaleString()}</p>
+            </div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-purple-50 text-purple-600">
-            <DollarSign className="w-6 h-6" />
+
+        <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
+              <Users className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Remaining</p>
+              <p className="text-2xl font-bold text-primary">{Math.max(0, totalCapacityValue - confirmedTicketsCount).toLocaleString()}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Net Income</p>
-            <p className="text-xl font-bold text-primary">ETB {totalRevenue.toLocaleString()}</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-all">
+              <DollarSign className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Net Income</p>
+              <p className="text-2xl font-bold text-primary">ETB {netIncomeValue.toLocaleString()}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -3183,8 +3243,9 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
               className="appearance-none bg-gray-50 border-none rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer"
             >
               <option>All Events</option>
-              <option>Timket 2025 (Epiphany)</option>
-              <option>Meskel Festival</option>
+              {festivals.map(f => (
+                <option key={f.id || f._id} value={f.name}>{f.name}</option>
+              ))}
             </select>
             <ArrowUpDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
           </div>
@@ -3272,9 +3333,13 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
           <span className="text-sm font-bold">{selectedBookings.length} bookings selected</span>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/10">Export Selected</Button>
-            <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/10">Mark Checked-in</Button>
-            <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/10">Cancel</Button>
-            <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/10">Refund</Button>
+            <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/10" onClick={() => {
+              if (window.confirm(`Are you sure you want to cancel ${selectedBookings.length} bookings?`)) {
+                // Bulk cancel logic
+                selectedBookings.forEach(id => handleBookingStatusUpdate(id, 'cancelled'));
+                setSelectedBookings([]);
+              }
+            }}>Cancel</Button>
           </div>
         </div>
       )}
@@ -3357,24 +3422,6 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
                     <button onClick={() => onViewBooking(booking._id)} className="p-2 bg-white border border-gray-100 rounded-xl text-primary hover:bg-primary hover:text-white transition-all shadow-sm">
                       <Eye className="w-4 h-4" />
                     </button>
-                    {booking.status === 'pending' && (
-                      <>
-                        <button 
-                          onClick={() => handleBookingStatusUpdate(booking._id, 'confirmed')}
-                          className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
-                          title="Confirm"
-                        >
-                          <Check className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleBookingStatusUpdate(booking._id, 'cancelled')}
-                          className="p-2 bg-red-50 border border-red-200 rounded-xl text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm"
-                          title="Cancel"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
                   </div>
                 </td>
               </tr>
