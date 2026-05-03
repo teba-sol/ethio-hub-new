@@ -33,19 +33,20 @@ import { useCart } from '../context/CartContext';
 import { UserRole } from '../types';
 import apiClient from '../lib/apiClient';
 import { useContentLanguage } from '@/hooks/useContentLanguage';
+import { CLOUDINARY_CLOUD_NAME } from '@/lib/cloudinary';
 
-const festivalAndProductImageBase = '/uploads/avatars/festivalandproductimage';
+const CLOUDINARY_BASE = `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
 const localFestivalImages = [
-  `${festivalAndProductImageBase}/festivalimage1.webp`,
-  `${festivalAndProductImageBase}/festivalimage2.avif`,
-  `${festivalAndProductImageBase}/event3.webp`,
+  `${CLOUDINARY_BASE}/w_800,c_fill/v1777798803/ethio-hub/avatars/festivalandproductimage/fzfj0bverugasrobafk0.webp`,
+  `${CLOUDINARY_BASE}/w_800,c_fill/v1777798809/ethio-hub/avatars/festivalandproductimage/qdrfjcmefptoteutrlen.avif`,
+  `${CLOUDINARY_BASE}/w_800,c_fill/v1777798811/ethio-hub/avatars/festivalandproductimage/q9lycufuumoflweo7cyy.webp`,
 ];
 
 const localProductImages = [
-  `${festivalAndProductImageBase}/product%20image%201.webp`,
-  `${festivalAndProductImageBase}/clothproduct2.webp`,
-  `${festivalAndProductImageBase}/product3.webp`,
+  `${CLOUDINARY_BASE}/w_800,c_fill/v1777798814/ethio-hub/avatars/festivalandproductimage/kpwld69hcxz4djeskl7r.webp`,
+  `${CLOUDINARY_BASE}/w_800,c_fill/v1777798817/ethio-hub/avatars/festivalandproductimage/keu3yplue7d67f4zkb2x.webp`,
+  `${CLOUDINARY_BASE}/w_800,c_fill/v1777798818/ethio-hub/avatars/festivalandproductimage/uxp6xscbdioiancfgrng.webp`,
 ];
 
 const heritageRailImages = [
@@ -380,7 +381,7 @@ export const Homepage: React.FC = () => {
               </div>
               <Link href="/products">
                 <Button variant="ghost" className="text-primary font-bold text-sm group p-0 hover:bg-transparent">
-                  View All Artifacts <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  {t("home.viewAllArtifacts")} <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
             </div>
@@ -412,7 +413,7 @@ export const Homepage: React.FC = () => {
                 <div className="explore-rail-up space-y-5">
                   {[...exploreLeftRailImages, ...exploreLeftRailImages].map((image, index) => (
                     <div key={`${image}-left-${index}`} className={`overflow-hidden rounded-[28px] shadow-2xl shadow-black/15 ${index % 2 === 0 ? 'h-56' : 'h-44'}`}>
-                      <img src={image} alt="Ethiopian handmade craft" className="h-full w-full object-cover" />
+                      <img src={image} alt={t("home.handmadeCraftAlt")} className="h-full w-full object-cover" />
                     </div>
                   ))}
                 </div>
@@ -422,7 +423,7 @@ export const Homepage: React.FC = () => {
                 <div className="explore-rail-down space-y-5">
                   {[...exploreRightRailImages, ...exploreRightRailImages].map((image, index) => (
                     <div key={`${image}-right-${index}`} className={`overflow-hidden rounded-[28px] shadow-2xl shadow-black/15 ${index % 2 === 0 ? 'h-44' : 'h-56'}`}>
-                      <img src={image} alt="Ethiopian market and festival detail" className="h-full w-full object-cover" />
+                      <img src={image} alt={t("home.marketFestivalAlt")} className="h-full w-full object-cover" />
                     </div>
                   ))}
                 </div>
@@ -430,8 +431,8 @@ export const Homepage: React.FC = () => {
 
               <div className="absolute left-1/2 top-1/2 z-20 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white p-4 shadow-2xl">
                 <div className="rounded-full bg-ethio-dark px-5 py-7 text-center text-white">
-                  <p className="text-[10px] uppercase tracking-[0.28em] text-secondary">Ethio Craft</p>
-                  <p className="mt-2 font-serif text-2xl font-bold leading-none">Hub</p>
+                  <p className="text-[10px] uppercase tracking-[0.28em] text-secondary">{t("home.ethioCraft")}</p>
+                  <p className="mt-2 font-serif text-2xl font-bold leading-none">{t("home.hub")}</p>
                 </div>
               </div>
             </div>
@@ -484,7 +485,7 @@ export const Homepage: React.FC = () => {
             </div>
             <Link href="/festivals">
               <Button variant="outline" className="rounded-full px-7 py-3 font-bold uppercase tracking-widest text-xs">
-                View All Festivals <ArrowRight className="ml-2 h-4 w-4" />
+                {t("home.viewAllFestivals")} <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
           </div>
@@ -522,12 +523,12 @@ export const Homepage: React.FC = () => {
                   </div>
                   <div className="flex items-center justify-between border-t border-gray-100 pt-5">
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Starting at</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{t("home.startingAt")}</p>
                       <p className="font-serif text-2xl font-bold text-primary">{festival.currency} {festival.baseTicketPrice || 0}</p>
                     </div>
                     <Link href={`/event/${festival.id}`}>
                       <Button className="rounded-full px-6 py-3 text-[10px] font-bold uppercase tracking-widest">
-                        Book Now
+                        {t("home.bookNow")}
                       </Button>
                     </Link>
                   </div>
@@ -543,17 +544,17 @@ export const Homepage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
             <div className="space-y-4">
-              <p className="text-xs font-bold uppercase tracking-[0.32em] text-secondary">Timeless Attractions</p>
-              <h2 className="font-serif text-4xl font-bold tracking-tight md:text-5xl">Timeless Craft Traditions</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.32em] text-secondary">{t("home.timelessAttractions")}</p>
+              <h2 className="font-serif text-4xl font-bold tracking-tight md:text-5xl">{t("home.timelessCraftTraditions")}</h2>
               <p className="max-w-xl text-lg font-light leading-relaxed text-gray-300">
-                From woven cotton and coffee ceremony clayware to silver crosses and Harari baskets, every product carries a place, a maker, and a cultural memory.
+                {t("home.timelessCraftDesc")}
               </p>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {[
-                { title: 'Woven Textiles', meta: 'Dorze, Shema, Gabi', image: heritageRailImages[1] },
-                { title: 'Coffee Ceremony', meta: 'Jebena and serving sets', image: heritageRailImages[0] },
-                { title: 'Heritage Jewelry', meta: 'Silver crosses and beadwork', image: heritageRailImages[2] },
+                { title: t("home.wovenTextiles"), meta: t("home.wovenTextilesMeta"), image: heritageRailImages[1] },
+                { title: t("home.coffeeCeremony"), meta: t("home.coffeeCeremonyMeta"), image: heritageRailImages[0] },
+                { title: t("home.heritageJewelry"), meta: t("home.heritageJewelryMeta"), image: heritageRailImages[2] },
               ].map((item) => (
                 <Link href="/products" key={item.title} className="group overflow-hidden rounded-[24px] bg-white/5">
                   <div className="relative aspect-[4/5] overflow-hidden">
@@ -720,217 +721,369 @@ export const AboutPage: React.FC = () => {
 };
 
 export const ProductListingPage: React.FC = () => {
-  const searchParams = useSearchParams();
-  const artisanParam = searchParams?.get('artisan');
-  const { t } = useLanguage();
-  const { getLocalizedField } = useContentLanguage();
-  
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [showFilters, setShowFilters] = useState(false);
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+   const searchParams = useSearchParams();
+   const artisanParam = searchParams?.get('artisan');
+   const { t } = useLanguage();
+   const { getLocalizedField } = useContentLanguage();
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const categoryParam = selectedCategory !== 'All' ? `&category=${selectedCategory}` : '';
-        const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
-        const artisanParamStr = artisanParam ? `&artisanId=${artisanParam}` : '';
-        const res = await fetch(`/api/public/products?${categoryParam}${searchParam}${artisanParamStr}`);
-        const data = await res.json();
-        if (data.products) {
-          const mappedProducts = data.products.map((p: any, index: number) => ({
-            id: p._id,
-            name: p.name,
-            name_en: p.name_en || p.name,
-            name_am: p.name_am || p.name,
-            description: p.description,
-            description_en: p.description_en || p.description,
-            description_am: p.description_am || p.description,
-            price: p.price,
-            discountPrice: p.discountPrice,
-            category: p.category,
-            artisanId: p.artisanId?._id || p.artisanId,
-            artisanName: p.artisanId?.name || 'Unknown Artisan',
-            images: getLocalProductImages(p.images, index),
-            isVerified: p.verificationStatus === 'Approved',
-            rating: 4.5,
-            stock: p.stock,
-            material: p.material,
-            isHandmade: true,
-            productionTime: p.deliveryTime,
-            shippingCost: Number(p.shippingFee) || 0,
-            culturalStory: '',
-            status: p.verificationStatus,
-            sku: p.sku,
-            shippingLocations: [],
-            estimatedDelivery: p.deliveryTime,
-            returnPolicy: '',
-            currency: 'ETB'
-          }));
-          setProducts(mappedProducts);
-        }
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        setProducts(withLocalProductFallbacks(MOCK_PRODUCTS));
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProducts();
-  }, [selectedCategory, searchTerm, artisanParam]);
+   const [searchTerm, setSearchTerm] = useState("");
+   const [selectedCategory, setSelectedCategory] = useState("All");
+   const [showFilters, setShowFilters] = useState(false);
+   const [products, setProducts] = useState<any[]>([]);
+   const [loading, setLoading] = useState(true);
 
-  const categories = ["All", ...Array.from(new Set(products.map(p => p.category)))];
+   useEffect(() => {
+     const fetchProducts = async () => {
+       try {
+         const categoryParam = selectedCategory !== 'All' ? `&category=${selectedCategory}` : '';
+         const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
+         const artisanParamStr = artisanParam ? `&artisanId=${artisanParam}` : '';
+         const res = await fetch(`/api/public/products?${categoryParam}${searchParam}${artisanParamStr}`);
+         const data = await res.json();
+         if (data.products) {
+           const mappedProducts = data.products.map((p: any, index: number) => ({
+             id: p._id,
+             name: p.name,
+             name_en: p.name_en || p.name,
+             name_am: p.name_am || p.name,
+             description: p.description,
+             description_en: p.description_en || p.description,
+             description_am: p.description_am || p.description,
+             price: p.price,
+             discountPrice: p.discountPrice,
+             category: p.category,
+             artisanId: p.artisanId?._id || p.artisanId,
+             artisanName: p.artisanId?.name || 'Unknown Artisan',
+             images: getLocalProductImages(p.images, index),
+             isVerified: p.verificationStatus === 'Approved',
+             rating: 4.5,
+             stock: p.stock,
+             material: p.material,
+             isHandmade: true,
+             productionTime: p.deliveryTime,
+             shippingCost: Number(p.shippingFee) || 0,
+             culturalStory: '',
+             status: p.verificationStatus,
+             sku: p.sku,
+             shippingLocations: [],
+             estimatedDelivery: p.deliveryTime,
+             returnPolicy: '',
+             currency: 'ETB'
+           }));
+           setProducts(mappedProducts);
+         }
+       } catch (error) {
+         console.error('Error fetching products:', error);
+         setProducts(withLocalProductFallbacks(MOCK_PRODUCTS));
+       } finally {
+         setLoading(false);
+       }
+     };
+     fetchProducts();
+   }, [selectedCategory, searchTerm, artisanParam]);
 
-  const filtered = products.filter(p => {
-    const localizedName = getLocalizedField(p, 'name');
-    const matchesSearch = localizedName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          p.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === "All" || p.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+   const categories = ["All", ...Array.from(new Set(products.map(p => p.category)))];
 
-  return (
-    <div className="py-12 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-            <div className="text-center md:text-left">
-               <h1 className="text-3xl font-serif font-bold text-primary">{t("home.marketplace")}</h1>
-               <p className="text-gray-500 mt-1">{t("home.discoverArtifacts")}</p>
-            </div>
-           
-           {/* Search Bar */}
-            <div className="relative w-full md:w-96">
-               <input 
+   const filtered = products.filter(p => {
+     const localizedName = getLocalizedField(p, 'name');
+     const matchesSearch = localizedName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           p.category.toLowerCase().includes(searchTerm.toLowerCase());
+     const matchesCategory = selectedCategory === "All" || p.category === selectedCategory;
+     return matchesSearch && matchesCategory;
+   });
+
+   const marketplaceProducts = filtered.slice(0, 8);
+   const heritageProducts = filtered.slice(8, 12);
+
+   return (
+     <div className="min-h-screen bg-white">
+       {/* Hero Section */}
+       <section className="relative overflow-hidden bg-gradient-to-br from-ethio-bg via-white to-secondary/10 py-20 md:py-28 border-b border-gray-100">
+         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-secondary/50 to-transparent" />
+         <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white to-transparent" />
+         <div className="max-w-7xl mx-auto px-6 relative">
+           <div className="text-center max-w-3xl mx-auto space-y-6">
+             <Badge className="bg-secondary text-primary border-none uppercase tracking-[0.2em] text-[10px] font-bold">
+               {t('home.curatedMarketplace')}
+             </Badge>
+             <h1 className="text-5xl md:text-7xl font-serif font-bold text-primary tracking-tight">
+               {t("home.masterArtisanCatalog")}
+             </h1>
+             <p className="text-xl text-gray-500 leading-relaxed font-light">
+               {t("home.directTrade")}
+             </p>
+           </div>
+
+           {/* Stats Banner */}
+           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16">
+             {[
+               { value: '1,200+', label: t("home.verifiedArtisans"), icon: Award },
+               { value: '5,000+', label: 'Handcrafted Items', icon: Box },
+               { value: '45k+', label: t("home.globalShipments"), icon: Globe },
+               { value: '100%', label: t("home.heritageScore"), icon: ShieldCheck },
+             ].map((stat, i) => (
+               <div key={i} className="flex flex-col items-center text-center space-y-2 p-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                 <div className="p-3 bg-ethio-bg rounded-2xl"><stat.icon className="w-6 h-6 text-secondary" /></div>
+                 <p className="text-2xl font-bold text-primary font-serif">{stat.value}</p>
+                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{stat.label}</p>
+               </div>
+             ))}
+           </div>
+         </div>
+       </section>
+
+       {/* Search and Filter Bar */}
+       <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
+         <div className="max-w-7xl mx-auto px-6 py-4">
+           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+             {/* Search */}
+             <div className="relative w-full md:w-96">
+               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+               <input
                  type="text"
                  placeholder={t("home.searchPlaceholder")}
-                 className="w-full pl-10 pr-4 py-3 border-none shadow-sm rounded-xl focus:ring-2 focus:ring-primary/20 text-sm"
+                 className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-primary/20 transition-all text-sm"
                  value={searchTerm}
                  onChange={(e) => setSearchTerm(e.target.value)}
                />
-               <Search className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
-            </div>
-        </div>
+             </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Mobile Filter Toggle */}
-           <button 
+             {/* Categories */}
+             <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto scrollbar-hide">
+               {categories.map(category => {
+                 const categoryKeyMap: Record<string, string> = {
+                   All: "common.all",
+                   Jewelry: "home.categoryNames.jewelry",
+                   Pottery: "home.categoryNames.pottery",
+                   Woodcraft: "home.categoryNames.woodcraft",
+                   Clothing: "home.categoryNames.clothing",
+                   Textiles: "home.categoryNames.textiles",
+                   Basketry: "home.categoryNames.basketry"
+                 };
+                 const displayName = t(categoryKeyMap[category] || "common.all");
+                 return (
+                   <button
+                     key={category}
+                     onClick={() => setSelectedCategory(category)}
+                     className={`px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+                       selectedCategory === category
+                         ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                         : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                     }`}
+                   >
+                     {displayName}
+                   </button>
+                 );
+               })}
+             </div>
+           </div>
+         </div>
+       </div>
+
+       <div className="max-w-7xl mx-auto px-6 py-16">
+         <div className="flex flex-col lg:flex-row gap-8">
+           {/* Mobile Filter Toggle */}
+           <button
              className="lg:hidden w-full flex items-center justify-center gap-2 bg-white p-4 rounded-xl border border-gray-100 font-bold text-primary shadow-sm"
              onClick={() => setShowFilters(!showFilters)}
            >
              <Filter className="w-4 h-4" /> {showFilters ? t("home.hideFilters") : t("home.showFilters")}
            </button>
 
-               {/* Sidebar Filters */}
-               <aside className={`w-full lg:w-64 flex-shrink-0 ${showFilters ? 'block' : 'hidden lg:block'}`}>
-                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 sticky top-24">
-                   <h3 className="font-bold text-primary mb-4 flex items-center gap-2">
-                     <Filter className="w-4 h-4" /> {t("home.categoriesLabel")}
-                   </h3>
-                   <div className="space-y-1">
-                     {categories.map(category => {
-                       // Map category values to translation keys
-                       const categoryKeyMap: Record<string, string> = {
-                         All: "common.all",
-                         Jewelry: "home.categoryNames.jewelry",
-                         Pottery: "home.categoryNames.pottery",
-                         Woodcraft: "home.categoryNames.woodcraft",
-                         Clothing: "home.categoryNames.clothing"
-                       };
-                       const displayName = t(categoryKeyMap[category] || "common.all");
-                       return (
-                         <button
-                           key={category}
-                           onClick={() => setSelectedCategory(category)}
-                           className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                             selectedCategory === category 
-                               ? 'bg-primary text-white font-medium shadow-md shadow-primary/20' 
-                               : 'text-gray-600 hover:bg-gray-50'
-                           }`}
-                         >
-                           {displayName}
-                         </button>
-                       );
-                     })}
+           {/* Sidebar Filters */}
+           <aside className={`w-full lg:w-64 flex-shrink-0 ${showFilters ? 'block' : 'hidden lg:block'}`}>
+             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 sticky top-24">
+               <h3 className="font-bold text-primary mb-4 flex items-center gap-2">
+                 <Filter className="w-4 h-4" /> {t("home.categoriesLabel")}
+               </h3>
+               <div className="space-y-1">
+                 {categories.map(category => {
+                   const categoryKeyMap: Record<string, string> = {
+                     All: "common.all",
+                     Jewelry: "home.categoryNames.jewelry",
+                     Pottery: "home.categoryNames.pottery",
+                     Woodcraft: "home.categoryNames.woodcraft",
+                     Clothing: "home.categoryNames.clothing",
+                     Textiles: "home.categoryNames.textiles",
+                     Basketry: "home.categoryNames.basketry"
+                   };
+                   const displayName = t(categoryKeyMap[category] || "common.all");
+                   return (
+                     <button
+                       key={category}
+                       onClick={() => setSelectedCategory(category)}
+                       className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                         selectedCategory === category
+                           ? 'bg-primary text-white font-medium shadow-md shadow-primary/20'
+                           : 'text-gray-600 hover:bg-gray-50'
+                       }`}
+                     >
+                       {displayName}
+                     </button>
+                   );
+                 })}
+               </div>
+
+               {/* Price Range (Mock) */}
+               <div className="mt-8 pt-8 border-t border-gray-100">
+                 <h3 className="font-bold text-primary mb-4 text-sm">{t("home.priceRange")}</h3>
+                 <div className="space-y-3 text-sm text-gray-600">
+                   <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
+                     <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" />
+                     <span>{t("home.under50")}</span>
+                   </label>
+                   <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
+                     <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" />
+                     <span>{t("home.price50to100")}</span>
+                   </label>
+                   <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
+                     <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" />
+                     <span>{t("home.price100to200")}</span>
+                   </label>
+                   <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
+                     <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" />
+                     <span>{t("home.over200")}</span>
+                   </label>
+                 </div>
+               </div>
+
+               {/* Rating (Mock) */}
+               <div className="mt-8 pt-8 border-t border-gray-100">
+                 <h3 className="font-bold text-primary mb-4 text-sm">{t("home.averageCustomerReview")}</h3>
+                 <div className="space-y-2">
+                   {[4, 3, 2, 1].map((rating) => (
+                     <div key={rating} className="flex items-center gap-2 cursor-pointer hover:opacity-80 group">
+                       <div className="flex text-yellow-400">
+                         {[...Array(5)].map((_, i) => (
+                           <Star key={i} className={`w-3.5 h-3.5 ${i < rating ? 'fill-current' : 'text-gray-200'}`} />
+                         ))}
+                       </div>
+                       <span className="text-xs text-gray-500 group-hover:text-primary transition-colors">{t("home.andUp")}</span>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             </div>
+           </aside>
+
+           {/* Main Content */}
+           <div className="flex-1">
+             {/* Results Header */}
+             <div className="flex items-center justify-between mb-10">
+               <div>
+                 <h2 className="text-3xl font-serif font-bold text-primary">
+                   {t("home.marketplace")}
+                 </h2>
+                 <p className="text-gray-500 mt-1">
+                   {filtered.length} {t("home.results")} found
+                 </p>
+               </div>
+             </div>
+
+             {/* Marketplace Grid */}
+             {marketplaceProducts.length > 0 && (
+               <div className="mb-20">
+                 <h3 className="text-2xl font-serif font-bold text-primary mb-8 flex items-center gap-3">
+                   <span className="w-8 h-1 bg-secondary rounded-full"></span>
+                   Featured Artifacts
+                 </h3>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                   {marketplaceProducts.map((p, i) => (
+                     <div
+                       key={p.id}
+                       className={`artifact-showcase-card group ${i % 2 === 0 ? 'artifact-enter-left' : 'artifact-enter-right'}`}
+                       style={{ animationDelay: `${i * 100}ms` }}
+                     >
+                       <ProductCard product={p} />
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             )}
+
+             {/* Heritage Horizontal Section */}
+             {heritageProducts.length > 0 && (
+               <div className="mb-20">
+                 <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-ethio-dark to-primary/90 py-16 md:py-24">
+                   <div className="absolute inset-0 opacity-20">
+                     <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-secondary rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
+                     <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-ethio-bg rounded-full blur-[100px] translate-y-1/3 -translate-x-1/3"></div>
                    </div>
 
-                   {/* Price Range (Mock) */}
-                   <div className="mt-8 pt-8 border-t border-gray-100">
-                     <h3 className="font-bold text-primary mb-4 text-sm">{t("home.priceRange")}</h3>
-                     <div className="space-y-3 text-sm text-gray-600">
-                         <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
-                             <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" /> 
-                             <span>{t("home.under50")}</span>
-                         </label>
-                         <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
-                             <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" /> 
-                             <span>{t("home.price50to100")}</span>
-                         </label>
-                         <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
-                             <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" /> 
-                             <span>{t("home.price100to200")}</span>
-                         </label>
-                         <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
-                             <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" /> 
-                             <span>{t("home.over200")}</span>
-                         </label>
+                   <div className="relative max-w-7xl mx-auto px-6">
+                     <div className="mb-12">
+                       <Badge className="mb-4 bg-white/10 text-white border-none uppercase tracking-[0.2em] text-[10px] font-bold">
+                         {t('home.timelessAttractions')}
+                       </Badge>
+                       <h2 className="text-3xl md:text-4xl font-serif font-bold text-white tracking-tight">
+                         {t('home.timelessCraftTraditions')}
+                       </h2>
+                       <p className="text-gray-300 max-w-2xl mt-3 text-lg font-light">
+                         {t('home.timelessCraftDesc')}
+                       </p>
+                     </div>
+
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                       {heritageProducts.map((p, i) => (
+                         <div
+                           key={p.id}
+                           className={`artifact-showcase-card group ${i % 2 === 0 ? 'artifact-enter-left' : 'artifact-enter-right'}`}
+                           style={{ animationDelay: `${(i + 8) * 100}ms` }}
+                         >
+                           <ProductCard product={p} />
                          </div>
-                       </div>
-                       
-                        {/* Rating (Mock) */}
-                        <div className="mt-8 pt-8 border-t border-gray-100">
-                          <h3 className="font-bold text-primary mb-4 text-sm">{t("home.averageCustomerReview")}</h3>
-                          <div className="space-y-2">
-                              {[4, 3, 2, 1].map((rating) => (
-                                  <div key={rating} className="flex items-center gap-2 cursor-pointer hover:opacity-80 group">
-                                      <div className="flex text-yellow-400">
-                                          {[...Array(5)].map((_, i) => (
-                                              <Star key={i} className={`w-3.5 h-3.5 ${i < rating ? 'fill-current' : 'text-gray-200'}`} />
-                                          ))}
-                                      </div>
-                                      <span className="text-xs text-gray-500 group-hover:text-primary transition-colors">{t("home.andUp")}</span>
-                                  </div>
-                              ))}
-                          </div>
-                        </div>
-                      </div>
-                    </aside>
-
-           {/* Product Grid */}
-           <div className="flex-1">
-             <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                  <span className="text-sm text-gray-500 font-medium">
-                    {t("home.showing")} <span className="text-primary font-bold">{filtered.length}</span> {t("home.results")}
-                  </span>
-                 <div className="flex items-center gap-2 text-sm text-gray-500">
-                     {t("home.sortBy")} <span className="font-bold text-primary cursor-pointer hover:underline">{t("home.sortByFeatured")}</span> <ChevronRight className="w-4 h-4 rotate-90" />
+                       ))}
+                     </div>
+                   </div>
                  </div>
-             </div>
-            
-            {filtered.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                  {filtered.map(p => <ProductCard key={p.id} product={p} />)}
-                </div>
-            ) : (
-                <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Search className="w-8 h-8 text-gray-300" />
-                    </div>
-                    <h3 className="text-lg font-bold text-primary">{t("home.noProductsFound")}</h3>
-                    <p className="text-gray-500 mt-1">{t("home.tryAdjustingSearch")}</p>
-                    <button onClick={() => {setSearchTerm(""); setSelectedCategory("All");}} className="mt-6 px-6 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">{t("home.clearAllFilters")}</button>
-                </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+               </div>
+             )}
 
-export const FestivalListingPage: React.FC = () => {
+             {/* Empty State */}
+             {filtered.length === 0 && (
+               <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                 <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                   <Search className="w-8 h-8 text-gray-300" />
+                 </div>
+                 <h3 className="text-lg font-bold text-primary">{t("home.noProductsFound")}</h3>
+                 <p className="text-gray-500 mt-1">{t("home.tryAdjustingSearch")}</p>
+                 <button onClick={() => {setSearchTerm(""); setSelectedCategory("All");}} className="mt-6 px-6 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">{t("home.clearAllFilters")}</button>
+               </div>
+             )}
+           </div>
+         </div>
+       </div>
+
+       {/* Why Choose Us Section */}
+       <section className="py-20 bg-ethio-bg border-t border-gray-100">
+         <div className="max-w-7xl mx-auto px-6">
+           <div className="text-center mb-16">
+             <h2 className="text-4xl font-serif font-bold text-primary mb-4">{t("home.whyChooseUs")}</h2>
+             <div className="w-24 h-1 bg-secondary mx-auto rounded-full"></div>
+           </div>
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+             {[
+               { icon: ShieldCheck, title: t("home.verifiedOrganizers"), desc: t("home.verifiedOrganizersDesc") },
+               { icon: CreditCard, title: t("home.securePayment"), desc: t("home.securePaymentDesc") },
+               { icon: Award, title: t("home.authenticHandmade"), desc: t("home.authenticHandmadeDesc") },
+               { icon: RefreshCw, title: t("home.easyRefund"), desc: t("home.easyRefundDesc") },
+             ].map((item, i) => (
+               <div key={i} className="bg-white p-8 rounded-3xl border border-gray-100 hover:shadow-xl hover:border-secondary/20 transition-all duration-300 group">
+                 <div className="w-14 h-14 bg-secondary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                   <item.icon className="w-7 h-7 text-secondary" />
+                 </div>
+                 <h3 className="text-xl font-bold mb-3 text-primary">{item.title}</h3>
+                 <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
+               </div>
+             ))}
+           </div>
+         </div>
+</section>
+      </div>
+    );
+  };
+
+  export const FestivalListingPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("All");
   const { t } = useLanguage();
@@ -1801,6 +1954,7 @@ export const FestivalDetailPage: React.FC = () => {
   const id = Array.isArray((params as any)?.id) ? (params as any).id[0] : (params as any)?.id;
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
+  const { t } = useLanguage();
   const { getLocalizedField } = useContentLanguage();
   const [festivalData, setFestivalData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -1819,12 +1973,15 @@ export const FestivalDetailPage: React.FC = () => {
   const [currentBooking, setCurrentBooking] = useState<any>(null);
   const [contactInfo, setContactInfo] = useState({ fullName: '', email: '', phone: '' });
 
-  const getImageUrl = (path: string | undefined | null) => {
+const getImageUrl = (path: string | undefined | null) => {
     if (!path || path === '') return localFestivalImages[0];
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
     if (path.startsWith('/uploads/')) {
       const baseUrl = window.location.origin;
       return `${baseUrl}${path}`;
+    }
+    if (path.startsWith('ethio-hub/')) {
+      return getCloudinaryImageUrl(path, { width: 800 });
     }
     return path;
   };
@@ -2612,7 +2769,7 @@ export const FestivalDetailPage: React.FC = () => {
                                 <div className="text-sm text-gray-500">/night</div>
                               </div>
                               {room.availability > 0 && room.availability <= 3 && (
-                                <Badge variant="warning" className="mt-2">Only {room.availability} left</Badge>
+                                <Badge variant="warning" className="mt-2">{t("hotel.roomsLeft").replace("{count}", String(room.availability))}</Badge>
                               )}
                               <Button 
                                 className="w-full mt-4"
@@ -2934,7 +3091,7 @@ export const FestivalDetailPage: React.FC = () => {
                         setSelectedTransport(null);
                       }}
                     >
-                      Book Now
+                      {t("home.bookNow")}
                     </Button>
                     <Button variant="outline" className="w-full py-3">
                       Contact Provider

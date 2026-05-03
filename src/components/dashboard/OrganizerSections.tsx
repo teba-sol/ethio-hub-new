@@ -25,6 +25,7 @@ import {
 } from 'recharts';
 
 import apiClient from '../../lib/apiClient';
+import { getImageUrl as getCloudImageUrl } from '../../lib/cloudinary';
 
 const REVENUE_DATA = [
   { name: 'Jan', revenue: 45000, bookings: 120, users: 400, sales: 85 },
@@ -86,6 +87,9 @@ const getImageUrl = (path: string | undefined | null) => {
       const baseUrl = window.location.origin;
       return `${baseUrl}${path}`;
     }
+    if (path.startsWith('ethio-hub/')) {
+      return getCloudImageUrl(path, { width: 800, height: 400 });
+    }
     return path;
   };
 
@@ -95,6 +99,9 @@ const getImageUrl = (path: string | undefined | null) => {
     if (path.startsWith('/uploads/')) {
       const baseUrl = window.location.origin;
       return `${baseUrl}${path}`;
+    }
+    if (path.startsWith('ethio-hub/')) {
+      return getCloudImageUrl(path, { width: 400, height: 400 });
     }
     return path;
   };

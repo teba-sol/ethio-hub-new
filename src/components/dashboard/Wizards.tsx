@@ -247,15 +247,42 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
      });
    };
 
-   // Helper to get display text based on language preference
-   const getDisplayText = (en: string, am: string) => {
-     if (languagePreference === 'both') return { primary: en, secondary: am, showBoth: true };
-     if (languagePreference === 'en') return { primary: en, secondary: '', showBoth: false };
-     if (languagePreference === 'am') return { primary: am, secondary: '', showBoth: false };
-     return { primary: en, secondary: '', showBoth: false };
-   };
+// Helper to get display text based on language preference
+    const getDisplayText = (en: string, am: string) => {
+      if (languagePreference === 'both') return { primary: en, secondary: am, showBoth: true };
+      if (languagePreference === 'en') return { primary: en, secondary: '', showBoth: false };
+      if (languagePreference === 'am') return { primary: am, secondary: '', showBoth: false };
+      return { primary: en, secondary: '', showBoth: false };
+    };
 
-   const handlePublish = async () => {
+    const handleFileUpload = async (file: File, isCover?: boolean) => {
+      if (!file) return;
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'festivals');
+      
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          const imageUrl = data.url;
+          if (isCover) {
+            setFormData(prev => ({ ...prev, core: { ...prev.core, coverImage: imageUrl } }));
+          } else {
+            setFormData(prev => ({ ...prev, core: { ...prev.core, gallery: [...prev.core.gallery, imageUrl] } }));
+          }
+        }
+      } catch (error) {
+        console.error('Upload failed:', error);
+      }
+    };
+
+    const handlePublish = async () => {
     const requiredFields: Record<string, any> = {
       startDate: formData.core.startDate,
       endDate: formData.core.endDate,

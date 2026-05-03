@@ -3,14 +3,13 @@ import Link from 'next/link';
 import { Button } from './UI';
 import { useLanguage } from '@/context/LanguageContext';
 
-// Local video files from public/uploads/videos
 const videoSources = [
   '/uploads/videos/13530688_1440_2560_30fps.mp4',
   '/uploads/videos/15185809_4096_2160_25fps.mp4',
   '/uploads/videos/3967245-uhd_4096_2160_24fps.mp4',
 ];
 
-const posterImage = '/uploads/avatars/festivalandproductimage/festivalimage1.webp';
+const posterImage = 'https://res.cloudinary.com/dmhu32ya9/image/upload/w_1920,h_1080,c_fill/v1777798803/ethio-hub/avatars/festivalandproductimage/fzfj0bverugasrobafk0.webp';
 
 export const HeroVideo: React.FC = () => {
   const { t } = useLanguage();
@@ -100,7 +99,7 @@ export const HeroVideo: React.FC = () => {
                 size="lg"
                 className="rounded-full px-10 py-5 font-bold uppercase tracking-widest text-sm shadow-2xl shadow-secondary/30"
               >
-                Explore Festivals
+                {t('home.exploreFestivals')}
               </Button>
             </Link>
             <Link href="/products">
@@ -109,7 +108,7 @@ export const HeroVideo: React.FC = () => {
                 size="lg"
                 className="rounded-full px-10 py-5 font-bold uppercase tracking-widest text-sm border-2 border-white/30 text-white hover:bg-white/10 backdrop-blur-sm"
               >
-                Browse Artisans
+                {t('home.browseArtisans')}
               </Button>
             </Link>
           </div>

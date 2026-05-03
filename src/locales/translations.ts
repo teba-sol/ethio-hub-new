@@ -57,6 +57,14 @@ export const translations: Record<Language, TranslationDictionary> = {
       payNow: "Pay Now",
       secureCheckout: "Secure checkout powered by Chapa & Telebirr"
     },
+    productCard: {
+      onlyLeft: "Only {count} left",
+      by: "By:",
+      shipsIn: "Ships in",
+      details: "Details",
+      add: "Add",
+      addToWishlist: "Add {name} to wishlist"
+    },
     // Footer (Original English)
     footer: {
       tagline: "Preserving centuries of Ethiopian craftsmanship through a secure, unified marketplace aligned with the Digital Ethiopia 2025 strategy.",
@@ -502,6 +510,23 @@ export const translations: Record<Language, TranslationDictionary> = {
     upcomingEventsFestivals: "Upcoming Events & Festivals",
     discoverCrafts: "Discover Crafts",
     exploreFestivals: "Explore Festivals",
+    browseArtisans: "Browse Artisans",
+    viewAllFestivals: "View All Festivals",
+    bookNow: "Book Now",
+    startingAt: "Starting at",
+    ethioCraft: "Ethio Craft",
+    hub: "Hub",
+    handmadeCraftAlt: "Ethiopian handmade craft",
+    marketFestivalAlt: "Ethiopian market and festival detail",
+    timelessAttractions: "Timeless Attractions",
+    timelessCraftTraditions: "Timeless Craft Traditions",
+    timelessCraftDesc: "From woven cotton and coffee ceremony clayware to silver crosses and Harari baskets, every product carries a place, a maker, and a cultural memory.",
+    wovenTextiles: "Woven Textiles",
+    wovenTextilesMeta: "Dorze, Shema, Gabi",
+    coffeeCeremony: "Coffee Ceremony",
+    coffeeCeremonyMeta: "Jebena and serving sets",
+    heritageJewelry: "Heritage Jewelry",
+    heritageJewelryMeta: "Silver crosses and beadwork",
     discoverHeart: "Discover the Heart of",
       ethiopianHeritage: "Ethiopian Heritage.",
       verifiedArtisans: "Verified Artisans",
@@ -760,14 +785,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       enhanceStay: "Enhance your stay with our meal packages available for this event",
       backToHotels: "Back to Hotels",
       selectedRoom: "Selected Room",
-      roomsLeft: "{count} rooms left",
-      // Facilities
-      freeWiFi: "Free WiFi",
-      swimmingPool: "Swimming Pool",
-      restaurant: "Restaurant",
-      fitnessCenter: "Fitness Center",
-      freeParking: "Free Parking",
-      spaWellness: "Spa & Wellness"
+      roomsLeft: "{count} rooms left"
     },
 
     transport: {
@@ -871,6 +889,15 @@ export const translations: Record<Language, TranslationDictionary> = {
     secureCheckout: "በቻፓ እና ቴሌብር የተጎላበተ ደህንነቱ የተጠበቀ ክፍያ"
   },
 
+  productCard: {
+    onlyLeft: "{count} ብቻ ቀርቷል",
+    by: "በ:",
+    shipsIn: "የሚላክበት ጊዜ",
+    details: "ዝርዝር",
+    add: "ጨምር",
+    addToWishlist: "{name}ን ወደ ምኞት ዝርዝር ጨምር"
+  },
+
   // ግርጌ (Footer)
   footer: {
     tagline: "የኢትዮጵያን የብዙ መቶ ዘመናት የእጅ ጥበብ ሥራ ከዲጂታል ኢትዮጵያ 2025 ስትራቴጂ ጋር በተጣጣመ ደህንነቱ በተጠበቀ፣ በአንድነት ባለው ገበያ ማስጠበቅ።",
@@ -914,7 +941,6 @@ export const translations: Record<Language, TranslationDictionary> = {
     back: "ተመለስ",
      next: "ቀጣይ",
      previous: "ቀዳሚ",
-     category: "ምድብ",
      close: "ዝጋ",
     loading: "በመጫን ላይ...",
     error: "ስህተት",
@@ -1354,6 +1380,33 @@ export const translations: Record<Language, TranslationDictionary> = {
   // ህዝብ ገጾች (Public Pages)
   home: {
     unifiedPlatform: "የተዋሃደ የባህል መድረክ",
+    curatedMarketplace: "የተመረጠ የጥበብ ገበያ",
+    craftCelebrationMeet: "ጥበብ እና በዓል የሚገናኙበት",
+    letsExploreEthiopia: "ኢትዮጵያን እንመርምር",
+    whereHeritageAwaits: "ቅርስ የሚጠብቅበት",
+    discoverHandmade: "የኢትዮጵያ የእጅ ሥራ ባህላዊ ምርቶችን ያግኙ፣ የበዓል ተሞክሮዎችን ይያዙ፣ እና ህያው ባህሎችን ከገበያ እስከ ታላላቅ ሕዝባዊ ክብረ በዓላት የሚያንቀሳቅሱ የጥበብ ባለሙያዎችን እና አዘጋጆችን ያግኙ።",
+    bookInLandOfOrigins: "በመነሻዎች ምድር ይያዙ",
+    reserveFestivalPass: "የበዓል መግቢያ ይያዙ፣ የአካባቢ አገልግሎቶችን ያስሱ፣ እና በኢትዮጵያ ህያው ክብረ በዓላት ዙሪያ የባህል ተሞክሮዎችን ያቅዱ።",
+    upcomingEventsFestivals: "መጪ ዝግጅቶች እና በዓላት",
+    discoverCrafts: "የእጅ ሥራዎችን ያግኙ",
+    exploreFestivals: "በዓላትን ያስሱ",
+    browseArtisans: "የጥበብ ባለሙያዎችን ያስሱ",
+    viewAllFestivals: "ሁሉንም በዓላት ተመልከት",
+    bookNow: "አሁን ይያዙ",
+    startingAt: "መነሻ ዋጋ",
+    ethioCraft: "ኢትዮ ክራፍት",
+    hub: "ሃብ",
+    handmadeCraftAlt: "የኢትዮጵያ የእጅ ሥራ",
+    marketFestivalAlt: "የኢትዮጵያ ገበያ እና የበዓል ዝርዝር",
+    timelessAttractions: "ዘመን የማይሽራቸው መስህቦች",
+    timelessCraftTraditions: "ዘመን የማይሽራቸው የእጅ ሥራ ባህሎች",
+    timelessCraftDesc: "ከተሸመኑ ጥጥ ጨርቆች እና የቡና ሥነ ሥርዓት የሸክላ ዕቃዎች እስከ የብር መስቀሎች እና የሐረሪ ቅርጫቶች፣ እያንዳንዱ ምርት ቦታ፣ ፈጣሪ እና የባህል ትውስታ ይይዛል።",
+    wovenTextiles: "የተሸመኑ ጨርቆች",
+    wovenTextilesMeta: "ዶርዜ፣ ሸማ፣ ጋቢ",
+    coffeeCeremony: "የቡና ሥነ ሥርዓት",
+    coffeeCeremonyMeta: "ጀበና እና የማቅረቢያ ስብስቦች",
+    heritageJewelry: "የቅርስ ጌጣጌጥ",
+    heritageJewelryMeta: "የብር መስቀሎች እና የዶቃ ሥራ",
     discoverHeart: "የኢትዮጵያን ባህል",
     ethiopianHeritage: "ልብ ያግኙ።",
     verifiedArtisans: "የተረጋገጡ የጥበብ ባለሙያዎች",
