@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb';
 import Wallet from '@/models/wallet.model';
 import Transaction from '@/models/transaction.model';
 import User from '@/models/User';
+import Payment from '@/models/payment.model';
 import { verifyToken } from '@/services/auth.service';
 import mongoose from 'mongoose';
 
@@ -135,6 +136,20 @@ export async function POST(request: NextRequest) {
         checkoutUrl: chapaData.data.checkout_url,
       },
     });
+
+    // Create Payment Record (Receipt)
+    try {
+      await Payment.create({
+        userId: userObjectId,
+        transactionRef: txRef,
+        method: 'chapa',
+        amount: withdrawalAmount,
+        status: 'Pending',
+        invoiceUrl: chapaData.data.checkout_url,
+      });
+    } catch (payError) {
+      console.error('[WithdrawAPI] Payment record creation failed:', payError);
+    }
 
     return NextResponse.json({
       success: true,

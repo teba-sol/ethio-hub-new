@@ -277,7 +277,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
           <div>
             <h2 className="text-2xl font-serif font-bold text-primary">{title}</h2>
             <p className="text-gray-500 text-sm">
-              {userType === 'admin' ? 'Platform earnings and commissions' : 'Your earnings and withdrawals'}
+              Your earnings and withdrawals
             </p>
           </div>
           <div className="flex gap-3">
@@ -517,7 +517,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                     <th className="px-6 py-4 text-left">Type</th>
                     <th className="px-6 py-4 text-left">Details</th>
                     <th className="px-6 py-4 text-right">Amount</th>
-                    <th className="px-6 py-4 text-center">Status</th>
+                    <th className="px-6 py-4 text-center">Payment Status</th>
 {(userType === 'artisan' || userType === 'admin' || userType === 'organizer') && (
                        <th className="px-6 py-4 text-center">View Detail</th>
                      )}
