@@ -175,28 +175,27 @@ export default function TicketsPage() {
                   onSelect={() => handleSelect(ticket.type)}
                 />
               ))}
-            </div>
-            
-            {/* Continue */}
-            <button
-              onClick={() => router.push(`/event/${eventId}/checkout`)}
-              disabled={!ticketSelection}
-              className={`w-full mt-8 py-4 rounded-xl font-bold transition-colors ${
-                ticketSelection 
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              Continue to Checkout
-            </button>
-          </div>
+             </div>
+           </div>
 
-          {/* Price Summary */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-24">
-              <PriceSummary eventId={eventId} />
-            </div>
-          </div>
+           {/* Price Summary */}
+           <div className="lg:col-span-1">
+             <div className="sticky top-24">
+               <PriceSummary eventId={eventId} />
+               {/* Continue to Checkout - Below Price Summary */}
+               <button
+                 onClick={() => router.push(`/event/${eventId}/checkout`)}
+                 disabled={!ticketSelection}
+                 className={`w-full mt-6 py-4 rounded-xl font-bold transition-colors ${
+                   ticketSelection 
+                     ? 'bg-primary text-white hover:bg-primary/90' 
+                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                 }`}
+               >
+                 Continue to Checkout
+               </button>
+             </div>
+           </div>
         </div>
       </div>
     </div>
