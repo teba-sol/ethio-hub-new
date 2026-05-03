@@ -281,7 +281,7 @@ export default function TransportPage() {
                   className="w-full py-3 text-center rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
                   onClick={handleContinue}
                 >
-                  {t('common.continueToCheckout')}
+                  {t('festival.continueToCheckout')}
                 </button>
                 <p className="text-center text-xs text-gray-500">{t('festival.freeCancellation')}</p>
               </div>
