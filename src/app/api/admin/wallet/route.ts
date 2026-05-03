@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Wallet from '@/models/wallet.model';
-import Transaction from '@/models/transaction.model';
 import User from '@/models/User';
 import '@/models/artisan/product.model';
+import '@/models/order.model';
+import Transaction from '@/models/transaction.model';
 import mongoose from 'mongoose';
 
 export async function GET(request: NextRequest) {
