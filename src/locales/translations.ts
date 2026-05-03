@@ -591,8 +591,24 @@ export const translations: Record<Language, TranslationDictionary> = {
        sortBy: "Sort by:",
        showing: "Showing ",
        results: " results",
-       resultsShowing: "Showing {count} results"
-     },
+       resultsShowing: "Showing {count} results",
+      // Additional homepage strings
+      viewAllFestivals: "View All Festivals",
+      timelessAttractions: "Timeless Attractions",
+      timelessCraftTraditions: "Timeless Craft Traditions",
+      craftDescription: "From woven cotton and coffee ceremony clayware to silver crosses and Harari baskets, every product carries a place, a maker, and a cultural memory.",
+      startingAt: "Starting at",
+      bookNow: "Book Now",
+      browseArtisans: "Browse Artisans",
+      wovenTextiles: "Woven Textiles",
+      coffeeCeremony: "Coffee Ceremony",
+      heritageJewelry: "Heritage Jewelry",
+      wovenTextilesMeta: "Dorze, Shema, Gabi",
+      coffeeCeremonyMeta: "Jebena and serving sets",
+      heritageJewelryMeta: "Silver crosses and beadwork",
+      ethioCraft: "Ethio Craft",
+      hub: "Hub"
+      },
       festival: {
         hero: {
           badge: "Official Holiday Directory",
@@ -763,14 +779,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       enhanceStay: "Enhance your stay with our meal packages available for this event",
       backToHotels: "Back to Hotels",
       selectedRoom: "Selected Room",
-      roomsLeft: "{count} rooms left",
-      // Facilities
-      freeWiFi: "Free WiFi",
-      swimmingPool: "Swimming Pool",
-      restaurant: "Restaurant",
-      fitnessCenter: "Fitness Center",
-      freeParking: "Free Parking",
-      spaWellness: "Spa & Wellness"
+      roomsLeft: "{count} rooms left"
     },
 
     transport: {
@@ -916,9 +925,8 @@ export const translations: Record<Language, TranslationDictionary> = {
     submit: "አስገባ",
     back: "ተመለስ",
      next: "ቀጣይ",
-     previous: "ቀዳሚ",
-     category: "ምድብ",
-     close: "ዝጋ",
+      previous: "ቀዳሚ",
+      close: "ዝጋ",
     loading: "በመጫን ላይ...",
     error: "ስህተት",
     success: "ተሳክቷል",
@@ -1442,8 +1450,29 @@ export const translations: Record<Language, TranslationDictionary> = {
     sortBy: "ደርድር:",
     showing: "",
     results: " የሚታዩ ውጤቶች",
-    resultsShowing: "የሚታዩ ውጤቶች {count}"
-  },
+     resultsShowing: "የሚታዩ ውጤቶች {count}",
+      // Additional homepage strings (Amharic)
+      viewAllFestivals: "ሁሉንም በዓላት ተመልከት",
+      timelessAttractions: "ዘመናት መውደያዎች",
+      timelessCraftTraditions: "ዘመናት የእጅ ጥበብ ባህላዊ",
+      craftDescription: "ከየቅድ እህል እና ከቡና ሥርያ ጡብ እስከ ብር መስቀልና ሀረሪ ቀረጥ፣ እያንዳንዱ ምርት ቦታ፣ ፈጸቢ እና ባህላዊ የማስታወስ የትዕዛዝ ታሪክ ይይዟል።",
+      startingAt: "ከ",
+      bookNow: "አሁን ይታዘዙ",
+      browseArtisans: "የጥበብ ባለሙያዎችን ያስሱ",
+      wovenTextiles: "የተወለዱ ጨርባዎች",
+      coffeeCeremony: "የቡና ሥርያ",
+      heritageJewelry: "የቅርስ ጌጣጌጥ",
+      wovenTextilesMeta: "ዶርዜ፣ ሸማ፣ ጋቢ",
+      coffeeCeremonyMeta: "ጀበና እና የመጫያ ስብስቦች",
+      heritageJewelryMeta: "የብር መስቀሎች እና የምስክር ስራ",
+      ethioCraft: "ኢትዮ ክራፍት",
+      hub: "ሃብ",
+      // Missing Amharic translations for homepage
+      whereHeritageAwaits: "የቅርስ መጠበቅ",
+      discoverHandmade: "የኢትዮጵያን ባህላዊ ተወልዶ የተሰሩ ምርቶችን ያግኙ፣ የበዓላት ልምድን ያስይዙ፣ ከገበያ ተሸጠዎችን እና አዘጋጆችን ያግኙ የሚያገሩትን ባህላዊ ልምዶች ከገበያ ተሸጠዎች እስከ ትልቅ የህብ በዓላት ስርዓማቸዎች ያድሉ።",
+      discoverCrafts: "ቅርሶችን ያግኙ",
+      exploreFestivals: "በዓላትን ያሰሱ"
+    },
 
   // በዓላት (Festivals)
  festival: {

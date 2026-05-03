@@ -381,7 +381,7 @@ export const Homepage: React.FC = () => {
               </div>
               <Link href="/products">
                 <Button variant="ghost" className="text-primary font-bold text-sm group p-0 hover:bg-transparent">
-                  View All Artifacts <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  {t('home.viewAllArtifacts')} <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
             </div>
@@ -431,8 +431,8 @@ export const Homepage: React.FC = () => {
 
               <div className="absolute left-1/2 top-1/2 z-20 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white p-4 shadow-2xl">
                 <div className="rounded-full bg-ethio-dark px-5 py-7 text-center text-white">
-                  <p className="text-[10px] uppercase tracking-[0.28em] text-secondary">Ethio Craft</p>
-                  <p className="mt-2 font-serif text-2xl font-bold leading-none">Hub</p>
+                  <p className="text-[10px] uppercase tracking-[0.28em] text-secondary">{t('home.ethioCraft')}</p>
+                  <p className="mt-2 font-serif text-2xl font-bold leading-none">{t('home.hub')}</p>
                 </div>
               </div>
             </div>
@@ -485,7 +485,7 @@ export const Homepage: React.FC = () => {
             </div>
             <Link href="/festivals">
               <Button variant="outline" className="rounded-full px-7 py-3 font-bold uppercase tracking-widest text-xs">
-                View All Festivals <ArrowRight className="ml-2 h-4 w-4" />
+                {t('home.viewAllFestivals')} <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
           </div>
@@ -523,12 +523,12 @@ export const Homepage: React.FC = () => {
                   </div>
                   <div className="flex items-center justify-between border-t border-gray-100 pt-5">
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Starting at</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{t('home.startingAt')}</p>
                       <p className="font-serif text-2xl font-bold text-primary">{festival.currency} {festival.baseTicketPrice || 0}</p>
                     </div>
                     <Link href={`/event/${festival.id}`}>
                       <Button className="rounded-full px-6 py-3 text-[10px] font-bold uppercase tracking-widest">
-                        Book Now
+                        {t('home.bookNow')}
                       </Button>
                     </Link>
                   </div>
@@ -544,17 +544,17 @@ export const Homepage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
             <div className="space-y-4">
-              <p className="text-xs font-bold uppercase tracking-[0.32em] text-secondary">Timeless Attractions</p>
-              <h2 className="font-serif text-4xl font-bold tracking-tight md:text-5xl">Timeless Craft Traditions</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.32em] text-secondary">{t('home.timelessAttractions')}</p>
+              <h2 className="font-serif text-4xl font-bold tracking-tight md:text-5xl">{t('home.timelessCraftTraditions')}</h2>
               <p className="max-w-xl text-lg font-light leading-relaxed text-gray-300">
-                From woven cotton and coffee ceremony clayware to silver crosses and Harari baskets, every product carries a place, a maker, and a cultural memory.
+                {t('home.craftDescription')}
               </p>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {[
-                { title: 'Woven Textiles', meta: 'Dorze, Shema, Gabi', image: heritageRailImages[1] },
-                { title: 'Coffee Ceremony', meta: 'Jebena and serving sets', image: heritageRailImages[0] },
-                { title: 'Heritage Jewelry', meta: 'Silver crosses and beadwork', image: heritageRailImages[2] },
+                { title: t('home.wovenTextiles'), meta: t('home.wovenTextilesMeta'), image: heritageRailImages[1] },
+                { title: t('home.coffeeCeremony'), meta: t('home.coffeeCeremonyMeta'), image: heritageRailImages[0] },
+                { title: t('home.heritageJewelry'), meta: t('home.heritageJewelryMeta'), image: heritageRailImages[2] },
               ].map((item) => (
                 <Link href="/products" key={item.title} className="group overflow-hidden rounded-[24px] bg-white/5">
                   <div className="relative aspect-[4/5] overflow-hidden">

@@ -100,7 +100,7 @@ export const HeroVideo: React.FC = () => {
                 size="lg"
                 className="rounded-full px-10 py-5 font-bold uppercase tracking-widest text-sm shadow-2xl shadow-secondary/30"
               >
-                Explore Festivals
+                {t('home.exploreFestivals')}
               </Button>
             </Link>
             <Link href="/products">
@@ -109,7 +109,7 @@ export const HeroVideo: React.FC = () => {
                 size="lg"
                 className="rounded-full px-10 py-5 font-bold uppercase tracking-widest text-sm border-2 border-white/30 text-white hover:bg-white/10 backdrop-blur-sm"
               >
-                Browse Artisans
+                {t('home.browseArtisans')}
               </Button>
             </Link>
           </div>
