@@ -196,7 +196,7 @@ export async function GET(request: NextRequest) {
               quantity: tx.quantity || order?.quantity || booking?.quantity || tx.metadata?.quantity || null,
               unitPrice: tx.unitPrice || order?.unitPrice || (booking ? booking.totalPrice / booking.quantity : null) || tx.metadata?.unitPrice || null,
               totalPrice: order?.totalPrice || booking?.totalPrice || tx.metadata?.totalAmount || null,
-              artisanEarnings: order?.artisanEarnings || booking?.organizerEarnings || null,
+              artisanEarnings: order?.artisanEarnings || booking?.organizerEarnings || (booking?.totalPrice ? (booking.totalPrice - tx.amount) : (order?.totalPrice ? (order.totalPrice - tx.amount) : 0)),
               adminCommission: order?.adminCommission || booking?.adminCommission || tx.amount || null,
               commissionRate: order?.commissionRate || booking?.commissionRate || tx.metadata?.commissionRate || null,
               paymentRef: tx.paymentRef || order?.paymentRef || booking?.paymentRef || null,

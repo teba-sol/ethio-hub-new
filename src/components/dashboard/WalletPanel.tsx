@@ -209,8 +209,8 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
       const data = await res.json();
 
       if (data.success) {
-        if (userType === 'admin' && data.checkoutUrl) {
-          // Redirect admin to Chapa for withdrawal confirmation
+        if ((userType === 'admin' || userType === 'organizer') && data.checkoutUrl) {
+          // Redirect admin or organizer to Chapa for withdrawal confirmation
           window.location.href = data.checkoutUrl;
           return;
         }
@@ -272,24 +272,26 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-serif font-bold text-primary">{title}</h2>
-          <p className="text-gray-500 text-sm">
-            {userType === 'admin' ? 'Platform earnings and commissions' : 'Your earnings and withdrawals'}
-          </p>
+      {userType !== 'organizer' && userType !== 'admin' && (
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-serif font-bold text-primary">{title}</h2>
+            <p className="text-gray-500 text-sm">
+              {userType === 'admin' ? 'Platform earnings and commissions' : 'Your earnings and withdrawals'}
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchWallet(page)}
+              leftIcon={RefreshCw}
+            >
+              Refresh
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchWallet(page)}
-            leftIcon={RefreshCw}
-          >
-            Refresh
-          </Button>
-        </div>
-      </div>
+      )}
 
       {/* Stats Cards */}
       <div className={`grid grid-cols-1 ${userType === 'admin' ? 'md:grid-cols-3' : 'md:grid-cols-3'} gap-6`}>
@@ -646,13 +648,13 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">
-                    {userType === 'admin' ? 'Admin Commission' : selectedTransaction.role === 'organizer' ? 'Organizer Earning' : 'Artisan Earning'}
+                    {userType === 'admin' ? 'Admin Commission' : (userType === 'organizer' || selectedTransaction.role === 'organizer') ? 'Organizer Earning' : 'Artisan Earning'}
                   </p>
                   <p className="text-xl font-bold text-emerald-800 mt-1">
                     {formatCurrency(
                       userType === 'admin'
                         ? selectedTransaction.details?.adminCommission || selectedTransaction.amount
-                        : selectedTransaction.role === 'organizer' ? selectedTransaction.details?.artisanEarnings || selectedTransaction.amount : selectedTransaction.details?.artisanEarnings || selectedTransaction.amount
+                        : selectedTransaction.amount
                     )}
                   </p>
                 </div>
@@ -665,17 +667,19 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                   </p>
                 </div>
                 <div className="p-4 rounded-xl bg-amber-50 border border-amber-100">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">{selectedTransaction.role === 'organizer' ? 'Organizer Got' : 'Artisan Got'}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">
+                    {(userType === 'organizer' || (userType === 'artisan' && selectedTransaction.role !== 'artisan')) ? 'Admin Commission' : selectedTransaction.role === 'organizer' ? 'Organizer Got' : 'Artisan Got'}
+                  </p>
                   <p className="text-xl font-bold text-amber-800 mt-1">
-                    {selectedTransaction.details?.artisanEarnings
-                      ? formatCurrency(selectedTransaction.details.artisanEarnings)
-                      : selectedTransaction.details?.totalPrice
-                        ? formatCurrency(selectedTransaction.details.totalPrice - (selectedTransaction.details?.adminCommission || 0))
-                        : 'N/A'}
+                    {formatCurrency(
+                      (userType === 'organizer' || userType === 'artisan')
+                        ? selectedTransaction.details?.adminCommission || 0
+                        : selectedTransaction.details?.artisanEarnings || (selectedTransaction.details?.totalPrice ? (selectedTransaction.details.totalPrice - selectedTransaction.amount) : 0)
+                    )}
                   </p>
                 </div>
                 <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Status</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Transaction Status</p>
                   <div className="mt-2">
                     <Badge variant={selectedTransaction.status === 'COMPLETED' ? 'success' : 'warning'} size="sm">
                       {selectedTransaction.status}
@@ -733,6 +737,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
               <div>
                 <h4 className="font-bold text-primary mb-4">Payment Information</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <DetailItem label="Payment Status" value={selectedTransaction.details?.paymentStatus || selectedTransaction.status} />
                   <DetailItem label="Chapa Reference" value={selectedTransaction.details?.paymentRef || selectedTransaction.paymentRef} />
                   <DetailItem label="Gateway Reference" value={selectedTransaction.details?.paymentGatewayId} />
                   <DetailItem label="Payment Method" value={selectedTransaction.details?.paymentMethod} />

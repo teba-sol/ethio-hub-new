@@ -10,7 +10,7 @@ export const AdminWalletPage: React.FC = () => {
           Platform commissions and earnings from all transactions.
         </p>
       </div>
-      <WalletPanel userType="admin" title="Wallet Overview" showWithdraw={false} />
+      <WalletPanel userType="admin" showWithdraw={true} />
     </div>
   );
 };
