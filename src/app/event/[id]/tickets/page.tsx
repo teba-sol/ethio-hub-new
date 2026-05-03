@@ -104,9 +104,64 @@ export default function TicketsPage() {
     return basePrice;
   };
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
+    if (!ticketSelection || !festival) return;
+    
     setProcessingPayment(true);
-    window.location.href = `https://checkout.chapa.co/checkout/payment/JLgElB7daPDpPzLbM8eCZ1THtsPYfETvukSeJM30jl2dq`;
+
+    try {
+      const grandTotal = getGrandTotal();
+      const serviceFee = getServiceFee();
+
+      // 1. Create booking and initialize payment in one step
+      const bookingResponse = await apiClient.post('/api/tourist/bookings', {
+        festivalId: eventId,
+        ticketType: ticketSelection.type,
+        quantity: ticketSelection.quantity,
+        totalPrice: grandTotal,
+        currency: festival.pricing?.currency || 'ETB',
+        hasHotelBooking: !!(selectedRoom && checkIn && checkOut),
+        touristServiceFee: serviceFee,
+        bookingDetails: {
+          ...(selectedRoom ? {
+            room: {
+              hotelId: selectedHotel?._id || selectedHotel?.id || '',
+              roomId: selectedRoom._id || selectedRoom.id,
+              hotelName: selectedHotel?.name || '',
+              roomName: selectedRoom.name,
+              roomPrice: selectedRoom.pricePerNight,
+            },
+          } : {}),
+          ...(selectedTransport ? {
+            transport: {
+              transportId: selectedTransport._id || selectedTransport.id,
+              type: selectedTransport.type,
+              price: selectedTransport.price,
+            },
+          } : {}),
+        },
+        contactInfo: {
+          fullName: 'Guest', // In a real app, you'd get this from a form or user profile
+          email: 'guest@email.com',
+          phone: '0912345678',
+        },
+      });
+
+      if (!bookingResponse.success) {
+        throw new Error(bookingResponse.message || 'Failed to create booking');
+      }
+
+      // 2. Redirect to Chapa if checkoutUrl is provided
+      if (bookingResponse.checkoutUrl) {
+        window.location.href = bookingResponse.checkoutUrl;
+      } else {
+        throw new Error('Payment initialization failed: No checkout URL received');
+      }
+    } catch (e: any) {
+      console.error('Payment error:', e);
+      alert(e.message || 'Payment failed');
+      setProcessingPayment(false);
+    }
   };
 
   const TICKET_TYPES = [

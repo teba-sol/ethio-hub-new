@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
+    const role = searchParams.get('role'); // 'artisan' or 'organizer'
     const skip = (page - 1) * limit;
 
     // Find admin user
@@ -35,9 +36,27 @@ export async function GET(request: NextRequest) {
       adminWallet = newWallet.toObject();
     }
 
+    // Build filter
+    const filter: any = { type: 'ADMIN_COMMISSION' };
+    if (role) {
+      filter['metadata.role'] = role;
+    }
+
+    // Get separate totals for artisan and organizer (All statuses = Total Earned)
+    const [artisanTotal, organizerTotal] = await Promise.all([
+      Transaction.aggregate([
+        { $match: { type: 'ADMIN_COMMISSION', 'metadata.role': 'artisan' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
+      Transaction.aggregate([
+        { $match: { type: 'ADMIN_COMMISSION', 'metadata.role': 'organizer' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ])
+    ]);
+
     // Get transactions (all admin commission transactions)
     const [transactions, total] = await Promise.all([
-      Transaction.find({ type: 'ADMIN_COMMISSION' })
+      Transaction.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -56,6 +75,24 @@ export async function GET(request: NextRequest) {
           ],
         })
         .populate({
+          path: 'bookingId',
+          select: 'tourist festival organizer quantity totalPrice adminCommission organizerEarnings commissionRate currency status paymentStatus paymentRef paymentMethod paymentDate contactInfo bookingDetails createdAt',
+          populate: [
+            {
+              path: 'tourist',
+              select: 'name email phone',
+            },
+            {
+              path: 'festival',
+              select: 'name locationName',
+            },
+            {
+              path: 'organizer',
+              select: 'name email phone',
+            },
+          ],
+        })
+        .populate({
           path: 'productId',
           select: 'name sku category artisanId',
           populate: {
@@ -65,11 +102,16 @@ export async function GET(request: NextRequest) {
         })
         .populate('userId', 'name email')
         .lean(),
-      Transaction.countDocuments({ type: 'ADMIN_COMMISSION' }),
+      Transaction.countDocuments(filter),
     ]);
 
     const getOrder = (tx: any) => {
       if (tx.orderId && typeof tx.orderId === 'object') return tx.orderId;
+      return null;
+    };
+
+    const getBooking = (tx: any) => {
+      if (tx.bookingId && typeof tx.bookingId === 'object') return tx.bookingId;
       return null;
     };
 
@@ -88,16 +130,24 @@ export async function GET(request: NextRequest) {
           lifetimePaidOut: adminWallet.lifetimePaidOut || 0,
           lifetimeRefunded: adminWallet.lifetimeRefunded || 0,
           currency: adminWallet.currency || 'ETB',
+          artisanTotalEarned: artisanTotal[0]?.total || 0,
+          organizerTotalEarned: organizerTotal[0]?.total || 0,
         },
         transactions: transactions.map((tx: any) => {
           const order = getOrder(tx);
+          const booking = getBooking(tx);
           const product = getProduct(tx);
-          const tourist = order?.tourist && typeof order.tourist === 'object' ? order.tourist : null;
+          
+          const tourist = (order?.tourist || booking?.tourist) && typeof (order?.tourist || booking?.tourist) === 'object' ? (order?.tourist || booking?.tourist) : null;
+          
           const artisanFromOrder = order?.artisan && typeof order.artisan === 'object' ? order.artisan : null;
           const artisanFromProduct = product?.artisanId && typeof product.artisanId === 'object' ? product.artisanId : null;
           const artisan = artisanFromOrder || artisanFromProduct;
-          const contactInfo = order?.contactInfo || {};
-          const paymentGatewayId = tx.metadata?.paymentGatewayId || order?.paymentReference || null;
+          
+          const organizer = booking?.organizer && typeof booking.organizer === 'object' ? booking.organizer : null;
+          
+          const contactInfo = order?.contactInfo || booking?.contactInfo || {};
+          const paymentGatewayId = tx.metadata?.paymentGatewayId || order?.paymentReference || booking?.paymentReference || null;
 
           return {
             id: tx._id,
@@ -108,37 +158,41 @@ export async function GET(request: NextRequest) {
             paymentRef: tx.paymentRef,
             createdAt: tx.createdAt,
             orderId: order?._id || tx.orderId,
+            bookingId: booking?._id || tx.bookingId,
             productId: product?._id || tx.productId || tx.metadata?.productId || order?.product || null,
-            productName: product?.name || null,
-            artisanName: artisan?.name || tx.metadata?.artisanId || null,
-            quantity: tx.quantity || order?.quantity || tx.metadata?.quantity || null,
-            unitPrice: tx.unitPrice || order?.unitPrice || tx.metadata?.unitPrice || null,
+            productName: product?.name || (booking?.festival ? `Festival: ${booking.festival.name}` : null),
+            artisanName: artisan?.name || organizer?.name || tx.metadata?.artisanId || tx.metadata?.organizerId || null,
+            role: tx.metadata?.role || (booking ? 'organizer' : 'artisan'),
+            quantity: tx.quantity || order?.quantity || booking?.quantity || tx.metadata?.quantity || null,
+            unitPrice: tx.unitPrice || order?.unitPrice || (booking ? booking.totalPrice / booking.quantity : null) || tx.metadata?.unitPrice || null,
             details: {
               touristFullName: contactInfo.fullName || tourist?.name || tx.metadata?.touristFullName || 'N/A',
               touristEmail: contactInfo.email || tourist?.email || tx.metadata?.touristEmail || 'N/A',
               touristPhone: contactInfo.phone || tourist?.phone || tourist?.touristProfile?.phone || tx.metadata?.touristPhone || null,
-              artisanFullName: artisan?.name || tx.metadata?.artisanName || tx.metadata?.artisanFullName || 'N/A',
-              artisanEmail: artisan?.email || tx.metadata?.artisanEmail || 'N/A',
-              artisanPhone: artisan?.phone || tx.metadata?.artisanPhone || null,
-              artisanId: artisan?._id || order?.artisan || product?.artisanId || tx.metadata?.artisanId || null,
+              artisanFullName: artisan?.name || organizer?.name || tx.metadata?.artisanName || tx.metadata?.artisanFullName || 'N/A',
+              artisanEmail: artisan?.email || organizer?.email || tx.metadata?.artisanEmail || 'N/A',
+              artisanPhone: artisan?.phone || organizer?.phone || tx.metadata?.artisanPhone || null,
+              artisanId: artisan?._id || organizer?._id || order?.artisan || booking?.organizer || product?.artisanId || tx.metadata?.artisanId || null,
               productId: product?._id || tx.productId || tx.metadata?.productId || order?.product || null,
-              productName: product?.name || null,
+              productName: product?.name || (booking?.festival ? booking.festival.name : null),
               productSku: product?.sku || tx.metadata?.productSku || null,
-              productCategory: product?.category || tx.metadata?.productCategory || null,
+              productCategory: product?.category || (booking ? 'Festival' : null) || tx.metadata?.productCategory || null,
               orderId: order?._id || tx.orderId || null,
-              quantity: tx.quantity || order?.quantity || tx.metadata?.quantity || null,
-              unitPrice: tx.unitPrice || order?.unitPrice || tx.metadata?.unitPrice || null,
-              totalPrice: order?.totalPrice || tx.metadata?.totalAmount || null,
-              artisanEarnings: order?.artisanEarnings || null,
-              adminCommission: order?.adminCommission || tx.amount || null,
-              commissionRate: order?.commissionRate || tx.metadata?.commissionRate || null,
-              paymentRef: tx.paymentRef || order?.paymentRef || null,
+              bookingId: booking?._id || tx.bookingId || null,
+              quantity: tx.quantity || order?.quantity || booking?.quantity || tx.metadata?.quantity || null,
+              unitPrice: tx.unitPrice || order?.unitPrice || (booking ? booking.totalPrice / booking.quantity : null) || tx.metadata?.unitPrice || null,
+              totalPrice: order?.totalPrice || booking?.totalPrice || tx.metadata?.totalAmount || null,
+              artisanEarnings: order?.artisanEarnings || booking?.organizerEarnings || null,
+              adminCommission: order?.adminCommission || booking?.adminCommission || tx.amount || null,
+              commissionRate: order?.commissionRate || booking?.commissionRate || tx.metadata?.commissionRate || null,
+              paymentRef: tx.paymentRef || order?.paymentRef || booking?.paymentRef || null,
               paymentGatewayId,
-              paymentMethod: order?.paymentMethod || 'chapa',
-              paymentDate: order?.paymentDate || tx.metadata?.completedAt || tx.createdAt,
-              orderStatus: order?.status || tx.metadata?.orderStatus || null,
-              paymentStatus: order?.paymentStatus || tx.metadata?.paymentStatus || null,
+              paymentMethod: order?.paymentMethod || booking?.paymentMethod || 'chapa',
+              paymentDate: order?.paymentDate || booking?.paymentDate || tx.metadata?.completedAt || tx.createdAt,
+              orderStatus: order?.status || booking?.status || tx.metadata?.orderStatus || null,
+              paymentStatus: order?.paymentStatus || booking?.paymentStatus || tx.metadata?.paymentStatus || null,
               shippingAddress: order?.shippingAddress || null,
+              role: tx.metadata?.role || (booking ? 'organizer' : 'artisan'),
             },
           };
         }),
