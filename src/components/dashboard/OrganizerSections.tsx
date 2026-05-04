@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Calendar, Users, DollarSign, ShieldCheck, TrendingUp, 
@@ -26,38 +26,10 @@ import {
 
 import apiClient from '../../lib/apiClient';
 
-const REVENUE_DATA = [
-  { name: 'Jan', revenue: 45000, bookings: 120, users: 400, sales: 85 },
-  { name: 'Feb', revenue: 52000, bookings: 145, users: 450, sales: 92 },
-  { name: 'Mar', revenue: 48000, bookings: 130, users: 480, sales: 110 },
-  { name: 'Apr', revenue: 61000, bookings: 170, users: 520, sales: 130 },
-  { name: 'May', revenue: 55000, bookings: 155, users: 590, sales: 125 },
-  { name: 'Jun', revenue: 67000, bookings: 190, users: 650, sales: 150 },
-  { name: 'Jul', revenue: 72000, bookings: 210, users: 710, sales: 180 },
-];
-
-const SNAPSHOT_DATA = [
-  { day: 'Mon', bookings: 12 },
-  { day: 'Tue', bookings: 18 },
-  { day: 'Wed', bookings: 15 },
-  { day: 'Thu', bookings: 25 },
-  { day: 'Fri', bookings: 32 },
-  { day: 'Sat', bookings: 45 },
-  { day: 'Sun', bookings: 38 },
-];
-
-const NOTIFICATIONS = [
-  { id: 1, type: 'booking', message: 'New booking from Sarah J.', time: '2m ago' },
-  { id: 2, type: 'review', message: '5-star review on Timket 2025', time: '1h ago' },
-  { id: 3, type: 'payout', message: 'Payout of ETB 45,000 processed', time: '1d ago' },
-];
-
-const ENGAGEMENT_DATA = [
-  { city: 'Addis Ababa', visitors: '45%' },
-  { city: 'Washington DC', visitors: '15%' },
-  { city: 'London', visitors: '10%' },
-  { city: 'Dubai', visitors: '8%' },
-];
+const REVENUE_DATA = [];
+const SNAPSHOT_DATA = [];
+const NOTIFICATIONS = [];
+const ENGAGEMENT_DATA = [];
 
 const MOCK_REVIEWS: Review[] = [
   { id: 'rev-1', userId: 'u1', userName: 'Abebe Bikila', userImage: 'https://picsum.photos/seed/abebe/100/100', targetId: 'f1', targetName: 'Timket 2025 (Epiphany)', rating: 5, comment: 'An absolutely breathtaking experience.', date: 'Jan 22, 2025', isVerified: true },
@@ -2304,6 +2276,52 @@ export const OrganizerOverview: React.FC<{ onManageEvent?: (id: string) => void;
   const activeListings = analytics?.festivals?.published || festivals.length;
   const totalAttendees = analytics?.bookings?.confirmed || 0;
   const totalBookings = analytics?.bookings?.total || 0;
+
+  // Process Booking Trend Data
+  const bookingTrendData = useMemo(() => {
+    if (!analytics?.charts?.bookingsByDay) return [];
+    
+    return Object.entries(analytics.charts.bookingsByDay).map(([date, count]) => {
+      const dayName = new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
+      return { day: dayName, bookings: count };
+    });
+  }, [analytics?.charts?.bookingsByDay]);
+
+  // Process Visitor Locations
+  const visitorLocations = useMemo(() => {
+    if (!analytics?.visitorLocations || analytics.visitorLocations.length === 0) return [];
+    
+    return analytics.visitorLocations.map((loc: any) => ({
+      city: loc.country,
+      visitors: `${loc.percentage}%`
+    }));
+  }, [analytics?.visitorLocations]);
+
+  // Process Latest Alerts
+  const latestAlerts = useMemo(() => {
+    if (!analytics?.latestAlerts || analytics.latestAlerts.length === 0) return [];
+    
+    return analytics.latestAlerts.map((alert: any) => {
+      const date = new Date(alert.time);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMin = Math.round(diffMs / 60000);
+      const diffHr = Math.round(diffMs / 3600000);
+      const diffDay = Math.round(diffMs / 86400000);
+      
+      let timeStr = 'Just now';
+      if (diffDay > 0) timeStr = `${diffDay}d ago`;
+      else if (diffHr > 0) timeStr = `${diffHr}h ago`;
+      else if (diffMin > 0) timeStr = `${diffMin}m ago`;
+      
+      return {
+        id: alert.id,
+        type: alert.type,
+        message: alert.message,
+        time: timeStr
+      };
+    });
+  }, [analytics?.latestAlerts]);
   
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) return `ETB ${(amount / 1000000).toFixed(1)}M`;
@@ -2351,7 +2369,7 @@ export const OrganizerOverview: React.FC<{ onManageEvent?: (id: string) => void;
        </div>
 
 {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
          {[
           { label: 'Active Listings', val: activeListings.toString(), icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
           { label: 'Global Attendees', val: formatNumber(totalAttendees), icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
@@ -2362,16 +2380,6 @@ export const OrganizerOverview: React.FC<{ onManageEvent?: (id: string) => void;
             <div className={`p-4 ${stat.bg} rounded-[20px]`}><stat.icon className={`w-6 h-6 ${stat.color}`} /></div>
           </div>
         ))}
-         <div className="bg-white p-8 rounded-3xl border border-gray-100 flex flex-col justify-between relative overflow-hidden shadow-sm">
-            <div className="flex justify-between items-start z-10">
-               <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Trust Level</p><p className="text-2xl font-bold text-primary">{user?.organizerProfile?.isVerified ? 'Verified' : 'Pending'}</p></div>
-               <div className="p-4 bg-secondary/10 rounded-[20px]"><ShieldCheck className="w-6 h-6 text-secondary" /></div>
-            </div>
-            <div className="mt-4 z-10">
-              <div className="flex justify-between text-[10px] font-bold text-gray-400 mb-1"><span>Progress to Top Rated</span><span>{Math.min(80, Math.round((totalAttendees / 100) * 100))}%</span></div>
-              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-secondary w-[80%]"></div></div>
-            </div>
-         </div>
        </div>
 
        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -2401,23 +2409,33 @@ export const OrganizerOverview: React.FC<{ onManageEvent?: (id: string) => void;
              <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-center mb-6">
                    <h3 className="text-lg font-serif font-bold text-primary flex items-center gap-2"><TrendingUp className="w-5 h-5 text-blue-600" /> 7-Day Booking Trend</h3>
-                   <Badge variant="outline" className="text-blue-600 bg-blue-50 border-blue-100">+12% vs last week</Badge>
+                   {bookingTrendData.length > 0 && (
+                     <Badge variant="outline" className="text-blue-600 bg-blue-50 border-blue-100">
+                       Real-time Data
+                     </Badge>
+                   )}
                 </div>
                 <div className="h-48 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={SNAPSHOT_DATA}>
-                      <defs>
-                        <linearGradient id="colorSnapshot" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                      <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af'}} />
-                      <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
-                      <Area type="monotone" dataKey="bookings" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorSnapshot)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  {bookingTrendData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={bookingTrendData}>
+                        <defs>
+                          <linearGradient id="colorSnapshot" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                        <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af'}} />
+                        <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
+                        <Area type="monotone" dataKey="bookings" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorSnapshot)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                      <p className="text-sm text-gray-400">No booking data yet</p>
+                    </div>
+                  )}
                 </div>
              </section>
 
@@ -2426,36 +2444,40 @@ export const OrganizerOverview: React.FC<{ onManageEvent?: (id: string) => void;
                 <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
                    <h4 className="font-bold text-primary mb-4 flex items-center gap-2"><Globe className="w-4 h-4 text-emerald-600" /> Top Visitor Locations</h4>
                    <div className="space-y-3">
-                      {ENGAGEMENT_DATA.map((loc, i) => (
-                         <div key={loc.city || i} className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600">{loc.city}</span>
-                            <div className="flex items-center gap-2 w-1/2">
-                               <div className="h-1.5 bg-gray-100 rounded-full flex-1 overflow-hidden">
-                                  <div className="h-full bg-emerald-500" style={{width: loc.visitors}}></div>
-                               </div>
-                               <span className="text-xs font-bold text-primary w-8 text-right">{loc.visitors}</span>
-                            </div>
-                         </div>
-                      ))}
+                      {visitorLocations.length > 0 ? (
+                        visitorLocations.map((loc, i) => (
+                           <div key={loc.city || i} className="flex justify-between items-center">
+                              <span className="text-sm text-gray-600">{loc.city}</span>
+                              <div className="flex items-center gap-2 w-1/2">
+                                 <div className="h-1.5 bg-gray-100 rounded-full flex-1 overflow-hidden">
+                                    <div className="h-full bg-emerald-500" style={{width: loc.visitors}}></div>
+                                 </div>
+                                 <span className="text-xs font-bold text-primary w-8 text-right">{loc.visitors}</span>
+                              </div>
+                           </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-400 italic py-4">No location data available yet.</p>
+                      )}
                    </div>
                 </div>
                 <div 
                   className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm cursor-pointer hover:shadow-md transition-all group"
-                  onClick={() => myEvents[0] && onManageEvent(myEvents[0]._id || myEvents[0].id)}
+                  onClick={() => analytics?.mostBookedEvent && onManageEvent(analytics.mostBookedEvent.id)}
                 >
-                   <h4 className="font-bold text-primary mb-4 flex items-center gap-2"><Eye className="w-4 h-4 text-purple-600" /> Most Viewed Event</h4>
-                   {myEvents[0] ? (
+                   <h4 className="font-bold text-primary mb-4 flex items-center gap-2"><Ticket className="w-4 h-4 text-purple-600" /> Most Booked Event</h4>
+                   {analytics?.mostBookedEvent ? (
                      <div className="space-y-4">
                         <div className="h-32 rounded-2xl overflow-hidden relative">
-                           <img src={myEvents[0].coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
-                           <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded-lg">1.2k Views</div>
+                           <img src={analytics.mostBookedEvent.coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
+                           <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded-lg">{analytics.mostBookedEvent.bookings} Bookings</div>
                         </div>
                         <div>
-                           <p className="font-bold text-primary group-hover:text-secondary transition-colors">{myEvents[0].name}</p>
-                           <p className="text-xs text-gray-500 mt-1">245 views today</p>
+                           <p className="font-bold text-primary group-hover:text-secondary transition-colors">{analytics.mostBookedEvent.name}</p>
+                           <p className="text-xs text-gray-500 mt-1">{analytics.mostBookedEvent.bookings} tourists booked this event</p>
                         </div>
                      </div>
-                   ) : <p className="text-sm text-gray-400">No events yet.</p>}
+                   ) : <p className="text-sm text-gray-400 italic py-4">No booking data yet.</p>}
                 </div>
              </section>
 
@@ -2483,18 +2505,22 @@ export const OrganizerOverview: React.FC<{ onManageEvent?: (id: string) => void;
              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-center mb-6">
                    <h3 className="text-lg font-serif font-bold text-primary">Latest Alerts</h3>
-                   <button className="text-xs font-bold text-secondary hover:underline">View All</button>
+                   <button onClick={() => navigate('/dashboard/organizer/bookings')} className="text-xs font-bold text-secondary hover:underline">View All</button>
                 </div>
                 <div className="space-y-4">
-                   {NOTIFICATIONS.map(notif => (
-                      <div key={notif.id} className="flex gap-3 items-start p-3 bg-gray-50 rounded-2xl border border-gray-100">
-                         <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${notif.type === 'booking' ? 'bg-blue-500' : notif.type === 'review' ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
-                         <div>
-                            <p className="text-sm font-bold text-primary leading-tight">{notif.message}</p>
-                            <p className="text-[10px] text-gray-400 mt-1">{notif.time}</p>
-                         </div>
-                      </div>
-                   ))}
+                   {latestAlerts.length > 0 ? (
+                     latestAlerts.map(notif => (
+                        <div key={notif.id} className="flex gap-3 items-start p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                           <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${notif.type === 'booking' ? 'bg-blue-500' : notif.type === 'review' ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
+                           <div>
+                              <p className="text-sm font-bold text-primary leading-tight">{notif.message}</p>
+                              <p className="text-[10px] text-gray-400 mt-1">{notif.time}</p>
+                           </div>
+                        </div>
+                     ))
+                   ) : (
+                     <p className="text-sm text-gray-400 italic py-4">No recent alerts.</p>
+                   )}
                 </div>
              </div>
 
@@ -3537,7 +3563,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
   }).sort((a, b) => {
     if (sortBy === 'Most Booked') return ((b as any).ticketsSold || 0) - ((a as any).ticketsSold || 0);
     if (sortBy === 'Soonest') return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
-    if (sortBy === 'Newest First') return new Date(b.createdAt || b.submittedAt || 0).getTime() - new Date(a.createdAt || a.submittedAt || 0).getTime();
+    if (sortBy === 'Newest First') return new Date((b as any).createdAt || b.submittedAt || 0).getTime() - new Date((a as any).createdAt || a.submittedAt || 0).getTime();
     return 0;
   });
 
@@ -3693,7 +3719,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
                   <div className="flex justify-between items-start">
                     <h4 className="text-lg font-serif font-bold text-primary leading-tight pr-4">{getLocalizedText(festival, 'name', language)}</h4>
                     <Badge variant={
-                      festival.verificationStatus === 'Rejected' ? 'destructive' : 
+                      festival.verificationStatus === 'Rejected' ? 'error' : 
                       festival.status === 'Draft' ? 'secondary' : 
                       (new Date(festival.endDate) < new Date() ? 'outline' : 'success')
                     }>
