@@ -140,6 +140,7 @@ export interface IFestival extends Document {
   pricing: IPricing;
   createdAt: Date;
   updatedAt: Date;
+  reportsCount: number;
 }
 
 // Define schemas
@@ -316,6 +317,7 @@ const FestivalSchema: Schema = new Schema(
     services: ServicesSchema,
     policies: PoliciesSchema,
     pricing: PricingSchema,
+    reportsCount: { type: Number, default: 0 },
   },
   {
     timestamps: true,

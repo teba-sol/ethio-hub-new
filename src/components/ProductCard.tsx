@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { Star, Heart, ShoppingCart, Truck } from 'lucide-react';
+import { Star, Heart, ShoppingCart, Truck, Eye, Flag } from 'lucide-react';
 import { Button, VerifiedBadge, Badge } from './UI';
 import { Product } from '../types';
 import { useCart } from '../context/CartContext';
@@ -9,16 +9,19 @@ import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { getLocalizedText } from '../utils/getLocalizedText';
+import { ReportModal } from './ReportModal';
 
 export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { user } = useAuth();
   const { language, t } = useLanguage();
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const isWishlisted = isInWishlist(product.id);
   const isTourist = user?.role === UserRole.TOURIST;
   const lowStock = product.stock && product.stock < 10;
+  const hasDiscount = product.discountPrice && product.discountPrice < product.price;
 
   const productName = getLocalizedText(product as any, 'name', language);
   const artisanName = getLocalizedText(product as any, 'artisanName' as any, language) || product.artisanName || '';
@@ -26,7 +29,7 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   const handleWishlistClick = (e: React.MouseEvent) => {
     e.preventDefault();
     if (!isTourist) return;
-
+    
     if (isWishlisted) {
       removeFromWishlist(product.id);
     } else {
@@ -40,33 +43,68 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   };
 
   return (
-    <article className="group relative bg-white rounded-3xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1 border border-gray-100 flex flex-col">
-      {/* Image Container */}
-      <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+    <article className="group relative bg-white rounded-[24px] overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-2 border-2 border-gray-200/80 flex flex-col max-w-[320px] mx-auto w-full shadow-md">
+      {/* Image Container with Gradient Overlay */}
+      <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-gray-50 via-white to-gray-100">
         <Link href={`/products/${product.id}`}>
           <img
             src={product.images[0]}
             alt={productName}
             loading="lazy"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
           />
         </Link>
+        
+        {/* Gradient Overlay on Hover */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        
+        {/* Top Action Buttons */}
+        <div className="absolute top-4 left-4 right-4 flex items-start justify-between opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
+          {/* Left Side - Badges */}
+          <div className="flex flex-col gap-2">
+            {hasDiscount && (
+              <Badge className="bg-red-500 text-white border-none text-[10px] font-bold px-3 py-1.5 rounded-full shadow-lg">
+                -{Math.round(((product.price - product.discountPrice!) / product.price) * 100)}%
+              </Badge>
+            )}
+            {lowStock && (
+              <Badge className="bg-amber-500 text-white border-none text-[10px] font-bold px-3 py-1.5 rounded-full shadow-lg backdrop-blur-sm">
+                Only {product.stock} left
+              </Badge>
+            )}
+          </div>
+          
+          {/* Right Side - Wishlist & Report */}
+          <div className="flex flex-col gap-2">
+            {isTourist && (
+              <button
+                className={`p-3 rounded-full backdrop-blur-md transition-all duration-300 shadow-lg hover:scale-110 ${
+                  isWishlisted
+                    ? 'bg-red-50 text-red-500 border-2 border-red-200'
+                    : 'bg-white/90 text-gray-600 hover:text-red-500 hover:bg-white'
+                }`}
+                aria-label={t('productCard.addToWishlist').replace('{name}', productName)}
+                onClick={handleWishlistClick}
+              >
+                <Heart className={`w-5 h-5 ${isWishlisted ? 'fill-current' : ''}`} />
+              </button>
+            )}
 
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-        {/* Wishlist Button */}
-        <button
-          className={`absolute top-4 right-4 p-2.5 rounded-full backdrop-blur-sm transition-all duration-300 shadow-md hover:scale-110 ${
-            isWishlisted && isTourist
-              ? 'bg-red-50 text-red-500 hover:bg-red-100'
-              : 'bg-white/90 text-gray-600 hover:text-secondary hover:bg-white'
-          }`}
-          aria-label={t('productCard.addToWishlist').replace('{name}', productName)}
-          onClick={handleWishlistClick}
-        >
-          <Heart className={`w-[18px] h-[18px] ${isWishlisted && isTourist ? 'fill-current' : ''}`} />
-        </button>
+            {/* Report Button */}
+            {user && (
+              <button
+                className="p-3 rounded-full bg-white/90 backdrop-blur-md transition-all duration-300 shadow-lg hover:scale-110 text-gray-400 hover:text-red-500"
+                aria-label="Report this product"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setShowReportModal(true);
+                }}
+              >
+                <Flag className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Verified Badge */}
         {(product as any).isVerified || (product as any).verificationStatus === 'Approved' ? (
@@ -75,86 +113,110 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
           </div>
         ) : null}
 
-        {/* Low Stock Badge */}
-        {lowStock && (
-          <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg">
-            {t('productCard.onlyLeft').replace('{count}', String(product.stock))}
-          </div>
-        )}
-
-        {/* Quick Add Overlay */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
-          <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-            <button
-              onClick={handleAddToCart}
-              className="bg-white text-primary px-6 py-3 rounded-full font-bold text-sm shadow-xl hover:shadow-2xl hover:bg-secondary hover:text-white transition-all duration-300 flex items-center gap-2"
+        {/* Quick View Overlay */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+          <Link
+            href={`/products/${product.id}`}
+            className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300"
+          >
+            <Button
+              variant="outline"
+              className="bg-white/90 backdrop-blur-md border-white/50 text-primary hover:bg-white shadow-xl rounded-full px-6 py-2.5 text-xs font-bold uppercase tracking-wider"
+              leftIcon={Eye}
             >
-              <ShoppingCart className="w-4 h-4" />
-              {t('productCard.add')}
-            </button>
-          </div>
+              Quick View
+            </Button>
+          </Link>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="p-6 flex flex-col flex-1">
-        {/* Category & Rating */}
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-[11px] font-bold text-secondary uppercase tracking-[0.1em]">
-            {product.category}
-          </span>
-          <div className="flex items-center gap-1.5 bg-ethio-bg px-2 py-1 rounded-full">
-            <Star className="w-3.5 h-3.5 text-secondary fill-current" />
-            <span className="text-xs font-bold text-primary">{product.rating}</span>
+        {/* Content */}
+        <div className="p-5 flex flex-col flex-1 bg-white">
+          {/* Category & Rating */}
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-bold text-secondary uppercase tracking-[0.15em] bg-secondary/10 px-3 py-1 rounded-full">
+              {product.category}
+            </span>
+            <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-full">
+              <Star className="w-3 h-3 text-amber-400 fill-current" />
+              <span className="text-[10px] font-bold text-amber-700">{product.rating || '4.5'}</span>
+              <span className="text-[9px] text-amber-600 ml-0.5">(120)</span>
+            </div>
           </div>
-        </div>
 
-        {/* Title */}
-        <h3 className="text-lg font-serif font-bold text-primary group-hover:text-secondary transition-colors mb-2 line-clamp-2 leading-snug">
-          <Link href={`/products/${product.id}`}>{productName}</Link>
-        </h3>
+          {/* Title */}
+          <h3 className="text-base font-semibold text-gray-900 group-hover:text-primary transition-colors mb-2 line-clamp-2 leading-snug">
+            <Link href={`/products/${product.id}`}>{productName}</Link>
+          </h3>
 
-        {/* Artisan */}
-        <Link
-          href={`/products?artisan=${product.artisanId}`}
-          className="text-xs text-gray-500 hover:text-primary transition-colors font-medium mb-4 block"
-        >
-          {t('productCard.by')} {artisanName}
-        </Link>
+          {/* Artisan */}
+          <Link
+            href={`/products?artisan=${product.artisanId}`}
+            className="text-[11px] text-gray-500 hover:text-primary transition-colors font-medium mb-4 block flex items-center gap-1.5"
+          >
+            <span className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-bold text-primary">
+              {artisanName.charAt(0).toUpperCase()}
+            </span>
+            {t('productCard.by')} <span className="text-gray-700">{artisanName}</span>
+          </Link>
 
-        {/* Shipping Info */}
-        <div className="flex items-center text-[11px] text-gray-400 mb-5 gap-1.5">
-          <Truck className="w-3.5 h-3.5" />
-          <span>{t('productCard.shipsIn')} {product.estimatedDelivery}</span>
-        </div>
-
-        {/* Price & Actions */}
-        <div className="mt-auto pt-4 border-t border-gray-50 flex items-end justify-between gap-4">
-          <div>
-            <span className="text-2xl font-bold text-primary">${product.price}</span>
-            {product.discountPrice && (
-              <span className="text-sm text-gray-400 line-through ml-2">${product.discountPrice}</span>
+          {/* Shipping Info */}
+          <div className="flex items-center text-[10px] text-gray-400 mb-4 gap-1.5">
+            <Truck className="w-3 h-3" />
+            <span>{t('productCard.shipsIn')} {product.estimatedDelivery}</span>
+            {product.shippingCost === 0 && (
+              <Badge variant="success" className="ml-auto text-[8px] px-2 py-0.5 font-bold">FREE SHIP</Badge>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/products/${product.id}`}
-              className="inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 border-2 border-primary text-primary hover:bg-ethio-light focus:ring-primary rounded-xl px-4 py-2.5 text-xs uppercase tracking-wider font-bold"
-            >
-              {t('productCard.details')}
-            </Link>
-            <Button
-              size="sm"
-              className="rounded-xl shadow-lg font-bold text-xs uppercase tracking-wider bg-primary text-white hover:bg-secondary px-4 py-2.5 min-h-[40px]"
-              leftIcon={ShoppingCart}
-              onClick={handleAddToCart}
-            >
-              {t('productCard.add')}
-            </Button>
+          {/* Price & Actions */}
+          <div className="mt-auto pt-4 border-t border-gray-100 flex items-end justify-between gap-3">
+            <div className="flex flex-col flex-1 min-w-0">
+              <div className="flex items-baseline gap-1.5 flex-wrap">
+                <span className="text-lg font-bold text-gray-900">
+                  {hasDiscount ? product.discountPrice : product.price}
+                </span>
+                <span className="text-xs text-gray-500 font-medium">{product.currency || 'ETB'}</span>
+                {hasDiscount && (
+                  <span className="text-xs text-gray-400 line-through shrink-0">
+                    {product.price}
+                  </span>
+                )}
+              </div>
+              {product.material && (
+                <span className="text-[10px] text-gray-400 mt-1 truncate">{product.material}</span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <Link
+                href={`/products/${product.id}`}
+                className="inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 rounded-lg px-3 py-1.5 text-[9px] uppercase tracking-wider font-semibold whitespace-nowrap"
+              >
+                Details
+              </Link>
+              <Button
+                size="sm"
+                className="rounded-xl shadow-lg font-bold text-[10px] uppercase tracking-wider bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary transition-all duration-300 px-4 py-2 min-h-[36px] border-0 whitespace-nowrap"
+                leftIcon={ShoppingCart}
+                onClick={handleAddToCart}
+              >
+                {t('productCard.add')}
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
-    </article>
+
+        {/* Report Modal */}
+        {showReportModal && (
+          <ReportModal
+            targetId={product.id}
+            targetType="Product"
+            targetName={productName}
+            onClose={() => setShowReportModal(false)}
+            userId={user?.id || ''}
+          />
+        )}
+      </article>
   );
 };

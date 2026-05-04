@@ -380,12 +380,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
     className="w-full h-full object-cover" 
     alt={currentData?.name || 'Event'} 
   />
-  {/* Debug: Show cover image URL */}
-  {process.env.NODE_ENV === 'development' && (
-    <div className="absolute bottom-0 left-0 bg-black/70 text-white text-[10px] px-1">
-      Cover: {currentData?.coverImage || 'none'}
-    </div>
-  )}
+    {/* Cover image displayed here - debug removed */}
   {isEditing && (
     <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
       <label className="cursor-pointer bg-white text-primary px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
@@ -2473,10 +2468,16 @@ export const OrganizerOverview: React.FC = () => {
                    <h4 className="font-bold text-primary mb-4 flex items-center gap-2"><Eye className="w-4 h-4 text-purple-600" /> Most Viewed Event</h4>
                    {myEvents[0] ? (
                      <div className="space-y-4">
-                        <div className="h-32 rounded-2xl overflow-hidden relative">
-                           <img src={myEvents[0].coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
-                           <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded-lg">1.2k Views</div>
-                        </div>
+                         <div className="h-32 rounded-2xl overflow-hidden relative">
+                            {myEvents[0].coverImage ? (
+                              <img src={myEvents[0].coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
+                            ) : (
+                              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                <Calendar className="w-8 h-8 text-gray-400" />
+                              </div>
+                            )}
+                            <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded-lg">1.2k Views</div>
+                         </div>
                         <div>
                            <p className="font-bold text-primary group-hover:text-secondary transition-colors">{myEvents[0].name}</p>
                            <p className="text-xs text-gray-500 mt-1">245 views today</p>
@@ -2494,9 +2495,17 @@ export const OrganizerOverview: React.FC = () => {
                   <h3 className="text-xl font-serif font-bold text-primary">Your Active Events</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {myEvents.slice(0, 4).map((fest, index) => (
-                      <div key={fest.id || `fest-${index}`} onClick={() => onManageEvent(fest.id)} className="bg-white rounded-[32px] overflow-hidden border border-gray-100 shadow-sm cursor-pointer group hover:shadow-md transition-all">
-                        <div className="h-44 overflow-hidden"><img src={fest.coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" /></div>
-                        <div className="p-6"><h4 className="text-xl font-serif font-bold text-primary group-hover:text-secondary transition-colors">{fest.name}</h4><p className="text-[10px] text-gray-400 uppercase font-bold">{fest.locationName}</p></div>
+                       <div key={fest.id || `fest-${index}`} onClick={() => onManageEvent(fest.id)} className="bg-white rounded-[32px] overflow-hidden border border-gray-100 shadow-sm cursor-pointer group hover:shadow-md transition-all">
+                         <div className="h-44 overflow-hidden">
+                           {fest.coverImage ? (
+                             <img src={fest.coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
+                           ) : (
+                             <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                               <Calendar className="w-12 h-12 text-gray-400" />
+                             </div>
+                           )}
+                         </div>
+                         <div className="p-6"><h4 className="text-xl font-serif font-bold text-primary group-hover:text-secondary transition-colors">{fest.name}</h4><p className="text-[10px] text-gray-400 uppercase font-bold">{fest.locationName}</p></div>
                       </div>
                     ))}
                   </div>

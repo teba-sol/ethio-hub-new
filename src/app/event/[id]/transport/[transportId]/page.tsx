@@ -298,13 +298,19 @@ export default function TransportDetailPage() {
                   {isSoldOut ? t('transport.soldOut') : isCurrentTransportSelected ? t('transport.removeSelection') : t('transport.selectThisCar')}
                 </Button>
 
-                <Button
-                  className="w-full py-3"
-                  onClick={handleContinue}
-                  disabled={!selectedTransport}
-                 >
-                   {t('festival.continueToCheckout')}
-                 </button>
+                 <Button
+                   className="w-full py-3"
+                   onClick={handleContinue}
+                   disabled={!selectedTransport}
+                  >
+                    {t('festival.continueToCheckout')}
+                  </Button>
+           <button>
+             onClick={() => setActiveImageIndex(Math.max(0, activeImageIndex - 1))}
+             className="absolute left-6 p-3 text-white hover:bg-white/20 rounded-full transition-colors"
+           >
+             <ChevronLeft className="w-8 h-8" />
+           </button>
           <button
             onClick={() => setActiveImageIndex(Math.max(0, activeImageIndex - 1))}
             className="absolute left-6 p-3 text-white hover:bg-white/20 rounded-full transition-colors"

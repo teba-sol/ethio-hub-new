@@ -18,31 +18,32 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const checkUserSession = async () => {
-      try {
-        const response = await fetch('/api/auth/session', { cache: 'no-store' });
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.success && data.user) {
-            const userData = {
-              ...data.user,
-              role: data.user.role?.toUpperCase()
-            };
-            setUser(userData);
-          }
-        }
-      } catch (error) {
-        console.error('Session check failed:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+   useEffect(() => {
+     const checkUserSession = async () => {
+       try {
+         const response = await fetch('/api/auth/session', { cache: 'no-store' });
+         const data = await response.json();
+         if (data && data.success && data.user) {
+           const userData = {
+             ...data.user,
+             role: data.user.role // Keep original case stored in DB
+           };
+           setUser(userData);
+         } else {
+           setUser(null);
+         }
+       } catch (error) {
+         console.error('Session check failed:', error);
+         setUser(null);
+       } finally {
+         setLoading(false);
+       }
+     };
 
-    setTimeout(checkUserSession, 100);
-  }, []);
+     checkUserSession();
+   }, []);
 
   const login = async (credentials: any) => {
     setLoading(true);

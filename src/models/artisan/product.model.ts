@@ -26,6 +26,7 @@ export interface IProduct extends Document {
   status: 'Draft' | 'Published' | 'Archived';
   verificationStatus: 'Pending' | 'Approved' | 'Rejected';
   rejectionReason?: string;
+  reportsCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -130,6 +131,10 @@ const ProductSchema = new Schema<IProduct>(
     },
     rejectionReason: {
       type: String,
+    },
+    reportsCount: {
+      type: Number,
+      default: 0,
     },
   },
   {

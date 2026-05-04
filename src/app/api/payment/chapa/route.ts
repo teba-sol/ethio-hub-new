@@ -72,47 +72,29 @@ export async function POST(request: NextRequest) {
 
     // ✅ Generate transaction reference
     const txRef = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+
+    // ✅ Correct Chapa payload
     const chapaData = {
       amount: amount.toString(),
-      currency,
-      email: email || 'customer@email.com',
-      first_name: firstName || 'Customer',
+      currency: 'ETB', // Always use ETB for Chapa
+      email: email || 'customer@example.com',
+      first_name: firstName || 'Guest',
       last_name: lastName || 'User',
-      phone_number: phone || '0912345678',
+      phone_number: phone || '0900000000',
       tx_ref: txRef,
       callback_url: `${FRONTEND_URL}/api/payment/chapa/callback`,
-      return_url: bookingId
-        ? `${FRONTEND_URL}/payment-success?bookingId=${bookingId}&status=success&tx_ref=${txRef}`
-        : orderId
-        ? `${FRONTEND_URL}/payment-success?orderId=${orderId}&status=success&tx_ref=${txRef}`
-        : `${FRONTEND_URL}/payment-success?status=success&tx_ref=${txRef}`,
-      metadata: {
+      return_url: `${FRONTEND_URL}/pay-result?status=success&tx_ref=${txRef}&bookingId=${bookingId}`,
+      customization: {
+        title: "EthioHub Payment",
+        description: `Payment for ${bookingId ? 'Booking' : 'Order'} #${txRef}`,
+      },
+      meta: {
         bookingId: bookingId || undefined,
         orderId: orderId || undefined,
         type: bookingId ? 'booking' : 'order',
       },
     };
 
-    // ✅ Correct Chapa payload
-   const chapaData = {
-  amount: amount.toString(),
-  currency: 'ETB', // Always use ETB for Chapa
-  email: email || 'customer@example.com',
-  first_name: firstName || 'Guest',
-  last_name: lastName || 'User',
-  phone_number: phone || '0900000000',
-  tx_ref: txRef,
-  callback_url: `${FRONTEND_URL}/api/payment/chapa/callback`,
-  return_url: `${FRONTEND_URL}/pay-result?status=success&tx_ref=${txRef}&bookingId=${bookingId}`,
-  customization: {
-    title: "EthioHub Payment",
-    description: description || "Booking payment"
-  },
-  meta: {
-    bookingId: bookingId,
-  },
-};
     console.log('Sending to Chapa:', chapaData);
 
     const response = await fetch(`${CHAPA_BASE_URL}/transaction/initialize`, {

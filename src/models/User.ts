@@ -118,6 +118,7 @@ const UserSchema = new mongoose.Schema(
     },
     adminApprovalReviewedAt: { type: Date, default: null },
     adminApprovalReason: { type: String, default: null },
+    reportsCount: { type: Number, default: 0 },
   },
   {
     timestamps: true

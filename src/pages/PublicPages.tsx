@@ -25,6 +25,7 @@ import { Button, Badge, VerifiedBadge } from '../components/UI';
 import { ProductCard } from '../components/ProductCard';
 import { FestivalCard } from '../components/FestivalCard';
 import { MOCK_PRODUCTS, MOCK_FESTIVALS } from '../data/constants';
+import { getImageUrl as getCloudinaryImageUrl } from '@/lib/cloudinary';
 import { getCulturalStory } from '@/backend/services/geminiService';
 import { HotelAccommodation, RoomType, TransportOption } from '../types';
 
@@ -944,26 +945,26 @@ export const ProductListingPage: React.FC = () => {
                </div>
              </div>
 
-             {/* Marketplace Grid */}
-             {marketplaceProducts.length > 0 && (
-               <div className="mb-20">
-                 <h3 className="text-2xl font-serif font-bold text-primary mb-8 flex items-center gap-3">
-                   <span className="w-8 h-1 bg-secondary rounded-full"></span>
-                   Featured Artifacts
-                 </h3>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                   {marketplaceProducts.map((p, i) => (
-                     <div
-                       key={p.id}
-                       className={`artifact-showcase-card group ${i % 2 === 0 ? 'artifact-enter-left' : 'artifact-enter-right'}`}
-                       style={{ animationDelay: `${i * 100}ms` }}
-                     >
-                       <ProductCard product={p} />
-                     </div>
-                   ))}
-                 </div>
-               </div>
-             )}
+                {/* Marketplace Grid */}
+                {marketplaceProducts.length > 0 && (
+                  <div className="mb-20">
+                    <h3 className="text-2xl font-serif font-bold text-primary mb-8 flex items-center gap-3">
+                      <span className="w-8 h-1 bg-secondary rounded-full"></span>
+                      Featured Artifacts
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {marketplaceProducts.map((p, i) => (
+                        <div
+                          key={p.id}
+                          className={`artifact-showcase-card group ${i % 2 === 0 ? 'artifact-enter-left' : 'artifact-enter-right'}`}
+                          style={{ animationDelay: `${i * 100}ms` }}
+                        >
+                          <ProductCard product={p} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
              {/* Heritage Horizontal Section */}
              {heritageProducts.length > 0 && (
@@ -987,17 +988,17 @@ export const ProductListingPage: React.FC = () => {
                        </p>
                      </div>
 
-                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                       {heritageProducts.map((p, i) => (
-                         <div
-                           key={p.id}
-                           className={`artifact-showcase-card group ${i % 2 === 0 ? 'artifact-enter-left' : 'artifact-enter-right'}`}
-                           style={{ animationDelay: `${(i + 8) * 100}ms` }}
-                         >
-                           <ProductCard product={p} />
-                         </div>
-                       ))}
-                     </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {heritageProducts.map((p, i) => (
+                          <div
+                            key={p.id}
+                            className={`artifact-showcase-card group ${i % 2 === 0 ? 'artifact-enter-left' : 'artifact-enter-right'}`}
+                            style={{ animationDelay: `${(i + 8) * 100}ms` }}
+                          >
+                            <ProductCard product={p} />
+                          </div>
+                        ))}
+                      </div>
                    </div>
                  </div>
                </div>
@@ -1189,7 +1190,13 @@ export const ProductListingPage: React.FC = () => {
                     <h2 className="text-3xl font-serif font-bold text-primary">{t("festival.featured.heading")}</h2>
                 </div>
                 <div className="relative rounded-[40px] overflow-hidden group h-[500px] shadow-2xl">
-                    <img src={filteredFestivals[0].coverImage} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" alt={getLocalizedField(filteredFestivals[0], 'name')} />
+                    {filteredFestivals[0].coverImage ? (
+                      <img src={filteredFestivals[0].coverImage} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" alt={getLocalizedField(filteredFestivals[0], 'name')} />
+                    ) : (
+                      <div className="absolute inset-0 w-full h-full bg-gray-200 flex items-center justify-center">
+                        <Calendar className="w-16 h-16 text-gray-400" />
+                      </div>
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-0 left-0 p-10 md:p-16 w-full md:w-2/3 text-white space-y-6">
                         <div className="flex gap-4">
