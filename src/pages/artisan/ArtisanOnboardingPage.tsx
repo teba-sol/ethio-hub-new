@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, Upload, MapPin, Briefcase, User as UserIcon, CheckCircle, AlertCircle, ShieldCheck, CreditCard } from 'lucide-react';
+import { Camera, Upload, MapPin, Briefcase, User as UserIcon, CheckCircle, AlertCircle, ShieldCheck, CreditCard, Loader2 } from 'lucide-react';
 import { Button, Input } from '../../components/UI';
 import { useAuth } from '../../context/AuthContext';
 import { ArtisanStatus } from '../../types';
@@ -44,6 +44,8 @@ export const ArtisanOnboardingPage: React.FC = () => {
   const [productSamplePhotos, setProductSamplePhotos] = useState<string[]>([]);
   const [phoneError, setPhoneError] = useState('');
   const [experienceError, setExperienceError] = useState('');
+  const [uploadError, setUploadError] = useState('');
+  const [uploading, setUploading] = useState({ profile: false, id: false, workshop: false, craft: false, product: false });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -72,84 +74,193 @@ export const ArtisanOnboardingPage: React.FC = () => {
     }
   };
 
-  const handleProfileImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Image must be less than 5MB');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('Image must be less than 5MB');
+      return;
     }
-  };
-
-  const handleIdDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) {
-        alert('File must be less than 5MB');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setIdDocument(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleWorkshopPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Image must be less than 5MB');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setWorkshopPhoto(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleCraftProcessPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Image must be less than 5MB');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCraftProcessPhoto(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleProductSampleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      if (files.length + productSamplePhotos.length > 5) {
-        alert('Maximum 5 images allowed');
-        return;
-      }
-      files.forEach(file => {
-        if (file.size > 5 * 1024 * 1024) {
-          alert('Each image must be less than 5MB');
-          return;
-        }
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setProductSamplePhotos(prev => [...prev, reader.result as string]);
-        };
-        reader.readAsDataURL(file);
+    
+    setUploading(prev => ({ ...prev, profile: true }));
+    setUploadError('');
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'avatars');
+      
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
       });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setProfileImage(data.url);
+      } else {
+        setUploadError(data.message || 'Failed to upload profile image');
+      }
+    } catch (error) {
+      setUploadError('Failed to upload profile image');
+    } finally {
+      setUploading(prev => ({ ...prev, profile: false }));
+    }
+  };
+
+  const handleIdDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('File must be less than 5MB');
+      return;
+    }
+    
+    setUploading(prev => ({ ...prev, id: true }));
+    setUploadError('');
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'artisan-docs');
+      
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setIdDocument(data.url);
+      } else {
+        setUploadError(data.message || 'Failed to upload ID document');
+      }
+    } catch (error) {
+      setUploadError('Failed to upload ID document');
+    } finally {
+      setUploading(prev => ({ ...prev, id: false }));
+    }
+  };
+
+  const handleWorkshopPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('Image must be less than 5MB');
+      return;
+    }
+    
+    setUploading(prev => ({ ...prev, workshop: true }));
+    setUploadError('');
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'artisan-docs');
+      
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setWorkshopPhoto(data.url);
+      } else {
+        setUploadError(data.message || 'Failed to upload workshop photo');
+      }
+    } catch (error) {
+      setUploadError('Failed to upload workshop photo');
+    } finally {
+      setUploading(prev => ({ ...prev, workshop: false }));
+    }
+  };
+
+  const handleCraftProcessPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('Image must be less than 5MB');
+      return;
+    }
+    
+    setUploading(prev => ({ ...prev, craft: true }));
+    setUploadError('');
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'artisan-docs');
+      
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setCraftProcessPhoto(data.url);
+      } else {
+        setUploadError(data.message || 'Failed to upload craft process photo');
+      }
+    } catch (error) {
+      setUploadError('Failed to upload craft process photo');
+    } finally {
+      setUploading(prev => ({ ...prev, craft: false }));
+    }
+  };
+
+  const handleProductSampleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    const newFiles = Array.from(files);
+    if (newFiles.length + productSamplePhotos.length > 5) {
+      setUploadError('Maximum 5 images allowed');
+      return;
+    }
+    
+    setUploading(prev => ({ ...prev, product: true }));
+    setUploadError('');
+    
+    try {
+      const uploadPromises = newFiles.map(async (file) => {
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error('Each image must be less than 5MB');
+        }
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'artisan-docs');
+        
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          return data.url;
+        } else {
+          throw new Error(data.message || 'Failed to upload product sample');
+        }
+      });
+      
+      const urls = await Promise.all(uploadPromises);
+      setProductSamplePhotos(prev => [...prev, ...urls]);
+    } catch (error: any) {
+      setUploadError(error.message || 'Failed to upload product samples');
+    } finally {
+      setUploading(prev => ({ ...prev, product: false }));
     }
   };
 
@@ -275,8 +386,15 @@ export const ArtisanOnboardingPage: React.FC = () => {
               <span className={`text-xs font-bold mt-2 ${step >= s.num ? 'text-primary' : 'text-gray-400'}`}>{s.label}</span>
             </div>
           ))}
-        </div>
-
+         </div>
+        
+        {uploadError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-2 text-red-700">
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <span className="text-sm">{uploadError}</span>
+          </div>
+        )}
+        
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
           <form onSubmit={handleSubmit} className="space-y-6">
             
@@ -371,22 +489,24 @@ export const ArtisanOnboardingPage: React.FC = () => {
                   <h3 className="text-xl font-bold text-gray-800 border-b pb-2 mb-4">Identity Verification</h3>
                   <p className="text-sm text-gray-500 mb-4">To avoid fake sellers, please upload a valid ID.</p>
                   
-                  <label className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50 block">
-                    {idDocument ? (
-                      <div>
-                        <img src={idDocument} alt="ID Document" className="w-32 h-32 object-cover rounded-xl mx-auto mb-2" />
-                        <p className="font-bold text-green-600">ID Uploaded ✓</p>
-                        <p className="text-xs text-gray-500 mt-1">Click to change</p>
-                      </div>
-                    ) : (
-                      <>
-                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="font-bold text-gray-700">Upload National ID / Passport</p>
-                        <p className="text-xs text-gray-500 mt-1">JPG, PNG or PDF (Max 5MB)</p>
-                      </>
-                    )}
-                    <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleIdDocumentUpload} />
-                  </label>
+                   <label className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50 block">
+                     {uploading.id ? (
+                       <Loader2 className="w-8 h-8 text-gray-400 mx-auto mb-2 animate-spin" />
+                     ) : idDocument ? (
+                       <div>
+                         <img src={idDocument} alt="ID Document" className="w-32 h-32 object-cover rounded-xl mx-auto mb-2" />
+                         <p className="font-bold text-green-600">ID Uploaded ✓</p>
+                         <p className="text-xs text-gray-500 mt-1">Click to change</p>
+                       </div>
+                     ) : (
+                       <>
+                         <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                         <p className="font-bold text-gray-700">Upload National ID / Passport</p>
+                         <p className="text-xs text-gray-500 mt-1">JPG, PNG or PDF (Max 5MB)</p>
+                       </>
+                     )}
+                     <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleIdDocumentUpload} />
+                   </label>
                 </div>
 
                 <div>
@@ -394,54 +514,64 @@ export const ArtisanOnboardingPage: React.FC = () => {
                   <p className="text-sm text-gray-500 mb-4">Proof that you actually produce items. This increases authenticity.</p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <label className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50 block">
-                      {workshopPhoto ? (
-                        <>
-                          <img src={workshopPhoto} alt="Workshop" className="w-20 h-20 object-cover rounded-xl mx-auto mb-2" />
-                          <p className="text-xs font-bold text-green-600">Uploaded ✓</p>
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                          <p className="text-sm font-bold text-gray-700">Workshop Photo</p>
-                        </>
-                      )}
-                      <input type="file" accept="image/*" className="hidden" onChange={handleWorkshopPhotoUpload} />
-                    </label>
-                    <label className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50 block">
-                      {craftProcessPhoto ? (
-                        <>
-                          <img src={craftProcessPhoto} alt="Craft Process" className="w-20 h-20 object-cover rounded-xl mx-auto mb-2" />
-                          <p className="text-xs font-bold text-green-600">Uploaded ✓</p>
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                          <p className="text-sm font-bold text-gray-700">Craft Process</p>
-                        </>
-                      )}
-                      <input type="file" accept="image/*" className="hidden" onChange={handleCraftProcessPhotoUpload} />
-                    </label>
-                    <div>
-                      <div className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center bg-gray-50">
-                        <p className="text-sm font-bold text-gray-700 mb-2">Product Samples</p>
-                        <p className="text-[10px] text-gray-500 mb-2">(3-5 images)</p>
-                        <div className="flex flex-wrap gap-2 justify-center">
-                          {productSamplePhotos.map((img, idx) => (
-                            <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden">
-                              <img src={img} alt={`Sample ${idx + 1}`} className="w-full h-full object-cover" />
-                              <button type="button" onClick={() => removeProductSample(idx)} className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs">&times;</button>
-                            </div>
-                          ))}
-                          {productSamplePhotos.length < 5 && (
-                            <label className="w-16 h-16 rounded-lg border border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary">
-                              <Upload className="w-4 h-4 text-gray-400" />
-                              <input type="file" accept="image/*" multiple className="hidden" onChange={handleProductSampleUpload} />
-                            </label>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                     <label className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50 block">
+                       {uploading.workshop ? (
+                         <Loader2 className="w-6 h-6 text-gray-400 mx-auto mb-2 animate-spin" />
+                       ) : workshopPhoto ? (
+                         <>
+                           <img src={workshopPhoto} alt="Workshop" className="w-20 h-20 object-cover rounded-xl mx-auto mb-2" />
+                           <p className="text-xs font-bold text-green-600">Uploaded ✓</p>
+                         </>
+                       ) : (
+                         <>
+                           <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                           <p className="text-sm font-bold text-gray-700">Workshop Photo</p>
+                         </>
+                       )}
+                       <input type="file" accept="image/*" className="hidden" onChange={handleWorkshopPhotoUpload} />
+                     </label>
+                     <label className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50 block">
+                       {uploading.craft ? (
+                         <Loader2 className="w-6 h-6 text-gray-400 mx-auto mb-2 animate-spin" />
+                       ) : craftProcessPhoto ? (
+                         <>
+                           <img src={craftProcessPhoto} alt="Craft Process" className="w-20 h-20 object-cover rounded-xl mx-auto mb-2" />
+                           <p className="text-xs font-bold text-green-600">Uploaded ✓</p>
+                         </>
+                       ) : (
+                         <>
+                           <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                           <p className="text-sm font-bold text-gray-700">Craft Process</p>
+                         </>
+                       )}
+                       <input type="file" accept="image/*" className="hidden" onChange={handleCraftProcessPhotoUpload} />
+                     </label>
+                     <div>
+                       <div className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center bg-gray-50">
+                         <p className="text-sm font-bold text-gray-700 mb-2">Product Samples</p>
+                         <p className="text-[10px] text-gray-500 mb-2">(3-5 images)</p>
+                         {uploading.product && (
+                           <div className="flex justify-center mb-2">
+                             <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                             <span className="text-xs text-gray-500 ml-2">Uploading...</span>
+                           </div>
+                         )}
+                         <div className="flex flex-wrap gap-2 justify-center">
+                           {productSamplePhotos.map((img, idx) => (
+                             <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden">
+                               <img src={img} alt={`Sample ${idx + 1}`} className="w-full h-full object-cover" />
+                               <button type="button" onClick={() => removeProductSample(idx)} className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs">&times;</button>
+                             </div>
+                           ))}
+                           {productSamplePhotos.length < 5 && !uploading.product && (
+                             <label className="w-16 h-16 rounded-lg border border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary">
+                               <Upload className="w-4 h-4 text-gray-400" />
+                               <input type="file" accept="image/*" multiple className="hidden" onChange={handleProductSampleUpload} />
+                             </label>
+                           )}
+                         </div>
+                       </div>
+                     </div>
                   </div>
                 </div>
               </div>

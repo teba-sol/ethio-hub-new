@@ -1,9 +1,12 @@
 import React, { useState, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { OrganizerStatus } from '../../types';
 import { Button, Input } from '../../components/UI';
 import { Upload, CheckCircle, Store, MapPin, ShieldCheck, CreditCard, Calendar, Loader2, AlertCircle } from 'lucide-react';
+
+const MapPickerModal = dynamic(() => import('../../components/MapPickerModal'), { ssr: false });
 
 interface FormData {
   organizerName: string;
@@ -18,11 +21,23 @@ interface FormData {
   region: string;
   city: string;
   address: string;
+  latitude: number | null;
+  longitude: number | null;
   paymentMethod: string;
   bankName: string;
   accountName: string;
-  accountNumber: string;
+  bankAccountNumber: string;
+  walletPhoneNumber: string;
   agreement: boolean;
+}
+
+interface DocState {
+  businessLicense: string;
+  tourismLicense: string;
+  taxCert: string;
+  eventPhotos: string;
+  eventPoster: string;
+  eventVideos: string;
 }
 
 export const OrganizerOnboardingPage: React.FC = () => {
@@ -31,9 +46,17 @@ export const OrganizerOnboardingPage: React.FC = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
-  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+
+  const businessLicenseRef = useRef<HTMLInputElement>(null);
+  const tourismLicenseRef = useRef<HTMLInputElement>(null);
+  const taxCertRef = useRef<HTMLInputElement>(null);
+  const eventPhotosRef = useRef<HTMLInputElement>(null);
+  const eventPosterRef = useRef<HTMLInputElement>(null);
+  const eventVideosRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState<FormData>({
     organizerName: '',
@@ -48,11 +71,23 @@ export const OrganizerOnboardingPage: React.FC = () => {
     region: '',
     city: '',
     address: '',
+    latitude: null,
+    longitude: null,
     paymentMethod: 'Bank Account',
     bankName: '',
     accountName: '',
-    accountNumber: '',
+    bankAccountNumber: '',
+    walletPhoneNumber: '',
     agreement: false
+  });
+
+  const [docs, setDocs] = useState<DocState>({
+    businessLicense: '',
+    tourismLicense: '',
+    taxCert: '',
+    eventPhotos: '',
+    eventPoster: '',
+    eventVideos: ''
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -70,20 +105,42 @@ export const OrganizerOnboardingPage: React.FC = () => {
     setUploadingLogo(true);
     setError('');
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'avatars');
-      const response = await fetch('/api/upload', { method: 'POST', body: formData });
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      formDataUpload.append('folder', 'avatars');
+      const response = await fetch('/api/upload', { method: 'POST', body: formDataUpload });
       const data = await response.json();
       if (data.success) {
         setAvatarUrl(data.url);
       } else {
         setError(data.message || 'Failed to upload logo');
       }
-    } catch (err) {
-      setError('Failed to upload logo');
+    } catch (err: any) {
+      console.error('Logo upload error:', err);
+      setError(err.message || 'Failed to upload logo. Please try again.');
     } finally {
       setUploadingLogo(false);
+    }
+  };
+
+  const handleDocUpload = async (docType: keyof DocState, file: File) => {
+    setUploadingDoc(docType);
+    setError('');
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      formDataUpload.append('folder', 'organizer-docs');
+      const response = await fetch('/api/upload', { method: 'POST', body: formDataUpload });
+      const data = await response.json();
+      if (data.success) {
+        setDocs(prev => ({ ...prev, [docType]: data.url }));
+      } else {
+        setError(data.message || 'Upload failed');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Upload failed');
+    } finally {
+      setUploadingDoc(null);
     }
   };
 
@@ -107,7 +164,11 @@ export const OrganizerOnboardingPage: React.FC = () => {
       const res = await fetch('/api/organizer/onboarding', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, avatar: avatarUrl })
+        body: JSON.stringify({ 
+          ...formData, 
+          avatar: avatarUrl,
+          documents: docs
+        })
       });
 
       const data = await res.json();
@@ -212,17 +273,8 @@ export const OrganizerOnboardingPage: React.FC = () => {
                     />
                     <div className="space-y-2">
                       <label className="block text-sm font-bold text-primary">Profile Logo</label>
-                      <input
-                        ref={logoInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleLogoUpload}
-                        className="hidden"
-                      />
-                      <div
-                        onClick={() => logoInputRef.current?.click()}
-                        className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:bg-gray-50 transition-colors cursor-pointer"
-                      >
+                      <label className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:bg-gray-50 transition-colors cursor-pointer block">
+                        <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
                         {avatarUrl ? (
                           <div className="flex flex-col items-center gap-2">
                             <img src={avatarUrl} alt="Logo" className="w-16 h-16 rounded-full object-cover" />
@@ -236,7 +288,7 @@ export const OrganizerOnboardingPage: React.FC = () => {
                             <span className="text-sm text-gray-500">Click to upload logo</span>
                           </>
                         )}
-                      </div>
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -348,11 +400,21 @@ export const OrganizerOnboardingPage: React.FC = () => {
                     />
                     <div className="md:col-span-2 space-y-2">
                       <label className="block text-sm font-bold text-primary">Map Location</label>
-                      <div className="h-48 bg-gray-100 rounded-2xl flex items-center justify-center border border-gray-200">
-                        <span className="text-gray-400 flex items-center gap-2">
-                          <MapPin className="w-5 h-5" />
-                          Click to pin location on map
-                        </span>
+                      <div 
+                        className="h-48 bg-gray-100 rounded-2xl flex items-center justify-center border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors"
+                        onClick={() => setIsMapModalOpen(true)}
+                      >
+                        {formData.latitude && formData.longitude ? (
+                          <span className="text-gray-600 flex items-center gap-2">
+                            <MapPin className="w-5 h-5 text-primary" />
+                            Selected: {formData.latitude.toFixed(4)}, {formData.longitude.toFixed(4)}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 flex items-center gap-2">
+                            <MapPin className="w-5 h-5" />
+                            Click to pin location on map
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -374,24 +436,111 @@ export const OrganizerOnboardingPage: React.FC = () => {
                       <div>
                         <p className="font-bold text-primary">Business License</p>
                         <p className="text-xs text-gray-500">Required</p>
+                        {docs.businessLicense && (
+                          <a href={docs.businessLicense} target="_blank" className="text-xs text-green-600 mt-1 block">
+                            View Uploaded
+                          </a>
+                        )}
                       </div>
-                      <Button type="button" variant="outline" size="sm">Upload</Button>
+                      <div className="flex items-center gap-2">
+                        {uploadingDoc === 'businessLicense' ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : docs.businessLicense ? (
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        ) : null}
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          className="hidden"
+                          ref={businessLicenseRef}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleDocUpload('businessLicense', file);
+                          }}
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => businessLicenseRef.current?.click()}
+                        >
+                          {docs.businessLicense ? 'Re-upload' : 'Upload'}
+                        </Button>
+                      </div>
                     </div>
                     {formData.organizerType === 'Tourism Company' && (
                       <div className="border border-gray-200 rounded-2xl p-4 flex items-center justify-between">
                         <div>
                           <p className="font-bold text-primary">Tourism License</p>
                           <p className="text-xs text-gray-500">Required for Tourism Companies</p>
+                          {docs.tourismLicense && (
+                            <a href={docs.tourismLicense} target="_blank" className="text-xs text-green-600 mt-1 block">
+                              View Uploaded
+                            </a>
+                          )}
                         </div>
-                        <Button type="button" variant="outline" size="sm">Upload</Button>
+                        <div className="flex items-center gap-2">
+                          {uploadingDoc === 'tourismLicense' ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : docs.tourismLicense ? (
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                          ) : null}
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="hidden"
+                            ref={tourismLicenseRef}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleDocUpload('tourismLicense', file);
+                            }}
+                          />
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => tourismLicenseRef.current?.click()}
+                          >
+                            {docs.tourismLicense ? 'Re-upload' : 'Upload'}
+                          </Button>
+                        </div>
                       </div>
                     )}
                     <div className="border border-gray-200 rounded-2xl p-4 flex items-center justify-between">
                       <div>
                         <p className="font-bold text-primary">Tax Registration Certificate</p>
                         <p className="text-xs text-gray-500">Optional</p>
+                        {docs.taxCert && (
+                          <a href={docs.taxCert} target="_blank" className="text-xs text-green-600 mt-1 block">
+                            View Uploaded
+                          </a>
+                        )}
                       </div>
-                      <Button type="button" variant="outline" size="sm">Upload</Button>
+                      <div className="flex items-center gap-2">
+                        {uploadingDoc === 'taxCert' ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : docs.taxCert ? (
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        ) : null}
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          className="hidden"
+                          ref={taxCertRef}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleDocUpload('taxCert', file);
+                          }}
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => taxCertRef.current?.click()}
+                        >
+                          {docs.taxCert ? 'Re-upload' : 'Upload'}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -408,22 +557,109 @@ export const OrganizerOnboardingPage: React.FC = () => {
                       <div>
                         <p className="font-bold text-primary">Photos of Past Events</p>
                         <p className="text-xs text-gray-500">Required</p>
+                        {docs.eventPhotos && (
+                          <a href={docs.eventPhotos} target="_blank" className="text-xs text-green-600 mt-1 block">
+                            View Uploaded
+                          </a>
+                        )}
                       </div>
-                      <Button type="button" variant="outline" size="sm">Upload</Button>
+                      <div className="flex items-center gap-2">
+                        {uploadingDoc === 'eventPhotos' ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : docs.eventPhotos ? (
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        ) : null}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          ref={eventPhotosRef}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleDocUpload('eventPhotos', file);
+                          }}
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => eventPhotosRef.current?.click()}
+                        >
+                          {docs.eventPhotos ? 'Re-upload' : 'Upload'}
+                        </Button>
+                      </div>
                     </div>
                     <div className="border border-gray-200 rounded-2xl p-4 flex items-center justify-between">
                       <div>
                         <p className="font-bold text-primary">Event Poster</p>
                         <p className="text-xs text-gray-500">Required</p>
+                        {docs.eventPoster && (
+                          <a href={docs.eventPoster} target="_blank" className="text-xs text-green-600 mt-1 block">
+                            View Uploaded
+                          </a>
+                        )}
                       </div>
-                      <Button type="button" variant="outline" size="sm">Upload</Button>
+                      <div className="flex items-center gap-2">
+                        {uploadingDoc === 'eventPoster' ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : docs.eventPoster ? (
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        ) : null}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          ref={eventPosterRef}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleDocUpload('eventPoster', file);
+                          }}
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => eventPosterRef.current?.click()}
+                        >
+                          {docs.eventPoster ? 'Re-upload' : 'Upload'}
+                        </Button>
+                      </div>
                     </div>
                     <div className="border border-gray-200 rounded-2xl p-4 flex items-center justify-between">
                       <div>
                         <p className="font-bold text-primary">Event Videos</p>
                         <p className="text-xs text-gray-500">Optional</p>
+                        {docs.eventVideos && (
+                          <a href={docs.eventVideos} target="_blank" className="text-xs text-green-600 mt-1 block">
+                            View Uploaded
+                          </a>
+                        )}
                       </div>
-                      <Button type="button" variant="outline" size="sm">Upload</Button>
+                      <div className="flex items-center gap-2">
+                        {uploadingDoc === 'eventVideos' ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : docs.eventVideos ? (
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        ) : null}
+                        <input
+                          type="file"
+                          accept="image/*,video/*"
+                          className="hidden"
+                          ref={eventVideosRef}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleDocUpload('eventVideos', file);
+                          }}
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => eventVideosRef.current?.click()}
+                        >
+                          {docs.eventVideos ? 'Re-upload' : 'Upload'}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -483,11 +719,10 @@ export const OrganizerOnboardingPage: React.FC = () => {
                           />
                           <Input 
                             label="Account Number" 
-                            name="accountNumber" 
-                            value={formData.accountNumber} 
+                            name="bankAccountNumber" 
+                            value={formData.bankAccountNumber} 
                             onChange={handleInputChange} 
                             required 
-                            className="md:col-span-2"
                           />
                         </>
                       ) : (
@@ -508,8 +743,8 @@ export const OrganizerOnboardingPage: React.FC = () => {
                           />
                           <Input 
                             label="Phone Number" 
-                            name="accountNumber" 
-                            value={formData.accountNumber} 
+                            name="walletPhoneNumber" 
+                            value={formData.walletPhoneNumber} 
                             onChange={handleInputChange} 
                             required 
                             className="md:col-span-2"
@@ -559,39 +794,6 @@ export const OrganizerOnboardingPage: React.FC = () => {
                 <div></div>
               )}
               <div className="flex gap-3">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={async () => {
-                    setLoading(true);
-                    try {
-                      const res = await fetch('/api/organizer/onboarding', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          organizerName: formData.organizerName || 'My Company',
-                          phoneNumber: formData.phoneNumber || '+251000000000',
-                          description: formData.description || 'Event organizer',
-                          address: formData.address || 'Ethiopia',
-                          paymentMethod: formData.paymentMethod,
-                          bankName: formData.bankName || 'Bank',
-                          accountName: formData.accountName || 'Account',
-                          accountNumber: formData.accountNumber || '000000'
-                        })
-                      });
-                      const data = await res.json();
-                      if (data.success) {
-                        updateUser({ organizerStatus: 'Pending' as OrganizerStatus });
-                        router.push('/organizer/waiting');
-                      }
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}
-                  disabled={loading}
-                >
-                  Skip
-                </Button>
                 <Button type="submit" disabled={loading}>
                   {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   {step < 4 ? 'Continue' : 'Submit Application'}
@@ -601,6 +803,23 @@ export const OrganizerOnboardingPage: React.FC = () => {
           </form>
         </div>
       </div>
+
+      <MapPickerModal
+        isOpen={isMapModalOpen}
+        onClose={() => setIsMapModalOpen(false)}
+        onLocationSelect={(coords) => {
+          setFormData(prev => ({
+            ...prev,
+            latitude: coords.lat,
+            longitude: coords.lng
+          }));
+        }}
+        initialPosition={
+          formData.latitude && formData.longitude 
+            ? { lat: formData.latitude, lng: formData.longitude } 
+            : { lat: 9.03, lng: 38.75 }
+        }
+      />
     </div>
   );
 };

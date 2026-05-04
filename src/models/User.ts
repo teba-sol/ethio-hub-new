@@ -129,7 +129,6 @@ UserSchema.index({ artisanStatus: 1 });
 UserSchema.index({ organizerStatus: 1 });
 UserSchema.index({ status: 1 });
 UserSchema.index({ createdAt: -1 });
-UserSchema.index({ email: 1 });
 
 const User =
   mongoose.models.User || mongoose.model("User", UserSchema);

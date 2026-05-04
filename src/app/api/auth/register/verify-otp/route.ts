@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { serialize } from "cookie";
-import { SignJWT } from "jose";
 import { connectDB } from "../../../../../lib/mongodb";
 import User from "../../../../../models/User";
 import PendingRegistration from "../../../../../models/PendingRegistration";
@@ -10,9 +8,6 @@ import {
   REGISTRATION_OTP_MAX_ATTEMPTS,
 } from "../../../../../lib/registrationOtp";
 import { applyRateLimit, getRequestIp } from "../../../../../lib/rateLimit";
-import { queueAdminReviewEmail } from "../../../../../lib/adminApproval";
-
-const JWT_SECRET = process.env.JWT_SECRET || "ethio-hub-secret-key-2025";
 
 export async function POST(request: Request) {
   try {
@@ -110,10 +105,7 @@ export async function POST(request: Request) {
       password: pending.passwordHash,
       role,
       isVerified: true,
-      adminApprovalStatus:
-        role === "artisan" || role === "organizer"
-          ? "PENDING_ADMIN_APPROVAL"
-          : "NOT_REQUIRED",
+      adminApprovalStatus: "NOT_REQUIRED",
     };
 
     if (role === "organizer") {
@@ -125,38 +117,10 @@ export async function POST(request: Request) {
     const user = await User.create(newUserData);
     await PendingRegistration.deleteOne({ _id: pending._id });
 
-    if (role === "artisan" || role === "organizer") {
-      await queueAdminReviewEmail({
-        subjectType: "user",
-        subjectId: user._id.toString(),
-        subjectLabel: `${role} account: ${user.name}`,
-        submittedByEmail: user.email,
-        submittedByName: user.name,
-      });
-    }
-
-    const token = await new SignJWT({
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role,
-    })
-      .setProtectedHeader({ alg: "HS256" })
-      .setIssuedAt()
-      .setExpirationTime("1h")
-      .sign(new TextEncoder().encode(JWT_SECRET));
-
-    const serialized = serialize("sessionToken", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 60 * 60,
-      path: "/",
-    });
-
     const response = NextResponse.json(
       {
         success: true,
-        message: "Email verified. Your account is now active.",
+        message: "Email verified. Your account is now active. Please sign in.",
         user: {
           id: user._id,
           email: user.email,
@@ -171,7 +135,6 @@ export async function POST(request: Request) {
       { status: 200 }
     );
 
-    response.headers.set("Set-Cookie", serialized);
     return response;
   } catch (error: any) {
     return NextResponse.json(

@@ -5,9 +5,8 @@ import { serialize } from "cookie";
 import { applyRateLimit, getRequestIp } from "../../../../lib/rateLimit";
 
 export async function POST(request: NextRequest) {
-  await connectDB();
-
   try {
+    await connectDB();
     const body = await request.json();
     const email = String(body?.email || "").trim().toLowerCase();
     const ip = getRequestIp(request);

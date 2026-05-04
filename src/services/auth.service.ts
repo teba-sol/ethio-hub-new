@@ -24,14 +24,6 @@ export const login = async (credentials: { email: string; password: string }) =>
     throw new Error("Please verify your email before logging in");
   }
 
-  if (user.adminApprovalStatus === 'PENDING_ADMIN_APPROVAL') {
-    throw new Error('Your account is pending admin approval.');
-  }
-
-  if (user.adminApprovalStatus === 'REJECTED') {
-    throw new Error('Your account was rejected by admin review.');
-  }
-  
   const token = await new SignJWT({ 
     userId: user._id.toString(),
     email: user.email,

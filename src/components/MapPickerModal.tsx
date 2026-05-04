@@ -16,6 +16,16 @@ L.Icon.Default.mergeOptions({
   shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
 });
 
+const redIcon = L.icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+  iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
 
 
 interface MapPickerModalProps {
@@ -34,7 +44,7 @@ const LocationMarker: React.FC<{ position: L.LatLng | null; setPosition: (positi
   });
 
   return position === null ? null : (
-    <Marker position={position}></Marker>
+    <Marker position={position} icon={redIcon}></Marker>
   );
 };
 
@@ -61,8 +71,8 @@ const MapPickerModal: React.FC<MapPickerModalProps> = ({ isOpen, onClose, onLoca
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
       <div className="bg-white rounded-3xl shadow-xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden">
         <header className="p-4 border-b border-gray-100 flex justify-between items-center">
-          <h3 className="font-bold text-primary text-lg">Select Festival Location</h3>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+          <h3 className="font-bold text-primary text-lg">Select Business Location</h3>
+          <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="w-5 h-5" />
           </Button>
         </header>
