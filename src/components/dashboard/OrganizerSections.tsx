@@ -2230,21 +2230,26 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
     </div>
   );
 };
-export const OrganizerOverview: React.FC = () => {
+export const OrganizerOverview: React.FC<{ onManageEvent?: (id: string) => void; onCreate?: () => void }> = ({ onManageEvent: propOnManageEvent, onCreate: propOnCreate }) => {
   const [view, setView] = useState('overview'); // 'overview', 'eventDetail', 'createEvent'
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleManageEvent = (id: string) => {
-    setSelectedEventId(id);
-    setView('eventDetail');
+    if (propOnManageEvent) {
+      propOnManageEvent(id);
+    } else {
+      setSelectedEventId(id);
+      setView('eventDetail');
+    }
   };
 
   const handleCreate = () => {
-    // In a real app, this would likely navigate to a creation form/page
-    // For this example, we'll just log it.
-    console.log('Navigate to create event view');
-    // Or, if a create view component exists:
-    // setView('createEvent'); 
+    if (propOnCreate) {
+      propOnCreate();
+    } else {
+      router.push('/dashboard/organizer/festivals/create');
+    }
   };
 
   const handleBack = () => {
@@ -2258,9 +2263,8 @@ export const OrganizerOverview: React.FC = () => {
 
 // The rest of the component is the overview itself
   const onManageEvent = handleManageEvent;
-  const onCreate = handleCreate;
+  const onCreate = propOnCreate || handleCreate;
   const { user } = useAuth();
-  const router = useRouter();
   const navigate = (to: string) => router.push(to);
   
   const [analytics, setAnalytics] = useState<any>(null);
@@ -3827,7 +3831,7 @@ export const OrganizerDashboard: React.FC = () => {
 
   const handleManageEvent = (id: string) => setSelectedEventId(id);
   const handleBack = () => setSelectedEventId(null);
-  const handleCreate = () => router.push('/dashboard/organizer/create-event');
+  const handleCreate = () => router.push('/dashboard/organizer/festivals/create');
 
   useEffect(() => {
     const fetchData = async () => {
