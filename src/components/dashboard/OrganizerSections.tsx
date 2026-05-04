@@ -3110,10 +3110,20 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
     }
   };
 
-  const totalTicketsSold = filteredBookings.reduce((acc, b) => acc + (b.quantity || 0), 0);
-  const confirmedTicketsCount = filteredBookings.filter(b => b.status === 'confirmed').reduce((acc, b) => acc + (b.quantity || 0), 0);
-  const netIncomeValue = filteredBookings
-    .filter(b => b.status === 'confirmed')
+  // Summary Stats based on Event Filter ONLY (not affected by search or status filters)
+  const eventScopedBookings = bookings.filter(b => {
+    if (eventFilter !== 'All Events' && b.festival?.name !== eventFilter) return false;
+    return true;
+  });
+
+  const totalTicketsSold = eventScopedBookings.reduce((acc, b) => acc + (b.quantity || 0), 0);
+  // Count both 'confirmed' and 'completed' for booked tickets
+  const confirmedTicketsCount = eventScopedBookings
+    .filter(b => b.status === 'confirmed' || b.status === 'completed')
+    .reduce((acc, b) => acc + (b.quantity || 0), 0);
+    
+  const netIncomeValue = eventScopedBookings
+    .filter(b => b.status === 'confirmed' || b.status === 'completed')
     .reduce((acc, b) => {
       // Use pre-calculated organizerAmount if available, else calculate manually (90%)
       const amount = b.organizerAmount || (b.totalPrice ? b.totalPrice * 0.9 : 0);
@@ -3124,12 +3134,12 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
   let totalCapacityValue = 0;
   if (eventFilter === 'All Events') {
     totalCapacityValue = festivals.reduce((acc, f) => {
-      const festivalCapacity = f.ticketTypes?.reduce((tAcc: number, t: any) => tAcc + (t.capacity || 0), 0) || 0;
+      const festivalCapacity = f.totalCapacity || f.ticketTypes?.reduce((tAcc: number, t: any) => tAcc + (t.quantity || t.capacity || 0), 0) || 0;
       return acc + festivalCapacity;
     }, 0);
   } else {
     const selectedFestival = festivals.find(f => f.name === eventFilter);
-    totalCapacityValue = selectedFestival?.ticketTypes?.reduce((tAcc: number, t: any) => tAcc + (t.capacity || 0), 0) || 0;
+    totalCapacityValue = selectedFestival?.totalCapacity || selectedFestival?.ticketTypes?.reduce((tAcc: number, t: any) => tAcc + (t.quantity || t.capacity || 0), 0) || 0;
   }
 
   if (loading) {
