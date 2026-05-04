@@ -369,7 +369,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
         <div className="flex flex-col lg:flex-row gap-10 items-start lg:items-center">
           <div className="w-full lg:w-72 h-48 rounded-[32px] overflow-hidden shadow-lg flex-shrink-0 relative group">
   <img 
-    src={getImageUrl(currentData?.coverImage, 'coverImage')} 
+    src={getImageUrl(currentData?.coverImage)}
     className="w-full h-full object-cover" 
     alt={currentData?.name || 'Event'} 
   />
@@ -2307,10 +2307,7 @@ export const OrganizerOverview: React.FC = () => {
   
   const activeListings = analytics?.festivals?.published || festivals.length;
   const totalAttendees = analytics?.bookings?.confirmed || 0;
-  // Split payment breakdown
-  const grossRevenue = analytics?.revenue?.gross || 0;
-  const platformFee = analytics?.revenue?.platformFee || 0;
-  const netEarnings = analytics?.revenue?.net || grossRevenue;
+  const totalBookings = analytics?.bookings?.total || 0;
   
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) return `ETB ${(amount / 1000000).toFixed(1)}M`;
@@ -2370,16 +2367,11 @@ export const OrganizerOverview: React.FC = () => {
          {[
           { label: 'Active Listings', val: activeListings.toString(), icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
           { label: 'Global Attendees', val: formatNumber(totalAttendees), icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Net Earnings (10% fee)', val: formatCurrency(netEarnings), icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50', tooltip: `Gross: ${formatCurrency(grossRevenue)} | Platform Fee: ${formatCurrency(platformFee)}` },
-        ].map((stat, i) => (
+          { label: 'Total Bookings', val: formatNumber(totalBookings), icon: FileText, color: 'text-purple-600', bg: 'bg-purple-50' },
+        ].map((stat: any, i) => (
           <div key={`stat-${i}`} className="bg-white p-8 rounded-3xl border border-gray-100 flex items-center justify-between shadow-sm relative group">
             <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{stat.label}</p><p className="text-2xl font-bold text-primary">{stat.val}</p></div>
             <div className={`p-4 ${stat.bg} rounded-[20px]`}><stat.icon className={`w-6 h-6 ${stat.color}`} /></div>
-            {stat.tooltip && (
-              <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs p-2 rounded whitespace-nowrap z-50">
-                {stat.tooltip}
-              </div>
-            )}
           </div>
         ))}
          <div className="bg-white p-8 rounded-3xl border border-gray-100 flex flex-col justify-between relative overflow-hidden shadow-sm">
@@ -2402,7 +2394,7 @@ export const OrganizerOverview: React.FC = () => {
                 <h3 className="text-lg font-serif font-bold text-primary mb-6 flex items-center gap-2"><CalendarClock className="w-5 h-5 text-secondary" /> Upcoming Timeline</h3>
                 <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
                    {myEvents.slice(0, 5).map((ev: any, i: number) => (
-                      <div key={ev._id || i} className="min-w-[200px] p-4 bg-ethio-bg/30 rounded-2xl border border-gray-50 flex gap-4 items-center cursor-pointer hover:bg-ethio-bg/50 transition-colors" onClick={() => onManageEvent(ev._id)}>
+                      <div key={ev._id || i} className="min-w-[200px] p-4 bg-ethio-bg/30 rounded-2xl border border-gray-50 flex gap-4 items-center cursor-pointer hover:bg-ethio-bg/50 transition-colors" onClick={() => onManageEvent(ev._id || ev.id)}>
                          <div className="w-12 h-12 bg-white rounded-xl flex flex-col items-center justify-center shadow-sm text-primary font-bold leading-tight">
                             <span className="text-[10px] uppercase text-gray-400">{ev.startDate ? new Date(ev.startDate).toLocaleString('en-US', { month: 'short' }) : 'TBD'}</span>
                             <span className="text-lg">{ev.startDate ? new Date(ev.startDate).getDate() : '--'}</span>
@@ -2461,7 +2453,7 @@ export const OrganizerOverview: React.FC = () => {
                 </div>
                 <div 
                   className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm cursor-pointer hover:shadow-md transition-all group"
-                  onClick={() => myEvents[0] && onManageEvent(myEvents[0].id)}
+                  onClick={() => myEvents[0] && onManageEvent(myEvents[0]._id || myEvents[0].id)}
                 >
                    <h4 className="font-bold text-primary mb-4 flex items-center gap-2"><Eye className="w-4 h-4 text-purple-600" /> Most Viewed Event</h4>
                    {myEvents[0] ? (
@@ -2487,7 +2479,7 @@ export const OrganizerOverview: React.FC = () => {
                   <h3 className="text-xl font-serif font-bold text-primary">Your Active Events</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {myEvents.slice(0, 4).map((fest, index) => (
-                      <div key={fest.id || `fest-${index}`} onClick={() => onManageEvent(fest.id)} className="bg-white rounded-[32px] overflow-hidden border border-gray-100 shadow-sm cursor-pointer group hover:shadow-md transition-all">
+                      <div key={fest._id || fest.id || `fest-${index}`} onClick={() => onManageEvent(fest._id || fest.id)} className="bg-white rounded-[32px] overflow-hidden border border-gray-100 shadow-sm cursor-pointer group hover:shadow-md transition-all">
                         <div className="h-44 overflow-hidden"><img src={fest.coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" /></div>
                         <div className="p-6"><h4 className="text-xl font-serif font-bold text-primary group-hover:text-secondary transition-colors">{fest.name}</h4><p className="text-[10px] text-gray-400 uppercase font-bold">{fest.locationName}</p></div>
                       </div>
@@ -2808,18 +2800,14 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
                     </div>
                     <Badge variant="secondary" className="bg-primary text-white border-none capitalize">{booking.ticketType} x{booking.quantity}</Badge>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-right">
+                  <div className="grid grid-cols-2 md:grid-cols-2 gap-8 text-right">
                     <div>
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Qty</p>
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Quantity</p>
                       <p className="text-lg font-bold text-primary">x{booking.quantity}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Rate (Net)</p>
-                      <p className="text-lg font-bold text-primary">ETB {(booking.organizerAmount / booking.quantity).toLocaleString()}</p>
-                    </div>
-                    <div className="col-span-2 md:col-span-1">
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Total Earned</p>
-                      <p className="text-lg font-bold text-secondary">ETB {booking.organizerAmount?.toLocaleString() || (booking.totalPrice * 0.9).toLocaleString()}</p>
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Total Price</p>
+                      <p className="text-lg font-bold text-secondary">ETB {booking.totalPrice?.toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
@@ -2974,8 +2962,8 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
                 <span className="font-bold text-primary">{booking.quantity}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Total Earned</span>
-                <span className="font-bold text-secondary">ETB {booking.organizerAmount?.toLocaleString() || (booking.totalPrice * 0.9).toLocaleString()}</span>
+                <span className="text-gray-500 text-sm">Total Price</span>
+                <span className="font-bold text-secondary">ETB {booking.totalPrice?.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 text-sm">Guest</span>
@@ -3118,17 +3106,17 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
 
   const totalTicketsSold = eventScopedBookings.reduce((acc, b) => acc + (b.quantity || 0), 0);
   // Count both 'confirmed' and 'completed' for booked tickets
-  const confirmedTicketsCount = eventScopedBookings
-    .filter(b => b.status === 'confirmed' || b.status === 'completed')
-    .reduce((acc, b) => acc + (b.quantity || 0), 0);
-    
-  const netIncomeValue = eventScopedBookings
-    .filter(b => b.status === 'confirmed' || b.status === 'completed')
-    .reduce((acc, b) => {
-      // Use pre-calculated organizerAmount if available, else calculate manually (90%)
-      const amount = b.organizerAmount || (b.totalPrice ? b.totalPrice * 0.9 : 0);
-      return acc + amount;
-    }, 0);
+   const confirmedTicketsCount = eventScopedBookings
+     .filter(b => b.status === 'confirmed' || b.status === 'completed')
+     .reduce((acc, b) => acc + (b.quantity || 0), 0);
+
+   const netIncomeValue = eventScopedBookings
+     .filter(b => b.status === 'confirmed' || b.status === 'completed')
+     .reduce((acc, b) => {
+       // Use pre-calculated organizerAmount if available, else calculate manually (90%)
+       const amount = b.organizerAmount || (b.totalPrice ? b.totalPrice * 0.9 : 0);
+       return acc + amount;
+     }, 0);
 
   // Total Capacity Calculation
   let totalCapacityValue = 0;
@@ -3429,7 +3417,7 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => onViewBooking(booking._id)} className="p-2 bg-white border border-gray-100 rounded-xl text-primary hover:bg-primary hover:text-white transition-all shadow-sm">
+                    <button onClick={() => onViewBooking(booking._id || '')} className="p-2 bg-white border border-gray-100 rounded-xl text-primary hover:bg-primary hover:text-white transition-all shadow-sm">
                       <Eye className="w-4 h-4" />
                     </button>
                   </div>
@@ -3472,6 +3460,8 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
   const [viewMode, setViewMode] = useState<'grid' | 'calendar'>('grid');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [showDateRange, setShowDateRange] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -3480,7 +3470,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
   const tabs = ['All', 'Draft', 'Upcoming', 'Live', 'Completed', 'Cancelled'];
 
   const handleUpdateStatus = (id: string, newStatus: string) => {
-    setFestivals(prev => prev.map(f => f.id === id ? { ...f, status: newStatus } : f));
+    setFestivals(prev => prev.map(f => f._id === id ? { ...f, status: newStatus as any } : f));
     setOpenDropdown(null);
   };
 
@@ -3498,7 +3488,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
       const response = await apiClient.delete(`/api/organizer/festivals/${eventIdToDelete}`);
       
       if (response.success) {
-        setFestivals(prev => prev.filter(f => f.id !== eventIdToDelete));
+        setFestivals(prev => prev.filter(f => f._id !== eventIdToDelete));
         setShowDeleteConfirm(false);
       } else {
         setError(response.message || 'Failed to delete event');
@@ -3516,18 +3506,24 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
   const filteredFestivals = festivals.filter(f => {
     if (activeTab !== 'All' && f.status !== activeTab) return false;
     if (searchQuery && !f.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    
+    // Date Range Filter
+    if (dateRange.start || dateRange.end) {
+      const festivalDate = new Date(f.startDate);
+      if (dateRange.start && festivalDate < new Date(dateRange.start)) return false;
+      if (dateRange.end && festivalDate > new Date(dateRange.end)) return false;
+    }
+    
     return true;
   }).sort((a, b) => {
-    if (sortBy === 'Highest Revenue') return b.revenue - a.revenue;
-    if (sortBy === 'Most Booked') return b.ticketsSold - a.ticketsSold;
+    if (sortBy === 'Most Booked') return ((b as any).ticketsSold || 0) - ((a as any).ticketsSold || 0);
     if (sortBy === 'Soonest Event Date') return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
     return 0; // Default Newest
   });
 
   const totalEvents = festivals.length;
   const activeEvents = festivals.filter(f => ['Live', 'Upcoming'].includes(f.status)).length;
-  const totalTickets = festivals.reduce((acc, f) => acc + f.ticketsSold, 0);
-  const totalRevenue = festivals.reduce((acc, f) => acc + f.revenue, 0);
+  const totalTickets = festivals.reduce((acc, f) => acc + ((f as any).ticketsSold || 0), 0);
 
   if (loading) {
     return <div className="text-center p-10">Loading your events...</div>;
@@ -3558,9 +3554,108 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
 
       {/* Festivals List */}
       <div className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm">
-        <div className="flex justify-between items-center mb-8">
-          <h3 className="text-xl font-serif font-bold text-primary">Your Active & Upcoming Festivals ({festivals.length})</h3>
-          {/* Add filtering/sorting options here if needed */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
+          <h3 className="text-2xl font-serif font-bold text-primary">Your Festivals ({festivals.length})</h3>
+          
+          <div className="w-full lg:w-auto flex flex-wrap items-center gap-4">
+            {/* Search */}
+            <div className="relative flex-1 min-w-[240px]">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input 
+                type="text" 
+                placeholder="Search by festival name..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-gray-50 border-none rounded-2xl py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/10 transition-all"
+              />
+            </div>
+
+            {/* Status Dropdown */}
+            <div className="relative min-w-[140px]">
+              <select 
+                value={activeTab}
+                onChange={(e) => setActiveTab(e.target.value)}
+                className="w-full appearance-none bg-gray-50 border-none rounded-2xl py-3 pl-5 pr-12 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer"
+              >
+                {tabs.map(tab => (
+                  <option key={tab} value={tab}>{tab}</option>
+                ))}
+              </select>
+              <ArrowUpDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+
+            {/* Date Range Picker */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowDateRange(!showDateRange)}
+                className="flex items-center gap-3 bg-gray-50 rounded-2xl py-3 px-5 text-sm font-bold text-primary hover:bg-gray-100 transition-all"
+              >
+                <Calendar className="w-4 h-4 text-secondary" />
+                {dateRange.start && dateRange.end ? `${dateRange.start} - ${dateRange.end}` : 'Date Range'}
+                <ArrowUpDown className="w-4 h-4 text-gray-400" />
+              </button>
+              
+              {showDateRange && (
+                <div className="absolute top-full right-0 mt-3 bg-white p-6 rounded-[32px] shadow-2xl border border-gray-100 z-30 w-80 animate-in fade-in zoom-in-95">
+                  <div className="space-y-5">
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Start Date</label>
+                      <input 
+                        type="date" 
+                        value={dateRange.start}
+                        onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                        className="w-full bg-gray-50 border-none rounded-xl py-2.5 px-4 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">End Date</label>
+                      <input 
+                        type="date" 
+                        value={dateRange.end}
+                        onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                        className="w-full bg-gray-50 border-none rounded-xl py-2.5 px-4 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                      />
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 rounded-xl" 
+                        onClick={() => {
+                          setDateRange({ start: '', end: '' });
+                          setShowDateRange(false);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        variant="primary" 
+                        size="sm" 
+                        className="flex-1 rounded-xl" 
+                        onClick={() => setShowDateRange(false)}
+                      >
+                        OK
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sort Dropdown */}
+            <div className="relative min-w-[160px]">
+              <select 
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full appearance-none bg-gray-50 border-none rounded-2xl py-3 pl-5 pr-12 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer"
+              >
+                <option value="Newest">Newest First</option>
+                <option value="Soonest Event Date">Date: Soonest</option>
+                <option value="Most Booked">Most Booked</option>
+              </select>
+              <ArrowUpDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
         </div>
 
         {festivals.length === 0 ? (
@@ -3572,7 +3667,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {festivals.map(festival => (
-              <div key={festival._id} onClick={() => onManageEvent(festival._id)} className="bg-white border border-gray-100 rounded-[32px] overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 group cursor-pointer">
+              <div key={festival._id} onClick={() => onManageEvent(festival._id || festival.id)} className="bg-white border border-gray-100 rounded-[32px] overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 group cursor-pointer">
                 <div className="h-48 overflow-hidden">
                   <img src={festival.coverImage || `https://picsum.photos/seed/${festival._id}/600/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={getLocalizedText(festival, 'name', language)} />
                 </div>
@@ -3589,7 +3684,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
                   </div>
                   <div className="pt-4 border-t border-gray-100 flex flex-col gap-2">
                     <div className="flex gap-2">
-                      <Button variant="primary" size="sm" className="flex-1" onClick={() => onManageEvent(festival._id)}>Manage</Button>
+                      <Button variant="primary" size="sm" className="flex-1" onClick={() => onManageEvent(festival._id || festival.id)}>Manage</Button>
                       <Button variant="outline" size="sm" className="flex-1" disabled={festival.verificationStatus === 'Approved'}>View Public</Button>
                     </div>
                      {[(festival as any).verificationStatus === 'Draft', (festival as any).verificationStatus === 'Rejected'].includes(true) && (
@@ -3645,7 +3740,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
                           className="w-full text-red-600 border-red-200 hover:bg-red-50"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onManageEvent(festival._id);
+                            onManageEvent(festival._id || '');
                           }}
                         >
                           Edit & Resubmit
@@ -3670,7 +3765,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
               </div>
               <h3 className="text-xl font-bold text-primary mb-2">Delete Event?</h3>
               <p className="text-gray-500 mb-6">
-                Are you sure you want to delete <strong className="text-primary">{festivals.find(f => f.id === eventIdToDelete)?.name}</strong>? 
+                Are you sure you want to delete <strong className="text-primary">{festivals.find(f => f._id === eventIdToDelete)?.name}</strong>? 
                 This action cannot be undone and all data will be permanently lost.
               </p>
               <div className="flex gap-3">
@@ -3761,10 +3856,9 @@ export const OrganizerDashboard: React.FC = () => {
                 <p className="text-xs text-gray-400 mb-3">{festival.startDate ? new Date(festival.startDate).toLocaleDateString() : 'TBA'}</p>
                 <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
                   <p className="flex items-center gap-1"><Ticket className="w-3 h-3" /> {festival.ticketsSold || 0} sold</p>
-                  <p className="flex items-center gap-1"><DollarSign className="w-3 h-3" /> ETB {festival.revenue || 0}</p>
                 </div>
                 <div className="pt-4 border-t border-gray-100 flex gap-3">
-                  <Button variant="primary" size="sm" className="flex-1" onClick={() => onManageEvent(festival._id)}>Manage</Button>
+                  <Button variant="primary" size="sm" className="flex-1" onClick={() => handleManageEvent(festival._id || festival.id)}>Manage</Button>
                   <Button variant="outline" size="sm" className="flex-1">View Public</Button>
                 </div>
               </div>

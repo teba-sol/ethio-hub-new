@@ -203,6 +203,8 @@ export interface Festival {
   organizerId: string;
   isVerified: boolean;
   ticketsAvailable: number;
+  ticketsSold?: number;
+  revenue?: number;
   status: 'Draft' | 'Published' | 'Cancelled';
   verificationStatus: 'Not Submitted' | 'Pending Review' | 'Under Review' | 'Approved' | 'Rejected';
   submittedAt?: string;
