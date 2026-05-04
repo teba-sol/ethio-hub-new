@@ -327,14 +327,6 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
     { id: 'reviews', label: 'Reviews', icon: MessageSquare },
   ];
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <RefreshCw className="w-10 h-10 text-primary animate-spin" />
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-6 rounded-2xl max-w-4xl mx-auto">
@@ -2324,15 +2316,7 @@ export const OrganizerOverview: React.FC = () => {
   const hasEvents = myEvents.length > 0;
   const [showSupport, setShowSupport] = useState(false);
   const [showTips, setShowTips] = useState(false);
-  
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <RefreshCw className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
        {/* Header with Notifications */}
@@ -3132,10 +3116,6 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
     totalCapacityValue = selectedFestival?.totalCapacity || selectedFestival?.ticketTypes?.reduce((tAcc: number, t: any) => tAcc + (t.quantity || t.capacity || 0), 0) || 0;
   }
 
-  if (loading) {
-    return <div className="text-center p-10">Loading bookings...</div>;
-  }
-
   if (error) {
     return <div className="text-center p-10 text-red-500">Error: {error}</div>;
   }
@@ -3466,7 +3446,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
   }, []);
 
   const [activeTab, setActiveTab] = useState('All');
-  const [sortBy, setSortBy] = useState('Newest');
+  const [sortBy, setSortBy] = useState('Newest First');
   const [viewMode, setViewMode] = useState<'grid' | 'calendar'>('grid');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState('');
@@ -3477,7 +3457,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
   const [deleting, setDeleting] = useState(false);
   const [eventIdToDelete, setEventIdToDelete] = useState<string | null>(null);
 
-  const tabs = ['All', 'Draft', 'Upcoming', 'Live', 'Completed', 'Cancelled'];
+  const tabs = ['All', 'Draft', 'Published', 'Upcoming', 'Completed', 'Rejected'];
 
   const handleUpdateStatus = (id: string, newStatus: string) => {
     setFestivals(prev => prev.map(f => f._id === id ? { ...f, status: newStatus as any } : f));
@@ -3514,30 +3494,52 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
   };
 
   const filteredFestivals = festivals.filter(f => {
-    if (activeTab !== 'All' && f.status !== activeTab) return false;
-    if (searchQuery && !f.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    // Status Filter logic
+    if (activeTab !== 'All') {
+      if (activeTab === 'Rejected') {
+        if (f.verificationStatus !== 'Rejected') return false;
+      } else if (activeTab === 'Published') {
+        if (f.status !== 'Published') return false;
+      } else if (activeTab === 'Upcoming') {
+        if (f.status !== 'Published' || new Date(f.endDate) < new Date()) return false;
+      } else if (activeTab === 'Completed') {
+        if (f.status !== 'Published' || new Date(f.endDate) >= new Date()) return false;
+      } else {
+        if (f.status !== activeTab) return false;
+      }
+    }
+    
+    // Search by localized name
+    const localizedName = getLocalizedText(f, 'name', language).toLowerCase();
+    if (searchQuery && !localizedName.includes(searchQuery.toLowerCase())) return false;
     
     // Date Range Filter
     if (dateRange.start || dateRange.end) {
-      const festivalDate = new Date(f.startDate);
-      if (dateRange.start && festivalDate < new Date(dateRange.start)) return false;
-      if (dateRange.end && festivalDate > new Date(dateRange.end)) return false;
+      const festivalStartDate = new Date(f.startDate);
+      const festivalEndDate = new Date(f.endDate);
+      
+      if (dateRange.start) {
+        const filterStartDate = new Date(dateRange.start);
+        if (festivalEndDate < filterStartDate) return false;
+      }
+      
+      if (dateRange.end) {
+        const filterEndDate = new Date(dateRange.end);
+        if (festivalStartDate > filterEndDate) return false;
+      }
     }
     
     return true;
   }).sort((a, b) => {
     if (sortBy === 'Most Booked') return ((b as any).ticketsSold || 0) - ((a as any).ticketsSold || 0);
-    if (sortBy === 'Soonest Event Date') return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
-    return 0; // Default Newest
+    if (sortBy === 'Soonest') return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+    if (sortBy === 'Newest First') return new Date(b.createdAt || b.submittedAt || 0).getTime() - new Date(a.createdAt || a.submittedAt || 0).getTime();
+    return 0;
   });
 
   const totalEvents = festivals.length;
-  const activeEvents = festivals.filter(f => ['Live', 'Upcoming'].includes(f.status)).length;
+  const activeEvents = festivals.filter(f => ['Upcoming'].includes(f.status)).length;
   const totalTickets = festivals.reduce((acc, f) => acc + ((f as any).ticketsSold || 0), 0);
-
-  if (loading) {
-    return <div className="text-center p-10">Loading your events...</div>;
-  }
 
   if (error) {
     return <div className="text-center p-10 text-red-500">Error: {error}</div>;
@@ -3565,18 +3567,20 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
       {/* Festivals List */}
       <div className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
-          <h3 className="text-2xl font-serif font-bold text-primary">Your Festivals ({festivals.length})</h3>
+          <h3 className="text-2xl font-serif font-bold text-primary">
+            {festivals.length} {festivals.length === 1 ? 'Posted Event' : 'Posted Events'}
+          </h3>
           
           <div className="w-full lg:w-auto flex flex-wrap items-center gap-4">
             {/* Search */}
-            <div className="relative flex-1 min-w-[240px]">
+            <div className="relative flex-1 min-w-[320px]">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input 
                 type="text" 
-                placeholder="Search by festival name..." 
+                placeholder="Search by festival title..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-gray-50 border-none rounded-2xl py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/10 transition-all"
+                className="w-full bg-gray-50 border-none rounded-2xl py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/10 transition-all shadow-inner"
               />
             </div>
 
@@ -3585,7 +3589,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
               <select 
                 value={activeTab}
                 onChange={(e) => setActiveTab(e.target.value)}
-                className="w-full appearance-none bg-gray-50 border-none rounded-2xl py-3 pl-5 pr-12 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer"
+                className="w-full appearance-none bg-gray-50 border-none rounded-2xl py-3 pl-5 pr-12 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer shadow-sm"
               >
                 {tabs.map(tab => (
                   <option key={tab} value={tab}>{tab}</option>
@@ -3657,10 +3661,10 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
               <select 
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="w-full appearance-none bg-gray-50 border-none rounded-2xl py-3 pl-5 pr-12 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer"
+                className="w-full appearance-none bg-gray-50 border-none rounded-2xl py-3 pl-5 pr-12 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer shadow-sm hover:bg-gray-100"
               >
-                <option value="Newest">Newest First</option>
-                <option value="Soonest Event Date">Date: Soonest</option>
+                <option value="Newest First">Newest First</option>
+                <option value="Soonest">Soonest</option>
                 <option value="Most Booked">Most Booked</option>
               </select>
               <ArrowUpDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -3684,8 +3688,17 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
                 <div className="p-6 space-y-4">
                   <div className="flex justify-between items-start">
                     <h4 className="text-lg font-serif font-bold text-primary leading-tight pr-4">{getLocalizedText(festival, 'name', language)}</h4>
-                    <Badge variant={new Date(festival.startDate) > new Date() ? 'secondary' : 'success'}>
-                      {new Date(festival.startDate) > new Date() ? 'Upcoming' : 'Live'}
+                    <Badge variant={
+                      festival.verificationStatus === 'Rejected' ? 'destructive' : 
+                      festival.status === 'Draft' ? 'secondary' : 
+                      (new Date(festival.endDate) < new Date() ? 'outline' : 'success')
+                    }>
+                      {
+                        festival.verificationStatus === 'Rejected' ? 'Rejected' : 
+                        festival.status === 'Draft' ? 'Draft' : 
+                        (new Date(festival.endDate) < new Date() ? 'Completed' : 
+                         new Date(festival.startDate) > new Date() ? 'Upcoming' : 'Live')
+                      }
                     </Badge>
                   </div>
                   <div className="text-xs text-gray-400 font-bold uppercase tracking-wider space-y-2">
@@ -3849,33 +3862,29 @@ export const OrganizerDashboard: React.FC = () => {
         </div>
         <Button variant="primary" size="lg" leftIcon={Plus} onClick={handleCreate}>Create Event</Button>
       </header>
-      {loading ? (
-        <div className="flex items-center justify-center h-64"><RefreshCw className="w-10 h-10 text-primary animate-spin" /></div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {festivals.map((festival) => (
-            <div key={festival._id} className="bg-white rounded-[32px] overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 group">
-              <div className="h-48 overflow-hidden">
-                <img src={festival.coverImage || 'https://images.unsplash.com/photo-1533174072545-7a4b6dad2cf7?w=800&h=400&fit=crop'} alt={festival.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {festivals.map((festival) => (
+          <div key={festival._id} className="bg-white rounded-[32px] overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 group">
+            <div className="h-48 overflow-hidden">
+              <img src={festival.coverImage || 'https://images.unsplash.com/photo-1533174072545-7a4b6dad2cf7?w=800&h=400&fit=crop'} alt={festival.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            </div>
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-lg font-bold text-primary line-clamp-1">{festival.name}</h3>
+                <Badge variant={festival.status === 'published' ? 'success' : 'warning'}>{festival.status}</Badge>
               </div>
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-lg font-bold text-primary line-clamp-1">{festival.name}</h3>
-                  <Badge variant={festival.status === 'published' ? 'success' : 'warning'}>{festival.status}</Badge>
-                </div>
-                <p className="text-xs text-gray-400 mb-3">{festival.startDate ? new Date(festival.startDate).toLocaleDateString() : 'TBA'}</p>
-                <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
-                  <p className="flex items-center gap-1"><Ticket className="w-3 h-3" /> {festival.ticketsSold || 0} sold</p>
-                </div>
-                <div className="pt-4 border-t border-gray-100 flex gap-3">
-                  <Button variant="primary" size="sm" className="flex-1" onClick={() => handleManageEvent(festival._id || festival.id)}>Manage</Button>
-                  <Button variant="outline" size="sm" className="flex-1">View Public</Button>
-                </div>
+              <p className="text-xs text-gray-400 mb-3">{festival.startDate ? new Date(festival.startDate).toLocaleDateString() : 'TBA'}</p>
+              <div className="items-center gap-4 text-xs text-gray-500 mb-4 flex">
+                <p className="flex items-center gap-1"><Ticket className="w-3 h-3" /> {festival.ticketsSold || 0} sold</p>
+              </div>
+              <div className="pt-4 border-t border-gray-100 flex gap-3">
+                <Button variant="primary" size="sm" className="flex-1" onClick={() => handleManageEvent(festival._id || festival.id)}>Manage</Button>
+                <Button variant="outline" size="sm" className="flex-1">View Public</Button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
