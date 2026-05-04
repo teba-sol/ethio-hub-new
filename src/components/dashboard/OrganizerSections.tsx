@@ -2807,7 +2807,9 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
                     </div>
                     <div>
                       <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Total Price</p>
-                      <p className="text-lg font-bold text-secondary">ETB {booking.totalPrice?.toLocaleString()}</p>
+                      <p className="text-lg font-bold text-secondary">
+                        ETB {(booking.organizerAmount || (booking.totalPrice ? booking.totalPrice * 0.9 : 0)).toLocaleString()}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -2893,14 +2895,10 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
                   </span>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Booking Status</p>
-                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold capitalize ${booking.status === 'confirmed' ? 'bg-green-100 text-green-700' : booking.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
-                    {booking.status}
-                  </span>
-                </div>
-                <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Total Amount</p>
-                  <p className="text-lg font-bold text-primary">{booking.currency} {booking.totalPrice}</p>
+                  <p className="text-lg font-bold text-primary">
+                    {booking.currency} {(booking.organizerAmount || (booking.totalPrice ? booking.totalPrice * 0.9 : 0)).toLocaleString()}
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Booked On</p>
@@ -2963,7 +2961,9 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 text-sm">Total Price</span>
-                <span className="font-bold text-secondary">ETB {booking.totalPrice?.toLocaleString()}</span>
+                <span className="font-bold text-secondary">
+                  ETB {(booking.organizerAmount || (booking.totalPrice ? booking.totalPrice * 0.9 : 0)).toLocaleString()}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 text-sm">Guest</span>
@@ -3058,7 +3058,11 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
     if (eventFilter !== 'All Events' && b.festival?.name !== eventFilter) return false;
     
     // Status filter
-    if (statusFilter !== 'All' && b.status !== statusFilter.toLowerCase()) return false;
+    if (statusFilter !== 'All') {
+      const isCompleted = b.festival?.endDate && new Date(b.festival.endDate) < new Date();
+      const eventStatus = isCompleted ? 'Completed' : 'Upcoming';
+      if (eventStatus !== statusFilter) return false;
+    }
     
     // Ticket Type filter
     if (ticketTypeFilter !== 'All' && b.ticketType !== ticketTypeFilter.toLowerCase()) return false;
@@ -3105,13 +3109,11 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
   });
 
   const totalTicketsSold = eventScopedBookings.reduce((acc, b) => acc + (b.quantity || 0), 0);
-  // Count both 'confirmed' and 'completed' for booked tickets
+  // Count all booked tickets for the scoped events
    const confirmedTicketsCount = eventScopedBookings
-     .filter(b => b.status === 'confirmed' || b.status === 'completed')
      .reduce((acc, b) => acc + (b.quantity || 0), 0);
 
    const netIncomeValue = eventScopedBookings
-     .filter(b => b.status === 'confirmed' || b.status === 'completed')
      .reduce((acc, b) => {
        // Use pre-calculated organizerAmount if available, else calculate manually (90%)
        const amount = b.organizerAmount || (b.totalPrice ? b.totalPrice * 0.9 : 0);
@@ -3171,49 +3173,55 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
 
       {/* Real-Time Check-in Counter & Payout Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-          <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
-              <Ticket className="w-6 h-6" />
+        {eventFilter !== 'All Events' && (
+          <>
+            <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+              <div className="flex items-center gap-4">
+                <div className="p-4 rounded-2xl bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                  <Ticket className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Total Capacity</p>
+                  <p className="text-2xl font-bold text-primary">{totalCapacityValue.toLocaleString()}</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Total Capacity</p>
-              <p className="text-2xl font-bold text-primary">{totalCapacityValue.toLocaleString()}</p>
+            
+            <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+              <div className="flex items-center gap-4">
+                <div className="p-4 rounded-2xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                  <UserCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Booked Ticket</p>
+                  <p className="text-2xl font-bold text-primary">{confirmedTicketsCount.toLocaleString()}</p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+
+            <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+              <div className="flex items-center gap-4">
+                <div className="p-4 rounded-2xl bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
+                  <Users className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Remaining</p>
+                  <p className="text-2xl font-bold text-primary">{Math.max(0, totalCapacityValue - confirmedTicketsCount).toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
         
-        <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-          <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
-              <UserCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Booked Ticket</p>
-              <p className="text-2xl font-bold text-primary">{confirmedTicketsCount.toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-          <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
-              <Users className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Remaining</p>
-              <p className="text-2xl font-bold text-primary">{Math.max(0, totalCapacityValue - confirmedTicketsCount).toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-
         <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
           <div className="flex items-center gap-4">
             <div className="p-4 rounded-2xl bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-all">
               <DollarSign className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Net Income</p>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">
+                {eventFilter === 'All Events' ? 'Net Income for All Event' : 'Net Income'}
+              </p>
               <p className="text-2xl font-bold text-primary">ETB {netIncomeValue.toLocaleString()}</p>
             </div>
           </div>
@@ -3255,12 +3263,8 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
               className="appearance-none bg-gray-50 border-none rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer"
             >
               <option>All</option>
-              <option>Pending</option>
-              <option>Confirmed</option>
-              <option>Cancelled</option>
-              <option>Refunded</option>
-              <option>Checked-in</option>
-              <option>No-show</option>
+              <option>Upcoming</option>
+              <option>Completed</option>
             </select>
             <ArrowUpDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
           </div>
@@ -3399,21 +3403,27 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
                   <span className="text-sm font-bold text-primary">x{booking.quantity}</span>
                 </td>
                 <td className="px-6 py-4">
-                  <p className="text-sm font-bold text-secondary">{booking.currency} {booking.totalPrice}</p>
+                  <p className="text-sm font-bold text-secondary">
+                    {booking.currency} {(booking.organizerAmount || (booking.totalPrice ? booking.totalPrice * 0.9 : 0)).toLocaleString()}
+                  </p>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm text-gray-600 capitalize">{booking.paymentStatus}</span>
+                  <span className="text-sm text-gray-600 capitalize">
+                    {booking.paymentStatus?.toLowerCase() === 'pending' ? 'Chapa' : (booking.paymentMethod || booking.paymentStatus || 'Chapa')}
+                  </span>
                 </td>
                 <td className="px-6 py-4">
-                  <Badge variant="secondary" className={`border-none ${
-                    booking.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : 
-                    booking.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                    booking.status === 'completed' ? 'bg-blue-100 text-blue-700' :
-                    booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                    'bg-gray-100 text-gray-700'
-                  }`}>
-                    {booking.status}
-                  </Badge>
+                  {(() => {
+                    const isCompleted = booking.festival?.endDate && new Date(booking.festival.endDate) < new Date();
+                    const statusText = isCompleted ? 'Completed' : 'Upcoming';
+                    return (
+                      <Badge variant="secondary" className={`border-none ${
+                        isCompleted ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
+                      }`}>
+                        {statusText}
+                      </Badge>
+                    );
+                  })()}
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
