@@ -482,13 +482,13 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
             <X className="w-6 h-6" />
           </button>
           <div>
-            <h2 className="text-3xl font-serif font-bold text-primary">Create New Festival</h2>
-            <p className="text-gray-400 text-sm">Share Ethiopia's vibrant heritage with the world.</p>
+             <h2 className="text-3xl font-serif font-bold text-primary">{t("organizer.createFestival.createNewFestival")}</h2>
+             <p className="text-gray-400 text-sm">{t("organizer.createFestival.shareHeritage")}</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <Button variant="outline" leftIcon={Save}>Save Draft</Button>
-          <Button onClick={handlePublish} disabled={step !== 8}>Publish Festival</Button>
+           <Button variant="outline" leftIcon={Save}>{t("organizer.createFestival.saveDraft")}</Button>
+           <Button onClick={handlePublish} disabled={step !== 8}>{t("organizer.createFestival.publish")}</Button>
         </div>
       </header>
 
@@ -1186,21 +1186,11 @@ label={t("organizer.createFestival.fullDescription") + " *"}
                             value={formData.services.culturalServices_am.join(', ')}
                             onChange={(e) => updateServiceArray('culturalServices', 'am', e.target.value)}
                           />
-                        </div>
-                       <div>
-                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Amharic Services (comma-separated)</label>
-                         <textarea
-                           rows={4}
-                           className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all mt-2"
-                           placeholder="e.g. የባህል አድራጎቶች፣ የእጅ ጥበብ ስራቶች..."
-                           value={formData.services.culturalServices_am.join(', ')}
-                           onChange={(e) => updateServiceArray('culturalServices', 'am', e.target.value)}
-                         />
-                       </div>
-                     </div>
-                   </section>
+                         </div>
+                      </div>
+                    </section>
 
-                   {/* Special Assistance */}
+                    {/* Special Assistance */}
                    <section>
                       <h4 className="text-lg font-bold text-primary mb-4">{t("organizer.createFestival.specialAssistance")}</h4>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1255,7 +1245,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
                {/* Step 6: Policies */}
                {step === 6 && (
                  <div className="space-y-8">
-                   <h3 className="text-2xl font-serif font-bold text-primary">Policies & Terms</h3>
+                    <h3 className="text-2xl font-serif font-bold text-primary">{t("organizer.createFestival.policies")}</h3>
                    <div className="grid grid-cols-1 gap-6">
                      <DualLanguageField
                        label={t("organizer.createFestival.cancellationPolicy") + " *"}
@@ -1309,7 +1299,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
                {/* Step 7: Pricing */}
                {step === 7 && (
                  <div className="space-y-8">
-                   <h3 className="text-2xl font-serif font-bold text-primary">Pricing</h3>
+                    <h3 className="text-2xl font-serif font-bold text-primary">{t("organizer.createFestival.pricing")}</h3>
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
                      <Input
                        label={t("organizer.createFestival.baseTicketPrice") + " *"}
@@ -1342,7 +1332,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
                        onChange={(e) => setFormData({ ...formData, pricing: { ...formData.pricing, groupDiscount: parseFloat(e.target.value) || 0 } })}
                      />
                      <div>
-                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Currency</label>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">{t("organizer.createFestival.currency")}</label>
                        <select
                          value={formData.pricing.currency}
                          onChange={(e) => setFormData({ ...formData, pricing: { ...formData.pricing, currency: e.target.value } })}
@@ -1361,14 +1351,14 @@ label={t("organizer.createFestival.fullDescription") + " *"}
                {step === 8 && (
                  <div className="space-y-8">
                    <div className="text-center mb-8">
-                     <h3 className="text-2xl font-serif font-bold text-primary mb-2">Review & Publish</h3>
-                     <p className="text-gray-500">Review your festival details before publishing.</p>
+                      <h3 className="text-2xl font-serif font-bold text-primary mb-2">{t("organizer.createFestival.reviewPublish")}</h3>
+                      <p className="text-gray-500">{t("organizer.createFestival.reviewPublishDesc")}</p>
                    </div>
 
                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                      {/* Core Info Summary */}
                      <section className="bg-ethio-bg rounded-2xl p-6">
-                       <h4 className="text-lg font-bold text-primary mb-4">Core Information</h4>
+                        <h4 className="text-lg font-bold text-primary mb-4">{t("organizer.createFestival.coreInfo")}</h4>
                        <div className="space-y-3 text-sm">
                          <div>
                            <span className="font-bold">Festival Name:</span>
@@ -1403,7 +1393,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
 
                      {/* Schedule Summary */}
                      <section className="bg-ethio-bg rounded-2xl p-6">
-                       <h4 className="text-lg font-bold text-primary mb-4">Schedule ({formData.schedule.length} day{formData.schedule.length !== 1 ? 's' : ''})</h4>
+                        <h4 className="text-lg font-bold text-primary mb-4">{t("organizer.createFestival.schedule")} ({formData.schedule.length} {formData.schedule.length !== 1 ? t("organizer.createFestival.days") : t("organizer.createFestival.day")})</h4>
                        <ul className="space-y-2 text-sm">
                          {formData.schedule.map((day: any, idx: number) => (
                            <li key={idx} className="border-b border-gray-200 pb-2 last:border-0">
@@ -1425,7 +1415,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
 
                      {/* Hotels Summary */}
                      <section className="bg-ethio-bg rounded-2xl p-6">
-                       <h4 className="text-lg font-bold text-primary mb-4">Hotels ({formData.hotels.length})</h4>
+                        <h4 className="text-lg font-bold text-primary mb-4">{t("organizer.createFestival.hotels")} ({formData.hotels.length})</h4>
                        <div className="space-y-4 text-sm">
                          {formData.hotels.map((hotel: any, idx: number) => (
                            <div key={idx} className="border-b border-gray-200 pb-3 last:border-0">
@@ -1448,7 +1438,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
 
                      {/* Transport Summary */}
                      <section className="bg-ethio-bg rounded-2xl p-6">
-                       <h4 className="text-lg font-bold text-primary mb-4">Transportation ({formData.transportation.length})</h4>
+                        <h4 className="text-lg font-bold text-primary mb-4">{t("organizer.createFestival.transportation")} ({formData.transportation.length})</h4>
                        <div className="space-y-2 text-sm">
                          {formData.transportation.map((t: any, idx: number) => (
                            <div key={idx} className="border-b border-gray-200 pb-2 last:border-0">
@@ -1471,7 +1461,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
 
                      {/* Services Summary */}
                      <section className="bg-ethio-bg rounded-2xl p-6">
-                       <h4 className="text-lg font-bold text-primary mb-4">Services</h4>
+                        <h4 className="text-lg font-bold text-primary mb-4">{t("organizer.createFestival.services")}</h4>
                        <div className="text-sm space-y-2">
                          <div><span className="font-bold">Food Packages:</span> {formData.services.foodPackages.length}</div>
                          <div><span className="font-bold">Cultural Services:</span> EN: {formData.services.culturalServices_en.length}, AM: {formData.services.culturalServices_am.length}</div>
@@ -1482,7 +1472,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
 
                      {/* Policies Summary */}
                      <section className="bg-ethio-bg rounded-2xl p-6">
-                       <h4 className="text-lg font-bold text-primary mb-4">Policies</h4>
+                        <h4 className="text-lg font-bold text-primary mb-4">{t("organizer.createFestival.policies")}</h4>
                        <div className="text-sm space-y-2">
                          <div><span className="font-bold">Cancellation:</span> {formData.policies.cancellation_en ? 'Provided' : 'Not provided'}</div>
                          <div><span className="font-bold">Terms:</span> {formData.policies.terms_en ? 'Provided' : 'Not provided'}</div>
@@ -1492,7 +1482,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
 
                      {/* Pricing Summary */}
                      <section className="bg-ethio-bg rounded-2xl p-6">
-                       <h4 className="text-lg font-bold text-primary mb-4">Pricing</h4>
+                        <h4 className="text-lg font-bold text-primary mb-4">{t("organizer.createFestival.pricing")}</h4>
                        <div className="text-sm space-y-1">
                          <div><span className="font-bold">Base Price:</span> {formData.pricing.basePrice} ETB</div>
                          <div><span className="font-bold">VIP Price:</span> {formData.pricing.vipPrice} ETB</div>

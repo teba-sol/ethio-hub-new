@@ -3390,7 +3390,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
 
   useEffect(() => {
     const fetchFestivals = async () => {
@@ -3497,8 +3497,8 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
           disabled={disableCreate}
           className="w-full md:w-auto"
         >
-          Create New Festival
-        </Button>
+           {t("organizer.createFestival.createNewFestival")}
+         </Button>
       </header>
 
       {/* Festivals List */}
@@ -3512,7 +3512,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
           <div className="text-center py-20 border-2 border-dashed border-gray-200 rounded-3xl">
             <Layers className="w-12 h-12 mx-auto text-gray-300" />
             <h4 className="mt-6 text-xl font-serif font-bold text-primary">No Festivals Yet</h4>
-            <p className="text-gray-400 mt-2">Click 'Create New Festival' to get started.</p>
+             <p className="text-gray-400 mt-2">{t("organizer.createFestival.clickToCreateFestival")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
