@@ -194,7 +194,7 @@ const buildDecisionHtml = ({
   </div>
 `;
 
-const sendMail = async (to: string, subject: string, html: string) => {
+export const sendMail = async (to: string, subject: string, html: string) => {
   try {
     const transporter = getTransporter();
     const { fromEmail, fromName } = getRequiredSenderConfig();

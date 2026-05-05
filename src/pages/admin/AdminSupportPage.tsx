@@ -181,7 +181,42 @@ export const AdminSupportPage: React.FC = () => {
   const [replyText, setReplyText] = useState('');
   const [showCanned, setShowCanned] = useState(false);
   const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+const fetchTickets = async () => {
+    try {
+      const response = await fetch('/api/admin/support');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.tickets && data.tickets.length > 0) {
+          const formattedTickets: Ticket[] = data.tickets.map((t: any) => ({
+            id: t._id || t.id,
+            subject: t.subject,
+            userId: t.user?._id || t.user || 'unknown',
+            userName: t.user?.name || t.userName || 'Unknown User',
+            userEmail: t.user?.email || t.userEmail || '',
+            userAvatar: (t.user?.name || t.userName || 'U')[0]?.toUpperCase() || 'U',
+            userType: 'Free',
+            category: 'General Inquiry',
+            status: t.status === 'New' ? 'Unread' : t.status === 'In Progress' ? 'In Progress' : t.status === 'Resolved' ? 'Resolved' : 'Open',
+            priority: 'Medium',
+            createdAt: new Date(t.createdAt).toLocaleDateString(),
+            lastUpdated: new Date(t.updatedAt || t.createdAt).toLocaleDateString(),
+            messages: t.messages || [{ id: 'm1', sender: 'user', content: t.message, timestamp: new Date(t.createdAt).toLocaleDateString() }]
+          }));
+          setTickets(formattedTickets);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch tickets:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+    fetchTickets();
+  }, []);
 
   useEffect(() => {
     if (selectedTicket && messagesEndRef.current) {
@@ -227,16 +262,23 @@ export const AdminSupportPage: React.FC = () => {
     }
   };
 
-  const handleSendReply = () => {
+  const handleSendReply = async () => {
     if (!replyText.trim() || !selectedTicket) return;
     setSending(true);
-    setTimeout(() => {
+    try {
       const newMessage: Message = {
         id: `m${Date.now()}`,
         sender: 'admin',
         content: replyText,
         timestamp: 'Just now'
       };
+      await fetch(`/api/admin/support/${selectedTicket.id}/reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          reply: replyText,
+        })
+      });
       setTickets(prev => prev.map(t => {
         if (t.id === selectedTicket.id) {
           return { 
@@ -248,22 +290,47 @@ export const AdminSupportPage: React.FC = () => {
         }
         return t;
       }));
-      setSelectedTicket(prev => prev ? { ...prev, messages: [...prev.messages, newMessage], status: 'In Progress' } : null);
+      setSelectedTicket(prev => prev ? { 
+        ...prev, 
+        messages: [...prev.messages, newMessage], 
+        status: 'In Progress' 
+      } : null);
       setReplyText('');
+    } catch (err) {
+      console.error('Failed to send reply:', err);
+    } finally {
       setSending(false);
-    }, 500);
+    }
   };
 
-  const handleCloseTicket = () => {
+  const handleCloseTicket = async () => {
     if (!selectedTicket) return;
-    setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, status: 'Closed' as const } : t));
-    setSelectedTicket(prev => prev ? { ...prev, status: 'Closed' } : null);
+    try {
+      await fetch(`/api/admin/support/${selectedTicket.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Closed' })
+      });
+      setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, status: 'Closed' as const } : t));
+      setSelectedTicket(prev => prev ? { ...prev, status: 'Closed' } : null);
+    } catch (err) {
+      console.error('Failed to close ticket:', err);
+    }
   };
 
-  const handleResolveTicket = () => {
+  const handleResolveTicket = async () => {
     if (!selectedTicket) return;
-    setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, status: 'Resolved' as const } : t));
-    setSelectedTicket(prev => prev ? { ...prev, status: 'Resolved' } : null);
+    try {
+      await fetch(`/api/admin/support/${selectedTicket.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Resolved' })
+      });
+      setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, status: 'Resolved' as const } : t));
+      setSelectedTicket(prev => prev ? { ...prev, status: 'Resolved' } : null);
+    } catch (err) {
+      console.error('Failed to resolve ticket:', err);
+    }
   };
 
   const handleCannedResponse = (response: typeof CANNED_RESPONSES[0]) => {

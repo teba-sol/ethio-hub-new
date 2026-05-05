@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Product from '@/models/artisan/product.model';
+import MarketplaceReview from '@/models/review.model';
 import User from '@/models/User';
 import mongoose from 'mongoose';
 
@@ -17,10 +18,33 @@ export async function GET(
       return NextResponse.json({ message: 'Invalid product ID' }, { status: 400 });
     }
 
-    const product: any = await Product.findById(id).populate('artisanId', 'name email status profilePicture');
+    let product: any = await Product.findById(id).populate('artisanId', 'name email status profilePicture');
 
     if (!product) {
       return NextResponse.json({ message: 'Product not found' }, { status: 404 });
+    }
+
+    // Self-healing: Recalculate rating if it's 0 but there are reviews
+    if (product.rating === 0) {
+      const stats = await MarketplaceReview.aggregate([
+        { $match: { targetId: new mongoose.Types.ObjectId(id), targetType: 'Product', isApproved: true } },
+        {
+          $group: {
+            _id: '$targetId',
+            numReviews: { $sum: 1 },
+            avgRating: { $avg: '$rating' }
+          }
+        }
+      ]);
+
+      if (stats.length > 0) {
+        product.rating = Math.round(stats[0].avgRating * 10) / 10;
+        product.numReviews = stats[0].numReviews;
+        await Product.findByIdAndUpdate(id, {
+          rating: product.rating,
+          numReviews: product.numReviews
+        });
+      }
     }
 
     if (product.artisanId && product.artisanId.status === 'Suspended') {

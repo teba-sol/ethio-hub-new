@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '../../../../lib/mongodb';
 import Festival from '../../../../models/festival.model';
 import Booking from '../../../../models/booking.model';
-import Review from '../../../../models/review.model';
+import MarketplaceReview from '../../../../models/review.model';
 import * as jose from 'jose';
 
 export async function GET(request: NextRequest) {
@@ -32,7 +32,10 @@ export async function GET(request: NextRequest) {
     const festivalIds = festivals.map(f => f._id);
 
     const bookings = await Booking.find({ organizer: organizerId });
-    const reviews = await Review.find({ organizer: organizerId });
+    const reviews = await MarketplaceReview.find({ 
+      targetId: { $in: festivalIds },
+      targetType: 'Festival'
+    });
 
     const totalFestivals = festivals.length;
     const publishedFestivals = festivals.filter(f => f.status === 'Published').length;

@@ -97,7 +97,7 @@ export const OrganizerAnalyticsPage: React.FC = () => {
       status,
       bookings: Math.floor(Math.random() * 500) + 50,
       attendees: 0,
-      rating: averageRating > 0 ? averageRating : 4.5,
+      rating: averageRating > 0 ? averageRating : 0,
       health: getEventHealth(100, averageRating)
     };
   });

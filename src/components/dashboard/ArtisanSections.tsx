@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Package, ShoppingCart, CreditCard, Star, Plus, 
@@ -6,7 +6,7 @@ import {
   Users, Box, AlertTriangle, Bell, FileText, 
   HelpCircle, Lightbulb, ArrowUpRight, CheckCircle2,
   Clock, Truck, XCircle, Eye, BarChart2, Filter,
-  MessageSquare, DollarSign, RefreshCw
+  MessageSquare, DollarSign, RefreshCw, X
 } from 'lucide-react';
 import { Button, Badge, Input } from '../UI';
 import { MOCK_PRODUCTS } from '../../data/constants';
@@ -14,6 +14,7 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip,
   CartesianGrid, PieChart, Pie, Cell, BarChart, Bar, Legend
 } from 'recharts';
+import { useAuth } from '../../context/AuthContext';
 
 const DAILY_REVENUE = [
   { name: '00:00', sales: 400, orders: 1 },
@@ -390,35 +391,16 @@ export const ArtisanOverview: React.FC<{ onAddProduct: () => void; disableCreate
 
       {/* Support Modal */}
       {showSupport && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-[32px] w-full max-w-md p-8 shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="flex justify-between items-start mb-6">
-              <div className="p-3 bg-blue-50 rounded-2xl text-blue-600">
-                <HelpCircle className="w-6 h-6" />
-              </div>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowSupport(false)}>
+          <div className="bg-white w-full max-w-md rounded-3xl p-8 space-y-6 animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center">
+              <h3 className="text-2xl font-serif font-bold text-primary">Contact Support</h3>
               <button onClick={() => setShowSupport(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <XCircle className="w-6 h-6 text-gray-400" />
+                <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <h3 className="text-2xl font-serif font-bold text-primary mb-2">Contact Support</h3>
-            <p className="text-gray-500 mb-6">Our team is here to help you with any issues or questions.</p>
-            <div className="space-y-4 mb-8">
-              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center gap-4">
-                <MessageSquare className="w-5 h-5 text-primary" />
-                <div>
-                  <p className="text-sm font-bold text-primary">Live Chat</p>
-                  <p className="text-xs text-gray-500">Available Mon-Fri, 9am-6pm</p>
-                </div>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center gap-4">
-                <Bell className="w-5 h-5 text-primary" />
-                <div>
-                  <p className="text-sm font-bold text-primary">Email Support</p>
-                  <p className="text-xs text-gray-500">support@ethiocraft.com</p>
-                </div>
-              </div>
-            </div>
-            <Button className="w-full" onClick={() => setShowSupport(false)}>Close</Button>
+            <p className="text-gray-500 text-sm">Need help with your artisan studio? Send us a message and we'll get back to you shortly.</p>
+            <SupportForm onSuccess={() => setShowSupport(false)} />
           </div>
         </div>
       )}
@@ -468,6 +450,90 @@ export const ArtisanMyProductsView: React.FC<{ onAddProduct: () => void; disable
     </div>
   </div>
 );
+
+const SupportForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const { user } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subject.trim() || !message.trim()) return;
+    
+    setSending(true);
+    try {
+      const response = await fetch('/api/artisan/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject,
+          message,
+          userId: user?.id || 'anonymous',
+          userName: user?.name || 'Anonymous User',
+          userEmail: user?.email || ''
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSubmitted(true);
+        setSubject('');
+        setMessage('');
+        setTimeout(() => {
+          onSuccess();
+          setSubmitted(false);
+        }, 2000);
+      } else {
+        alert(data.message || 'Failed to submit support ticket');
+      }
+    } catch (error: any) {
+      console.error('Support ticket error:', error);
+      alert(`Error: ${error.message || 'An error occurred while submitting your ticket'}`);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="py-12 text-center space-y-4 animate-in fade-in zoom-in duration-500">
+        <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle2 className="w-10 h-10" />
+        </div>
+        <h4 className="text-2xl font-serif font-bold text-primary">Message Sent!</h4>
+        <p className="text-gray-500">Our support team will get back to you via email shortly.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Subject</label>
+        <Input 
+          placeholder="How can we help?" 
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Message</label>
+        <textarea 
+          className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary h-32 text-sm" 
+          placeholder="Describe your issue..."
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          required
+        ></textarea>
+      </div>
+      <Button className="w-full" type="submit" disabled={sending}>
+        {sending ? 'Sending...' : 'Send Message'}
+      </Button>
+    </form>
+  );
+};
 
 export const ArtisanOrdersView: React.FC = () => (
   <div className="space-y-6">

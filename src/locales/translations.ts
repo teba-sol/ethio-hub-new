@@ -1,4 +1,4 @@
-﻿export type Language = 'en' | 'am';
+export type Language = 'en' | 'am';
 
 export interface TranslationDictionary {
   [key: string]: string | TranslationDictionary;
@@ -79,7 +79,25 @@ export const translations: Record<Language, TranslationDictionary> = {
       terms: "Terms",
       international: "International"
     },
-    // Common UI (Original English)
+    reviews: {
+      verifiedPurchase: "Verified Purchase",
+      reviewedOn: "Reviewed on",
+      helpful: "Helpful",
+      thankFeedback: "Thank you for your feedback",
+      report: "Report",
+      reported: "Reported",
+      reportTitle: "Report this review",
+      optionalReason: "Optional: Why are you reporting this?",
+      reasons: {
+        offTopic: { label: "Off topic", desc: "Not about the product" },
+        inappropriate: { label: "Inappropriate", desc: "Disrespectful, hateful, obscene" },
+        fake: { label: "Fake", desc: "Paid for, inauthentic" },
+        other: { label: "Other", desc: "Something else" }
+      },
+      guidelineNote: "We'll check if this review meets our community guidelines. If it doesn't, we'll remove it.",
+      cancel: "Cancel",
+      submit: "Submit"
+    },
     common: {
       search: "Search",
       filter: "Filter",
@@ -209,6 +227,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       myEvents: "My Events",
       products: "Products",
       orders: "Orders",
+      wallet: "Wallet",
       revenue: "Revenue",
       reviews: "Reviews",
       analytics: "Analytics",
@@ -910,28 +929,6 @@ export const translations: Record<Language, TranslationDictionary> = {
       availableUnitsCount: "Available: {count} units",
       days: "days"
     },
-
-   
-    
-    reviews: {
-      verifiedPurchase: "Verified Purchase",
-      reviewedOn: "Reviewed on",
-      helpful: "Helpful",
-      thankFeedback: "Thank you for your feedback",
-      report: "Report",
-      reported: "Reported",
-      reportTitle: "Report this review",
-      optionalReason: "Optional: Why are you reporting this?",
-      reasons: {
-        offTopic: { label: "Off topic", desc: "Not about the product" },
-        inappropriate: { label: "Inappropriate", desc: "Disrespectful, hateful, obscene" },
-        fake: { label: "Fake", desc: "Paid for, inauthentic" },
-        other: { label: "Other", desc: "Something else" }
-      },
-      guidelineNote: "We'll check if this review meets our community guidelines. If it doesn't, we'll remove it.",
-      cancel: "Cancel",
-      submit: "Submit"
-     }
    },
 
    am: {
@@ -1012,8 +1009,26 @@ export const translations: Record<Language, TranslationDictionary> = {
     international: "አለም አቀፍ"
   },
 
-  // የጋራ በይነገጽ (Common UI)
-   common: {
+    reviews: {
+      verifiedPurchase: "የተረጋገጠ ግዢ",
+      reviewedOn: "ግምገማ የተሰጠው በ",
+      helpful: "ጠቃሚ ነው",
+      thankFeedback: "ለአስተያየትዎ እናመሰግናለን",
+      report: "ሪፖርት አድርግ",
+      reported: "ሪፖርት ተደርጓል",
+      reportTitle: "ይህን ግምገማ ሪፖርት ያድርጉ",
+      optionalReason: "አማራጭ፡ ለምን ሪፖርት ያደርጋሉ?",
+      reasons: {
+        offTopic: { label: "ከጉዳዩ ውጭ", desc: "ስለ ምርቱ አይደለም" },
+        inappropriate: { label: "ተገቢ ያልሆነ", desc: "አጸያፊ ወይም ጎጂ ይዘት" },
+        fake: { label: "ሐሰተኛ", desc: "አጠራጣሪ ወይም የማስተዋወቂያ ይዘት" },
+        other: { label: "ሌላ", desc: "ሌላ ነገር" }
+      },
+      guidelineNote: "ቡድናችን ይህን ሪፖርት በ24 ሰዓት ውስጥ ይመለከታል።",
+      cancel: "ሰርዝ",
+      submit: "ላክ"
+    },
+    common: {
      search: "ፈልግ",
      filter: "አጣራ",
      sort: "ደርድር",
@@ -1209,6 +1224,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     myEvents: "ዝግጅቶቼ",
     products: "ምርቶች",
     orders: "ትዕዛዞች",
+    wallet: "ቦርሳ",
     revenue: "ገቢ",
     reviews: "ግምገማዎች",
     analytics: "ትንታኔዎች",

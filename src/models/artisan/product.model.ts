@@ -26,6 +26,8 @@ export interface IProduct extends Document {
   status: 'Draft' | 'Published' | 'Archived';
   verificationStatus: 'Pending' | 'Approved' | 'Rejected';
   rejectionReason?: string;
+  rating: number;
+  numReviews: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -131,10 +133,16 @@ const ProductSchema = new Schema<IProduct>(
     rejectionReason: {
       type: String,
     },
+    rating: {
+      type: Number,
+      default: 0,
+    },
+    numReviews: {
+      type: Number,
+      default: 0,
+    },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 ProductSchema.index({ artisanId: 1, status: 1 });

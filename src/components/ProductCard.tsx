@@ -69,7 +69,7 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
           <p className="text-[10px] font-bold text-secondary uppercase tracking-widest">{product.category}</p>
           <div className="flex items-center text-xs text-gray-500">
             <Star className="w-3 h-3 text-secondary fill-current mr-1" />
-            <span className="font-bold">{product.rating}</span>
+            <span className="font-bold">{product.rating ? Number(product.rating).toFixed(1) : '0.0'}</span>
           </div>
         </div>
         

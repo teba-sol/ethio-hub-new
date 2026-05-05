@@ -2547,28 +2547,18 @@ export const OrganizerOverview: React.FC<{ onCreate?: () => void; disableCreate?
           </aside>
        </div>
 
-       {/* Support Modal */}
-       {showSupport && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowSupport(false)}>
-          <div className="bg-white w-full max-w-md rounded-3xl p-8 space-y-6 animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center">
-              <h3 className="text-2xl font-serif font-bold text-primary">Contact Support</h3>
-              <button onClick={() => setShowSupport(false)} className="p-2 hover:bg-gray-100 rounded-full"><X className="w-5 h-5 text-gray-500" /></button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Subject</label>
-                <Input placeholder="How can we help?" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Message</label>
-                <textarea className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary h-32 text-sm" placeholder="Describe your issue..."></textarea>
-              </div>
-              <Button className="w-full">Send Message</Button>
-            </div>
-          </div>
-        </div>
-       )}
+{/* Support Modal */}
+        {showSupport && (
+         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowSupport(false)}>
+           <div className="bg-white w-full max-w-md rounded-3xl p-8 space-y-6 animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
+             <div className="flex justify-between items-center">
+               <h3 className="text-2xl font-serif font-bold text-primary">Contact Support</h3>
+               <button onClick={() => setShowSupport(false)} className="p-2 hover:bg-gray-100 rounded-full"><X className="w-5 h-5 text-gray-500" /></button>
+             </div>
+             <SupportForm onSuccess={() => setShowSupport(false)} />
+           </div>
+         </div>
+        )}
 
        {/* Tips Modal */}
        {showTips && (
@@ -2599,6 +2589,91 @@ export const OrganizerOverview: React.FC<{ onCreate?: () => void; disableCreate?
         </div>
        )}
     </div>
+  );
+};
+
+const SupportForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const { user } = useAuth();
+
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subject.trim() || !message.trim()) return;
+    
+    setSending(true);
+    try {
+      const response = await fetch('/api/organizer/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject,
+          message,
+          userId: user?.id || 'anonymous',
+          userName: user?.name || 'Anonymous User',
+          userEmail: user?.email || ''
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSubmitted(true);
+        setSubject('');
+        setMessage('');
+        setTimeout(() => {
+          onSuccess();
+          setSubmitted(false);
+        }, 2000);
+      } else {
+        alert(data.message || 'Failed to submit support ticket');
+      }
+    } catch (error: any) {
+      console.error('Support ticket error:', error);
+      alert(`Error: ${error.message || 'An error occurred while submitting your ticket'}`);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="py-12 text-center space-y-4 animate-in fade-in zoom-in duration-500">
+        <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle2 className="w-10 h-10" />
+        </div>
+        <h4 className="text-2xl font-serif font-bold text-primary">Message Sent!</h4>
+        <p className="text-gray-500">Our support team will get back to you via email shortly.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Subject</label>
+        <Input 
+          placeholder="How can we help?" 
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Message</label>
+        <textarea 
+          className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary h-32 text-sm" 
+          placeholder="Describe your issue..."
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          required
+        ></textarea>
+      </div>
+      <Button className="w-full" type="submit" disabled={sending}>
+        {sending ? 'Sending...' : 'Send Message'}
+      </Button>
+    </form>
   );
 };
 
