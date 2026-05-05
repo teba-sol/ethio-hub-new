@@ -317,112 +317,39 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
   };
 
   const handlePublish = async () => {
-    const requiredFields: Record<string, any> = {
-      startDate: formData.core.startDate,
-      endDate: formData.core.endDate,
-      address: formData.core.address,
-    };
+    const allMissing: string[] = [];
 
-    // Add language-specific required fields based on preference
-    if (languagePreference !== 'am') {
-      requiredFields.name_en = formData.core.name_en;
-      requiredFields.locationName_en = formData.core.locationName_en;
-      requiredFields.shortDescription_en = formData.core.shortDescription_en;
-      requiredFields.fullDescription_en = formData.core.fullDescription_en;
-    }
-    if (languagePreference !== 'en') {
-      requiredFields.name_am = formData.core.name_am;
-      requiredFields.locationName_am = formData.core.locationName_am;
-      requiredFields.shortDescription_am = formData.core.shortDescription_am;
-      requiredFields.fullDescription_am = formData.core.fullDescription_am;
+    // Core Validation - Only require one language for text fields
+    if (!formData.core.name_en && !formData.core.name_am) allMissing.push('Festival Name (English or Amharic)');
+    if (!formData.core.startDate) allMissing.push('Start Date');
+    if (!formData.core.endDate) allMissing.push('End Date');
+    if (!formData.core.locationName_en && !formData.core.locationName_am) allMissing.push('Location Name (English or Amharic)');
+    if (!formData.core.address) allMissing.push('Address');
+    if (!formData.core.shortDescription_en && !formData.core.shortDescription_am) allMissing.push('Short Description (English or Amharic)');
+    if (!formData.core.fullDescription_en && !formData.core.fullDescription_am) allMissing.push('Full Description (English or Amharic)');
+
+    // Validate pricing
+    if (formData.pricing.basePrice == null || formData.pricing.basePrice <= 0) {
+      allMissing.push('Base ticket price must be greater than 0');
     }
 
-     const baseMissing = Object.entries(requiredFields)
-       .filter(([_, value]) => !value)
-       .map(([key]) => key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()));
-
-     // Extended validation for other sections
-     let additionalMissing: string[] = [];
-
-     // Validate schedule
-     if (!formData.schedule || formData.schedule.length === 0) {
-       additionalMissing.push('At least one schedule day is required');
-     } else {
-       formData.schedule.forEach((day: any, idx: number) => {
-         if (languagePreference !== 'am') {
-           if (!day.title_en?.trim()) additionalMissing.push(`Day ${day.day} title (English)`);
-           if (!day.activities_en?.trim()) additionalMissing.push(`Day ${day.day} activities (English)`);
-         }
-         if (languagePreference !== 'en') {
-           if (!day.title_am?.trim()) additionalMissing.push(`Day ${day.day} title (Amharic)`);
-           if (!day.activities_am?.trim()) additionalMissing.push(`Day ${day.day} activities (Amharic)`);
-         }
-       });
-     }
-
-     // Validate hotels
-     if (!formData.hotels || formData.hotels.length === 0) {
-       additionalMissing.push('At least one hotel is required');
-     } else {
-       formData.hotels.forEach((hotel: any, hIdx: number) => {
-         const num = hIdx + 1;
-         if (languagePreference !== 'am' && !hotel.name_en?.trim()) additionalMissing.push(`Hotel ${num} name (English)`);
-         if (languagePreference !== 'en' && !hotel.name_am?.trim()) additionalMissing.push(`Hotel ${num} name (Amharic)`);
-         if (languagePreference !== 'am' && !hotel.description_en?.trim()) additionalMissing.push(`Hotel ${num} short description (English)`);
-         if (languagePreference !== 'en' && !hotel.description_am?.trim()) additionalMissing.push(`Hotel ${num} short description (Amharic)`);
-         if (languagePreference !== 'am' && !hotel.fullDescription_en?.trim()) additionalMissing.push(`Hotel ${num} full description (English)`);
-         if (languagePreference !== 'en' && !hotel.fullDescription_am?.trim()) additionalMissing.push(`Hotel ${num} full description (Amharic)`);
-
-         if (!hotel.rooms || hotel.rooms.length === 0) {
-           additionalMissing.push(`Hotel ${num} must have at least one room`);
-         } else {
-           hotel.rooms.forEach((room: any, rIdx: number) => {
-             const rNum = rIdx + 1;
-             if (languagePreference !== 'am' && !room.name_en?.trim()) additionalMissing.push(`Hotel ${num} Room ${rNum} name (English)`);
-             if (languagePreference !== 'en' && !room.name_am?.trim()) additionalMissing.push(`Hotel ${num} Room ${rNum} name (Amharic)`);
-             if (!room.capacity || room.capacity <= 0) additionalMissing.push(`Hotel ${num} Room ${rNum} capacity`);
-             if (room.pricePerNight == null || room.pricePerNight < 0) additionalMissing.push(`Hotel ${num} Room ${rNum} price per night`);
-             if (room.availability == null || room.availability <= 0) additionalMissing.push(`Hotel ${num} Room ${rNum} availability`);
-           });
-         }
-       });
-     }
-
-     // Validate transportation
-     if (!formData.transportation || formData.transportation.length === 0) {
-       additionalMissing.push('At least one transportation option is required');
-     } else {
-       formData.transportation.forEach((trans: any, tIdx: number) => {
-         const num = tIdx + 1;
-         if (languagePreference !== 'am' && !trans.type_en?.trim()) additionalMissing.push(`Transport ${num} type (English)`);
-         if (languagePreference !== 'en' && !trans.type_am?.trim()) additionalMissing.push(`Transport ${num} type (Amharic)`);
-         if (trans.availability == null || trans.availability <= 0) additionalMissing.push(`Transport ${num} availability`);
-       });
-     }
-
-     // Validate pricing
-     if (formData.pricing.basePrice == null || formData.pricing.basePrice <= 0) {
-       additionalMissing.push('Base ticket price must be greater than 0');
-     }
-
-     const allMissing = [...baseMissing, ...additionalMissing];
-     if (allMissing.length > 0) {
-       alert(`Please fill out all required fields:\n- ${allMissing.join('\n- ')}`);
-       return;
-     }
+    if (allMissing.length > 0) {
+      alert(`Please fill out all required fields:\n- ${allMissing.join('\n- ')}`);
+      return;
+    }
 
     try {
       const response = await apiClient.post('/api/organizer/festivals', {
         ...formData.core,
         name_en: formData.core.name_en,
-        name_am: languagePreference === 'am' ? formData.core.name_am : undefined,
+        name_am: formData.core.name_am,
         shortDescription_en: formData.core.shortDescription_en,
-        shortDescription_am: languagePreference === 'am' ? formData.core.shortDescription_am : undefined,
+        shortDescription_am: formData.core.shortDescription_am,
         fullDescription_en: formData.core.fullDescription_en,
-        fullDescription_am: languagePreference === 'am' ? formData.core.fullDescription_am : undefined,
+        fullDescription_am: formData.core.fullDescription_am,
         location: {
           name_en: formData.core.locationName_en,
-          name_am: languagePreference === 'am' ? formData.core.locationName_am : undefined,
+          name_am: formData.core.locationName_am,
           address: formData.core.address,
           coordinates: formData.core.coordinates,
         },
