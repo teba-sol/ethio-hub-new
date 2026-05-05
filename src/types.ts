@@ -205,8 +205,8 @@ export interface Festival {
   ticketsAvailable: number;
   ticketsSold?: number;
   revenue?: number;
-  status: 'Draft' | 'Published' | 'Cancelled';
-  verificationStatus: 'Not Submitted' | 'Pending Review' | 'Under Review' | 'Approved' | 'Rejected';
+  status: 'Draft' | 'Published' | 'Completed' | 'Cancelled';
+  verificationStatus: 'Draft' | 'Pending Approval' | 'Pending Review' | 'Under Review' | 'Approved' | 'Rejected' | 'Not Submitted';
   submittedAt?: string;
   reviewedAt?: string;
   rejectionReason?: string;

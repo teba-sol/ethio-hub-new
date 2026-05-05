@@ -368,7 +368,8 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                  <ChevronLeft className="w-5 h-5" />
                </button>
                <Badge variant="secondary" className="bg-secondary/10 text-secondary border-none">
-                 {new Date(currentData.startDate) > new Date() ? 'Upcoming' : 'Live'}
+                 {currentData.status === 'Completed' || new Date(currentData.endDate) < new Date() ? 'Completed' : 
+                  currentData.status === 'Published' ? 'Published' : 'Draft'}
                </Badge>
                {currentData.isVerified && <VerifiedBadge />}
                {/* Verification Status Badge */}
@@ -475,9 +476,6 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   leftIcon={Edit3}
                 >
                   Edit Event
-                </Button>
-                <Button variant="primary" className="flex-1 lg:flex-none" leftIcon={Globe}>
-                  View Public Page
                 </Button>
                 <Button 
                   variant="outline" 
@@ -3074,7 +3072,7 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
     // Status filter
     if (statusFilter !== 'All') {
       const isCompleted = b.festival?.endDate && new Date(b.festival.endDate) < new Date();
-      const eventStatus = isCompleted ? 'Completed' : 'Upcoming';
+      const eventStatus = isCompleted ? 'Completed' : 'Published';
       if (eventStatus !== statusFilter) return false;
     }
     
@@ -3273,7 +3271,7 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
               className="appearance-none bg-gray-50 border-none rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer"
             >
               <option>All</option>
-              <option>Upcoming</option>
+              <option>Published</option>
               <option>Completed</option>
             </select>
             <ArrowUpDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
@@ -3425,7 +3423,7 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
                 <td className="px-6 py-4">
                   {(() => {
                     const isCompleted = booking.festival?.endDate && new Date(booking.festival.endDate) < new Date();
-                    const statusText = isCompleted ? 'Completed' : 'Upcoming';
+                    const statusText = isCompleted ? 'Completed' : 'Published';
                     return (
                       <Badge variant="secondary" className={`border-none ${
                         isCompleted ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
@@ -3487,7 +3485,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
   const [deleting, setDeleting] = useState(false);
   const [eventIdToDelete, setEventIdToDelete] = useState<string | null>(null);
 
-  const tabs = ['All', 'Draft', 'Published', 'Upcoming', 'Completed', 'Rejected'];
+  const tabs = ['All', 'Pending', 'Published', 'Completed', 'Draft', 'Rejected'];
 
   const handleUpdateStatus = (id: string, newStatus: string) => {
     setFestivals(prev => prev.map(f => f._id === id ? { ...f, status: newStatus as any } : f));
@@ -3525,22 +3523,29 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
 
   const filteredFestivals = festivals.filter(f => {
     // Status Filter logic
-    if (activeTab !== 'All') {
-      if (activeTab === 'Rejected') {
-        if (f.verificationStatus !== 'Rejected') return false;
+    if (activeTab === 'All') {
+      // In "All", only show Pending, Published, and Completed
+      const isPending = f.verificationStatus === 'Pending Approval' || f.verificationStatus === 'Pending Review';
+      const isPublished = f.verificationStatus === 'Approved';
+      const isCompleted = f.verificationStatus === 'Approved' && new Date(f.endDate) < new Date();
+      
+      if (!isPending && !isPublished && !isCompleted) return false;
+    } else {
+      if (activeTab === 'Pending') {
+        if (f.verificationStatus !== 'Pending Approval' && f.verificationStatus !== 'Pending Review') return false;
       } else if (activeTab === 'Published') {
-        if (f.status !== 'Published') return false;
-      } else if (activeTab === 'Upcoming') {
-        if (f.status !== 'Published' || new Date(f.endDate) < new Date()) return false;
+        if (f.verificationStatus !== 'Approved') return false;
       } else if (activeTab === 'Completed') {
-        if (f.status !== 'Published' || new Date(f.endDate) >= new Date()) return false;
-      } else {
-        if (f.status !== activeTab) return false;
+        if (!(f.verificationStatus === 'Approved' && new Date(f.endDate) < new Date())) return false;
+      } else if (activeTab === 'Draft') {
+        if (f.verificationStatus !== 'Draft') return false;
+      } else if (activeTab === 'Rejected') {
+        if (f.verificationStatus !== 'Rejected') return false;
       }
     }
     
     // Search by localized name
-    const localizedName = getLocalizedText(f, 'name', language).toLowerCase();
+    const localizedName = (getLocalizedText(f, 'name', language) || f.name || '').toLowerCase();
     if (searchQuery && !localizedName.includes(searchQuery.toLowerCase())) return false;
     
     // Date Range Filter
@@ -3548,27 +3553,36 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
       const festivalStartDate = new Date(f.startDate);
       const festivalEndDate = new Date(f.endDate);
       
+      // Reset times for date-only comparison
+      festivalStartDate.setHours(0, 0, 0, 0);
+      festivalEndDate.setHours(23, 59, 59, 999);
+      
       if (dateRange.start) {
         const filterStartDate = new Date(dateRange.start);
+        filterStartDate.setHours(0, 0, 0, 0);
         if (festivalEndDate < filterStartDate) return false;
       }
       
       if (dateRange.end) {
         const filterEndDate = new Date(dateRange.end);
+        filterEndDate.setHours(23, 59, 59, 999);
         if (festivalStartDate > filterEndDate) return false;
       }
     }
     
     return true;
   }).sort((a, b) => {
-    if (sortBy === 'Most Booked') return ((b as any).ticketsSold || 0) - ((a as any).ticketsSold || 0);
-    if (sortBy === 'Soonest') return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
-    if (sortBy === 'Newest First') return new Date((b as any).createdAt || b.submittedAt || 0).getTime() - new Date((a as any).createdAt || a.submittedAt || 0).getTime();
+    // Only apply sorting for Completed tab
+    if (activeTab === 'Completed') {
+      if (sortBy === 'Most Booked') return ((b as any).ticketsSold || 0) - ((a as any).ticketsSold || 0);
+      if (sortBy === 'Soonest') return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+      if (sortBy === 'Newest First') return new Date((b as any).createdAt || b.submittedAt || 0).getTime() - new Date((a as any).createdAt || a.submittedAt || 0).getTime();
+    }
     return 0;
   });
 
   const totalEvents = festivals.length;
-  const activeEvents = festivals.filter(f => ['Upcoming'].includes(f.status)).length;
+  const activeEvents = festivals.filter(f => f.status === 'Published').length;
   const totalTickets = festivals.reduce((acc, f) => acc + ((f as any).ticketsSold || 0), 0);
 
   if (error) {
@@ -3598,7 +3612,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
       <div className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
           <h3 className="text-2xl font-serif font-bold text-primary">
-            {festivals.length} {festivals.length === 1 ? 'Posted Event' : 'Posted Events'}
+            {filteredFestivals.length} {filteredFestivals.length === 1 ? 'Posted Event' : 'Posted Events'}
           </h3>
           
           <div className="w-full lg:w-auto flex flex-wrap items-center gap-4">
@@ -3686,19 +3700,21 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
               )}
             </div>
 
-            {/* Sort Dropdown */}
-            <div className="relative min-w-[160px]">
-              <select 
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="w-full appearance-none bg-gray-50 border-none rounded-2xl py-3 pl-5 pr-12 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer shadow-sm hover:bg-gray-100"
-              >
-                <option value="Newest First">Newest First</option>
-                <option value="Soonest">Soonest</option>
-                <option value="Most Booked">Most Booked</option>
-              </select>
-              <ArrowUpDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
+            {/* Sort Dropdown - Only show for Completed tab */}
+            {activeTab === 'Completed' && (
+              <div className="relative min-w-[160px]">
+                <select 
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="w-full appearance-none bg-gray-50 border-none rounded-2xl py-3 pl-5 pr-12 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer shadow-sm hover:bg-gray-100"
+                >
+                  <option value="Newest First">Newest First</option>
+                  <option value="Soonest">Soonest</option>
+                  <option value="Most Booked">Most Booked</option>
+                </select>
+                <ArrowUpDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+            )}
           </div>
         </div>
 
@@ -3710,7 +3726,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {festivals.map(festival => (
+            {filteredFestivals.map(festival => (
               <div key={festival._id} onClick={() => onManageEvent(festival._id || festival.id)} className="bg-white border border-gray-100 rounded-[32px] overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 group cursor-pointer">
                 <div className="h-48 overflow-hidden">
                   <img src={festival.coverImage || `https://picsum.photos/seed/${festival._id}/600/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={getLocalizedText(festival, 'name', language)} />
@@ -3720,14 +3736,15 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
                     <h4 className="text-lg font-serif font-bold text-primary leading-tight pr-4">{getLocalizedText(festival, 'name', language)}</h4>
                     <Badge variant={
                       festival.verificationStatus === 'Rejected' ? 'error' : 
+                      (festival.verificationStatus === 'Pending Approval' || festival.verificationStatus === 'Pending Review') ? 'warning' :
                       festival.status === 'Draft' ? 'secondary' : 
-                      (new Date(festival.endDate) < new Date() ? 'outline' : 'success')
+                      (festival.status === 'Completed' || new Date(festival.endDate) < new Date() ? 'outline' : 'success')
                     }>
                       {
                         festival.verificationStatus === 'Rejected' ? 'Rejected' : 
+                        (festival.verificationStatus === 'Pending Approval' || festival.verificationStatus === 'Pending Review') ? 'Pending' :
                         festival.status === 'Draft' ? 'Draft' : 
-                        (new Date(festival.endDate) < new Date() ? 'Completed' : 
-                         new Date(festival.startDate) > new Date() ? 'Upcoming' : 'Live')
+                        (festival.status === 'Completed' || new Date(festival.endDate) < new Date() ? 'Completed' : 'Published')
                       }
                     </Badge>
                   </div>
@@ -3737,67 +3754,77 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
                   </div>
                   <div className="pt-4 border-t border-gray-100 flex flex-col gap-2">
                     <div className="flex gap-2">
-                      <Button variant="primary" size="sm" className="flex-1" onClick={() => onManageEvent(festival._id || festival.id)}>Manage</Button>
-                      <Button variant="outline" size="sm" className="flex-1" disabled={festival.verificationStatus === 'Approved'}>View Public</Button>
+                      <Button variant="primary" size="sm" className="flex-1" onClick={(e) => { e.stopPropagation(); onManageEvent(festival._id || festival.id); }}>Manage</Button>
                     </div>
-                     {[(festival as any).verificationStatus === 'Draft', (festival as any).verificationStatus === 'Rejected'].includes(true) && (
-                       <Button 
-                         variant="secondary" 
-                         size="sm" 
-                         className="w-full"
-                         onClick={async (e) => {
-                           e.stopPropagation();
-                           try {
-                             const res = await fetch(`/api/organizer/festivals/${festival._id}/submit`, { method: 'POST' });
-                             const data = await res.json();
-                             if (data.success) {
-                               setFestivals(prev => prev.map(f => f._id === festival._id ? { ...f, verificationStatus: 'Pending Review', submittedAt: new Date().toISOString() } : f));
-                               alert('Event submitted for review');
-                             } else {
-                               alert(data.message || 'Failed to submit');
+                     {(festival.status === 'Draft' && (festival.verificationStatus === 'Draft' || festival.verificationStatus === 'Rejected')) && (
+                       <div className="space-y-3">
+                         {festival.verificationStatus === 'Rejected' && (
+                           <div className="p-3 bg-red-50 border border-red-100 rounded-xl">
+                             <p className="text-[10px] font-bold text-red-600 uppercase mb-1">Rejection Reason</p>
+                             <p className="text-xs text-red-700">{festival.rejectionReason || 'Please edit and resubmit your event'}</p>
+                           </div>
+                         )}
+                         <Button 
+                           variant="secondary" 
+                           size="sm" 
+                           className="w-full"
+                           onClick={async (e) => {
+                             e.stopPropagation();
+                             
+                             // Mandatory Field Validation
+                             const missingFields = [];
+                             if (!festival.name_en && !festival.name) missingFields.push('Festival Name');
+                             if (!festival.startDate) missingFields.push('Start Date');
+                             if (!festival.endDate) missingFields.push('End Date');
+                             if (!festival.locationName && (!festival.location || !festival.location.name_en)) missingFields.push('Location');
+                             if (!festival.shortDescription_en && !festival.shortDescription) missingFields.push('Short Description');
+                             if (!festival.fullDescription_en && !festival.fullDescription) missingFields.push('Full Description');
+                             if (!festival.coverImage) missingFields.push('Cover Image');
+                             if (!festival.pricing || (festival.pricing.basePrice === undefined && festival.pricing.regularPrice === undefined)) missingFields.push('Pricing');
+
+                             if (missingFields.length > 0) {
+                               alert(`Please fill in all mandatory fields before submitting for review:\n- ${missingFields.join('\n- ')}`);
+                               return;
                              }
-                           } catch (err) {
-                             alert('Error submitting event');
-                           }
-                         }}
-                       >
-                         {(festival as any).verificationStatus === 'Rejected' ? 'Resubmit for Review' : 'Submit for Review'}
-                       </Button>
+
+                             try {
+                               const res = await fetch(`/api/organizer/festivals/${festival._id}/submit`, { method: 'POST' });
+                               const data = await res.json();
+                               if (data.success) {
+                                 setFestivals(prev => prev.map(f => f._id === festival._id ? { ...f, verificationStatus: 'Pending Approval', submittedAt: new Date().toISOString() } : f));
+                                 alert('Event submitted for review');
+                               } else {
+                                 alert(data.message || 'Failed to submit');
+                               }
+                             } catch (err) {
+                               alert('Error submitting event');
+                             }
+                           }}
+                         >
+                           {festival.verificationStatus === 'Rejected' ? 'Resubmit for Review' : 'Submit for Review'}
+                         </Button>
+                       </div>
                      )}
-                    {(festival as any).verificationStatus === 'Pending Review' && (
-                      <div className="text-center text-xs text-amber-600 py-1 bg-amber-50 rounded-lg">
+                    {(festival.verificationStatus === 'Pending Approval' || festival.verificationStatus === 'Pending Review') && (
+                      <div className="text-center text-xs text-amber-600 py-2 bg-amber-50 rounded-xl font-bold uppercase tracking-wider border border-amber-100">
                         Awaiting Admin Review
                       </div>
                     )}
-                    {festival.verificationStatus === 'Approved' && (
+                    {festival.verificationStatus === 'Approved' && festival.status === 'Published' && (
                       <>
-                        <div className="text-center text-xs text-emerald-600 py-1 bg-emerald-50 rounded-lg">
-                          Published
+                        <div className="text-center text-xs text-emerald-600 py-2 bg-emerald-50 rounded-xl font-bold uppercase tracking-wider border border-emerald-100">
+                          Published & Live
                         </div>
-                        {(festival as any).isEditedAfterApproval && (
-                          <div className="text-center text-xs text-amber-600 py-1 bg-amber-50 rounded-lg mt-1">
+                        {festival.isEditedAfterApproval && (
+                          <div className="text-center text-xs text-amber-600 py-2 bg-amber-50 rounded-xl font-bold uppercase tracking-wider border border-amber-100 mt-1">
                             Pending Re-verification
                           </div>
                         )}
                       </>
                     )}
-                    {festival.verificationStatus === 'Rejected' && (
-                      <div className="space-y-2">
-                        <div className="p-3 bg-red-50 border border-red-100 rounded-xl">
-                          <p className="text-[10px] font-bold text-red-600 uppercase mb-1">Rejection Reason</p>
-                          <p className="text-xs text-red-700">{(festival as any).rejectionReason || 'Please edit and resubmit your event'}</p>
-                        </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="w-full text-red-600 border-red-200 hover:bg-red-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onManageEvent(festival._id || '');
-                          }}
-                        >
-                          Edit & Resubmit
-                        </Button>
+                    {(festival.status === 'Completed' || (festival.status === 'Published' && new Date(festival.endDate) < new Date())) && (
+                      <div className="text-center text-xs text-gray-500 py-2 bg-gray-50 rounded-xl font-bold uppercase tracking-wider border border-gray-100">
+                        Event Completed
                       </div>
                     )}
                   </div>
@@ -3894,22 +3921,33 @@ export const OrganizerDashboard: React.FC = () => {
       </header>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {festivals.map((festival) => (
-          <div key={festival._id} className="bg-white rounded-[32px] overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 group">
+          <div key={festival._id} onClick={() => handleManageEvent(festival._id || festival.id)} className="bg-white rounded-[32px] overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 group cursor-pointer">
             <div className="h-48 overflow-hidden">
               <img src={festival.coverImage || 'https://images.unsplash.com/photo-1533174072545-7a4b6dad2cf7?w=800&h=400&fit=crop'} alt={festival.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
             </div>
             <div className="p-6">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="text-lg font-bold text-primary line-clamp-1">{festival.name}</h3>
-                <Badge variant={festival.status === 'published' ? 'success' : 'warning'}>{festival.status}</Badge>
+                <Badge variant={
+                  festival.verificationStatus === 'Rejected' ? 'error' : 
+                  (festival.verificationStatus === 'Pending Approval' || festival.verificationStatus === 'Pending Review') ? 'warning' :
+                  festival.status === 'Draft' ? 'secondary' : 
+                  (festival.status === 'Completed' || new Date(festival.endDate) < new Date() ? 'outline' : 'success')
+                }>
+                  {
+                    festival.verificationStatus === 'Rejected' ? 'Rejected' : 
+                    (festival.verificationStatus === 'Pending Approval' || festival.verificationStatus === 'Pending Review') ? 'Pending' :
+                    festival.status === 'Draft' ? 'Draft' : 
+                    (festival.status === 'Completed' || new Date(festival.endDate) < new Date() ? 'Completed' : 'Published')
+                  }
+                </Badge>
               </div>
               <p className="text-xs text-gray-400 mb-3">{festival.startDate ? new Date(festival.startDate).toLocaleDateString() : 'TBA'}</p>
               <div className="items-center gap-4 text-xs text-gray-500 mb-4 flex">
                 <p className="flex items-center gap-1"><Ticket className="w-3 h-3" /> {festival.ticketsSold || 0} sold</p>
               </div>
               <div className="pt-4 border-t border-gray-100 flex gap-3">
-                <Button variant="primary" size="sm" className="flex-1" onClick={() => handleManageEvent(festival._id || festival.id)}>Manage</Button>
-                <Button variant="outline" size="sm" className="flex-1">View Public</Button>
+                <Button variant="primary" size="sm" className="flex-1" onClick={(e) => { e.stopPropagation(); handleManageEvent(festival._id || festival.id); }}>Manage</Button>
               </div>
             </div>
           </div>

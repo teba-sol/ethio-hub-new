@@ -6,6 +6,21 @@ import Review from '../../../../models/review.model';
 import User from '../../../../models/User';
 import * as jose from 'jose';
 
+// Define types for better TypeScript support
+interface Alert {
+  id: string;
+  type: 'booking' | 'review';
+  message: string;
+  time: Date;
+}
+
+interface MostBookedEvent {
+  id: any;
+  name: string;
+  coverImage: any;
+  bookings: number;
+}
+
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
@@ -38,7 +53,8 @@ export async function GET(request: NextRequest) {
         { organizer: organizerId },
         { festival: { $in: festivalIds } }
       ]
-    }).populate('tourist', 'touristProfile');
+    }).populate('tourist', 'touristProfile name email');
+    
     const reviews = await Review.find({ organizer: organizerId });
 
     const totalFestivals = festivals.length;
@@ -56,21 +72,28 @@ export async function GET(request: NextRequest) {
       ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length 
       : 0;
 
-    const recentBookings = await Booking.find({ organizer: organizerId })
+    const recentBookings = await Booking.find({ 
+      $or: [
+        { organizer: organizerId },
+        { festival: { $in: festivalIds } }
+      ]
+    })
       .populate('tourist', 'name email touristProfile')
       .populate('festival', 'name')
       .sort({ createdAt: -1 })
       .limit(5);
 
     // Latest Alerts: Recent Bookings + Recent Reviews
-    const latestAlerts = [];
+    const latestAlerts: Alert[] = [];
     
     // Add bookings to alerts
     recentBookings.forEach(b => {
+      const festivalName = (b.festival as any)?.name || 'your event';
+      const touristName = (b.tourist as any)?.name || 'a tourist';
       latestAlerts.push({
         id: `booking-${b._id}`,
         type: 'booking',
-        message: `New booking from ${(b.tourist as any)?.name || 'a tourist'}`,
+        message: `New booking for ${festivalName} from ${touristName}`,
         time: b.createdAt,
       });
     });
@@ -78,14 +101,16 @@ export async function GET(request: NextRequest) {
     // Add reviews to alerts
     const recentReviews = await Review.find({ organizer: organizerId })
       .populate('tourist', 'name')
+      .populate('festival', 'name')
       .sort({ createdAt: -1 })
       .limit(5);
 
     recentReviews.forEach(r => {
+      const festivalName = (r.festival as any)?.name || 'your event';
       latestAlerts.push({
         id: `review-${r._id}`,
         type: 'review',
-        message: `${r.rating}-star review on ${(r as any).festivalName || 'your event'}`,
+        message: `${r.rating}-star review on ${festivalName}`,
         time: r.createdAt,
       });
     });
@@ -94,7 +119,7 @@ export async function GET(request: NextRequest) {
     latestAlerts.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
 
     // 7-Day Booking Trend
-    const last7Days = [];
+    const last7Days: string[] = [];
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
@@ -114,14 +139,14 @@ export async function GET(request: NextRequest) {
     });
 
     // Top Visitor Locations
-     const locationCounts: Record<string, number> = {};
-     let totalLocationBookings = 0;
+    const locationCounts: Record<string, number> = {};
+    let totalLocationBookings = 0;
  
-     for (const b of bookings) {
-       const country = (b.tourist as any)?.touristProfile?.country || 'Unknown';
-       locationCounts[country] = (locationCounts[country] || 0) + 1;
-       totalLocationBookings++;
-     }
+    for (const b of bookings) {
+      const country = (b.tourist as any)?.touristProfile?.country || 'Unknown';
+      locationCounts[country] = (locationCounts[country] || 0) + 1;
+      totalLocationBookings++;
+    }
 
     const visitorLocations = Object.entries(locationCounts)
       .map(([country, count]) => ({
@@ -164,7 +189,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    let mostBookedEvent = null;
+    let mostBookedEvent: MostBookedEvent | null = null;
     if (mostBookedFestivalId) {
       // Find the festival from our already fetched list or from DB
       const festival = festivals.find(f => f._id.toString() === mostBookedFestivalId) || 
@@ -173,12 +198,22 @@ export async function GET(request: NextRequest) {
       if (festival) {
         mostBookedEvent = {
           id: festival._id,
-          name: festival.name,
+          name: festival.name || festival.name_en || 'Unnamed Festival',
           coverImage: festival.coverImage,
-          bookings: maxTickets, // This now represents total tickets sold
+          bookings: maxTickets,
         };
       }
     }
+
+    // Format recentBookings for response
+    const formattedRecentBookings = recentBookings.map(booking => ({
+      _id: booking._id,
+      tourist: booking.tourist,
+      festival: booking.festival,
+      status: booking.status,
+      totalPrice: booking.totalPrice,
+      createdAt: booking.createdAt,
+    }));
 
     return new NextResponse(
       JSON.stringify({
@@ -207,7 +242,7 @@ export async function GET(request: NextRequest) {
             approved: reviews.filter(r => r.isApproved).length,
             pending: reviews.filter(r => !r.isApproved).length,
           },
-          recentBookings,
+          recentBookings: formattedRecentBookings,
           latestAlerts: latestAlerts.slice(0, 5),
           visitorLocations,
           mostBookedEvent,

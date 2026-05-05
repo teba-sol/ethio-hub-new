@@ -255,7 +255,68 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
      return { primary: en, secondary: '', showBoth: false };
    };
 
-   const handlePublish = async () => {
+  const handleFileUpload = async (file: File, isCover: boolean = false) => {
+    const uploadFormData = new FormData();
+    uploadFormData.append('file', file);
+
+    try {
+      const response = await fetch('/api/upload', { method: 'POST', body: uploadFormData });
+      const data = await response.json();
+
+      if (data.success) {
+        if (isCover) {
+          setFormData(prev => ({ ...prev, core: { ...prev.core, coverImage: data.url } }));
+        } else {
+          setFormData(prev => ({ ...prev, core: { ...prev.core, gallery: [...prev.core.gallery, data.url] } }));
+        }
+      } else {
+        alert('Failed to upload image: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('An error occurred during upload');
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    try {
+      const response = await apiClient.post('/api/organizer/festivals', {
+        ...formData.core,
+        name_en: formData.core.name_en,
+        name_am: languagePreference === 'am' ? formData.core.name_am : undefined,
+        shortDescription_en: formData.core.shortDescription_en,
+        shortDescription_am: languagePreference === 'am' ? formData.core.shortDescription_am : undefined,
+        fullDescription_en: formData.core.fullDescription_en,
+        fullDescription_am: languagePreference === 'am' ? formData.core.fullDescription_am : undefined,
+        location: {
+          name_en: formData.core.locationName_en,
+          name_am: languagePreference === 'am' ? formData.core.locationName_am : undefined,
+          address: formData.core.address,
+          coordinates: formData.core.coordinates,
+        },
+        schedule: formData.schedule,
+        hotels: formData.hotels,
+        transportation: formData.transportation,
+        services: formData.services,
+        policies: formData.policies,
+        pricing: formData.pricing,
+        status: 'Draft',
+        verificationStatus: 'Draft'
+      });
+
+      if (response.success) {
+        alert('Festival saved as draft successfully!');
+        router.push('/dashboard/organizer/festivals');
+      } else {
+        alert(`Failed to save draft: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      alert('An error occurred while saving the draft.');
+    }
+  };
+
+  const handlePublish = async () => {
     const requiredFields: Record<string, any> = {
       startDate: formData.core.startDate,
       endDate: formData.core.endDate,
@@ -352,34 +413,33 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
 
     try {
       const response = await apiClient.post('/api/organizer/festivals', {
+        ...formData.core,
         name_en: formData.core.name_en,
         name_am: languagePreference === 'am' ? formData.core.name_am : undefined,
         shortDescription_en: formData.core.shortDescription_en,
         shortDescription_am: languagePreference === 'am' ? formData.core.shortDescription_am : undefined,
         fullDescription_en: formData.core.fullDescription_en,
         fullDescription_am: languagePreference === 'am' ? formData.core.fullDescription_am : undefined,
-        startDate: formData.core.startDate,
-        endDate: formData.core.endDate,
-        totalCapacity: formData.core.totalCapacity,
         location: {
           name_en: formData.core.locationName_en,
           name_am: languagePreference === 'am' ? formData.core.locationName_am : undefined,
           address: formData.core.address,
           coordinates: formData.core.coordinates,
         },
-        coverImage: formData.core.coverImage,
-        gallery: formData.core.gallery,
         schedule: formData.schedule,
         hotels: formData.hotels,
         transportation: formData.transportation,
         services: formData.services,
         policies: formData.policies,
         pricing: formData.pricing,
+        status: 'Draft',
+        verificationStatus: 'Pending Approval',
+        submittedAt: new Date().toISOString()
       });
 
       if (response.success) {
-        alert('Festival Published Successfully!');
-        router.push('/dashboard/organizer/overview');
+        alert('Festival submitted for verification successfully!');
+        router.push('/dashboard/organizer/festivals');
       } else {
         alert(`Failed to publish festival: ${response.message}`);
       }
@@ -434,7 +494,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <Button variant="outline" leftIcon={Save}>Save Draft</Button>
+          <Button variant="outline" leftIcon={Save} onClick={handleSaveDraft}>Save Draft</Button>
           <Button onClick={handlePublish} disabled={step !== 8}>Publish Festival</Button>
         </div>
       </header>

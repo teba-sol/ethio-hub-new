@@ -120,7 +120,7 @@ export interface IFestival extends Document {
   organizer: mongoose.Types.ObjectId;
   coverImage?: string;
   gallery?: string[];
-  status: 'Draft' | 'Published' | 'Cancelled';
+  status: 'Draft' | 'Published' | 'Completed' | 'Cancelled';
   isVerified: boolean;
   verificationStatus: 'Draft' | 'Pending Approval' | 'Under Review' | 'Approved' | 'Rejected';
   submittedAt?: Date;
@@ -287,7 +287,7 @@ const FestivalSchema: Schema = new Schema(
     gallery: [{ type: String }],
     status: {
       type: String,
-      enum: ['Draft', 'Published', 'Cancelled'],
+      enum: ['Draft', 'Published', 'Completed', 'Cancelled'],
       default: 'Draft',
     },
     isVerified: { type: Boolean, default: false },
