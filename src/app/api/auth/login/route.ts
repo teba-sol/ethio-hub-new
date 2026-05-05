@@ -26,9 +26,9 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Login request body:', body); // <-- Add this line for debugging
-    const { token, user } = await authService.login(body);
+const { token, user, showSuspensionModal } = await authService.login(body);
 
-    const serialized = serialize("sessionToken", token, {
+const serialized = serialize("sessionToken", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       path: "/",
     });
 
-    const response = NextResponse.json({ success: true, user }, { status: 200 });
+    const response = NextResponse.json({ success: true, user, showSuspensionModal }, { status: 200 });
 
     response.headers.set("Set-Cookie", serialized);
 

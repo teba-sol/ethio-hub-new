@@ -8,7 +8,7 @@ import {
   EyeOff,
   Calendar as CalIcon,
 } from "lucide-react";
-import { Button, Input } from "../components/UI";
+import { Button, Input, Modal, SuspensionModal } from "../components/UI";
 import { useAuth } from "../context/AuthContext";
 
 import { UserRole } from "../types";
@@ -32,9 +32,55 @@ export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [suspendedReason, setSuspendedReason] = useState<string | null>(null);
+  const [showSuspensionModal, setShowSuspensionModal] = useState(false);
+const [pendingUser, setPendingUser] = useState<any>(null);
   const { login } = useAuth();
   const router = useRouter();
+
+  const redirectToDashboard = (user: any) => {
+    const userRole = user.role?.toLowerCase();
+    const organizerStatus = user.organizerStatus;
+    const artisanStatus = user.artisanStatus;
+
+    if (userRole === "organizer") {
+      if (organizerStatus === "Not Submitted") {
+        router.push("/dashboard/organizer/onboarding");
+      } else if (
+        organizerStatus === "Pending" ||
+        organizerStatus === "Under Review"
+      ) {
+        router.push("/organizer/waiting");
+      } else if (
+        organizerStatus === "Rejected" ||
+        organizerStatus === "Modification Requested"
+      ) {
+        router.push("/dashboard/organizer/onboarding");
+      } else if (organizerStatus === "Approved") {
+        router.push("/dashboard/organizer/overview");
+      }
+    } else if (userRole === "artisan") {
+      if (artisanStatus === "Not Submitted") {
+        router.push("/dashboard/artisan/onboarding");
+      } else if (
+        artisanStatus === "Pending" ||
+        artisanStatus === "Under Review"
+      ) {
+        router.push("/artisan/waiting");
+      } else if (artisanStatus === "Approved") {
+        router.push("/dashboard/artisan/overview");
+      }
+    } else {
+      router.push(userRole === "admin" ? "/dashboard/admin/overview" : "/");
+    }
+  };
+
+  const handleSuspensionModalClose = () => {
+    setShowSuspensionModal(false);
+    if (pendingUser) {
+      redirectToDashboard(pendingUser);
+      setPendingUser(null);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,47 +88,19 @@ export const LoginPage: React.FC = () => {
       const res = await login({ email, password });
 
       if (res.success) {
-        const userRole = res.user.role?.toLowerCase();
-        const organizerStatus = res.user.organizerStatus;
-        const artisanStatus = res.user.artisanStatus;
-
-        if (userRole === "organizer") {
-          if (organizerStatus === "Not Submitted") {
-            router.push("/dashboard/organizer/onboarding");
-          } else if (
-            organizerStatus === "Pending" ||
-            organizerStatus === "Under Review"
-          ) {
-            router.push("/organizer/waiting");
-          } else if (
-            organizerStatus === "Rejected" ||
-            organizerStatus === "Modification Requested"
-          ) {
-            router.push("/dashboard/organizer/onboarding");
-          } else if (organizerStatus === "Approved") {
-            router.push("/dashboard/organizer/overview");
-          }
-        } else if (userRole === "artisan") {
-          if (artisanStatus === "Not Submitted") {
-            router.push("/dashboard/artisan/onboarding");
-          } else if (
-            artisanStatus === "Pending" ||
-            artisanStatus === "Under Review"
-          ) {
-            router.push("/artisan/waiting");
-          } else if (artisanStatus === "Approved") {
-            router.push("/dashboard/artisan/overview");
-          }
-        } else {
-          router.push(userRole === "admin" ? "/dashboard/admin/overview" : "/");
+        if (res.showSuspensionModal) {
+          setPendingUser(res.user);
+          setShowSuspensionModal(true);
+          return;
         }
-       } else {
-         alert(res.message || t("auth.loginFailed"));
-       }
-     } catch (error: any) {
-       console.error("Login error:", error);
-       alert(error.message || t("auth.unexpectedError"));
-     }
+        redirectToDashboard(res.user);
+      } else {
+        alert(res.message || t("auth.loginFailed"));
+      }
+    } catch (error: any) {
+      console.error("Login error:", error);
+      alert(error.message || t("auth.unexpectedError"));
+    }
   };
 
    return (
@@ -93,20 +111,15 @@ export const LoginPage: React.FC = () => {
              {t("auth.loginTitle")}
            </h1>
            <p className="text-gray-500">{t("auth.loginSubtitle")}</p>
-         </div>
-
-        {suspendedReason && (
-          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4">
-            <p className="text-sm font-bold text-red-700">
-              {t("auth.suspendedTitle")}
-            </p>
-            <p className="mt-1 text-sm text-red-700">
-              {t("auth.suspendedReasonLabel")} {suspendedReason}
-            </p>
           </div>
-        )}
 
-         <form onSubmit={handleLogin} className="space-y-6">
+          <SuspensionModal
+            isOpen={showSuspensionModal}
+            onClose={handleSuspensionModalClose}
+            reason={pendingUser?.suspensionReason}
+          />
+
+          <form onSubmit={handleLogin} className="space-y-6">
 
            <Input
              label={t("auth.email")}

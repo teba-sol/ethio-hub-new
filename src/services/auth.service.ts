@@ -37,6 +37,15 @@ export const login = async (credentials: { email: string; password: string }) =>
   // Refresh user from DB to get latest data
 const freshUser = await User.findById(user._id);
 
+let showSuspensionModal = false;
+
+// Check if user is suspended and hasn't been notified yet
+if (freshUser.status === 'Suspended' && !freshUser.suspensionNotified) {
+  showSuspensionModal = true;
+  freshUser.suspensionNotified = true;
+  await freshUser.save();
+}
+
 return { 
     token, 
     user: { 
@@ -52,7 +61,8 @@ return {
       organizerStatus: freshUser.organizerStatus || 'Not Submitted',
       organizerProfile: freshUser.organizerProfile || null,
       touristProfile: freshUser.touristProfile || null,
-    } 
+    },
+    showSuspensionModal
   };
 };
 
