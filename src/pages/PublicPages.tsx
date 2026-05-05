@@ -732,6 +732,8 @@ export const ProductListingPage: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [minPrice, setMinPrice] = useState<string>("");
+  const [maxPrice, setMaxPrice] = useState<string>("");
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -787,10 +789,26 @@ export const ProductListingPage: React.FC = () => {
 
   const filtered = products.filter(p => {
     const localizedName = getLocalizedField(p, 'name');
-    const matchesSearch = localizedName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          p.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const artisanName = p.artisanName || "";
+    const category = p.category || "";
+    const priceStr = p.price?.toString() || "";
+
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = 
+      localizedName.toLowerCase().includes(searchLower) || 
+      artisanName.toLowerCase().includes(searchLower) ||
+      category.toLowerCase().includes(searchLower) ||
+      priceStr.includes(searchLower);
+
     const matchesCategory = selectedCategory === "All" || p.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    
+    // Price range filtering (Sidebar inputs)
+    const price = Number(p.price);
+    const min = minPrice !== "" ? Number(minPrice) : 0;
+    const max = maxPrice !== "" ? Number(maxPrice) : Infinity;
+    const matchesPrice = price >= min && price <= max;
+
+    return matchesSearch && matchesCategory && matchesPrice;
   });
 
   return (
@@ -858,61 +876,95 @@ export const ProductListingPage: React.FC = () => {
                      })}
                    </div>
 
-                   {/* Price Range (Mock) */}
+                   {/* Price Range */}
                    <div className="mt-8 pt-8 border-t border-gray-100">
                      <h3 className="font-bold text-primary mb-4 text-sm">{t("home.priceRange")}</h3>
-                     <div className="space-y-3 text-sm text-gray-600">
-                         <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
-                             <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" /> 
-                             <span>{t("home.under50")}</span>
-                         </label>
-                         <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
-                             <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" /> 
-                             <span>{t("home.price50to100")}</span>
-                         </label>
-                         <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
-                             <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" /> 
-                             <span>{t("home.price100to200")}</span>
-                         </label>
-                         <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
-                             <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" /> 
-                             <span>{t("home.over200")}</span>
-                         </label>
-                         </div>
-                       </div>
-                       
-                        {/* Rating (Mock) */}
-                        <div className="mt-8 pt-8 border-t border-gray-100">
-                          <h3 className="font-bold text-primary mb-4 text-sm">{t("home.averageCustomerReview")}</h3>
-                          <div className="space-y-2">
-                              {[4, 3, 2, 1].map((rating) => (
-                                  <div key={rating} className="flex items-center gap-2 cursor-pointer hover:opacity-80 group">
-                                      <div className="flex text-yellow-400">
-                                          {[...Array(5)].map((_, i) => (
-                                              <Star key={i} className={`w-3.5 h-3.5 ${i < rating ? 'fill-current' : 'text-gray-200'}`} />
-                                          ))}
-                                      </div>
-                                      <span className="text-xs text-gray-500 group-hover:text-primary transition-colors">{t("home.andUp")}</span>
-                                  </div>
-                              ))}
-                          </div>
+                     <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-2">
+                           <div>
+                              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">Min Price</label>
+                              <div className="relative">
+                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+                                 <input 
+                                    type="number" 
+                                    placeholder="0"
+                                    value={minPrice}
+                                    onChange={(e) => setMinPrice(e.target.value)}
+                                    className="w-full pl-6 pr-2 py-2 bg-gray-50 border-none rounded-lg text-xs focus:ring-2 focus:ring-primary/20 transition-all"
+                                 />
+                              </div>
+                           </div>
+                           <div>
+                              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">Max Price</label>
+                              <div className="relative">
+                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+                                 <input 
+                                    type="number" 
+                                    placeholder="Any"
+                                    value={maxPrice}
+                                    onChange={(e) => setMaxPrice(e.target.value)}
+                                    className="w-full pl-6 pr-2 py-2 bg-gray-50 border-none rounded-lg text-xs focus:ring-2 focus:ring-primary/20 transition-all"
+                                 />
+                              </div>
+                           </div>
                         </div>
+                        
+                        {(minPrice || maxPrice) && (
+                           <button 
+                              onClick={() => {setMinPrice(""); setMaxPrice("");}}
+                              className="w-full py-2 text-[10px] font-bold text-secondary uppercase tracking-widest hover:bg-secondary/5 rounded-lg transition-colors border border-dashed border-secondary/20"
+                           >
+                              Reset Price
+                           </button>
+                        )}
+
+                        <div className="space-y-3 text-sm text-gray-600">
+                           <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
+                               <input 
+                                 type="radio" 
+                                 name="priceRange"
+                                 checked={minPrice === "" && maxPrice === "50"}
+                                 onChange={() => {setMinPrice(""); setMaxPrice("50");}}
+                                 className="rounded-full border-gray-300 text-primary focus:ring-primary w-4 h-4" 
+                               /> 
+                               <span>{t("home.under50")}</span>
+                           </label>
+                           <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
+                               <input 
+                                 type="radio" 
+                                 name="priceRange"
+                                 checked={minPrice === "50" && maxPrice === "100"}
+                                 onChange={() => {setMinPrice("50"); setMaxPrice("100");}}
+                                 className="rounded-full border-gray-300 text-primary focus:ring-primary w-4 h-4" 
+                               /> 
+                               <span>{t("home.price50to100")}</span>
+                           </label>
+                           <label className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
+                               <input 
+                                 type="radio" 
+                                 name="priceRange"
+                                 checked={minPrice === "100" && maxPrice === "200"}
+                                 onChange={() => {setMinPrice("100"); setMaxPrice("200");}}
+                                 className="rounded-full border-gray-300 text-primary focus:ring-primary w-4 h-4" 
+                               /> 
+                               <span>{t("home.price100to200")}</span>
+                           </label>
+                        </div>
+                     </div>
+                   </div>
                       </div>
                     </aside>
 
            {/* Product Grid */}
            <div className="flex-1">
-             <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+             <div className="mb-8 flex justify-between items-center bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
                   <span className="text-sm text-gray-500 font-medium">
                     {t("home.showing")} <span className="text-primary font-bold">{filtered.length}</span> {t("home.results")}
                   </span>
-                 <div className="flex items-center gap-2 text-sm text-gray-500">
-                     {t("home.sortBy")} <span className="font-bold text-primary cursor-pointer hover:underline">{t("home.sortByFeatured")}</span> <ChevronRight className="w-4 h-4 rotate-90" />
-                 </div>
              </div>
             
             {filtered.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                   {filtered.map(p => <ProductCard key={p.id} product={p} />)}
                 </div>
             ) : (

@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Star, Heart, ShoppingCart, Truck } from 'lucide-react';
+import { Star, Heart, ShoppingCart, Truck, ArrowRight } from 'lucide-react';
 import { Button, VerifiedBadge } from './UI';
 import { Product } from '../types';
 import { useCart } from '../context/CartContext';
@@ -35,79 +35,93 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   };
 
   return (
-    <article className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 flex flex-col h-full">
-      <div className="relative aspect-square overflow-hidden bg-gray-100">
-        <Link href={`/products/${product.id}`}>
+    <article className="group bg-white rounded-[24px] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 border border-gray-100 flex flex-col h-full relative">
+      <div className="relative aspect-[4/5] overflow-hidden bg-ethio-bg">
+        <Link href={`/products/${product.id}`} className="block h-full">
           <img 
             src={product.images[0]} 
             alt={productName} 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
           />
         </Link>
+        
+        {/* Top Badges */}
+        <div className="absolute top-4 left-4 flex flex-col gap-2">
+          {lowStock && (
+            <div className="bg-red-500 text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg backdrop-blur-md">
+              Limited Stock: {product.stock}
+            </div>
+          )}
+          {(product as any).isVerified || (product as any).verificationStatus === 'Approved' && (
+            <div className="w-fit scale-90 origin-left shadow-lg">
+              <VerifiedBadge />
+            </div>
+          )}
+        </div>
+
+        {/* Wishlist Button */}
         <button 
-          className={`absolute top-4 right-4 p-2.5 bg-white/90 backdrop-blur rounded-full transition-colors shadow-sm ${
-            isWishlisted && isTourist ? 'text-red-500 hover:text-red-600' : 'text-gray-400 hover:text-accent'
+          className={`absolute top-4 right-4 p-3 bg-white/80 backdrop-blur rounded-full transition-all duration-300 shadow-lg border border-white/20 hover:scale-110 active:scale-95 ${
+            isWishlisted && isTourist ? 'text-red-500' : 'text-gray-400 hover:text-red-400'
           }`}
           aria-label={`Add ${productName} to wishlist`}
           onClick={handleWishlistClick}
         >
           <Heart className={`w-5 h-5 ${isWishlisted && isTourist ? 'fill-current' : ''}`} />
         </button>
-        {(product as any).isVerified || (product as any).verificationStatus === 'Approved' && (
-          <div className="absolute bottom-4 left-4">
-            <VerifiedBadge />
-          </div>
-        )}
-        {lowStock && (
-           <div className="absolute top-4 left-4 bg-red-500 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
-              Only {product.stock} left
-            </div>
-        )}
+
+        {/* Quick Add Button Overlay */}
+        <div className="absolute bottom-6 left-6 right-6 translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
+          <Button 
+            className="w-full rounded-xl py-3 shadow-2xl font-bold text-[10px] uppercase tracking-[0.2em] bg-white text-primary hover:bg-primary hover:text-white border-none"
+            leftIcon={ShoppingCart}
+            onClick={(e) => {
+              e.preventDefault();
+              addToCart(product);
+            }}
+          >
+            Quick Add
+          </Button>
+        </div>
       </div>
-      <div className="p-6 flex flex-col flex-1">
-        <div className="flex justify-between items-start mb-2">
-          <p className="text-[10px] font-bold text-secondary uppercase tracking-widest">{product.category}</p>
-          <div className="flex items-center text-xs text-gray-500">
-            <Star className="w-3 h-3 text-secondary fill-current mr-1" />
-            <span className="font-bold">{product.rating ? Number(product.rating).toFixed(1) : '0.0'}</span>
+
+      <div className="p-7 flex flex-col flex-1">
+        <div className="flex justify-between items-center mb-4">
+          <span className="text-[10px] font-bold text-secondary uppercase tracking-[0.2em] bg-secondary/5 px-3 py-1 rounded-full">
+            {product.category}
+          </span>
+          <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-lg">
+            <Star className="w-3.5 h-3.5 text-secondary fill-current" />
+            <span className="text-xs font-bold text-primary">{product.rating ? Number(product.rating).toFixed(1) : '5.0'}</span>
           </div>
         </div>
         
-        <h3 className="text-lg font-serif font-bold text-primary group-hover:text-secondary transition-colors mb-1">
+        <h3 className="text-xl font-serif font-bold text-primary mb-2 line-clamp-1 group-hover:text-secondary transition-colors duration-300">
           <Link href={`/products/${product.id}`}>{productName}</Link>
         </h3>
         
-        <Link href={`/products?artisan=${product.artisanId}`} className="text-xs text-gray-500 hover:text-primary transition-colors font-medium mb-3 block">
-          By: {artisanName}
-        </Link>
-
-        <div className="flex items-center text-[10px] text-gray-400 mb-4">
-          <Truck className="w-3 h-3 mr-1" />
-          <span>Ships in {product.estimatedDelivery}</span>
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-5 h-px bg-gray-200" />
+          <Link href={`/products?artisan=${product.artisanId}`} className="text-[11px] text-gray-400 hover:text-primary transition-colors font-medium uppercase tracking-widest">
+            {artisanName}
+          </Link>
         </div>
 
-        <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between gap-3">
-          <span className="text-lg font-bold text-primary">${product.price}</span>
-          
-          <div className="flex items-center gap-2">
-            <Link 
-              href={`/products/${product.id}`}
-              className="inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 border-2 border-primary text-primary hover:bg-ethio-light focus:ring-primary rounded-xl px-3 text-[9px] uppercase tracking-widest font-bold h-9"
-            >
-              Details
-            </Link>
-            <Button 
-              size="sm" 
-              className="rounded-xl px-4 shadow-lg font-bold text-[9px] uppercase tracking-widest h-9"
-              leftIcon={ShoppingCart}
-              onClick={(e) => {
-                e.preventDefault();
-                addToCart(product);
-              }}
-            >
-              Add
-            </Button>
+        <div className="mt-auto flex items-end justify-between pt-6 border-t border-gray-50">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Price</span>
+            <span className="text-2xl font-bold text-primary leading-none">
+              <span className="text-sm font-light text-gray-400 mr-1">$</span>
+              {product.price}
+            </span>
           </div>
+          
+          <Link 
+            href={`/products/${product.id}`}
+            className="p-3 bg-ethio-bg text-primary hover:bg-primary hover:text-white rounded-xl transition-all duration-300 group/btn shadow-sm"
+          >
+            <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
+          </Link>
         </div>
       </div>
     </article>
