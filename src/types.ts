@@ -13,6 +13,9 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  status?: string;
+  suspensionReason?: string | null;
+  suspendedAt?: string | null;
   isVerified: boolean;
   profileImage: string;
   artisanStatus?: ArtisanStatus;

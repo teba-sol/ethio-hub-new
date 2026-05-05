@@ -62,6 +62,11 @@ export async function GET(req: Request) {
 
     const total = await Product.countDocuments(query);
 
+    const responseHeaders: Record<string, string> = {};
+    if (user.status === 'Suspended') {
+      responseHeaders['X-Account-Warning'] = 'Your account is suspended. Your products are hidden from other users.';
+    }
+
     return NextResponse.json({
       products,
       pagination: {
@@ -70,6 +75,8 @@ export async function GET(req: Request) {
         total,
         pages: Math.ceil(total / limit),
       },
+    }, {
+      headers: responseHeaders
     });
   } catch (error) {
     console.error('Error fetching products:', error);

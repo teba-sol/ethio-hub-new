@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Festival from '@/models/festival.model';
+import User from '@/models/User';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,12 +19,18 @@ export async function GET(request: NextRequest) {
     const search = url.searchParams.get('search');
     const status = url.searchParams.get('status'); // Filter by live/upcoming
 
+    const activeUsers = await User.find({
+      status: { $ne: 'Suspended' }
+    }).select('_id');
+    const activeUserIds = activeUsers.map(u => u._id);
+
      // Build query for verified and published festivals only
      const query: any = {
-       // REMOVED STRICT FILTER FOR TESTING
-       // isVerified: true,
-       // status: 'Published'
-     };
+       organizer: { $in: activeUserIds }
+      // REMOVED STRICT FILTER FOR TESTING
+      // isVerified: true,
+      // status: 'Published'
+    };
 
     // Add search filter
     if (search) {

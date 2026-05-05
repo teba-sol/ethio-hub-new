@@ -20,6 +20,7 @@ interface UserData {
   artisanStatus?: VerificationStatus;
   organizerStatus?: VerificationStatus;
   status: UserStatus;
+  suspensionReason?: string | null;
   lastLogin?: string;
   avatar?: string;
   createdAt: string;
@@ -152,12 +153,30 @@ export const AdminUsersPage: React.FC = () => {
   };
 
   const handleSuspendUser = async (userId: string) => {
+    const reason = window.prompt('Enter suspension reason');
+    if (reason === null) return;
+    const trimmedReason = reason.trim();
+    if (!trimmedReason) {
+      alert('Suspension reason is required');
+      return;
+    }
+
     try {
       setActionLoading(userId);
-      const response = await fetch(`/api/admin/users/${userId}/suspend`, { method: 'POST' });
+      const response = await fetch(`/api/admin/users/${userId}/suspend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: trimmedReason }),
+      });
       const data = await response.json();
       if (response.ok) {
-        setUsers(prev => prev.map(u => u._id === userId ? { ...u, status: 'Suspended' as UserStatus } : u));
+        setUsers(prev =>
+          prev.map(u =>
+            u._id === userId
+              ? { ...u, status: 'Suspended' as UserStatus, suspensionReason: trimmedReason }
+              : u
+          )
+        );
         fetchStats();
       } else {
         alert(data.message || 'Failed to suspend user');

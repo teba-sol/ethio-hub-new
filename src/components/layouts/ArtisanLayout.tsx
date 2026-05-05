@@ -3,17 +3,25 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  BarChart3, Package, ShoppingCart, LogOut, Bell, Search, DollarSign, MessageSquare, PieChart, Settings, Menu, X, TrendingUp
+  BarChart3, Package, ShoppingCart, LogOut, Bell, Search, DollarSign, MessageSquare, PieChart, Settings, Menu, X, TrendingUp, AlertTriangle, CheckCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { LanguageToggle } from '../LanguageToggle';
 
 export const ArtisanLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const { t } = useLanguage();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-ethio-bg">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const menuItems = [
     { path: '/dashboard/artisan/overview', name: 'Dashboard', icon: BarChart3 },
@@ -122,12 +130,35 @@ export const ArtisanLayout: React.FC<{ children?: React.ReactNode }> = ({ childr
               </div>
               <LanguageToggle />
 
+              {user?.status === 'Suspended' ? (
+                <div className="hidden md:flex items-center space-x-2 bg-red-50 text-red-700 px-3 py-1.5 rounded-full border border-red-100">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">{t('dashboard.suspended')}</span>
+                </div>
+              ) : (
+                <div className="hidden md:flex items-center space-x-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-100">
+                  <CheckCircle className="w-4 h-4" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">{t('dashboard.approved')}</span>
+                </div>
+              )}
+
               <div className="flex items-center space-x-3 pl-6 border-l border-gray-100">
                 <div className="text-right"><p className="text-xs font-bold text-primary">{user?.name}</p><p className="text-[10px] text-gray-400 uppercase font-bold">{t('nav.dashboard')}</p></div>
                 <img src={user?.profileImage} className="w-9 h-9 rounded-full object-cover border border-gray-100 shadow-sm" alt="" />
               </div>
             </div>
           </nav>
+        )}
+        {user?.status === 'Suspended' && (
+          <div className="bg-red-50 border-b border-red-200 px-4 py-2 text-center">
+            <p className="text-sm font-semibold text-red-700">
+              {t('dashboard.accountSuspended')}
+            </p>
+            <p className="text-xs text-red-700 mt-1">
+              {t('auth.suspendedReasonLabel')}{' '}
+              {user?.suspensionReason?.trim() || t('auth.suspendedReasonFallback')}
+            </p>
+          </div>
         )}
         <main className={`flex-1 overflow-y-auto bg-ethio-bg ${isOnboarding ? '' : 'p-8'}`}>
           <div className={`${isOnboarding ? 'h-full' : 'max-w-[1600px] mx-auto'} animate-in fade-in duration-500`}>

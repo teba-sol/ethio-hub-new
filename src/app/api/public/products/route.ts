@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Product from '@/models/artisan/product.model';
+import User from '@/models/User';
 import mongoose from 'mongoose';
 
 export async function GET(req: Request) {
@@ -35,6 +36,12 @@ export async function GET(req: Request) {
         { description_am: { $regex: search, $options: 'i' } },
       ];
     }
+
+    const activeUsers = await User.find({
+      status: { $ne: 'Suspended' }
+    }).select('_id');
+    const activeUserIds = activeUsers.map(u => u._id);
+    query.artisanId = { $in: activeUserIds };
 
     const products = await Product.find(query)
       .populate('artisanId', 'name email profilePicture')

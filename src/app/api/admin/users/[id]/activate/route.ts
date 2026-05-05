@@ -37,6 +37,8 @@ export async function POST(
     }
 
     user.status = 'Active';
+    user.suspensionReason = null;
+    user.suspendedAt = null;
     await user.save();
 
     const userResponse = user.toObject();

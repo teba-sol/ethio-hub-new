@@ -70,7 +70,7 @@ const NOTIFICATIONS = [
   { id: 4, type: 'payout', message: 'Weekly payout of ETB 12,500 processed', time: '1d ago' },
 ];
 
-export const ArtisanOverview: React.FC<{ onAddProduct: () => void }> = ({ onAddProduct }) => {
+export const ArtisanOverview: React.FC<{ onAddProduct: () => void; disableCreate?: boolean }> = ({ onAddProduct, disableCreate = false }) => {
   const router = useRouter();
   const navigate = (to: string) => router.push(to);
   const [showSupport, setShowSupport] = React.useState(false);
@@ -102,13 +102,13 @@ export const ArtisanOverview: React.FC<{ onAddProduct: () => void }> = ({ onAddP
           <p className="text-gray-500 text-sm">Manage your craft business.</p>
         </div>
         <div className="flex items-center gap-4">
-          <Button leftIcon={Plus} onClick={onAddProduct}>Add New Artifact</Button>
+          <Button leftIcon={Plus} onClick={onAddProduct} disabled={disableCreate}>Add New Artifact</Button>
         </div>
       </header>
 
       {/* Quick Actions */}
       <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-        <button onClick={() => navigate('/dashboard/artisan/products/create')} className="flex items-center gap-3 px-6 py-3 bg-white border border-gray-100 rounded-2xl hover:shadow-md transition-all whitespace-nowrap group">
+        <button onClick={() => navigate('/dashboard/artisan/products/create')} disabled={disableCreate} className="flex items-center gap-3 px-6 py-3 bg-white border border-gray-100 rounded-2xl hover:shadow-md transition-all whitespace-nowrap group disabled:cursor-not-allowed disabled:opacity-60">
           <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl group-hover:scale-110 transition-transform"><Plus className="w-4 h-4" /></div>
           <span className="text-sm font-bold text-primary">Add New Product</span>
         </button>
@@ -455,9 +455,9 @@ export const ArtisanOverview: React.FC<{ onAddProduct: () => void }> = ({ onAddP
   );
 };
 
-export const ArtisanMyProductsView: React.FC<{ onAddProduct: () => void }> = ({ onAddProduct }) => (
+export const ArtisanMyProductsView: React.FC<{ onAddProduct: () => void; disableCreate?: boolean }> = ({ onAddProduct, disableCreate = false }) => (
   <div className="space-y-8">
-    <div className="flex justify-between items-center"><h2 className="text-2xl font-serif font-bold text-primary">My Collections</h2><Button leftIcon={Plus} size="sm" onClick={onAddProduct}>Add Item</Button></div>
+    <div className="flex justify-between items-center"><h2 className="text-2xl font-serif font-bold text-primary">My Collections</h2><Button leftIcon={Plus} size="sm" onClick={onAddProduct} disabled={disableCreate}>Add Item</Button></div>
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       {MOCK_PRODUCTS.slice(0, 3).map(p => (
         <div key={p.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm group">

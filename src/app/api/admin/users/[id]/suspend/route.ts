@@ -31,6 +31,12 @@ export async function POST(
     }
 
     const { id } = await params;
+    const body = await req.json().catch(() => ({}));
+    const suspensionReason = String(body?.reason || '').trim();
+
+    if (!suspensionReason) {
+      return NextResponse.json({ message: 'Suspension reason is required' }, { status: 400 });
+    }
 
     if (id === admin._id.toString()) {
       return NextResponse.json({ message: 'Cannot suspend your own account' }, { status: 400 });
@@ -42,6 +48,8 @@ export async function POST(
     }
 
     user.status = 'Suspended';
+    user.suspensionReason = suspensionReason;
+    user.suspendedAt = new Date();
     await user.save();
 
     const userResponse = user.toObject();

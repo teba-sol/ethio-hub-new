@@ -4,17 +4,25 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   BarChart3, Ticket, LogOut, Bell, Search, 
-  Calendar, CreditCard, Star, PieChart, Settings, CheckCircle, Menu, X
+  Calendar, CreditCard, Star, PieChart, Settings, CheckCircle, Menu, X, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { LanguageToggle } from '../LanguageToggle';
 
 export const OrganizerLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const { t } = useLanguage();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-ethio-bg">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const isOnboarding = pathname === '/dashboard/organizer/onboarding';
 
@@ -112,10 +120,17 @@ export const OrganizerLayout: React.FC<{ children?: React.ReactNode }> = ({ chil
           </div>
           
           <div className="flex items-center space-x-6">
-            <div className="hidden md:flex items-center space-x-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-full border border-emerald-100">
-              <CheckCircle className="w-4 h-4" />
-              <span className="text-[10px] font-bold uppercase tracking-wider">{t('dashboard.approved')}</span>
-            </div>
+            {user?.status === 'Suspended' ? (
+              <div className="hidden md:flex items-center space-x-2 bg-red-50 text-red-700 px-4 py-2 rounded-full border border-red-100">
+                <AlertTriangle className="w-4 h-4" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">{t('dashboard.suspended')}</span>
+              </div>
+            ) : (
+              <div className="hidden md:flex items-center space-x-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-full border border-emerald-100">
+                <CheckCircle className="w-4 h-4" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">{t('dashboard.approved')}</span>
+              </div>
+            )}
             
             <div className="relative group">
               <button className="p-2.5 text-gray-400 hover:text-primary bg-ethio-bg rounded-full transition-colors relative">
@@ -162,6 +177,18 @@ export const OrganizerLayout: React.FC<{ children?: React.ReactNode }> = ({ chil
             </div>
           </div>
         </nav>
+        
+        {user?.status === 'Suspended' && (
+          <div className="bg-red-50 border-b border-red-200 px-4 py-2 text-center">
+            <p className="text-sm font-semibold text-red-700">
+              {t('dashboard.accountSuspended')}
+            </p>
+            <p className="text-xs text-red-700 mt-1">
+              {t('auth.suspendedReasonLabel')}{' '}
+              {user?.suspensionReason?.trim() || t('auth.suspendedReasonFallback')}
+            </p>
+          </div>
+        )}
         
         <main className="flex-1 p-10 overflow-y-auto bg-ethio-bg/50">
           <div className="max-w-[1400px] mx-auto">

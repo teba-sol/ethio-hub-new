@@ -129,6 +129,9 @@ export const translations: Record<Language, TranslationDictionary> = {
        // Login page
        loginTitle: "Welcome Back",
        loginSubtitle: "Sign in to your cultural hub account",
+      suspendedTitle: "Your account is suspended",
+      suspendedReasonLabel: "Reason:",
+      suspendedReasonFallback: "No reason was provided. Please contact support.",
        loginAs: "Log in as",
        tourist: "Tourist",
        artisan: "Artisan",
@@ -210,7 +213,10 @@ export const translations: Record<Language, TranslationDictionary> = {
       reviews: "Reviews",
       analytics: "Analytics",
       helpCenter: "Help Center",
-      approved: "Approved"
+      approved: "Approved",
+      suspended: "Suspended",
+      accountSuspended: "Account Suspended - Your content is hidden from other users",
+      createDisabledForSuspended: "Create actions are disabled while your account is suspended.",
     },
 
     // Tourist Settings (Original English)
@@ -1029,6 +1035,9 @@ export const translations: Record<Language, TranslationDictionary> = {
     register: "ተመዝገብ",
     loginTitle: "እንኳን ደህና ተመለሱ",
     loginSubtitle: "ወደ የባህል ማዕከርዎ መለያዎን ይግቡ",
+    suspendedTitle: "መለያዎ ታግዷል",
+    suspendedReasonLabel: "ምክንያት:",
+    suspendedReasonFallback: "ምክንያት አልተጠቀሰም። እባክዎን ድጋፍን ያግኙ።",
     loginAs: "እንደሚከተሉት ይግቡ",
     tourist: "ቱሪስት",
     artisan: "የጥበብ ባለሙያ",
@@ -1103,9 +1112,12 @@ export const translations: Record<Language, TranslationDictionary> = {
     revenue: "ገቢ",
     reviews: "ግምገማዎች",
     analytics: "ትንታኔዎች",
-    helpCenter: "የእርዳታ ማዕከል",
-    approved: "ጸድቋል"
-  },
+helpCenter: "የእርዳታ ማዕከል",
+      approved: "ጸድቋል",
+      suspended: "ተበልቷል",
+      accountSuspended: "አካውንት ተበልቷል - ይህ ምርት ለሌላዎች ተደብቷል",
+      createDisabledForSuspended: "መለያዎ ታግዶ ስለሆነ አዲስ መፍጠር ተግባር ተሰናክሏል።",
+    },
 
   // አስተዳዳሪ (Admin)
   admin: {

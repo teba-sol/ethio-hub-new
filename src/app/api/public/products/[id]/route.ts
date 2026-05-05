@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Product from '@/models/artisan/product.model';
+import User from '@/models/User';
 import mongoose from 'mongoose';
 
 export async function GET(
@@ -16,9 +17,13 @@ export async function GET(
       return NextResponse.json({ message: 'Invalid product ID' }, { status: 400 });
     }
 
-    const product = await Product.findById(id).populate('artisanId', 'name email profilePicture');
+    const product: any = await Product.findById(id).populate('artisanId', 'name email status profilePicture');
 
     if (!product) {
+      return NextResponse.json({ message: 'Product not found' }, { status: 404 });
+    }
+
+    if (product.artisanId && product.artisanId.status === 'Suspended') {
       return NextResponse.json({ message: 'Product not found' }, { status: 404 });
     }
 

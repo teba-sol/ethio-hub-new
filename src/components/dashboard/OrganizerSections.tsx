@@ -2238,7 +2238,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
     </div>
   );
 };
-export const OrganizerOverview: React.FC = () => {
+export const OrganizerOverview: React.FC<{ onCreate?: () => void; disableCreate?: boolean }> = ({ onCreate: onCreateProp, disableCreate = false }) => {
   const [view, setView] = useState('overview'); // 'overview', 'eventDetail', 'createEvent'
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
@@ -2266,7 +2266,7 @@ export const OrganizerOverview: React.FC = () => {
 
 // The rest of the component is the overview itself
   const onManageEvent = handleManageEvent;
-  const onCreate = handleCreate;
+  const onCreate = onCreateProp ?? handleCreate;
   const { user } = useAuth();
   const router = useRouter();
   const navigate = (to: string) => router.push(to);
@@ -2345,7 +2345,7 @@ export const OrganizerOverview: React.FC = () => {
            <p className="text-gray-500 text-sm">Manage your cultural celebrations.</p>
          </div>
          <div className="flex items-center gap-4">
-            <Button onClick={onCreate} leftIcon={Plus}>Create Festival</Button>
+            <Button onClick={onCreate} leftIcon={Plus} disabled={disableCreate}>Create Festival</Button>
          </div>
        </header>
 
@@ -2481,7 +2481,7 @@ export const OrganizerOverview: React.FC = () => {
 
              {/* Existing My Events List */}
              {!hasEvents ? (
-                <section className="bg-white p-12 rounded-[48px] border border-gray-100 text-center space-y-8"><div className="w-24 h-24 bg-ethio-bg rounded-[32px] flex items-center justify-center mx-auto"><Briefcase className="w-10 h-10 text-gray-300" /></div><h3 className="text-3xl font-serif font-bold text-primary">Ready to showcase your heritage?</h3><Button size="lg" onClick={onCreate}>List Your First Festival</Button></section>
+                <section className="bg-white p-12 rounded-[48px] border border-gray-100 text-center space-y-8"><div className="w-24 h-24 bg-ethio-bg rounded-[32px] flex items-center justify-center mx-auto"><Briefcase className="w-10 h-10 text-gray-300" /></div><h3 className="text-3xl font-serif font-bold text-primary">Ready to showcase your heritage?</h3><Button size="lg" onClick={onCreate} disabled={disableCreate}>List Your First Festival</Button></section>
               ) : (
                 <div className="space-y-6">
                   <h3 className="text-xl font-serif font-bold text-primary">Your Active Events</h3>
@@ -2519,7 +2519,7 @@ export const OrganizerOverview: React.FC = () => {
              </div>
 
              {/* Existing Mission Control */}
-             <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8"><h3 className="text-xl font-serif font-bold text-primary">Mission Control</h3><div className="space-y-3">{[{ id: 'create', label: 'Launch New Listing', icon: Plus, action: onCreate }].map(action => (<button key={action.id} onClick={action.action} className="w-full flex items-center justify-between p-4 bg-ethio-bg rounded-2xl transition-all group"><div className="flex items-center gap-4"><div className="p-2 bg-white rounded-xl group-hover:bg-primary group-hover:text-white"><action.icon className="w-4 h-4" /></div><span className="text-[11px] font-bold text-primary uppercase">{action.label}</span></div><ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-primary" /></button>))}</div></div>
+             <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8"><h3 className="text-xl font-serif font-bold text-primary">Mission Control</h3><div className="space-y-3">{[{ id: 'create', label: 'Launch New Listing', icon: Plus, action: onCreate }].map(action => (<button key={action.id} onClick={action.action} disabled={disableCreate} className="w-full flex items-center justify-between p-4 bg-ethio-bg rounded-2xl transition-all group disabled:cursor-not-allowed disabled:opacity-60"><div className="flex items-center gap-4"><div className="p-2 bg-white rounded-xl group-hover:bg-primary group-hover:text-white"><action.icon className="w-4 h-4" /></div><span className="text-[11px] font-bold text-primary uppercase">{action.label}</span></div><ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-primary" /></button>))}</div></div>
 
              {/* Community / Support */}
              <div className="bg-gradient-to-br from-primary to-ethio-black p-8 rounded-[40px] text-white shadow-lg relative overflow-hidden">
@@ -3385,7 +3385,7 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
     </div>
   );
 };
-export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => void; onCreate: () => void }> = ({ onManageEvent, onCreate }) => {
+export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => void; onCreate: () => void; disableCreate?: boolean }> = ({ onManageEvent, onCreate, disableCreate = false }) => {
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -3493,6 +3493,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
           size="lg"
           leftIcon={Plus}
           onClick={onCreate}
+          disabled={disableCreate}
           className="w-full md:w-auto"
         >
           Create New Festival

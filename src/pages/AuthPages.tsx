@@ -32,6 +32,7 @@ export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [suspendedReason, setSuspendedReason] = useState<string | null>(null);
   const { login } = useAuth();
   const router = useRouter();
 
@@ -93,6 +94,17 @@ export const LoginPage: React.FC = () => {
            </h1>
            <p className="text-gray-500">{t("auth.loginSubtitle")}</p>
          </div>
+
+        {suspendedReason && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4">
+            <p className="text-sm font-bold text-red-700">
+              {t("auth.suspendedTitle")}
+            </p>
+            <p className="mt-1 text-sm text-red-700">
+              {t("auth.suspendedReasonLabel")} {suspendedReason}
+            </p>
+          </div>
+        )}
 
          <form onSubmit={handleLogin} className="space-y-6">
 

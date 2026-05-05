@@ -29,6 +29,14 @@ const UserSchema = new mongoose.Schema(
       enum: ["Active", "Suspended", "Banned", "Deleted"],
       default: "Active"
     },
+    suspensionReason: {
+      type: String,
+      default: null
+    },
+    suspendedAt: {
+      type: Date,
+      default: null
+    },
 
     phone: {
       type: String,
