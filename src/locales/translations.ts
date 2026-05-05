@@ -468,6 +468,87 @@ export const translations: Record<Language, TranslationDictionary> = {
       addImage: "Add Image",
       addFile: "Add File"
     },
+    // Organizer Create Festival (Original English)
+    organizer: {
+      createFestival: {
+        // Step titles
+        coreInfo: "Core Information",
+        schedule: "Schedule",
+        hotels: "Hotels",
+        transportation: "Transportation",
+        services: "Services",
+        policies: "Policies",
+        pricing: "Pricing",
+        reviewPublish: "Review & Publish",
+        // Core fields
+        festivalName: "Festival Name",
+        slug: "Slug",
+        festivalType: "Festival Type",
+        startDate: "Start Date",
+        endDate: "End Date",
+        locationName: "Location Name",
+        address: "Address",
+        shortDescription: "Short Description",
+        fullDescription: "Full Description",
+        // Schedule
+        day: "Day",
+        dayTitle: "Day Title",
+        activities: "Activities",
+        performers: "Performers",
+        addDay: "Add Day",
+        // Hotels
+        addHotel: "Add Hotel",
+        hotelName: "Hotel Name",
+        shortDesc: "Short Description",
+        fullDesc: "Full Description",
+        coverImage: "Cover Image URL",
+        addRoom: "Add Room",
+        roomName: "Room Name",
+        capacity: "Capacity (guests)",
+        description: "Description",
+        pricePerNight: "Price per Night",
+        availableRooms: "Available Rooms",
+        // Transportation
+        addTransport: "Add Transport",
+        transportType: "Transport Type",
+        pricePerUnit: "Price per Unit",
+        availableUnits: "Available Units",
+        passengerCapacity: "Passenger Capacity",
+        imageUrl: "Image URL",
+        // Services
+        addPackage: "Add Package",
+        packageName: "Package Name",
+        pricePerPerson: "Price per Person",
+        // Policies
+        cancellationPolicy: "Cancellation Policy",
+        bookingTerms: "Booking Terms",
+        safetyRules: "Safety Rules",
+        ageRestriction: "Age Restriction",
+        // Pricing
+        baseTicketPrice: "Base Ticket Price (ETB)",
+        vipTicketPrice: "VIP Ticket Price (ETB)",
+        earlyBirdDiscount: "Early Bird Discount (%)",
+        groupDiscount: "Group Discount (%)",
+        // Actions
+        save: "Save",
+        cancel: "Cancel",
+        next: "Next",
+        previous: "Previous",
+        publish: "Publish Festival",
+        addAnother: "Add Another",
+        requiredField: "Required",
+        languagePreference: "Language Preference",
+        chooseLanguages: "Choose which languages to include in your festival:",
+        bothLanguages: "Both English and Amharic",
+        showBothFields: "Show fields for both languages",
+        englishOnly: "English Only (Foreign Audience)",
+        amharicOnly: "Amharic Only (Native Audience)",
+        festivalType: "Festival Type",
+        typeReligious: "Religious",
+        typeCulturalTraditional: "Cultural / Traditional",
+        typeNationalPublicHolidays: "National / Public Holidays"
+      }
+    },
     // Documents (Original English)
     documents: {
       files: "Files",
@@ -1342,6 +1423,87 @@ helpCenter: "የእርዳታ ማዕከል",
     fileTypes: "SVG፣ PNG፣ JPG ወይም GIF (ከፍተኛው 800x400px)",
     addImage: "ምስል ጨምር",
     addFile: "ፋይል ጨምር"
+  },
+  // አዘጋጅ የ�estival ፍጠር (Organizer Create Festival)
+  organizer: {
+    createFestival: {
+      // Step titles
+      coreInfo: "ዋና መረጃ",
+      schedule: "የጊዜ ሰሌዳ",
+      hotels: "ሆተሎች",
+      transportation: "ትራንስፖርት",
+      services: "አገልግሎቶች",
+      policies: "ፖሊሲዎች",
+      pricing: "ዋጋታ",
+      reviewPublish: "ግምትና አትስፋፅ",
+      // Core fields
+      festivalName: "የበጎች ስም",
+      slug: "Slug",
+      festivalType: "የበጎች አይነት",
+      startDate: "የጀመርበት ቀን",
+      endDate: "የማብርበት ቀን",
+      locationName: "ስፍራ ስም",
+      address: "አድራሽ",
+      shortDescription: "በጋላ መግለጫ",
+      fullDescription: "ሙሉ መግለጫ",
+      // Schedule
+      day: "ቀን",
+      dayTitle: "የቀን ርዕስ",
+      activities: "እንቅስቃሴዎች",
+      performers: "ታየዎች",
+      addDay: "ቀን ጨምር",
+      // Hotels
+      addHotel: "ሆተል ጨምር",
+      hotelName: "የሆተል ስም",
+      shortDesc: "በጋላ መግለጫ",
+      fullDesc: "ሙሉ መግለጫ",
+      coverImage: "የሽፋን ምስል URL",
+      addRoom: "ክፍል ጨምር",
+      roomName: "የክፍል ስም",
+      capacity: "የማስተናነያ ቁጥር",
+      description: "መግለጫ",
+      pricePerNight: "ዋጋታ በሌሊት",
+      availableRooms: "የሚገኙ ክፍሎች",
+      // Transportation
+      addTransport: "ትራንስፖርት ጨምር",
+      transportType: "የትራንስፖርት አይነት",
+      pricePerUnit: "ዋጋታ በአንድ",
+      availableUnits: "የሚገኙ ክፍሎች",
+      passengerCapacity: "የተሳፋሪ ቁጥር",
+      imageUrl: "ምስል URL",
+      // Services
+      addPackage: "ጣጅጨምር",
+      packageName: "የጣጅ ስም",
+      pricePerPerson: "ዋጋታ በአንድ ሰው",
+      // Policies
+      cancellationPolicy: "የመሰረዝ ፖሊሲ",
+      bookingTerms: "የቦተን ቃላት",
+      safetyRules: "የደህንነት ህጎች",
+      ageRestriction: "የአስር ገደብ",
+      // Pricing
+      baseTicketPrice: "የመሠረታዊ ትኬት ዋጋታ (ኤቲቢ)",
+      vipTicketPrice: "ቪአይ ትኬት ዋጋታ (ኤቲቢ)",
+      earlyBirdDiscount: "ቀደም ብሎ ቅናሽ (%)",
+      groupDiscount: "ቡድድ ቅናሽ (%)",
+      // Actions
+      save: "አስቀምጥ",
+cancel: "ይቁም",
+      next: "ቀጥል",
+      previous: "በፊት",
+      publish: "በጎችን አትስፋፅ",
+      addAnother: "ሌላ ጨምር",
+      requiredField: "አስፈላጊ",
+      languagePreference: "ቋንቋ ምርጫ",
+      chooseLanguages: "ለበጎችዎ የቋንቋ ምርጫ ይምረጡ:",
+      bothLanguages: "እንግሊዝና አምሐርክ",
+      showBothFields: "ለሁለቱም ቋንቋዎች መስኮች አሳይ",
+      englishOnly: "እንግሊዝ alone (ውጭ ታዳሚዎች)",
+      amharicOnly: "አምሐርክ alone (አገር ቤት ታዳሚዎች)",
+      festivalType: "የበጎች አይነት",
+      typeReligious: "ሃይማኖናዊ",
+      typeCulturalTraditional: "ባህላዊ / ባህራዊ",
+      typeNationalPublicHolidays: "ሀገርናዊ / የህዝብ አስታራቂት"
+    }
   },
 
   // ሰነዶች (Documents)

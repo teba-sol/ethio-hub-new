@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { DualLanguageField } from '../BilingualInput';
+import { useLanguage } from '../../context/LanguageContext';
 
 const MapPickerModal = dynamic(() => import('../MapPickerModal'), { 
   ssr: false 
@@ -20,18 +21,19 @@ const MapPickerModal = dynamic(() => import('../MapPickerModal'), {
 import apiClient from '../../lib/apiClient';
 
 const STEPS = [
-  { id: 1, name: 'Core Information', icon: Info },
-  { id: 2, name: 'Schedule', icon: Calendar },
-  { id: 3, name: 'Hotels', icon: Hotel },
-  { id: 4, name: 'Transportation', icon: Car },
-  { id: 5, name: 'Services', icon: Utensils },
-  { id: 6, name: 'Policies', icon: Shield },
-  { id: 7, name: 'Pricing', icon: DollarSign },
-  { id: 8, name: 'Review & Publish', icon: Eye },
+  { id: 1, name: 'Core Information', key: 'organizer.createFestival.coreInfo', icon: Info },
+  { id: 2, name: 'Schedule', key: 'organizer.createFestival.schedule', icon: Calendar },
+  { id: 3, name: 'Hotels', key: 'organizer.createFestival.hotels', icon: Hotel },
+  { id: 4, name: 'Transportation', key: 'organizer.createFestival.transportation', icon: Car },
+  { id: 5, name: 'Services', key: 'organizer.createFestival.services', icon: Utensils },
+  { id: 6, name: 'Policies', key: 'organizer.createFestival.policies', icon: Shield },
+  { id: 7, name: 'Pricing', key: 'organizer.createFestival.pricing', icon: DollarSign },
+  { id: 8, name: 'Review & Publish', key: 'organizer.createFestival.reviewPublish', icon: Eye },
 ];
 
 export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onCancel }) => {
   const router = useRouter();
+  const { t, language } = useLanguage();
   const [step, setStep] = useState(1);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [languagePreference, setLanguagePreference] = useState<'both' | 'en' | 'am'>('both');
@@ -60,7 +62,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
       title_am: '', 
       activities_en: '', 
       activities_am: '', 
-      performers: [] as string[] 
+      performers: [] as string[]
     }],
     hotels: [] as any[],
     transportation: [] as any[],
@@ -402,7 +404,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
             }`}>
               {step > s.id ? <CheckCircle2 className="w-5 h-5" /> : <s.icon className="w-5 h-5" />}
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-center">{s.name}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-center">{t(s.key)}</span>
           </div>
           {i < STEPS.length - 1 && (
             <div className={`h-[2px] flex-1 min-w-[20px] mx-2 ${step > s.id ? 'bg-emerald-500' : 'bg-gray-100'}`} />
@@ -456,8 +458,8 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                   <div className="lg:col-span-3 space-y-8">
                     {/* Language Preference Radio Buttons */}
                     <div className="bg-ethio-bg p-6 rounded-2xl">
-                      <h3 className="text-lg font-bold text-primary mb-4">Language Preference</h3>
-                      <p className="text-sm text-gray-600 mb-4">Choose which languages to include in your festival:</p>
+                      <h3 className="text-lg font-bold text-primary mb-4">{t("organizer.createFestival.languagePreference")}</h3>
+                      <p className="text-sm text-gray-600 mb-4">{t("organizer.createFestival.chooseLanguages")}</p>
                       <div className="flex flex-col space-y-3">
                         <label className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 cursor-pointer hover:border-primary transition-colors">
                           <input
@@ -469,8 +471,8 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                             className="w-4 h-4 text-primary"
                           />
                           <div>
-                            <span className="font-medium">Both English and Amharic</span>
-                            <p className="text-xs text-gray-500">Show fields for both languages</p>
+<span className="font-medium">{t("organizer.createFestival.bothLanguages")}</span>
+                                                    <p className="text-xs text-gray-500">{t("organizer.createFestival.showBothFields")}</p>
                           </div>
                         </label>
                         <label className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 cursor-pointer hover:border-primary transition-colors">
@@ -483,7 +485,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                             className="w-4 h-4 text-primary"
                           />
                           <div>
-                            <span className="font-medium">English Only (Foreign Audience)</span>
+                            <span className="font-medium">{t("organizer.createFestival.englishOnly")}</span>
                             <p className="text-xs text-gray-500">Only English fields required</p>
                           </div>
                         </label>
@@ -497,7 +499,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                             className="w-4 h-4 text-primary"
                           />
                           <div>
-                            <span className="font-medium">Amharic Only (Native Audience)</span>
+                            <span className="font-medium">{t("organizer.createFestival.amharicOnly")}</span>
                             <p className="text-xs text-gray-500">Only Amharic fields required</p>
                           </div>
                         </label>
@@ -506,7 +508,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <DualLanguageField
-                          label="Festival Name *"
+                          label={t("organizer.createFestival.festivalName") + " *"}
                           englishPlaceholder="e.g. Timket 2025"
                           amharicPlaceholder="ቲምኬት 2025"
                           englishValue={formData.core.name_en}
@@ -517,7 +519,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                           showAmharic={languagePreference !== 'en'}
                         />
                         <Input
-                          label="Slug"
+                          label={t("organizer.createFestival.slug")}
                           value={formData.core.slug}
                           readOnly
                           className="bg-gray-50"
@@ -526,28 +528,28 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Festival Type *</label>
+                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500">{t("organizer.createFestival.festivalType")} *</label>
                           <select
                             value={formData.core.type}
                             onChange={(e) => setFormData({...formData, core: {...formData.core, type: e.target.value as 'Religious' | 'CulturalTraditional' | 'NationalPublicHolidays'}})}
                             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
                           >
-                            <option value="Religious">Religious</option>
-                            <option value="CulturalTraditional">Cultural / Traditional</option>
-                            <option value="NationalPublicHolidays">National / Public Holidays</option>
+                            <option value="Religious">{t("organizer.createFestival.typeReligious")}</option>
+                            <option value="CulturalTraditional">{t("organizer.createFestival.typeCulturalTraditional")}</option>
+                            <option value="NationalPublicHolidays">{t("organizer.createFestival.typeNationalPublicHolidays")}</option>
                           </select>
                         </div>
                       </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <Input 
-                        label="Start Date *" 
+                        label={t("organizer.createFestival.startDate") + " *"} 
                         type="date" 
                         value={formData.core.startDate} 
                         onChange={e => setFormData({...formData, core: {...formData.core, startDate: e.target.value}})} 
                       />
                       <Input 
-                        label="End Date *" 
+                        label={t("organizer.createFestival.endDate") + " *"} 
                         type="date" 
                         value={formData.core.endDate} 
                         onChange={e => setFormData({...formData, core: {...formData.core, endDate: e.target.value}})} 
@@ -556,7 +558,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <DualLanguageField
-                        label="Location Name *"
+                        label={t("organizer.createFestival.locationName") + " *"}
                         englishPlaceholder="e.g. Gondar, Ethiopia"
                         amharicPlaceholder="ጎንዳር ፣ ኢትዮጵያ"
                         englishValue={formData.core.locationName_en}
@@ -567,7 +569,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                         showAmharic={languagePreference !== 'en'}
                       />
                       <Input 
-                        label="Address" 
+label={t("organizer.createFestival.address")}
                         placeholder="e.g. Fasil Ghebbi"
                         value={formData.core.address} 
                         onChange={e => setFormData({...formData, core: {...formData.core, address: e.target.value}})} 
@@ -589,7 +591,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                     </div>
 
                     <DualLanguageField
-                      label="Short Description *"
+                      label={t("organizer.createFestival.shortDesc") + " *"}
                       englishPlaceholder="Brief summary for listing cards..."
                       amharicPlaceholder="ለዝርዝር ካርዶች አጭር መግለጫ..."
                       englishValue={formData.core.shortDescription_en}
@@ -603,7 +605,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                     />
 
                     <DualLanguageField
-                      label="Full Description *"
+                      label={t("organizer.createFestival.fullDesc") + " *"}
                       englishPlaceholder="Detailed story and information..."
                       amharicPlaceholder="ዝርዝር ታሪክ እና መረጃ..."
                       englishValue={formData.core.fullDescription_en}
@@ -670,7 +672,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                       leftIcon={Plus}
                       onClick={() => setFormData({
                         ...formData, 
-                        schedule: [...formData.schedule, { day: formData.schedule.length + 1, title_en: '', title_am: '', activities_en: '', activities_am: '', performers: [] }]
+                         schedule: [...formData.schedule, { day: formData.schedule.length + 1, title_en: '', title_am: '', activities_en: '', activities_am: '', performers: [] }]
                       })}
                     >
                       Add Day
@@ -685,7 +687,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                         </div>
                         <div className="flex-1 space-y-4">
                           <DualLanguageField
-                            label="Day Title"
+                            label={t("organizer.createFestival.dayTitle")}
                             englishValue={day.title_en}
                             amharicValue={day.title_am}
                             onEnglishChange={(value) => {
@@ -702,7 +704,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                             showAmharic={languagePreference !== 'en'}
                           />
                           <DualLanguageField
-                            label="Activities"
+                            label={t("organizer.createFestival.activities")}
                             englishValue={day.activities_en}
                             amharicValue={day.activities_am}
                             onEnglishChange={(value) => {
@@ -721,7 +723,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                             showAmharic={languagePreference !== 'en'}
                           />
                           <Input
-                            label="Performers (comma-separated)"
+                            label={t("organizer.createFestival.performers")}
                             value={day.performers.join(', ')}
                             onChange={(e) => {
                               const newSchedule = [...formData.schedule];
@@ -729,7 +731,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                               setFormData({ ...formData, schedule: newSchedule });
                             }}
                           />
-                        </div>
+                         </div>
                       </div>
                     ))}
                   </div>
@@ -764,7 +766,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                            </div>
                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                              <DualLanguageField
-                               label="Hotel Name *"
+                               label={t("organizer.createFestival.hotelName") + " *"}
                                englishPlaceholder="e.g. Gondar Heritage Hotel"
                                amharicPlaceholder="e.g. ጎንዳር ሆቴል"
                                englishValue={hotel.name_en || ''}
@@ -790,7 +792,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                              </div>
                            </div>
                            <DualLanguageField
-                             label="Short Description *"
+label={t("organizer.createFestival.shortDescription") + " *"}
                              textarea
                              rows={3}
                              englishPlaceholder="Brief description of the hotel..."
@@ -803,7 +805,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                              showAmharic={languagePreference !== 'en'}
                            />
                            <DualLanguageField
-                             label="Full Description *"
+label={t("organizer.createFestival.fullDescription") + " *"}
                              textarea
                              rows={5}
                              englishPlaceholder="Detailed information about the hotel..."
@@ -817,13 +819,13 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                            />
                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                              <Input
-                               label="Cover Image URL"
+                               label={t("organizer.createFestival.coverImage")}
                                placeholder="https://example.com/hotel.jpg"
                                value={hotel.image || ''}
                                onChange={(e) => updateHotel(hotelIdx, 'image', e.target.value)}
                              />
                              <Input
-                               label="Address"
+                               label={t("organizer.createFestival.address")}
                                placeholder="Hotel address"
                                value={hotel.address || ''}
                                onChange={(e) => updateHotel(hotelIdx, 'address', e.target.value)}
@@ -848,7 +850,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                      </div>
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                        <DualLanguageField
-                                         label="Room Name *"
+                                         label={t("organizer.createFestival.roomName") + " *"}
                                          englishPlaceholder="e.g. Deluxe Double"
                                          amharicPlaceholder="e.g. የመልካም ድርሻ"
                                          englishValue={room.name_en || ''}
@@ -859,7 +861,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                          showAmharic={languagePreference !== 'en'}
                                        />
                                        <Input
-                                         label="Capacity (guests)"
+                                         label={t("organizer.createFestival.capacity")}
                                          type="number"
                                          min="1"
                                          value={room.capacity || 1}
@@ -867,7 +869,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                        />
                                      </div>
                                      <DualLanguageField
-                                       label="Description"
+                                       label={t("organizer.createFestival.description")}
                                        textarea
                                        rows={2}
                                        englishPlaceholder="Room features and amenities..."
@@ -881,14 +883,14 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                      />
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                        <Input
-                                         label="Price per Night *"
+                                         label={t("organizer.createFestival.pricePerNight") + " *"}
                                          type="number"
                                          min="0"
                                          value={room.pricePerNight || 0}
                                          onChange={(e) => updateRoom(hotelIdx, roomIdx, 'pricePerNight', parseFloat(e.target.value) || 0)}
                                        />
                                        <Input
-                                         label="Available Rooms *"
+                                         label={t("organizer.createFestival.availableRooms") + " *"}
                                          type="number"
                                          min="0"
                                          value={room.availability || 0}
@@ -939,7 +941,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                            </div>
                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                              <DualLanguageField
-                               label="Transport Type *"
+                               label={t("organizer.createFestival.transportType") + " *"}
                                englishPlaceholder="e.g. Private Car, Shuttle Bus"
                                amharicPlaceholder="e.g. ፕሪቫት መኪና፣ ሸልቱ ባስ"
                                englishValue={transport.type_en || ''}
@@ -950,7 +952,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                showAmharic={languagePreference !== 'en'}
                              />
                              <Input
-                               label="Price per Unit"
+                               label={t("organizer.createFestival.pricePerUnit")}
                                type="number"
                                min="0"
                                value={transport.price || 0}
@@ -958,7 +960,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                              />
                            </div>
                            <DualLanguageField
-                             label="Description"
+                             label={t("organizer.createFestival.description")}
                              textarea
                              rows={3}
                              englishPlaceholder="Describe the transport service..."
@@ -972,14 +974,14 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                            />
                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                              <Input
-                               label="Available Units"
+                               label={t("organizer.createFestival.availableUnits")}
                                type="number"
                                min="0"
                                value={transport.availability || 1}
                                onChange={(e) => updateTransport(idx, 'availability', parseInt(e.target.value) || 1)}
                              />
                              <Input
-                               label="Passenger Capacity"
+                               label={t("organizer.createFestival.passengerCapacity")}
                                type="number"
                                min="0"
                                value={transport.capacity || 0}
@@ -987,7 +989,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                              />
                            </div>
                            <Input
-                             label="Image URL"
+                             label={t("organizer.createFestival.imageUrl")}
                              placeholder="https://example.com/transport.jpg"
                              value={transport.image || ''}
                              onChange={(e) => updateTransport(idx, 'image', e.target.value)}
@@ -1027,7 +1029,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                              </div>
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                <DualLanguageField
-                                 label="Package Name *"
+                                 label={t("organizer.createFestival.packageName") + " *"}
                                  englishPlaceholder="e.g. Traditional Feast"
                                  amharicPlaceholder="e.g. ባህላዊ ዓዲ"
                                  englishValue={pkg.name_en || ''}
@@ -1038,7 +1040,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                  showAmharic={languagePreference !== 'en'}
                                />
                                <Input
-                                 label="Price per Person"
+                                 label={t("organizer.createFestival.pricePerPerson")}
                                  type="number"
                                  min="0"
                                  value={pkg.pricePerPerson || 0}
@@ -1046,7 +1048,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                />
                              </div>
                              <DualLanguageField
-                               label="Description"
+                               label={t("organizer.createFestival.description")}
                                textarea
                                rows={3}
                                englishPlaceholder="Describe the package..."
@@ -1165,7 +1167,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                    <h3 className="text-2xl font-serif font-bold text-primary">Policies & Terms</h3>
                    <div className="grid grid-cols-1 gap-6">
                      <DualLanguageField
-                       label="Cancellation Policy *"
+                       label={t("organizer.createFestival.cancellationPolicy") + " *"}
                        textarea
                        rows={5}
                        englishPlaceholder="Explain cancellation terms, refund policy..."
@@ -1178,7 +1180,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                        showAmharic={languagePreference !== 'en'}
                      />
                      <DualLanguageField
-                       label="Booking Terms *"
+                       label={t("organizer.createFestival.bookingTerms") + " *"}
                        textarea
                        rows={5}
                        englishPlaceholder="Terms and conditions for bookings..."
@@ -1191,7 +1193,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                        showAmharic={languagePreference !== 'en'}
                      />
                      <DualLanguageField
-                       label="Safety Rules"
+                       label={t("organizer.createFestival.safetyRules")}
                        textarea
                        rows={5}
                        englishPlaceholder="Safety guidelines and rules..."
@@ -1204,7 +1206,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                        showAmharic={languagePreference !== 'en'}
                      />
                      <Input
-                       label="Age Restriction"
+                       label={t("organizer.createFestival.ageRestriction")}
                        placeholder="e.g. 18+, All ages, etc."
                        value={formData.policies.ageRestriction || ''}
                        onChange={(e) => setFormData({ ...formData, policies: { ...formData.policies, ageRestriction: e.target.value } })}
@@ -1219,21 +1221,21 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                    <h3 className="text-2xl font-serif font-bold text-primary">Pricing</h3>
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
                      <Input
-                       label="Base Ticket Price (ETB) *"
+                       label={t("organizer.createFestival.baseTicketPrice") + " *"}
                        type="number"
                        min="0"
                        value={formData.pricing.basePrice || 0}
                        onChange={(e) => setFormData({ ...formData, pricing: { ...formData.pricing, basePrice: parseFloat(e.target.value) || 0 } })}
                      />
                      <Input
-                       label="VIP Ticket Price (ETB)"
+                       label={t("organizer.createFestival.vipTicketPrice")}
                        type="number"
                        min="0"
                        value={formData.pricing.vipPrice || 0}
                        onChange={(e) => setFormData({ ...formData, pricing: { ...formData.pricing, vipPrice: parseFloat(e.target.value) || 0 } })}
                      />
                      <Input
-                       label="Early Bird Discount (%)"
+                       label={t("organizer.createFestival.earlyBirdDiscount")}
                        type="number"
                        min="0"
                        max="100"
@@ -1241,7 +1243,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                        onChange={(e) => setFormData({ ...formData, pricing: { ...formData.pricing, earlyBird: parseFloat(e.target.value) || 0 } })}
                      />
                      <Input
-                       label="Group Discount (%)"
+                       label={t("organizer.createFestival.groupDiscount")}
                        type="number"
                        min="0"
                        max="100"
