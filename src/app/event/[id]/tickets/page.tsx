@@ -175,24 +175,36 @@ export default function TicketsPage() {
         'Complimentary refreshments',
         'Reserved parking',
       ],
+      isVip: true,
+      includesHotelTransport: true,
+      vipPerks: festival?.vipPerks || [
+        'Front row seating',
+        'VIP lounge access',
+        'Fast entry',
+        'Welcome drink',
+      ],
     },
     {
       type: 'standard' as const,
       label: 'Standard Entry',
       benefits: [
-        'General admissions access',
+        'General admission access',
         'Food court access',
         'Standard viewing area',
       ],
+      isVip: false,
+      includesHotelTransport: false,
     },
     {
       type: 'earlyBird' as const,
       label: 'Early Bird',
       benefits: [
-        'General admissions access',
+        'General admission access',
         'Discounted price',
         'Food court access',
       ],
+      isVip: false,
+      includesHotelTransport: false,
     },
   ];
 
@@ -240,6 +252,9 @@ export default function TicketsPage() {
                   price={getTicketPrice(ticket.type)}
                   benefits={ticket.benefits}
                   isSelected={ticketSelection?.type === ticket.type}
+                  isVip={ticket.isVip}
+                  includesHotelTransport={ticket.includesHotelTransport}
+                  vipPerks={ticket.vipPerks}
                   disabled={ticket.type === 'earlyBird' && !isEarlyBirdAvailable}
                   disabledReason={
                     ticket.type === 'earlyBird' && !isEarlyBirdAvailable

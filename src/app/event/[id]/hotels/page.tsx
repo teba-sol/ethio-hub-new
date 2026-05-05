@@ -69,12 +69,17 @@ export default function HotelsPage() {
         
         const hotelsData = availabilityRes?.hotels || festivalData?.hotels || [];
         
+        const tier = ticketSelection?.type === 'vip' ? 'vip' : 'standard'; // earlyBird treated as standard
         const normalizedHotels = hotelsData.map((hotel: any, index: number) => ({
           ...hotel,
           id: hotel._id || hotel.id || `hotel-${index}`,
-          rooms: (hotel.rooms || []).map((room: any, roomIndex: number) => ({
+          rooms: (hotel.rooms || []).filter((room: any) => {
+            const roomTier = room.tier || 'both';
+            return roomTier === 'both' || roomTier === tier;
+          }).map((room: any, roomIndex: number) => ({
             ...room,
             id: room._id || room.id || `room-${index}-${roomIndex}`,
+            remaining: (room.availability || 0) - (room.bookedCount || 0),
           })),
         }));
         

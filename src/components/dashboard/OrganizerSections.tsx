@@ -884,7 +884,8 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={() => handleAddArrayItem('hotels', { 
+        onClick={() => handleAddArrayItem('hotels', { 
+  id: `hotel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             name: '', 
             starRating: 5, 
             address: '', 
@@ -1582,7 +1583,8 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => handleAddArrayItem('transportation', { 
+                 onClick={() => handleAddArrayItem('transportation', { 
+  id: `trans-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
                     type: '', 
                     price: 0, 
                     description: '', 
@@ -2125,110 +2127,345 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
         )}
 
         {/* ==================== PRICING TAB ==================== */}
-        {activeTab === 'pricing' && (
-          <div className="space-y-10 animate-in fade-in duration-500">
-            <h3 className="text-2xl font-serif font-bold text-primary">Pricing & Inventory</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {/* Base Price Card */}
-              <div className="bg-primary p-10 rounded-[40px] text-white shadow-xl space-y-6">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Standard Ticket</p>
-                {isEditing ? (
-                  <input
-                    type="number"
-                    value={currentData.pricing?.basePrice || 0}
-                    onChange={(e) => handleNestedChange('pricing', 'basePrice', parseNumberInput(e.target.value))}
-                    className="text-5xl font-serif font-bold bg-transparent border-b border-white/30 text-white w-full"
-                  />
-                ) : (
-                  <h4 className="text-5xl font-serif font-bold">
-                    {currentData.pricing?.currency || 'ETB'} {currentData.pricing?.basePrice || '0'}
-                  </h4>
-                )}
-                <ul className="space-y-3 text-sm opacity-80">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> General Admission</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Standard Seating</li>
-                  {currentData.pricing?.earlyBird > 0 && (
-                    <li className="flex items-center gap-2"><Clock className="w-4 h-4" /> Early Bird: {currentData.pricing.earlyBird}% off</li>
-                  )}
-                </ul>
-              </div>
+      // ==================== PRICING TAB WITH TIER LOGIC ====================
+{activeTab === 'pricing' && (
+  <div className="space-y-10 animate-in fade-in duration-500">
+    <h3 className="text-2xl font-serif font-bold text-primary">Pricing & Ticket Tiers</h3>
+    
+    {/* Currency & Global Settings */}
+    <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div>
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Currency</p>
+          {isEditing ? (
+            <select
+              value={currentData.pricing?.currency || 'ETB'}
+              onChange={(e) => handleNestedChange('pricing', 'currency', e.target.value)}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+            >
+              <option>ETB - Ethiopian Birr</option>
+              <option>USD - US Dollar</option>
+              <option>EUR - Euro</option>
+            </select>
+          ) : (
+            <p className="text-sm font-bold text-primary">{currentData.pricing?.currency || 'ETB'}</p>
+          )}
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Total Capacity</p>
+          {isEditing ? (
+            <input
+              type="number"
+              value={currentData.capacity || 1000}
+              onChange={(e) => handleInputChange('capacity', parseNumberInput(e.target.value))}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+            />
+          ) : (
+            <p className="text-sm font-bold text-primary">{currentData.capacity?.toLocaleString()} people</p>
+          )}
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Early Bird Deadline</p>
+          {isEditing ? (
+            <input
+              type="date"
+              value={currentData.pricing?.earlyBirdDeadline?.split('T')[0] || ''}
+              onChange={(e) => handleNestedChange('pricing', 'earlyBirdDeadline', e.target.value)}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+            />
+          ) : (
+            <p className="text-sm font-bold text-primary">
+              {currentData.pricing?.earlyBirdDeadline ? new Date(currentData.pricing.earlyBirdDeadline).toDateString() : 'No early bird'}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
 
-              {/* VIP Price Card */}
-              <div className="bg-secondary p-10 rounded-[40px] text-white shadow-xl space-y-6">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">VIP Experience</p>
-                {isEditing ? (
-                  <input
-                    type="number"
-                    value={currentData.pricing?.vipPrice || 0}
-                    onChange={(e) => handleNestedChange('pricing', 'vipPrice', parseNumberInput(e.target.value))}
-                    className="text-5xl font-serif font-bold bg-transparent border-b border-white/30 text-white w-full"
-                  />
-                ) : (
-                  <h4 className="text-5xl font-serif font-bold">
-                    {currentData.pricing?.currency || 'ETB'} {currentData.pricing?.vipPrice || (currentData.pricing?.basePrice ? currentData.pricing.basePrice * 3 : 750)}
-                  </h4>
-                )}
-                <ul className="space-y-3 text-sm opacity-80">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Priority Entry</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Exclusive Lounge Access</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Meet & Greet</li>
-                </ul>
-              </div>
+    {/* STANDARD TICKET CARD */}
+    <div className="bg-white p-8 rounded-[40px] border-2 border-gray-200 shadow-sm">
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <div className="inline-flex items-center gap-2 bg-gray-100 px-4 py-1.5 rounded-full mb-3">
+            <Ticket className="w-4 h-4 text-gray-500" />
+            <span className="text-[10px] font-black uppercase text-gray-600 tracking-wider">TIER 1</span>
+          </div>
+          <h4 className="text-2xl font-serif font-bold text-primary">Standard Ticket</h4>
+          <p className="text-sm text-gray-500 mt-1">General admission with optional add-ons</p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Price</p>
+          {isEditing ? (
+            <input
+              type="number"
+              value={currentData.pricing?.standardPrice || 0}
+              onChange={(e) => handleNestedChange('pricing', 'standardPrice', parseNumberInput(e.target.value))}
+              className="text-3xl font-bold text-primary bg-gray-50 border border-gray-200 rounded-xl p-2 w-32 text-right"
+            />
+          ) : (
+            <p className="text-3xl font-bold text-primary">
+              {currentData.pricing?.currency || 'ETB'} {currentData.pricing?.standardPrice?.toLocaleString() || '0'}
+            </p>
+          )}
+        </div>
+      </div>
 
-              {/* Inventory & Discounts Card */}
-              <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Inventory & Discounts</p>
-                <div className="space-y-6">
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Currency</p>
-                    {isEditing ? (
-                      <select
-                        value={currentData.pricing?.currency || 'ETB'}
-                        onChange={(e) => handleNestedChange('pricing', 'currency', e.target.value)}
-                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+      {/* Standard Ticket Benefits */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-2xl">
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <CheckCircle2 className="w-4 h-4 text-emerald-500" /> General Admission
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Standard Seating
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Access to All Days
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Clock className="w-4 h-4 text-amber-500" /> Early Bird Available
+        </div>
+      </div>
+
+      {/* Standard: Hotel & Transport are OPTIONAL (extra fee) - Show info only */}
+      <div className="border-t border-gray-100 pt-6 mt-2">
+        <p className="text-xs text-gray-400 flex items-center gap-2">
+          <Info className="w-3 h-3" />
+          Standard ticket holders can add hotels and transport as paid extras during checkout
+        </p>
+      </div>
+    </div>
+
+    {/* VIP TICKET CARD */}
+    <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 p-8 rounded-[40px] border-2 border-secondary/30 shadow-lg">
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <div className="inline-flex items-center gap-2 bg-secondary/20 px-4 py-1.5 rounded-full mb-3">
+            <Star className="w-4 h-4 text-secondary" />
+            <span className="text-[10px] font-black uppercase text-secondary tracking-wider">TIER 2 • PREMIUM</span>
+          </div>
+          <h4 className="text-2xl font-serif font-bold text-primary">VIP Ticket</h4>
+          <p className="text-sm text-gray-600 mt-1">Premium experience with hotel & transport INCLUDED</p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Price (All Inclusive)</p>
+          {isEditing ? (
+            <input
+              type="number"
+              value={currentData.pricing?.vipPrice || 0}
+              onChange={(e) => handleNestedChange('pricing', 'vipPrice', parseNumberInput(e.target.value))}
+              className="text-3xl font-bold text-secondary bg-white border border-secondary/30 rounded-xl p-2 w-32 text-right"
+            />
+          ) : (
+            <p className="text-3xl font-bold text-secondary">
+              {currentData.pricing?.currency || 'ETB'} {currentData.pricing?.vipPrice?.toLocaleString() || '0'}
+            </p>
+          )}
+          <p className="text-[10px] text-gray-400 mt-1">Includes hotel + transport</p>
+        </div>
+      </div>
+
+      {/* VIP Benefits */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
+          <CheckCircle2 className="w-4 h-4 text-secondary" /> Priority Entry
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
+          <CheckCircle2 className="w-4 h-4 text-secondary" /> VIP Lounge Access
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
+          <CheckCircle2 className="w-4 h-4 text-secondary" /> Meet & Greet
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
+          <CheckCircle2 className="w-4 h-4 text-secondary" /> Complimentary Drinks
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
+          <Hotel className="w-4 h-4 text-secondary" /> Hotel Included (1 night)
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
+          <Car className="w-4 h-4 text-secondary" /> Transport Included
+        </div>
+      </div>
+
+      {/* VIP Settings - Which hotels/transport are available for VIP choice */}
+      {isEditing && (
+        <div className="border-t border-secondary/20 pt-6 mt-4">
+          <p className="text-sm font-bold text-primary mb-4 flex items-center gap-2">
+            <Settings className="w-4 h-4 text-secondary" />
+            VIP Package Configuration
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* VIP Hotel Selection */}
+            <div className="bg-white p-5 rounded-2xl">
+              <p className="text-xs font-black uppercase text-gray-400 tracking-wider mb-3">
+                VIP Included Hotels (user chooses 1)
+              </p>
+              <div className="space-y-2">
+                {(currentData.pricing?.vipIncludedHotels || []).map((hotelId: string, idx: number) => {
+                  const hotel = currentData.hotels?.find((h: any) => h.id === hotelId);
+                  return (
+                    <div key={idx} className="flex items-center justify-between bg-gray-50 p-3 rounded-xl">
+                      <span className="text-sm font-medium text-primary">{hotel?.name || hotelId}</span>
+                      <button
+                        onClick={() => {
+                          const newList = (currentData.pricing?.vipIncludedHotels || []).filter((_: string, i: number) => i !== idx);
+                          handleNestedChange('pricing', 'vipIncludedHotels', newList);
+                        }}
+                        className="text-red-500 text-xs"
                       >
-                        <option>ETB</option>
-                        <option>USD</option>
-                        <option>EUR</option>
-                      </select>
-                    ) : (
-                      <p className="text-sm font-bold text-primary">{currentData.pricing?.currency || 'ETB'}</p>
-                    )}
-                  </div>
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })}
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const currentList = currentData.pricing?.vipIncludedHotels || [];
+                      handleNestedChange('pricing', 'vipIncludedHotels', [...currentList, e.target.value]);
+                    }
+                  }}
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+                  defaultValue=""
+                >
+                  <option value="">-- Add hotel to VIP package --</option>
+                  {(currentData.hotels || []).map((hotel: any) => (
+                    <option key={hotel.id} value={hotel.id}>{hotel.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Early Bird Discount</p>
-                    {isEditing ? (
-                      <input
-                        type="number"
-                        value={currentData.pricing?.earlyBird || 0}
-                        onChange={(e) => handleNestedChange('pricing', 'earlyBird', parseNumberInput(e.target.value))}
-                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                      />
-                    ) : (
-                      <p className="text-sm font-bold text-primary">{currentData.pricing?.earlyBird || 0}% off</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Group Discount</p>
-                    {isEditing ? (
-                      <input
-                        type="number"
-                        value={currentData.pricing?.groupDiscount || 0}
-                        onChange={(e) => handleNestedChange('pricing', 'groupDiscount', parseNumberInput(e.target.value))}
-                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                      />
-                    ) : (
-                      <p className="text-sm font-bold text-primary">{currentData.pricing?.groupDiscount || 10}% off for groups of 10+</p>
-                    )}
-                  </div>
-                </div>
+            {/* VIP Transport Selection */}
+            <div className="bg-white p-5 rounded-2xl">
+              <p className="text-xs font-black uppercase text-gray-400 tracking-wider mb-3">
+                VIP Included Transport (user chooses 1)
+              </p>
+              <div className="space-y-2">
+                {(currentData.pricing?.vipIncludedTransport || []).map((transportId: string, idx: number) => {
+                  const transport = currentData.transportation?.find((t: any) => t.id === transportId);
+                  return (
+                    <div key={idx} className="flex items-center justify-between bg-gray-50 p-3 rounded-xl">
+                      <span className="text-sm font-medium text-primary">{transport?.type || transportId}</span>
+                      <button
+                        onClick={() => {
+                          const newList = (currentData.pricing?.vipIncludedTransport || []).filter((_: string, i: number) => i !== idx);
+                          handleNestedChange('pricing', 'vipIncludedTransport', newList);
+                        }}
+                        className="text-red-500 text-xs"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })}
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const currentList = currentData.pricing?.vipIncludedTransport || [];
+                      handleNestedChange('pricing', 'vipIncludedTransport', [...currentList, e.target.value]);
+                    }
+                  }}
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+                  defaultValue=""
+                >
+                  <option value="">-- Add transport to VIP package --</option>
+                  {(currentData.transportation || []).map((transport: any) => (
+                    <option key={transport.id} value={transport.id}>{transport.type}</option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
+      {/* Non-editing mode: Show what's included */}
+      {!isEditing && currentData.pricing?.vipIncludedHotels?.length > 0 && (
+        <div className="border-t border-secondary/20 pt-6 mt-4">
+          <p className="text-xs text-gray-500 flex items-center gap-2">
+            <Hotel className="w-3 h-3" />
+            VIP includes choice of: {currentData.pricing.vipIncludedHotels.map((id: string) => {
+              const hotel = currentData.hotels?.find((h: any) => h.id === id);
+              return hotel?.name;
+            }).filter(Boolean).join(', ')}
+          </p>
+        </div>
+      )}
+    </div>
+
+    {/* Early Bird Settings */}
+    <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+      <h4 className="font-bold text-primary mb-4 flex items-center gap-2">
+        <Clock className="w-4 h-4 text-secondary" />
+        Early Bird Discount
+      </h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Standard Early Bird (%)</p>
+          {isEditing ? (
+            <input
+              type="number"
+              value={currentData.pricing?.standardEarlyBird || 0}
+              onChange={(e) => handleNestedChange('pricing', 'standardEarlyBird', parseNumberInput(e.target.value))}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+            />
+          ) : (
+            <p className="text-sm font-bold text-primary">{currentData.pricing?.standardEarlyBird || 0}% off</p>
+          )}
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">VIP Early Bird (%)</p>
+          {isEditing ? (
+            <input
+              type="number"
+              value={currentData.pricing?.vipEarlyBird || 0}
+              onChange={(e) => handleNestedChange('pricing', 'vipEarlyBird', parseNumberInput(e.target.value))}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+            />
+          ) : (
+            <p className="text-sm font-bold text-primary">{currentData.pricing?.vipEarlyBird || 0}% off</p>
+          )}
+        </div>
+      </div>
+    </div>
+
+    {/* Group Discount */}
+    <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+      <h4 className="font-bold text-primary mb-4 flex items-center gap-2">
+        <Users className="w-4 h-4 text-secondary" />
+        Group Discount
+      </h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Minimum Group Size</p>
+          {isEditing ? (
+            <input
+              type="number"
+              value={currentData.pricing?.groupMinSize || 10}
+              onChange={(e) => handleNestedChange('pricing', 'groupMinSize', parseNumberInput(e.target.value))}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+            />
+          ) : (
+            <p className="text-sm font-bold text-primary">{currentData.pricing?.groupMinSize || 10}+ people</p>
+          )}
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Group Discount (%)</p>
+          {isEditing ? (
+            <input
+              type="number"
+              value={currentData.pricing?.groupDiscount || 0}
+              onChange={(e) => handleNestedChange('pricing', 'groupDiscount', parseNumberInput(e.target.value))}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+            />
+          ) : (
+            <p className="text-sm font-bold text-primary">{currentData.pricing?.groupDiscount || 0}% off</p>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
         {/* ==================== REVIEWS TAB ==================== */}
         {activeTab === 'reviews' && (
           <div className="space-y-10 animate-in fade-in duration-500">

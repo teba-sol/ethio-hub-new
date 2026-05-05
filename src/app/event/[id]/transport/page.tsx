@@ -128,10 +128,13 @@ export default function TransportPage() {
                             <h3 className="text-lg font-bold text-primary">{getLocalizedText(transport, 'type', language)}</h3>
                             {transport.provider && <p className="text-gray-500 text-sm">{transport.provider}</p>}
                           </div>
-                          <div className="text-right">
-                            <span className="text-2xl font-bold text-primary">${transport.price}</span>
-                            <span className="text-gray-500 text-sm">/day</span>
-                          </div>
+                        <div className="text-right">
+                          {transport.vipIncluded && (
+                            <span className="inline-block px-2 py-1 text-xs font-bold bg-amber-100 text-amber-800 rounded-full mb-1">VIP FREE</span>
+                          )}
+                          <span className="text-2xl font-bold text-primary">${transport.price}</span>
+                          <span className="text-gray-500 text-sm">/day</span>
+                        </div>
                         </div>
                         {transport.description && (
                           <p className="mt-3 text-sm leading-relaxed text-gray-500 line-clamp-3">{getLocalizedText(transport, 'description', language)}</p>

@@ -229,6 +229,8 @@ export const Homepage: React.FC = () => {
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [festivalLoading, setFestivalLoading] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [celebrationFestivals, setCelebrationFestivals] = useState<Festival[]>([]);
+  const [celebrationLoading, setCelebrationLoading] = useState(true);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -299,6 +301,26 @@ export const Homepage: React.FC = () => {
     fetchUpcomingFestivals();
   }, []);
 
+  useEffect(() => {
+    const fetchCelebrationFestivals = async () => {
+      try {
+        const res = await fetch('/api/festivals?limit=2&sort=startDate');
+        const data = await res.json();
+        const apiFestivals = Array.isArray(data.festivals) ? data.festivals : [];
+        const normalized = apiFestivals
+          .map((festival: any, index: number) => normalizeFestival(festival, index));
+        
+        setCelebrationFestivals(normalized.length > 0 ? normalized : []);
+      } catch (error) {
+        console.error('Error fetching celebration festivals:', error);
+        setCelebrationFestivals([]);
+      } finally {
+        setCelebrationLoading(false);
+      }
+    };
+    fetchCelebrationFestivals();
+  }, []);
+
   const filteredProducts = products;
   const landingProducts = filteredProducts.slice(0, 4).map((product, index) => ({
     ...product,
@@ -312,7 +334,7 @@ export const Homepage: React.FC = () => {
       {/* Hero Video Section */}
       <HeroVideo />
 
-      <section className="py-12 bg-white border-b border-gray-100 -mt-10 relative z-20">
+      <section className="py-12 bg-white border-b border-gray-100 -mt-20 md:-mt-32 relative z-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
@@ -362,6 +384,221 @@ export const Homepage: React.FC = () => {
               ))}
             </div>
           </div>
+      </section>
+
+      {/* UNESCO World Heritage & Festival Events Section */}
+      <section className="py-16 md:py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#D4AF37] mb-3">TIMELESS ATTRACTIONS</p>
+            <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary mb-4">UNESCO World Heritage & Festival Events</h2>
+            <p className="text-gray-500 max-w-2xl mx-auto">Experience Ethiopia's rich cultural tapestry through our sacred festivals and legendary heritage sites that have captivated travelers for centuries.</p>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Timket Card */}
+            <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
+              <div className="h-48 bg-gray-200 relative overflow-hidden">
+                {/* <!-- Replace with actual Timket festival image --> */}
+                <img 
+                  src="https://images.unsplash.com/photo-1562962280-749b6e76a9d2?w=600&h=400&fit=crop" 
+                  alt="Timket Festival" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-4">
+                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">Festival</span>
+                <h3 className="font-bold text-lg mt-2 text-primary">Timket</h3>
+                <p className="text-gray-600 text-sm mt-1">Epiphany celebration featuring colorful processions and traditional Tabot ceremonies.</p>
+                <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
+                  <Calendar className="w-4 h-4" />
+                  <span>January 19</span>
+                </div>
+                <Link href="https://en.wikipedia.org/wiki/Timket" target="_blank" rel="noopener noreferrer" className="inline-flex items-center mt-3 text-sm font-medium text-[#D4AF37] hover:text-[#B8962E] transition-colors">
+                  Discover More <ArrowRight className="w-4 h-4 ml-1" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Meskel Card */}
+            <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
+              <div className="h-48 bg-gray-200 relative overflow-hidden">
+                {/* <!-- Replace with actual Meskel festival image --> */}
+                <img 
+                  src="https://images.unsplash.com/photo-1572252009286-268acec5ca0a8?w=600&h=400&fit=crop" 
+                  alt="Meskel Festival" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-4">
+                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">Festival</span>
+                <h3 className="font-bold text-lg mt-2 text-primary">Meskel</h3>
+                <p className="text-gray-600 text-sm mt-1">Finding of the True Cross celebration with the iconic Demera bonfire in Addis Ababa.</p>
+                <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
+                  <Calendar className="w-4 h-4" />
+                  <span>September 27</span>
+                </div>
+                <Link href="https://en.wikipedia.org/wiki/Meskel" target="_blank" rel="noopener noreferrer" className="inline-flex items-center mt-3 text-sm font-medium text-[#D4AF37] hover:text-[#B8962E] transition-colors">
+                  Discover More <ArrowRight className="w-4 h-4 ml-1" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Lalibela Card */}
+            <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
+              <div className="h-48 bg-gray-200 relative overflow-hidden">
+                {/* <!-- Replace with actual Lalibela image --> */}
+                <img 
+                  src="https://images.unsplash.com/photo-1563184572-339991b7e7fe?w=600&h=400&fit=crop" 
+                  alt="Lalibela Rock-Hewn Churches" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-4">
+                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">World Heritage</span>
+                <h3 className="font-bold text-lg mt-2 text-primary">Lalibela</h3>
+                <p className="text-gray-600 text-sm mt-1">UNESCO site featuring 11 monolithic rock-hewn churches, the "Eighth Wonder of the World."</p>
+                <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
+                  <MapPin className="w-4 h-4" />
+                  <span>Amhara Region</span>
+                </div>
+                <Link href="https://en.wikipedia.org/wiki/Lalibela" target="_blank" rel="noopener noreferrer" className="inline-flex items-center mt-3 text-sm font-medium text-[#D4AF37] hover:text-[#B8962E] transition-colors">
+                  Discover More <ArrowRight className="w-4 h-4 ml-1" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Irreecha Card */}
+            <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
+              <div className="h-48 bg-gray-200 relative overflow-hidden">
+                {/* <!-- Replace with actual Irreecha festival image --> */}
+                <img 
+                  src="https://images.unsplash.com/photo-1545389336-cf090694435e?w=600&h=400&fit=crop" 
+                  alt="Irreecha Festival" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-4">
+                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">Festival</span>
+                <h3 className="font-bold text-lg mt-2 text-primary">Irreecha</h3>
+                <p className="text-gray-600 text-sm mt-1">Oromo thanksgiving celebration at Lake Tuppo, symbolizing gratitude and renewal.</p>
+                <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
+                  <Calendar className="w-4 h-4" />
+                  <span>October</span>
+                </div>
+                <Link href="/festivals" className="inline-flex items-center text-[#D4AF37] font-medium hover:text-[#B8962E] transition-colors">
+                  Discover More <ArrowRight className="w-4 h-4 ml-1" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Ethiopian Festivals Celebration Section - Dynamic */}
+      <section className="py-16 md:py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#D4AF37] mb-3">CULTURAL CELEBRATIONS</p>
+            <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary mb-4">Experience Ethiopian Festivities</h2>
+            <p className="text-gray-500 max-w-2xl mx-auto">From ancient religious traditions to vibrant cultural celebrations, discover the soul of Ethiopia through its festivals.</p>
+          </div>
+
+          {celebrationLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+              {[1, 2].map((i) => (
+                <div key={i} className="flex flex-col md:flex-row bg-white rounded-2xl overflow-hidden shadow-lg animate-pulse">
+                  <div className="md:w-1/2 h-64 bg-gray-200"></div>
+                  <div className="p-6 md:w-1/2 space-y-4">
+                    <div className="h-4 bg-gray-200 rounded w-24"></div>
+                    <div className="h-6 bg-gray-200 rounded w-32"></div>
+                    <div className="h-4 bg-gray-200 rounded w-full"></div>
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : celebrationFestivals.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+              {celebrationFestivals.slice(0, 2).map((festival) => (
+                <Link href={`/event/${festival.id}`} key={festival.id} className="group flex flex-col md:flex-row bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all">
+                  <div className="md:w-1/2 h-64 md:h-auto relative overflow-hidden">
+                    <img 
+                      src={festival.coverImage || 'https://images.unsplash.com/photo-1572252009286-268acec5ca0a8?w=600&h=400&fit=crop'} 
+                      alt={festival.name} 
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                  </div>
+                  <div className="p-6 md:w-1/2">
+                    <span className="inline-block bg-[#D4AF37]/10 text-[#D4AF37] text-xs px-3 py-1 rounded-full font-medium mb-3">
+                      {formatDate(festival.startDate)}
+                    </span>
+                    <h3 className="font-serif text-2xl font-bold text-primary mb-2">{festival.name}</h3>
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-3">{festival.shortDescription}</p>
+                    <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                      <div className="flex items-center gap-1">
+                        <MapPin className="w-4 h-4" />
+                        <span className="line-clamp-1">{festival.locationName}</span>
+                      </div>
+                    </div>
+                    <div className="inline-flex items-center text-[#D4AF37] font-medium hover:text-[#B8962E] transition-colors">
+                      Explore Festival <ArrowRight className="w-4 h-4 ml-1" />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+              <div className="flex flex-col md:flex-row bg-white rounded-2xl overflow-hidden shadow-lg">
+                <div className="md:w-1/2 h-64 md:h-auto relative">
+                  <img 
+                    src="https://images.unsplash.com/photo-1572252009286-268acec5ca0a8?w=600&h=400&fit=crop" 
+                    alt="Meskel" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="p-6 md:w-1/2">
+                  <span className="inline-block bg-[#D4AF37]/10 text-[#D4AF37] text-xs px-3 py-1 rounded-full font-medium mb-3">September 27</span>
+                  <h3 className="font-serif text-2xl font-bold text-primary mb-2">Meskel</h3>
+                  <p className="text-gray-600 text-sm mb-4">The Ethiopian Orthodox celebration of the Finding of the True Cross. Thousands gather in Addis Ababa's Meskel Square for the iconic Demera bonfire ceremony.</p>
+                  <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                    <div className="flex items-center gap-1">
+                      <MapPin className="w-4 h-4" />
+                      <span>Addis Ababa</span>
+                    </div>
+                  </div>
+                  <Link href="/festivals" className="inline-flex items-center text-[#D4AF37] font-medium hover:text-[#B8962E] transition-colors">
+                    Explore Festival <ArrowRight className="w-4 h-4 ml-1" />
+                  </Link>
+                </div>
+              </div>
+              <div className="flex flex-col md:flex-row bg-white rounded-2xl overflow-hidden shadow-lg">
+                <div className="md:w-1/2 h-64 md:h-auto relative">
+                  <img 
+                    src="https://images.unsplash.com/photo-1562962280-749b6e76a9d2?w=600&h=400&fit=crop" 
+                    alt="Timket" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="p-6 md:w-1/2">
+                  <span className="inline-block bg-[#D4AF37]/10 text-[#D4AF37] text-xs px-3 py-1 rounded-full font-medium mb-3">January 19</span>
+                  <h3 className="font-serif text-2xl font-bold text-primary mb-2">Timket</h3>
+                  <p className="text-gray-600 text-sm mb-4">The Ethiopian Epiphany celebration recreates the baptism of Jesus with colorful processions and Tabot ceremonies.</p>
+                  <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                    <div className="flex items-center gap-1">
+                      <MapPin className="w-4 h-4" />
+                      <span>Nationwide</span>
+                    </div>
+                  </div>
+                  <Link href="/festivals" className="inline-flex items-center text-[#D4AF37] font-medium hover:text-[#B8962E] transition-colors">
+                    Explore Festival <ArrowRight className="w-4 h-4 ml-1" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Explore Ethiopia Inspired Section */}
@@ -537,43 +774,48 @@ export const Homepage: React.FC = () => {
         </div>
       </section>
 
-      {/* Why Choose Us */}
-      <section className="py-12 md:py-24 bg-ethio-dark text-white">
-        <div className="max-w-7xl mx-auto px-6">
+      {/* Key Features Section - Enhanced */}
+      <section className="py-16 md:py-24 bg-gradient-to-br from-ethio-dark via-[#1a1a2e] to-ethio-dark text-white relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-20 left-20 w-72 h-72 bg-[#D4AF37] rounded-full blur-[100px]"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-secondary rounded-full blur-[120px]"></div>
+        </div>
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-serif font-bold mb-4">{t("home.whyChooseUs")}</h2>
-            <div className="w-24 h-1 bg-secondary mx-auto rounded-full"></div>
+            <p className="text-xs font-bold uppercase tracking-[0.32em] text-secondary mb-3">WHY CHOOSE US</p>
+            <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">Your Gateway to Authentic Ethiopian Culture</h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">We bridge the gap between global travelers and Ethiopia's rich cultural heritage, ensuring safe, authentic, and unforgettable experiences.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="bg-white/5 p-8 rounded-3xl border border-white/10 hover:bg-white/10 transition-colors group">
-              <div className="w-14 h-14 bg-secondary/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <ShieldCheck className="w-7 h-7 text-secondary" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white/5 p-8 rounded-2xl border border-white/10 hover:bg-white/10 hover:border-secondary/30 transition-all group cursor-pointer">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#D4AF37]/20 to-[#D4AF37]/5 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-[#D4AF37]/20 transition-all">
+                <ShieldCheck className="w-8 h-8 text-secondary" />
               </div>
-              <h3 className="text-xl font-bold mb-3">{t("home.verifiedOrganizers")}</h3>
+              <h3 className="text-xl font-bold mb-3 text-white">{t("home.verifiedOrganizers")}</h3>
               <p className="text-gray-400 text-sm leading-relaxed">{t("home.verifiedOrganizersDesc")}</p>
             </div>
             
-            <div className="bg-white/5 p-8 rounded-3xl border border-white/10 hover:bg-white/10 transition-colors group">
-              <div className="w-14 h-14 bg-secondary/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <CreditCard className="w-7 h-7 text-secondary" />
+            <div className="bg-white/5 p-8 rounded-2xl border border-white/10 hover:bg-white/10 hover:border-secondary/30 transition-all group cursor-pointer">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#D4AF37]/20 to-[#D4AF37]/5 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-[#D4AF37]/20 transition-all">
+                <CreditCard className="w-8 h-8 text-secondary" />
               </div>
-              <h3 className="text-xl font-bold mb-3">{t("home.securePayment")}</h3>
+              <h3 className="text-xl font-bold mb-3 text-white">{t("home.securePayment")}</h3>
               <p className="text-gray-400 text-sm leading-relaxed">{t("home.securePaymentDesc")}</p>
             </div>
             
-            <div className="bg-white/5 p-8 rounded-3xl border border-white/10 hover:bg-white/10 transition-colors group">
-              <div className="w-14 h-14 bg-secondary/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Award className="w-7 h-7 text-secondary" />
+            <div className="bg-white/5 p-8 rounded-2xl border border-white/10 hover:bg-white/10 hover:border-secondary/30 transition-all group cursor-pointer">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#D4AF37]/20 to-[#D4AF37]/5 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-[#D4AF37]/20 transition-all">
+                <Award className="w-8 h-8 text-secondary" />
               </div>
-              <h3 className="text-xl font-bold mb-3">{t("home.authenticHandmade")}</h3>
+              <h3 className="text-xl font-bold mb-3 text-white">{t("home.authenticHandmade")}</h3>
               <p className="text-gray-400 text-sm leading-relaxed">{t("home.authenticHandmadeDesc")}</p>
             </div>
             
-            <div className="bg-white/5 p-8 rounded-3xl border border-white/10 hover:bg-white/10 transition-colors group">
-              <div className="w-14 h-14 bg-secondary/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <RefreshCw className="w-7 h-7 text-secondary" />
+            <div className="bg-white/5 p-8 rounded-2xl border border-white/10 hover:bg-white/10 hover:border-secondary/30 transition-all group cursor-pointer">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#D4AF37]/20 to-[#D4AF37]/5 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-[#D4AF37]/20 transition-all">
+                <RefreshCw className="w-8 h-8 text-secondary" />
               </div>
-              <h3 className="text-xl font-bold mb-3">{t("home.easyRefund")}</h3>
+              <h3 className="text-xl font-bold mb-3 text-white">{t("home.easyRefund")}</h3>
               <p className="text-gray-400 text-sm leading-relaxed">{t("home.easyRefundDesc")}</p>
             </div>
           </div>

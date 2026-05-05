@@ -17,7 +17,7 @@ export interface ITicketType {
   price: number;
   quantity: number;       // Total inventory
   available: number;      // Available (decremented on booking)
-  benefits?: string[];
+  perks?: string[];       // Priority perks (VIP only)
 }
 
 export interface IRoom extends Document {
@@ -34,6 +34,7 @@ export interface IRoom extends Document {
   description_en?: string;
   description_am?: string;
   sqm?: number;           // Room size in square meters
+  tier: 'vip' | 'standard' | 'both';  // Which ticket tiers can book this room
   amenities?: string[];    // Room amenities (WiFi, AC, etc.)
 }
 
@@ -57,6 +58,11 @@ export interface IHotel extends Document {
   facilities?: string[];
   gallery?: string[];
   rooms: IRoom[];
+  hotelServices?: Array<{  // Pay-at-hotel services (display only)
+    name: string;
+    price: number;
+    description?: string;
+  }>;
 }
 
 export interface ITransportation extends Document {
@@ -72,6 +78,8 @@ export interface ITransportation extends Document {
   availability?: number;  // Total vehicles available
   available?: number;     // Available vehicles (decremented on booking)
   capacity?: number;      // Passenger capacity per vehicle
+  vipIncluded?: boolean;  // If true, VIP ticket holders get this transport free
+  features?: string[];    // Vehicle features (matches schema)
   pickupLocations?: string;
 }
 
@@ -162,7 +170,7 @@ const TicketTypeSchema: Schema = new Schema({
   price: { type: Number, required: true },
   quantity: { type: Number, required: true, default: 0 },     // Total inventory
   available: { type: Number, required: true, default: 0 },     // Available (decremented on booking)
-  benefits: [{ type: String }],
+  perks: [{ type: String }],  // Priority perks (VIP only)
 }, { _id: true });
 
 // SIMPLIFIED: Room Schema - with all fields
@@ -180,6 +188,7 @@ const RoomSchema: Schema = new Schema({
   description_en: { type: String },
   description_am: { type: String },
   sqm: { type: Number },                            // Room size in sqm
+  tier: { type: String, enum: ['vip', 'standard', 'both'], default: 'both' },  // Which tiers can book
   amenities: [{ type: String }],                    // Room amenities
 }, { _id: true });
 
@@ -215,6 +224,11 @@ const HotelSchema: Schema = new Schema({
   facilities: [{ type: String }],
   gallery: [{ type: String }],
   rooms: [RoomSchema],
+  hotelServices: [{  // Pay-at-hotel services (display only)
+    name: { type: String, required: true },
+    price: { type: Number, required: true },
+    description: { type: String }
+  }],
 });
 
 const TransportationSchema: Schema = new Schema({
@@ -230,6 +244,7 @@ const TransportationSchema: Schema = new Schema({
   availability: { type: Number },       // Total vehicles available
   available: { type: Number },          // Available vehicles (decremented on booking)
   capacity: { type: Number },
+  vipIncluded: { type: Boolean, default: false },  // VIP ticket holders get this free
   features: [{ type: String }],
   pickupLocations: { type: String },
 });

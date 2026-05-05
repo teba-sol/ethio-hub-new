@@ -54,9 +54,11 @@ export default function HotelDetailPage() {
   const normalizeHotel = (hotelData: any, hotelIndex = 0): HotelAccommodation => ({
     ...hotelData,
     id: hotelData._id || hotelData.id || `hotel-${hotelIndex}`,
+    hotelServices: hotelData.hotelServices || [],
     rooms: (hotelData.rooms || []).map((room: any, roomIndex: number) => ({
       ...room,
       id: room._id || room.id || `room-${hotelIndex}-${roomIndex}`,
+      remaining: (room.availability || 0) - (room.bookedCount || 0),
     })),
   });
 
@@ -432,9 +434,26 @@ export default function HotelDetailPage() {
                   <p className="text-gray-500">No rooms available. Please check back later.</p>
                 </div>
               )}
-            </div>
+              </div>
 
-             {/* Food & Drink Packages Section - from Event Services */}
+              {/* Hotel Services (Pay at Hotel) */}
+              {hotel.hotelServices && hotel.hotelServices.length > 0 && (
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">Hotel Services (Pay at Hotel)</h2>
+                  <p className="text-sm text-gray-500 mb-6">These services are paid directly at the hotel, not through the platform.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {hotel.hotelServices.map((service: any, idx: number) => (
+                      <div key={idx} className="p-4 bg-white rounded-xl border border-gray-100">
+                        <h3 className="font-bold text-gray-900">{service.name}</h3>
+                        {service.description && <p className="text-sm text-gray-500 mt-1">{service.description}</p>}
+                        <p className="text-lg font-bold text-primary mt-2">${service.price}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Food & Drink Packages Section - from Event Services */}
              {foodPackages.length > 0 && (
                <div>
                  <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">{t('hotel.foodPackages')}</h2>

@@ -97,10 +97,9 @@ export async function POST(
         break;
 
       case 'Ban':
-        updateData.status = 'PendingBan';
-        // Send ban notification email to target owner
-        await sendBanEmail(report);
-        // Mark for second admin approval
+        updateData.status = 'Resolved';
+        // Directly ban/suspend the user immediately - no second approval needed
+        await banUserDirectly(report);
         break;
 
       default:
@@ -255,7 +254,6 @@ async function takeDownContent(report: any) {
     }
 
     if (targetEmail) {
-      // Use external URL for email notification API
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.FRONTEND_URL || 'http://localhost:3000';
       const url = `${baseUrl}/api/notifications/suspended-email`;
       
@@ -273,5 +271,56 @@ async function takeDownContent(report: any) {
     }
   } catch (error) {
     console.error('Take down content error:', error);
+  }
+}
+
+// Helper: Directly ban user without pending approval
+async function banUserDirectly(report: any) {
+  try {
+    let targetEmail = '';
+    let targetName = '';
+    let targetId = report.targetId;
+
+    if (report.targetType === 'Event') {
+      await Festival.findByIdAndUpdate(targetId, { status: 'Cancelled' });
+      const event = await Festival.findById(targetId).populate('organizer', 'email name');
+      if (event?.organizer) {
+        targetEmail = (event.organizer as any).email;
+        targetName = (event.organizer as any).name;
+      }
+    } else if (report.targetType === 'Product') {
+      await Product.findByIdAndUpdate(targetId, { status: 'Archived' });
+      const product = await Product.findById(targetId).populate('artisanId', 'email name');
+      if (product?.artisanId) {
+        targetEmail = (product.artisanId as any).email;
+        targetName = (product.artisanId as any).name;
+      }
+    } else if (report.targetType === 'User') {
+      await User.findByIdAndUpdate(targetId, { status: 'Banned' });
+      const user = await User.findById(targetId);
+      if (user) {
+        targetEmail = user.email;
+        targetName = user.name;
+      }
+    }
+
+    if (targetEmail) {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.FRONTEND_URL || 'http://localhost:3000';
+      const url = `${baseUrl}/api/notifications/ban-email`;
+      
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: targetEmail,
+          name: targetName,
+          targetType: report.targetType,
+          reason: report.reason,
+          description: report.description,
+        })
+      });
+    }
+  } catch (error) {
+    console.error('Ban user directly error:', error);
   }
 }

@@ -118,9 +118,11 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
     image: '',
     facilities: [] as string[],
     rooms: [] as any[],
+    hotelServices: [] as any[],
   });
 
   const createEmptyRoom = () => ({
+    tier: 'both',
     name_en: '',
     name_am: '',
     description_en: '',
@@ -131,6 +133,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
   });
 
   const createEmptyTransport = () => ({
+    vipIncluded: false,
     type_en: '',
     type_am: '',
     description_en: '',
@@ -185,6 +188,30 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
     const newHotels = [...formData.hotels];
     const rooms = newHotels[hotelIndex].rooms.filter((_: any, i: number) => i !== roomIndex);
     newHotels[hotelIndex] = { ...newHotels[hotelIndex], rooms };
+    setFormData({ ...formData, hotels: newHotels });
+   };
+
+  // Hotel service handlers
+  const addHotelService = (hotelIndex: number) => {
+    const newHotels = [...formData.hotels];
+    const hotel = { ...newHotels[hotelIndex], hotelServices: [...(newHotels[hotelIndex].hotelServices || [])] };
+    hotel.hotelServices.push({ name: '', price: 0, description: '' });
+    newHotels[hotelIndex] = hotel;
+    setFormData({ ...formData, hotels: newHotels });
+  };
+
+  const updateHotelService = (hotelIndex: number, serviceIndex: number, field: string, value: any) => {
+    const newHotels = [...formData.hotels];
+    const services = [...newHotels[hotelIndex].hotelServices];
+    services[serviceIndex] = { ...services[serviceIndex], [field]: value };
+    newHotels[hotelIndex] = { ...newHotels[hotelIndex], hotelServices: services };
+    setFormData({ ...formData, hotels: newHotels });
+  };
+
+  const removeHotelService = (hotelIndex: number, serviceIndex: number) => {
+    const newHotels = [...formData.hotels];
+    const services = newHotels[hotelIndex].hotelServices.filter((_: any, i: number) => i !== serviceIndex);
+    newHotels[hotelIndex] = { ...newHotels[hotelIndex], hotelServices: services };
     setFormData({ ...formData, hotels: newHotels });
   };
 
@@ -1005,8 +1032,52 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                       <h5 className="font-medium text-primary">Room {roomIdx + 1}</h5>
                                       {hotel.rooms.length > 1 && (
                                         <Button variant="ghost" size="sm" leftIcon={Trash2} onClick={() => removeRoom(hotelIdx, roomIdx)} className="text-red-500">Remove</Button>
-                                      )}
-                                    </div>
+                             )}
+                           </div>
+
+                           {/* Hotel Services (Pay at Hotel) */}
+                           <div className="mt-8 pt-6 border-t border-gray-200">
+                             <div className="flex justify-between items-center mb-4">
+                               <h4 className="text-lg font-bold">Hotel Services (Pay at Hotel)</h4>
+                               <Button variant="outline" size="sm" leftIcon={Plus} onClick={() => addHotelService(hotelIdx)}>Add Service</Button>
+                             </div>
+                             {hotel.hotelServices && hotel.hotelServices.length > 0 ? (
+                               <div className="space-y-4">
+                                 {hotel.hotelServices.map((service: any, sIdx: number) => (
+                                   <div key={sIdx} className="p-4 bg-white rounded-xl border border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                                     <Input
+                                       label="Service Name"
+                                       placeholder="e.g. Breakfast"
+                                       value={service.name || ''}
+                                       onChange={(e) => updateHotelService(hotelIdx, sIdx, 'name', e.target.value)}
+                                     />
+                                     <Input
+                                       label="Price"
+                                       type="number"
+                                       min="0"
+                                       placeholder="e.g. 15"
+                                       value={service.price || 0}
+                                       onChange={(e) => updateHotelService(hotelIdx, sIdx, 'price', parseFloat(e.target.value) || 0)}
+                                     />
+                                     <div className="flex items-end gap-2">
+                                       <Input
+                                         label="Description"
+                                         placeholder="e.g. Per person"
+                                         value={service.description || ''}
+                                         onChange={(e) => updateHotelService(hotelIdx, sIdx, 'description', e.target.value)}
+                                       />
+                                       <Button variant="ghost" size="sm" leftIcon={Trash2} onClick={() => removeHotelService(hotelIdx, sIdx)} className="text-red-500 mb-2">Remove</Button>
+                                     </div>
+                                   </div>
+                                 ))}
+                               </div>
+                             ) : (
+                               <div className="text-center p-4 border-2 border-dashed border-gray-100 rounded-xl text-gray-400 text-sm">
+                                 <p>No services added. These are display-only, tourists pay at the hotel.</p>
+                               </div>
+                             )}
+                           </div>
+                         </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                       <DualLanguageField
                                         label="Room Name *"
@@ -1039,8 +1110,20 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                                       onAmharicChange={(value) => updateRoom(hotelIdx, roomIdx, 'description_am', value)}
                                       showEnglish={languagePreference !== 'am'}
                                       showAmharic={languagePreference !== 'en'}
-                                    />
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                     />
+                                     <div className="mb-4">
+                                       <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Room Tier</label>
+                                       <select 
+                                         className="mt-2 block w-full rounded-xl border border-gray-100 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                         value={room.tier || 'both'}
+                                         onChange={(e) => updateRoom(hotelIdx, roomIdx, 'tier', e.target.value)}
+                                       >
+                                         <option value="vip">VIP Only</option>
+                                         <option value="standard">Standard Only</option>
+                                         <option value="both">Both Tiers</option>
+                                       </select>
+                                     </div>
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                       <Input
                                         label="Price per Night *"
                                         type="number"
@@ -1384,8 +1467,20 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
                       placeholder="e.g. 18+, All ages, etc."
                       value={formData.policies.ageRestriction || ''}
                       onChange={(e) => setFormData({ ...formData, policies: { ...formData.policies, ageRestriction: e.target.value } })}
-                    />
-                  </div>
+                               />
+                             <div className="flex items-center gap-2 mt-4">
+                               <input
+                                 type="checkbox"
+                                 id={`vip-included-${idx}`}
+                                 checked={transport.vipIncluded || false}
+                                 onChange={(e) => updateTransport(idx, 'vipIncluded', e.target.checked)}
+                                 className="rounded border-gray-300 text-primary focus:ring-primary"
+                               />
+                               <label htmlFor={`vip-included-${idx}`} className="text-sm font-medium text-gray-700">
+                                 VIP Included (Free for VIP ticket holders)
+                               </label>
+                             </div>
+                             </div>
                 </div>
               )}
 

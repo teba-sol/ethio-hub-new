@@ -189,19 +189,26 @@ const ReportDetailModal = ({
                       {report.targetDetails?.startDate && (
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-gray-400" />
-                          <span>{new Date(report.targetDetails.startDate).toLocaleDateString()}</span>
+                          <span>{report.targetDetails?.startDate ? new Date(report.targetDetails.startDate).toLocaleDateString() : 'N/A'}</span>
                         </div>
                       )}
                     </div>
                   </div>
                   <Button
                     size="md"
-                    variant="gradient"
-                    leftIcon={Eye}
-                    onClick={() => onViewProfile(report.targetId)}
+                    variant="outline"
+                    onClick={() => {
+                      if (report.targetType === 'Event') {
+                        window.location.href = `/dashboard/admin/management?view=event&id=${report.targetId}`;
+                      } else if (report.targetType === 'Product') {
+                        window.location.href = `/dashboard/admin/management?view=product&id=${report.targetId}`;
+                      } else {
+                        window.location.href = `/dashboard/admin/management?view=user&id=${report.targetId}`;
+                      }
+                    }}
                     className="shrink-0"
                   >
-                    View Profile
+                    {report.targetType === 'Event' ? 'View Event' : report.targetType === 'Product' ? 'View Product' : 'View User'}
                   </Button>
                 </div>
               </div>
@@ -368,12 +375,12 @@ const ReportDetailModal = ({
                     size="lg"
                     leftIcon={Ban}
                     onClick={() => {
-                      if (confirm('🚫 Ban user? Requires second admin approval. Continue?')) {
+                      if (confirm('🚫 This will directly ban the user. Continue?')) {
                         onAction(report._id, 'Ban', adminNote);
                       }
                     }}
                   >
-                    🚫 Ban User (Pending)
+                    Ban User (Immediate)
                   </Button>
                 </div>
 
@@ -448,6 +455,7 @@ export const AdminReportsPage: React.FC = () => {
   const [selectedReports, setSelectedReports] = useState<string[]>([]);
   const [viewReport, setViewReport] = useState<Report | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [filterTiming, setFilterTiming] = useState<'All' | 'Pre-Event' | 'During-Event' | 'Post-Event'>('All');
   const { user } = useAuth();
   const adminId = user?._id?.toString() || user?.id?.toString() || '';
 
@@ -460,7 +468,7 @@ export const AdminReportsPage: React.FC = () => {
 
   useEffect(() => {
     fetchReports();
-  }, [filterStatus, filterType]);
+  }, [filterStatus, filterType, filterTiming]);
 
   const fetchReports = async () => {
     setLoading(true);
@@ -542,6 +550,14 @@ export const AdminReportsPage: React.FC = () => {
     }
   };
 
+  const toggleSelectReport = (reportId: string) => {
+    setSelectedReports(prev => 
+      prev.includes(reportId) 
+        ? prev.filter(id => id !== reportId)
+        : [...prev, reportId]
+    );
+  };
+
   const getTargetIcon = (type: string) => {
     switch (type) {
       case 'Event': return Calendar;
@@ -551,13 +567,24 @@ export const AdminReportsPage: React.FC = () => {
     }
   };
 
+  const getReportTiming = (report: Report): 'Pre-Event' | 'During-Event' | 'Post-Event' => {
+    if (report.targetType !== 'Event' || !report.targetDetails?.startDate || !report.targetDetails?.endDate) {
+      return 'Pre-Event';
+    }
+    const reportDate = new Date(report.createdAt);
+    const startDate = new Date(report.targetDetails.startDate);
+    const endDate = new Date(report.targetDetails.endDate);
+    
+    if (reportDate < startDate) return 'Pre-Event';
+    if (reportDate > endDate) return 'Post-Event';
+    return 'During-Event';
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Pending': return 'bg-red-500';
-      case 'Investigating': return 'bg-amber-500';
-      case 'PendingBan': return 'bg-rose-600';
-      case 'Resolved': return 'bg-emerald-500';
-      case 'Dismissed': return 'bg-gray-400';
+      case 'Pending': return 'bg-yellow-500';
+      case 'Investigating': return 'bg-blue-500';
+      case 'Resolved': return 'bg-green-500';
       default: return 'bg-gray-400';
     }
   };
@@ -597,126 +624,115 @@ export const AdminReportsPage: React.FC = () => {
       )}
 
       {/* Hero Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-gradient-to-br from-red-500 to-rose-600 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group hover:scale-[1.02] transition-transform">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <ShieldAlert className="w-8 h-8 opacity-90" />
-              <span className="text-3xl font-bold">{stats.total}</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Total Reports</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
             </div>
-            <p className="text-red-100 text-sm font-medium uppercase tracking-wide">Total Reports</p>
-            <div className="mt-3 h-1 w-20 bg-white/30 rounded-full overflow-hidden">
-              <div className="h-full bg-white rounded-full" style={{ width: '100%' }}></div>
+            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+              <Flag className="w-5 h-5 text-gray-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group hover:scale-[1.02] transition-transform">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <Clock className="w-8 h-8 opacity-90" />
-              <span className="text-3xl font-bold">{stats.pending}</span>
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Pending Review</p>
+              <p className="text-2xl font-bold text-red-600 mt-1">{stats.pending}</p>
             </div>
-            <p className="text-amber-100 text-sm font-medium uppercase tracking-wide">Pending Review</p>
-            <div className="mt-3 h-1 w-20 bg-white/30 rounded-full overflow-hidden">
-              <div className="h-full bg-white rounded-full animate-pulse" style={{ width: `${stats.pending > 0 ? '70%' : '0%'}` }}></div>
+            <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
+              <Clock className="w-5 h-5 text-red-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-rose-600 to-red-700 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group hover:scale-[1.02] transition-transform">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <Ban className="w-8 h-8 opacity-90" />
-              <span className="text-3xl font-bold">{stats.pendingBan}</span>
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Pending Bans</p>
+              <p className="text-2xl font-bold text-orange-600 mt-1">{stats.pendingBan}</p>
             </div>
-            <p className="text-red-100 text-sm font-medium uppercase tracking-wide">Pending Bans</p>
-            <div className="mt-3 h-1 w-20 bg-white/30 rounded-full overflow-hidden">
-              <div className="h-full bg-white rounded-full animate-pulse" style={{ width: `${stats.pendingBan > 0 ? '100%' : '0%'}` }}></div>
+            <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
+              <Ban className="w-5 h-5 text-orange-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group hover:scale-[1.02] transition-transform">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <CheckCircle2 className="w-8 h-8 opacity-90" />
-              <span className="text-3xl font-bold">{stats.resolved}</span>
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Resolved</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{stats.resolved}</p>
             </div>
-            <p className="text-emerald-100 text-sm font-medium uppercase tracking-wide">Resolved</p>
-            <div className="mt-3 h-1 w-20 bg-white/30 rounded-full overflow-hidden">
-              <div className="h-full bg-white rounded-full" style={{ width: `${reports.length > 0 ? (stats.resolved / reports.length * 100) + '%' : '0%'}` }}></div>
+            <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5 text-green-600" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Reports Section */}
-      <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="p-6 md:p-8 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+        <div className="p-6 border-b border-gray-200">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h1 className="text-3xl font-serif font-bold text-gray-800">📋 Reports & Moderation</h1>
-              <p className="text-gray-500 mt-1">Review and take action on user-submitted reports</p>
+              <h1 className="text-xl font-bold text-gray-900">Reports & Moderation</h1>
+              <p className="text-sm text-gray-500 mt-1">Review and take action on user-submitted reports</p>
             </div>
             <Button
-              variant="gradient"
+              variant="outline"
+              size="sm"
               leftIcon={Download}
               onClick={handleExportReports}
               isLoading={isExporting}
-              className="shadow-lg"
             >
-              {isExporting ? 'Exporting...' : '📥 Export CSV'}
+              {isExporting ? 'Exporting...' : 'Export CSV'}
             </Button>
           </div>
 
           {/* Filters */}
-          <div className="flex flex-wrap gap-3 mt-6">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-500">Status:</span>
-              {['All', 'Pending', 'Investigating', 'PendingBan', 'Resolved', 'Dismissed'].map(status => (
-                <button
-                  key={status}
-                  onClick={() => setFilterStatus(status)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    filterStatus === status 
-                      ? 'bg-primary text-white shadow-md shadow-primary/30' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {status}
-                  {status !== 'All' && reports.filter(r => r.status === status).length > 0 && (
-                    <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-full text-[10px]">
-                      {reports.filter(r => r.status === status).length}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-wrap items-center gap-2 mt-6">
+            <span className="text-sm font-medium text-gray-600">Status:</span>
+            {['All', 'Pending', 'Resolved'].map(status => (
+              <button
+                key={status}
+                onClick={() => setFilterStatus(status)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  filterStatus === status 
+                    ? 'bg-gray-900 text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {status}
+                {status !== 'All' && reports.filter(r => r.status === status).length > 0 && (
+                  <span className="ml-1.5 px-1.5 py-0.5 bg-white/20 rounded-full text-xs">
+                    {reports.filter(r => r.status === status).length}
+                  </span>
+                )}
+              </button>
+            ))}
 
-            <div className="w-px h-8 bg-gray-300"></div>
+<span className="mx-2 text-gray-300">|</span>
 
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-500">Type:</span>
-              {['All', 'Event', 'Product', 'User'].map(type => (
-                <button
-                  key={type}
-                  onClick={() => setFilterType(type)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    filterType === type 
-                      ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
+            <span className="text-sm font-medium text-gray-600">Timing:</span>
+            {['All', 'Pre-Event', 'During-Event', 'Post-Event'].map(timing => (
+              <button
+                key={timing}
+                onClick={() => setFilterTiming(timing as any)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  filterTiming === timing 
+                    ? 'bg-gray-900 text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {timing}
+              </button>
+            ))}
+
           </div>
         </div>
 
@@ -729,122 +745,110 @@ export const AdminReportsPage: React.FC = () => {
               </div>
               <h3 className="text-xl font-bold text-gray-800 mb-2">All Caught Up!✨</h3>
               <p className="text-gray-500">No reports match your current filters</p>
-            </div>
-          ) : (
-            reports.map((report) => {
-              const TargetIcon = getTargetIcon(report.targetType);
-              const displayName = getTargetName(report);
+</div>
+            ) : (
+              reports
+                .filter(report => {
+                  if (filterTiming === 'All') return true;
+                  return getReportTiming(report) === filterTiming;
+                })
+                .map((report) => {
+                  const TargetIcon = getTargetIcon(report.targetType);
+                  const displayName = getTargetName(report);
+                  const reportTiming = getReportTiming(report);
 
-              return (
-                <div 
-                  key={report.id}
-                  className={`group relative bg-white rounded-2xl border-2 transition-all duration-300 hover:shadow-xl overflow-hidden ${
-                    selectedReports.includes(report.id)
-                      ? 'border-primary ring-2 ring-primary/20 shadow-lg'
-                      : 'border-gray-100 hover:border-gray-200'
-                  }`}
-                >
-                  {/* Left accent bar */}
-                  <div className={`absolute left-0 top-0 bottom-0 w-1 ${getStatusColor(report.status)}`}></div>
+                  return (
+                    <div 
+                      key={report.id}
+                      className={`group relative bg-white rounded-lg border transition-all duration-200 hover:shadow-md ${
+                        selectedReports.includes(report.id)
+                          ? 'border-gray-900 ring-1 ring-gray-900/10'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {/* Left accent bar */}
+                      <div className={`absolute left-0 top-0 bottom-0 w-1 ${getStatusColor(report.status)}`}></div>
 
-                  <div className="p-6 pl-8">
-                    <div className="flex flex-col lg:flex-row items-start gap-6">
+                  <div className="p-4 pl-6">
+                    <div className="flex flex-col lg:flex-row items-start gap-4">
                       
                       {/* Checkbox & Icon */}
-                      <div className="flex items-start gap-4">
+                      <div className="flex items-start gap-3">
                         <input
                           type="checkbox"
                           checked={selectedReports.includes(report.id)}
                           onChange={() => toggleSelectReport(report.id)}
-                          className="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                          className="mt-1 w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer"
                         />
-                        <div className={`p-3 rounded-xl ${report.status === 'PendingBan' ? 'bg-red-100 text-red-600' : report.status === 'Pending' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>
-                          <TargetIcon className="w-6 h-6" />
+                        <div className="p-2 bg-gray-100 rounded-lg">
+                          <TargetIcon className="w-5 h-5 text-gray-600" />
                         </div>
                       </div>
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-3 mb-2">
-                          <h3 className="text-xl font-bold text-gray-800 truncate">{displayName}</h3>
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <h3 className="text-base font-semibold text-gray-900 truncate">{displayName}</h3>
                           <Badge 
-                            variant={report.status === 'PendingBan' ? 'error' : report.status === 'Resolved' ? 'success' : report.status === 'Pending' ? 'warning' : 'info'}
-                            size="md"
+                            variant={report.status === 'Resolved' ? 'success' : report.status === 'Pending' ? 'warning' : 'info'}
+                            size="sm"
                           >
                             {report.status}
                           </Badge>
                           <Badge variant="secondary" size="sm">
                             {report.targetType}
                           </Badge>
-                          {report.status === 'Pending' && (
-                            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shadow-sm"></span>
-                          )}
+                          <Badge variant={reportTiming === 'Pre-Event' ? 'secondary' : reportTiming === 'During-Event' ? 'info' : 'success'} size="sm">
+                            {reportTiming}
+                          </Badge>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm">
                           <p className="text-gray-600 truncate">
-                            <span className="font-semibold text-gray-700">Reason:</span> {report.reason}
-                            {report.reasonOther && <span className="text-gray-500"> ({report.reasonOther})</span>}
+                            <span className="font-medium text-gray-700">Reason:</span> {report.reason}
                           </p>
-                          
                           <p className="text-gray-600 truncate">
-                            <span className="font-semibold text-gray-700">Reported:</span> {report.reporterId?.name || 'Anonymous'}
-                          </p>
-
-                          <p className="text-gray-600 line-clamp-1 col-span-1 md:col-span-2">
-                            <span className="font-semibold text-gray-700">Description:</span> "{report.description}"
+                            <span className="font-medium text-gray-700">Reported by:</span> {report.reporterId?.name || 'Anonymous'}
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
+                        <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
                             {report.date}
                           </span>
                           {report.evidence?.length > 0 && (
-                            <span className="flex items-center gap-1 text-blue-600 font-medium">
+                            <span className="flex items-center gap-1 text-gray-600 font-medium">
                               <FileText className="w-3 h-3" />
-                              {report.evidence.length} attachment(s)
+                              {report.evidence.length} evidence
                             </span>
                           )}
                         </div>
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-3 self-end md:self-center">
+                      <div className="flex items-center gap-2 self-end md:self-center">
                         <Button
                           variant="outline"
                           size="sm"
-                          leftIcon={Eye}
                           onClick={() => openReportDetail(report._id?.toString() || report.id)}
                         >
-                          Details
+                          View
                         </Button>
                         
                         {report.status === 'Pending' || report.status === 'Investigating' ? (
-                          report.status === 'Pending' && (
-                            <Button
-                              size="sm"
-                              className="bg-primary hover:bg-primary/90 text-white shadow-md"
-                              leftIcon={ShieldAlert}
-                              onClick={() => handleReportAction(report._id?.toString() || report.id, 'Investigate')}
-                            >
-                              Investigate
-                            </Button>
-                          )
+                          <Button
+                            size="sm"
+                            className="bg-gray-900 hover:bg-gray-800 text-white"
+                            onClick={() => handleReportAction(report._id?.toString() || report.id, 'Resolve')}
+                          >
+                            Resolve
+                          </Button>
                         ) : (
-                          <div className="flex items-center gap-3">
-                            <div className="text-right">
-                              <Badge variant={report.status === 'Resolved' ? 'success' : 'secondary'}>
-                                {report.status}
-                              </Badge>
-                              <p className="text-[10px] text-gray-400 mt-1">
-                                {report.resolvedBy?.name || 'Admin'}
-                              </p>
-                            </div>
-                            <Button variant="ghost" size="sm" onClick={() => openReportDetail(report._id?.toString() || report.id)}>
-                              Log
-                            </Button>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={report.status === 'Resolved' ? 'success' : 'secondary'}>
+                              {report.status}
+                            </Badge>
                           </div>
                         )}
                       </div>
