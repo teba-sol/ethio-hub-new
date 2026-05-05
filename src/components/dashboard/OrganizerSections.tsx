@@ -74,8 +74,9 @@ export const EventDetailPanel: React.FC<{ eventId: string; onBack: () => void }>
   const [editData, setEditData] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  // Add these with your other useState declarations
-const [uploadingImage, setUploadingImage] = useState(false);
+  const { t } = useLanguage();
+
+  const [uploadingImage, setUploadingImage] = useState(false);
 const [imageUploadType, setImageUploadType] = useState<'cover' | 'gallery'>('cover');
 const [imageIndex, setImageIndex] = useState<number | null>(null);
 
@@ -763,7 +764,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
         {activeTab === 'schedule' && (
           <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex justify-between items-center">
-              <h3 className="text-2xl font-serif font-bold text-primary">Experience & Daily Schedule</h3>
+              <h3 className="text-2xl font-serif font-bold text-primary">Experience & {t('organizer.createFestival.dailySchedule')}</h3>
               {isEditing && (
                 <Button 
                   variant="outline" 

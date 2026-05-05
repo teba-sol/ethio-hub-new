@@ -62,7 +62,8 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
       title_am: '', 
       activities_en: '', 
       activities_am: '', 
-      performers: [] as string[]
+      performers: [] as string[],
+      image: ''
     }],
     hotels: [] as any[],
     transportation: [] as any[],
@@ -103,8 +104,59 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
     setFormData(prev => ({ ...prev, core: { ...prev.core, slug } }));
   }, [formData.core.name_en]);
 
-  const nextStep = () => setStep(s => Math.min(s + 1, 8));
+   const nextStep = () => setStep(s => Math.min(s + 1, 8));
    const prevStep = () => setStep(s => Math.max(s - 1, 1));
+
+   const handleScheduleImageUpload = async (file: File, dayIndex: number) => {
+     try {
+       const uploadData = new FormData();
+       uploadData.append('file', file);
+       uploadData.append('folder', 'festivals');
+       
+       const response = await fetch('/api/upload', { method: 'POST', body: uploadData });
+       const data = await response.json();
+       
+       if (data.success) {
+         const newSchedule = [...formData.schedule];
+         newSchedule[dayIndex].image = data.url;
+         setFormData({ ...formData, schedule: newSchedule });
+       }
+     } catch (error) {
+       console.error('Upload failed:', error);
+       alert('Failed to upload image');
+     }
+   };
+
+   const handleFileUpload = async (file: File, isCover?: boolean) => {
+     try {
+       const uploadData = new FormData();
+       uploadData.append('file', file);
+       uploadData.append('folder', 'festivals');
+       
+       const response = await fetch('/api/upload', { method: 'POST', body: uploadData });
+       const data = await response.json();
+       
+       if (data.success) {
+         if (isCover) {
+           setFormData({ 
+             ...formData, 
+             core: { ...formData.core, coverImage: data.url } 
+           });
+         } else {
+           setFormData({ 
+             ...formData, 
+             core: { 
+               ...formData.core, 
+               gallery: [...formData.core.gallery, data.url] 
+             } 
+           });
+         }
+       }
+     } catch (error) {
+       console.error('Upload failed:', error);
+       alert('Failed to upload image');
+     }
+   };
 
    // Helper creators
    const createEmptyHotel = () => ({
@@ -666,14 +718,14 @@ label={t("organizer.createFestival.address")}
               {step === 2 && (
                 <div className="space-y-8">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-2xl font-serif font-bold text-primary">Daily Schedule</h3>
+                    <h3 className="text-2xl font-serif font-bold text-primary">{t('organizer.createFestival.dailySchedule')}</h3>
                     <Button 
                       variant="outline" 
                       leftIcon={Plus}
-                      onClick={() => setFormData({
-                        ...formData, 
-                         schedule: [...formData.schedule, { day: formData.schedule.length + 1, title_en: '', title_am: '', activities_en: '', activities_am: '', performers: [] }]
-                      })}
+                       onClick={() => setFormData({
+                         ...formData, 
+                          schedule: [...formData.schedule, { day: formData.schedule.length + 1, title_en: '', title_am: '', activities_en: '', activities_am: '', performers: [], image: '' }]
+                       })}
                     >
                       Add Day
                     </Button>
@@ -722,16 +774,55 @@ label={t("organizer.createFestival.address")}
                             showEnglish={languagePreference !== 'am'}
                             showAmharic={languagePreference !== 'en'}
                           />
-                          <Input
-                            label={t("organizer.createFestival.performers")}
-                            value={day.performers.join(', ')}
-                            onChange={(e) => {
-                              const newSchedule = [...formData.schedule];
-                              newSchedule[idx].performers = e.target.value.split(',').map(p => p.trim());
-                              setFormData({ ...formData, schedule: newSchedule });
-                            }}
-                          />
-                         </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  {t("organizer.createFestival.performers")}
+                                </label>
+                                <textarea
+                                    value={day.performers.join(', ')}
+                                    onChange={(e) => {
+                                      const newSchedule = [...formData.schedule];
+                                      newSchedule[idx].performers = e.target.value.split(',').map(p => p.trim());
+                                      setFormData({ ...formData, schedule: newSchedule });
+                                    }}
+                                    rows={2}
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
+                                    placeholder="Enter Performer"
+                                  />
+                              </div>
+                                <div className="w-48 h-48 mx-auto p-4 border-2 border-dashed border-gray-100 rounded-2xl text-center hover:border-primary/20 transition-colors cursor-pointer flex flex-col items-center justify-center">
+                                 <input 
+                                   type="file" 
+                                   className="hidden" 
+                                   id={`schedule-image-${idx}`} 
+                                   onChange={e => e.target.files && handleScheduleImageUpload(e.target.files[0], idx)} 
+                                 />
+                                 {day.image ? (
+                                   <div className="w-full h-full flex flex-col">
+                                     <img src={day.image} alt="Day" className="w-full flex-1 object-cover rounded-xl mb-1" />
+                                     <button
+                                       type="button"
+                                       onClick={(e) => {
+                                         e.preventDefault();
+                                         const newSchedule = [...formData.schedule];
+                                         newSchedule[idx].image = '';
+                                         setFormData({ ...formData, schedule: newSchedule });
+                                       }}
+                                       className="text-xs text-red-500 hover:text-red-700"
+                                     >
+                                       Remove Image
+                                     </button>
+                                   </div>
+                                 ) : (
+                                   <label htmlFor={`schedule-image-${idx}`} className="cursor-pointer flex flex-col items-center justify-center flex-1">
+                                     <ImageIcon className="w-8 h-8 text-gray-300 mb-2" />
+                                     <p className="text-xs font-bold text-gray-400">Day Image (Optional)</p>
+                                   </label>
+                                 )}
+                             </div>
+                           </div>
+                          </div>
                       </div>
                     ))}
                   </div>
@@ -742,7 +833,7 @@ label={t("organizer.createFestival.address")}
                {step === 3 && (
                  <div className="space-y-8">
                    <div className="flex justify-between items-center">
-                     <h3 className="text-2xl font-serif font-bold text-primary">Partner Hotels</h3>
+                     <h3 className="text-2xl font-serif font-bold text-primary">{t("events.sections.hotels")}</h3>
                      <Button variant="outline" leftIcon={Plus} onClick={addHotel}>Add Hotel</Button>
                    </div>
                    {formData.hotels.length === 0 ? (
@@ -758,7 +849,7 @@ label={t("organizer.createFestival.address")}
                            <div className="flex justify-between items-start mb-6">
                              <h4 className="text-lg font-bold flex items-center gap-2">
                                <Hotel className="w-5 h-5 text-secondary" />
-                               Hotel {hotelIdx + 1}
+                                {t("organizer.createFestival.hotel")} {hotelIdx + 1}
                              </h4>
                              {formData.hotels.length > 1 && (
                                <Button variant="ghost" size="sm" leftIcon={Trash2} onClick={() => removeHotel(hotelIdx)} className="text-red-500">Remove</Button>
@@ -835,7 +926,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
                            {/* Rooms Management */}
                            <div className="mt-8 pt-6 border-t border-gray-200">
                              <div className="flex justify-between items-center mb-4">
-                               <h4 className="text-lg font-bold">Room Types</h4>
+                                <h4 className="text-lg font-bold">{t("organizer.createFestival.roomTypes")}</h4>
                                <Button variant="outline" size="sm" leftIcon={Plus} onClick={() => addRoom(hotelIdx)}>Add Room Type</Button>
                              </div>
                              {hotel.rooms && hotel.rooms.length > 0 ? (
@@ -843,7 +934,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
                                  {hotel.rooms.map((room: any, roomIdx: number) => (
                                    <div key={roomIdx} className="p-6 bg-white rounded-xl border border-gray-100">
                                      <div className="flex justify-between items-start mb-4">
-                                       <h5 className="font-medium text-primary">Room {roomIdx + 1}</h5>
+                                        <h5 className="font-medium text-primary">{t("organizer.createFestival.room")} {roomIdx + 1}</h5>
                                        {hotel.rooms.length > 1 && (
                                          <Button variant="ghost" size="sm" leftIcon={Trash2} onClick={() => removeRoom(hotelIdx, roomIdx)} className="text-red-500">Remove</Button>
                                        )}
@@ -917,7 +1008,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
                {step === 4 && (
                  <div className="space-y-8">
                    <div className="flex justify-between items-center">
-                     <h3 className="text-2xl font-serif font-bold text-primary">Transportation Options</h3>
+                      <h3 className="text-2xl font-serif font-bold text-primary">{t("organizer.createFestival.transportationOptions")}</h3>
                      <Button variant="outline" leftIcon={Plus} onClick={addTransport}>Add Transport Option</Button>
                    </div>
                    {formData.transportation.length === 0 ? (
@@ -933,7 +1024,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
                            <div className="flex justify-between items-start mb-6">
                              <h4 className="text-lg font-bold flex items-center gap-2">
                                <Car className="w-5 h-5 text-secondary" />
-                               Transport {idx + 1}
+                                {t("organizer.createFestival.transport")} {idx + 1}
                              </h4>
                              {formData.transportation.length > 1 && (
                                <Button variant="ghost" size="sm" leftIcon={Trash2} onClick={() => removeTransport(idx)} className="text-red-500">Remove</Button>
@@ -1004,12 +1095,12 @@ label={t("organizer.createFestival.fullDescription") + " *"}
                {/* Step 5: Services */}
                {step === 5 && (
                  <div className="space-y-10">
-                   <h3 className="text-2xl font-serif font-bold text-primary">Services</h3>
+                    <h3 className="text-2xl font-serif font-bold text-primary">{t("organizer.createFestival.services")}</h3>
 
                    {/* Food Packages */}
                    <section>
                      <div className="flex justify-between items-center mb-4">
-                       <h4 className="text-lg font-bold text-primary">Food & Drink Packages</h4>
+                        <h4 className="text-lg font-bold text-primary">{t("organizer.createFestival.foodDrinkPackages")}</h4>
                        <Button variant="outline" size="sm" leftIcon={Plus} onClick={addFoodPackage}>Add Package</Button>
                      </div>
                      {formData.services.foodPackages.length === 0 ? (
@@ -1022,7 +1113,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
                          {formData.services.foodPackages.map((pkg: any, idx: number) => (
                            <div key={idx} className="p-6 bg-ethio-bg rounded-2xl border border-gray-100">
                              <div className="flex justify-between items-start mb-4">
-                               <h5 className="font-medium">Package {idx + 1}</h5>
+                                <h5 className="font-medium">{t("organizer.createFestival.package")} {idx + 1}</h5>
                                {formData.services.foodPackages.length > 1 && (
                                  <Button variant="ghost" size="sm" leftIcon={Trash2} onClick={() => removeFoodPackage(idx)} className="text-red-500">Remove</Button>
                                )}
@@ -1061,7 +1152,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
                                showAmharic={languagePreference !== 'en'}
                              />
                              <div className="mt-4">
-                               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Included Items (comma-separated)</label>
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">{t("organizer.createFestival.includedItems")}</label>
                                <Input
                                  placeholder="e.g. Injera, Doro Wat, Tej"
                                  value={pkg.items ? pkg.items.join(', ') : ''}
@@ -1076,7 +1167,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
 
                    {/* Cultural Services */}
                    <section>
-                     <h4 className="text-lg font-bold text-primary mb-4">Cultural Services</h4>
+                      <h4 className="text-lg font-bold text-primary mb-4">{t("organizer.createFestival.culturalServices")}</h4>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                           <textarea
@@ -1111,7 +1202,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
 
                    {/* Special Assistance */}
                    <section>
-                     <h4 className="text-lg font-bold text-primary mb-4">Special Assistance</h4>
+                      <h4 className="text-lg font-bold text-primary mb-4">{t("organizer.createFestival.specialAssistance")}</h4>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                           <textarea
@@ -1136,7 +1227,7 @@ label={t("organizer.createFestival.fullDescription") + " *"}
 
                    {/* Extras */}
                    <section>
-                     <h4 className="text-lg font-bold text-primary mb-4">Extra Services</h4>
+                      <h4 className="text-lg font-bold text-primary mb-4">{t("organizer.createFestival.extraServices")}</h4>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                           <textarea

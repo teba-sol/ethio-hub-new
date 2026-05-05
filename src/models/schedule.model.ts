@@ -5,6 +5,7 @@ export interface ISchedule extends Document {
   title: string;
   activities: string;
   performers: string[];
+  image: string;
   festival: mongoose.Schema.Types.ObjectId;
 }
 
@@ -14,6 +15,7 @@ const ScheduleSchema: Schema = new Schema(
     title: { type: String, required: true },
     activities: { type: String, required: true },
     performers: [{ type: String }],
+    image: { type: String, default: '' },
     festival: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Festival',
