@@ -2554,7 +2554,7 @@ export const OrganizerOverview: React.FC<{ onManageEvent?: (id: string) => void;
                 <div className="space-y-6">
                   <h3 className="text-xl font-serif font-bold text-primary">Your Active Events</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {myEvents.slice(0, 4).map((fest, index) => (
+                    {activePublishedEvents.slice(0, 2).map((fest, index) => (
                        <div key={fest.id || `fest-${index}`} onClick={() => onManageEvent(fest.id)} className="bg-white rounded-[32px] overflow-hidden border border-gray-100 shadow-sm cursor-pointer group hover:shadow-md transition-all">
                          <div className="h-44 overflow-hidden">
                            {fest.coverImage ? (
@@ -2894,7 +2894,7 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
                       <p className="text-lg font-bold text-primary">x{booking.quantity}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Total Price</p>
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Payout</p>
                       <p className="text-lg font-bold text-secondary">
                         ETB {(booking.organizerAmount || (booking.totalPrice ? booking.totalPrice * 0.9 : 0)).toLocaleString()}
                       </p>
@@ -2983,10 +2983,26 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
                   </span>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Total Amount</p>
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Organizer Earnings</p>
                   <p className="text-lg font-bold text-primary">
                     {booking.currency} {(booking.organizerAmount || (booking.totalPrice ? booking.totalPrice * 0.9 : 0)).toLocaleString()}
                   </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Platform Fee</p>
+                  <p className="text-lg font-bold text-red-600">
+                    {booking.currency} {(booking.platformFee || booking.adminCommission || 0).toLocaleString()}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Total Paid</p>
+                  <p className="text-lg font-bold text-blue-600">
+                    {booking.currency} {booking.totalPrice?.toLocaleString() || 0}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Payment Method</p>
+                  <p className="text-sm font-bold text-primary">Chapa</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Booked On</p>
@@ -3048,7 +3064,7 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
                 <span className="font-bold text-primary">{booking.quantity}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Total Price</span>
+                <span className="text-gray-500 text-sm">Payout</span>
                 <span className="font-bold text-secondary">
                   ETB {(booking.organizerAmount || (booking.totalPrice ? booking.totalPrice * 0.9 : 0)).toLocaleString()}
                 </span>
@@ -3201,12 +3217,20 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
    const confirmedTicketsCount = eventScopedBookings
      .reduce((acc, b) => acc + (b.quantity || 0), 0);
 
-   const netIncomeValue = eventScopedBookings
-     .reduce((acc, b) => {
-       // Use pre-calculated organizerAmount if available, else calculate manually (90%)
-       const amount = b.organizerAmount || (b.totalPrice ? b.totalPrice * 0.9 : 0);
-       return acc + amount;
-     }, 0);
+const netIncomeValue = eventScopedBookings
+      .reduce((acc, b) => {
+        // Use pre-calculated organizerAmount if available, else calculate manually (90%)
+        const amount = b.organizerAmount || (b.totalPrice ? b.totalPrice * 0.9 : 0);
+        return acc + amount;
+      }, 0);
+
+// Total Amount - Tourist paid (WITHOUT any cut/commission)
+    const totalAmountValue = eventScopedBookings
+      .reduce((acc, b) => acc + (b.totalPrice || 0), 0);
+
+   // Platform Fee - Total admin/commission cut (10%)
+   const platformFeeValue = eventScopedBookings
+     .reduce((acc, b) => acc + (b.platformFee || b.adminCommission || 0), 0);
 
   // Total Capacity Calculation
   let totalCapacityValue = 0;
@@ -3256,47 +3280,35 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
       </div>
 
       {/* Real-Time Check-in Counter & Payout Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {eventFilter !== 'All Events' && (
-          <>
-            <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-              <div className="flex items-center gap-4">
-                <div className="p-4 rounded-2xl bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                  <Ticket className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Total Capacity</p>
-                  <p className="text-2xl font-bold text-primary">{totalCapacityValue.toLocaleString()}</p>
-                </div>
-              </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
+              <DollarSign className="w-6 h-6" />
             </div>
-            
-            <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-              <div className="flex items-center gap-4">
-                <div className="p-4 rounded-2xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                  <UserCheck className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Booked Ticket</p>
-                  <p className="text-2xl font-bold text-primary">{confirmedTicketsCount.toLocaleString()}</p>
-                </div>
-              </div>
+            <div>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">
+                {eventFilter === 'All Events' ? 'Total Amount for All Event' : 'Total Amount'}
+              </p>
+              <p className="text-2xl font-bold text-primary">ETB {totalAmountValue.toLocaleString()}</p>
             </div>
+          </div>
+        </div>
 
-            <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-              <div className="flex items-center gap-4">
-                <div className="p-4 rounded-2xl bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
-                  <Users className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Remaining</p>
-                  <p className="text-2xl font-bold text-primary">{Math.max(0, totalCapacityValue - confirmedTicketsCount).toLocaleString()}</p>
-                </div>
-              </div>
+        <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-red-50 text-red-600 group-hover:bg-red-600 group-hover:text-white transition-all">
+              <DollarSign className="w-6 h-6" />
             </div>
-          </>
-        )}
-        
+            <div>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">
+                {eventFilter === 'All Events' ? 'Platform Fee for All Event' : 'Platform Fee'}
+              </p>
+              <p className="text-2xl font-bold text-primary">ETB {platformFeeValue.toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
           <div className="flex items-center gap-4">
             <div className="p-4 rounded-2xl bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-all">
@@ -3311,6 +3323,46 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
           </div>
         </div>
       </div>
+
+      {eventFilter !== 'All Events' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+            <div className="flex items-center gap-4">
+              <div className="p-4 rounded-2xl bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                <Ticket className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Total Capacity</p>
+                <p className="text-2xl font-bold text-primary">{totalCapacityValue.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+            <div className="flex items-center gap-4">
+              <div className="p-4 rounded-2xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                <UserCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Booked Ticket</p>
+                <p className="text-2xl font-bold text-primary">{confirmedTicketsCount.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+            <div className="flex items-center gap-4">
+              <div className="p-4 rounded-2xl bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Remaining</p>
+                <p className="text-2xl font-bold text-primary">{Math.max(0, totalCapacityValue - confirmedTicketsCount).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-wrap gap-4 items-center">
@@ -3413,42 +3465,19 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
         </div>
       </div>
 
-      {/* Bulk Actions */}
-      {selectedBookings.length > 0 && (
-        <div className="bg-primary text-white p-4 rounded-2xl flex justify-between items-center animate-in slide-in-from-bottom-2">
-          <span className="text-sm font-bold">{selectedBookings.length} bookings selected</span>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/10">Export Selected</Button>
-            <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/10" onClick={() => {
-              if (window.confirm(`Are you sure you want to cancel ${selectedBookings.length} bookings?`)) {
-                // Bulk cancel logic
-                selectedBookings.forEach(id => handleBookingStatusUpdate(id, 'cancelled'));
-                setSelectedBookings([]);
-              }
-            }}>Cancel</Button>
-          </div>
-        </div>
-      )}
+      
 
       <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
         <table className="w-full text-left border-collapse whitespace-nowrap">
           <thead>
             <tr className="bg-gray-50/50 border-b border-gray-100">
-              <th className="px-6 py-5 w-12">
-                <input 
-                  type="checkbox" 
-                  checked={selectedBookings.length === filteredBookings.length && filteredBookings.length > 0}
-                  onChange={handleSelectAll}
-                  className="rounded text-primary focus:ring-primary"
-                />
-              </th>
               <th className="px-6 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Booking ID</th>
               <th className="px-6 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Booking Date</th>
               <th className="px-6 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Guest</th>
               <th className="px-6 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Event</th>
               <th className="px-6 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Ticket Type</th>
               <th className="px-6 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Qty</th>
-              <th className="px-6 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Total Paid</th>
+              <th className="px-6 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Payout</th>
               <th className="px-6 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Payment Method</th>
               <th className="px-6 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Status</th>
               <th className="px-6 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-right">Actions</th>
@@ -3457,14 +3486,6 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
           <tbody className="divide-y divide-gray-50">
             {filteredBookings.map(booking => (
               <tr key={booking._id} className="hover:bg-ethio-bg/30 transition-colors group">
-                <td className="px-6 py-4">
-                  <input 
-                    type="checkbox" 
-                    checked={selectedBookings.includes(booking._id)}
-                    onChange={() => handleSelectBooking(booking._id)}
-                    className="rounded text-primary focus:ring-primary"
-                  />
-                </td>
                 <td className="px-6 py-4">
                   <span className="text-sm font-mono font-bold text-primary">{booking._id?.slice(-8)}</span>
                 </td>
