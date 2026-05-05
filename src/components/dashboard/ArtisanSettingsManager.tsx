@@ -411,12 +411,6 @@ export const ArtisanSettingsManager: React.FC = () => {
                 onChange={(c) => setNotifications({...notifications, newOrder: c})} 
               />
               <Toggle 
-                label="Low Stock Warning" 
-                description="Alert when product stock falls below 5 units." 
-                checked={notifications.lowStock} 
-                onChange={(c) => setNotifications({...notifications, lowStock: c})} 
-              />
-              <Toggle 
                 label="New Reviews" 
                 description="Get notified when a customer leaves a review." 
                 checked={notifications.newReview} 
@@ -428,20 +422,6 @@ export const ArtisanSettingsManager: React.FC = () => {
                 checked={notifications.payout} 
                 onChange={(c) => setNotifications({...notifications, payout: c})} 
               />
-              <Toggle 
-                label="Promotional Updates" 
-                description="News about platform features and tips." 
-                checked={notifications.promos} 
-                onChange={(c) => setNotifications({...notifications, promos: c})} 
-              />
-              <div className="pt-4">
-                <Toggle 
-                  label="SMS Notifications" 
-                  description="Receive critical alerts via SMS to your registered phone." 
-                  checked={notifications.sms} 
-                  onChange={(c) => setNotifications({...notifications, sms: c})} 
-                />
-              </div>
             </div>
             <div className="flex justify-end pt-4">
               <Button leftIcon={Save}>Save Preferences</Button>
@@ -473,43 +453,6 @@ export const ArtisanSettingsManager: React.FC = () => {
               </div>
               <div className="flex justify-end">
                 <Button>Update Password</Button>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
-              <Toggle 
-                label="Two-Factor Authentication (2FA)" 
-                description="Add an extra layer of security to your account." 
-                checked={true} 
-                onChange={() => {}} 
-              />
-              <div className="pt-4 border-t border-gray-100">
-                <h3 className="text-sm font-bold text-gray-900 mb-4">Login Activity</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-3">
-                      <Smartphone className="w-4 h-4 text-gray-400" />
-                      <div>
-                        <p className="font-bold text-gray-700">iPhone 13 Pro</p>
-                        <p className="text-xs text-gray-400">Addis Ababa • Active now</p>
-                      </div>
-                    </div>
-                    <span className="text-xs text-emerald-500 font-bold">Current Device</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-3">
-                      <Globe className="w-4 h-4 text-gray-400" />
-                      <div>
-                        <p className="font-bold text-gray-700">Chrome on Windows</p>
-                        <p className="text-xs text-gray-400">Addis Ababa • 2 days ago</p>
-                      </div>
-                    </div>
-                    <button className="text-xs text-red-500 hover:underline">Log out</button>
-                  </div>
-                </div>
-                <div className="mt-6">
-                  <Button variant="outline" className="w-full text-red-500 border-red-200 hover:bg-red-50">Log Out of All Devices</Button>
-                </div>
               </div>
             </div>
           </div>
