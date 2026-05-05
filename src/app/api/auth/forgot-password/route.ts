@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '../../../../lib/mongodb';
 import User from '../../../../models/User';
-import bcrypt from 'bcryptjs';
+import { createHash } from 'crypto';
+import { sendRegistrationOtpEmail } from '../../../../lib/email';
+
+export const OTP_LENGTH = 6;
+export const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+export const generateOtp = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString().padStart(OTP_LENGTH, '0');
+};
+
+export const hashOtp = (otp: string) => {
+  return createHash('sha256').update(otp).digest('hex');
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,34 +35,43 @@ export async function POST(request: NextRequest) {
     // But only proceed if user exists
     if (!user) {
       return new NextResponse(
-        JSON.stringify({ success: true, message: 'If an account exists with this email, a password reset link has been sent.' }),
+        JSON.stringify({ success: true, message: 'If an account exists with this email, a password reset code has been sent.' }),
         { status: 200, headers: { 'content-type': 'application/json' } }
       );
     }
 
-    // Generate a reset token
-    const resetToken = crypto.randomUUID();
-    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+    // Generate OTP
+    const otp = generateOtp();
+    const otpHash = hashOtp(otp);
+    const otpExpiry = new Date(Date.now() + OTP_TTL_MS);
 
-    user.resetToken = resetToken;
-    user.resetTokenExpiry = resetTokenExpiry;
+    user.resetToken = otpHash;
+    user.resetTokenExpiry = otpExpiry;
     await user.save();
 
-    // In production, send email with reset link
-    // For now, we'll just return success and log the token
-    console.log(`Password reset token for ${email}: ${resetToken}`);
+    // Send OTP via email
+    try {
+      await sendRegistrationOtpEmail({
+        to: email,
+        name: user.name || 'User',
+        otp: otp
+      });
+    } catch (emailError) {
+      console.error('Failed to send OTP email:', emailError);
+      // Don't reveal email sending failure to prevent enumeration
+    }
 
-    // TODO: Send email with reset link:
-    // const resetLink = `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password?token=${resetToken}`;
-    // await sendEmail(email, 'Password Reset', `Click here to reset: ${resetLink}`);
+    // For development, log the OTP (remove in production)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Password reset OTP for ${email}: ${otp}`);
+    }
 
     return new NextResponse(
       JSON.stringify({ 
         success: true, 
-        message: 'If an account exists with this email, a password reset link has been sent.',
+        message: 'If an account exists with this email, a password reset code has been sent.',
         // Remove this in production - for dev only
-        devToken: resetToken,
-        devResetLink: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`
+        ...(process.env.NODE_ENV !== 'production' ? { devOtp: otp } : {})
       }),
       { status: 200, headers: { 'content-type': 'application/json' } }
     );

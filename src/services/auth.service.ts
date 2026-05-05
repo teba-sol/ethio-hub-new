@@ -32,6 +32,15 @@ export const login = async (credentials: { email: string; password: string }) =>
     throw new Error('Your account was rejected by admin review.');
   }
   
+  // Check if user is suspended or banned
+  if (user.status === 'Suspended') {
+    throw new Error('Your account has been suspended. Please contact support.');
+  }
+  
+  if (user.status === 'Banned') {
+    throw new Error('Your account has been banned. Please contact support.');
+  }
+  
   const token = await new SignJWT({ 
     userId: user._id.toString(),
     email: user.email,

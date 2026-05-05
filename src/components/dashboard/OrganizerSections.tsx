@@ -25,6 +25,7 @@ import {
 } from 'recharts';
 
 import apiClient from '../../lib/apiClient';
+import { getImageUrl as getCloudImageUrl } from '../../lib/cloudinary';
 
 const REVENUE_DATA = [];
 const SNAPSHOT_DATA = [];
@@ -58,6 +59,9 @@ const getImageUrl = (path: string | undefined | null) => {
       const baseUrl = window.location.origin;
       return `${baseUrl}${path}`;
     }
+    if (path.startsWith('ethio-hub/')) {
+      return getCloudImageUrl(path, { width: 800, height: 400 });
+    }
     return path;
   };
 
@@ -67,6 +71,9 @@ const getImageUrl = (path: string | undefined | null) => {
     if (path.startsWith('/uploads/')) {
       const baseUrl = window.location.origin;
       return `${baseUrl}${path}`;
+    }
+    if (path.startsWith('ethio-hub/')) {
+      return getCloudImageUrl(path, { width: 400, height: 400 });
     }
     return path;
   };
@@ -340,12 +347,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
     className="w-full h-full object-cover" 
     alt={currentData?.name || 'Event'} 
   />
-  {/* Debug: Show cover image URL */}
-  {process.env.NODE_ENV === 'development' && (
-    <div className="absolute bottom-0 left-0 bg-black/70 text-white text-[10px] px-1">
-      Cover: {currentData?.coverImage || 'none'}
-    </div>
-  )}
+    {/* Cover image displayed here - debug removed */}
   {isEditing && (
     <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
       <label className="cursor-pointer bg-white text-primary px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
@@ -2552,10 +2554,18 @@ export const OrganizerOverview: React.FC<{ onManageEvent?: (id: string) => void;
                 <div className="space-y-6">
                   <h3 className="text-xl font-serif font-bold text-primary">Your Active Events</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {activePublishedEvents.map((fest, index) => (
-                      <div key={fest._id || fest.id || `fest-${index}`} onClick={() => onManageEvent(fest._id || fest.id)} className="bg-white rounded-[32px] overflow-hidden border border-gray-100 shadow-sm cursor-pointer group hover:shadow-md transition-all">
-                        <div className="h-44 overflow-hidden"><img src={fest.coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" /></div>
-                        <div className="p-6"><h4 className="text-xl font-serif font-bold text-primary group-hover:text-secondary transition-colors">{fest.name}</h4><p className="text-[10px] text-gray-400 uppercase font-bold">{fest.locationName}</p></div>
+                    {myEvents.slice(0, 4).map((fest, index) => (
+                       <div key={fest.id || `fest-${index}`} onClick={() => onManageEvent(fest.id)} className="bg-white rounded-[32px] overflow-hidden border border-gray-100 shadow-sm cursor-pointer group hover:shadow-md transition-all">
+                         <div className="h-44 overflow-hidden">
+                           {fest.coverImage ? (
+                             <img src={fest.coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
+                           ) : (
+                             <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                               <Calendar className="w-12 h-12 text-gray-400" />
+                             </div>
+                           )}
+                         </div>
+                         <div className="p-6"><h4 className="text-xl font-serif font-bold text-primary group-hover:text-secondary transition-colors">{fest.name}</h4><p className="text-[10px] text-gray-400 uppercase font-bold">{fest.locationName}</p></div>
                       </div>
                     ))}
                   </div>

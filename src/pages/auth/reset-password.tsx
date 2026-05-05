@@ -7,7 +7,7 @@ import { useLanguage } from '../../context/LanguageContext';
 export default function ResetPasswordPage() {
   const { t } = useLanguage();
   const router = useRouter();
-  const [token, setToken] = useState('');
+  const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -17,15 +17,15 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const tokenParam = params.get('token');
-    if (tokenParam) {
-      setToken(tokenParam);
+    const emailParam = params.get('email');
+    if (emailParam) {
+      // Pre-fill email if provided
     }
   }, []);
 
   const handleReset = async () => {
-    if (!token) {
-      setMessage({ type: 'error', text: t('auth.invalidToken') });
+    if (!otp) {
+      setMessage({ type: 'error', text: t('auth.invalidToken') || 'OTP is required' });
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -44,7 +44,7 @@ export default function ResetPasswordPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          token,
+          otp,
           newPassword,
         }),
       });

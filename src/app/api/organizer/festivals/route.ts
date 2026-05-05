@@ -265,11 +265,12 @@ export async function POST(request: NextRequest) {
         );
     }
 
-const body = await request.json();
+    const body = await request.json();
     const { 
       name,
       name_en,
       name_am,
+      type,
       shortDescription,
       shortDescription_en,
       shortDescription_am,
@@ -354,6 +355,7 @@ const body = await request.json();
       name: normalizedNameEn || normalizedNameAm || 'Untitled draft festival',
       name_en: normalizedNameEn || normalizedNameAm || 'Untitled draft festival',
       name_am: normalizedNameAm || normalizedNameEn || 'Untitled draft festival',
+      type: type || 'CulturalTraditional',
       shortDescription: normalizedShortEn || normalizedShortAm || 'Draft festival description',
       shortDescription_en: normalizedShortEn || normalizedShortAm || 'Draft festival description',
       shortDescription_am: normalizedShortAm || normalizedShortEn || 'Draft festival description',

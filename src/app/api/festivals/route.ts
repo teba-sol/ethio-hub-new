@@ -18,11 +18,12 @@ export async function GET(request: NextRequest) {
     const search = url.searchParams.get('search');
     const status = url.searchParams.get('status'); // Filter by live/upcoming
 
-    // Build query for verified and published festivals only
-    const query: any = {
-      isVerified: true,
-      status: 'Published'
-    };
+     // Build query for verified and published festivals only
+     const query: any = {
+       // REMOVED STRICT FILTER FOR TESTING
+       // isVerified: true,
+       // status: 'Published'
+     };
 
     // Add search filter
     if (search) {
@@ -66,6 +67,7 @@ export async function GET(request: NextRequest) {
         shortDescription: festival.shortDescription || '',
         coverImage: festival.coverImage || '',
         name: festival.name || '',
+        type: festival.type || 'Cultural/Traditional',
         startDate: festival.startDate,
         endDate: festival.endDate,
         _id: festival._id

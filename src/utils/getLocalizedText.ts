@@ -23,7 +23,22 @@ export function getLocalizedText(
   if (obj[englishField]) return obj[englishField];
 
   // Fallback to base field (for backward compatibility)
-  if (obj[field]) return obj[field];
+  const baseField = obj[field];
+  if (baseField) {
+    if (typeof baseField === 'string' || typeof baseField === 'number') {
+      return String(baseField);
+    }
+    if (typeof baseField === 'object') {
+      const langKey = language.toLowerCase();
+      if (baseField[langKey]) return baseField[langKey];
+      if (baseField['en']) return baseField['en'];
+      for (const key in baseField) {
+        if (typeof baseField[key] === 'string' && baseField[key]) {
+          return baseField[key];
+        }
+      }
+    }
+  }
 
   return '';
 }

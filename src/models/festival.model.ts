@@ -101,6 +101,7 @@ export interface IFestival extends Document {
   name: string; // for backward compatibility
   name_en: string;
   name_am: string;
+  type: 'Religious' | 'Cultural/Traditional' | 'National/Public Holidays';
   shortDescription: string; // for backward compatibility
   shortDescription_en: string;
   shortDescription_am: string;
@@ -140,6 +141,7 @@ export interface IFestival extends Document {
   pricing: IPricing;
   createdAt: Date;
   updatedAt: Date;
+  reportsCount: number;
 }
 
 // Define schemas
@@ -259,6 +261,12 @@ const FestivalSchema: Schema = new Schema(
     name: { type: String },
     name_en: { type: String, required: true },
     name_am: { type: String, required: true },
+    type: {
+      type: String,
+      enum: ['Religious', 'CulturalTraditional', 'NationalPublicHolidays'],
+      required: true,
+      default: 'CulturalTraditional'
+    },
     shortDescription: { type: String, required: true },
     shortDescription_en: { type: String, required: true },
     shortDescription_am: { type: String, required: true },
@@ -311,6 +319,7 @@ const FestivalSchema: Schema = new Schema(
     services: ServicesSchema,
     policies: PoliciesSchema,
     pricing: PricingSchema,
+    reportsCount: { type: Number, default: 0 },
   },
   {
     timestamps: true,

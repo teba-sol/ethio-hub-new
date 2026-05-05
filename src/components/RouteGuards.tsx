@@ -15,9 +15,10 @@ export function PrivateRoute({
   redirectTo?: string;
 }) {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, loading } = useAuth();
 
   React.useEffect(() => {
+    if (loading) return;
     if (!isAuthenticated) {
       router.replace(redirectTo);
       return;
@@ -26,8 +27,9 @@ export function PrivateRoute({
     if (allowedRoles && user && !allowedRoles.includes(user.role)) {
       router.replace("/");
     }
-  }, [allowedRoles, isAuthenticated, redirectTo, router, user]);
+  }, [loading, isAuthenticated, allowedRoles, redirectTo, router, user]);
 
+  if (loading) return null;
   if (!isAuthenticated) return null;
   if (allowedRoles && user && !allowedRoles.includes(user.role)) return null;
 

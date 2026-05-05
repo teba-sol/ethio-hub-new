@@ -1,5 +1,111 @@
 @import "tailwindcss";
 
+@keyframes heritage-float-up {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-24px);
+  }
+}
+
+@keyframes heritage-float-down {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(24px);
+  }
+}
+
+@keyframes explore-rail-up {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes explore-rail-down {
+  from {
+    transform: translateY(-50%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes artifact-enter-left {
+  from {
+    opacity: 0;
+    transform: translateX(-64px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes artifact-enter-right {
+  from {
+    opacity: 0;
+    transform: translateX(64px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.heritage-float-up {
+  animation: heritage-float-up 8s ease-in-out infinite;
+}
+
+.heritage-float-down {
+  animation: heritage-float-down 9s ease-in-out infinite;
+}
+
+.explore-rail-up {
+  animation: explore-rail-up 26s linear infinite;
+}
+
+.explore-rail-down {
+  animation: explore-rail-down 28s linear infinite;
+}
+
+.artifact-enter-left {
+  animation: artifact-enter-left 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.artifact-enter-right {
+  animation: artifact-enter-right 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.artifact-showcase-card {
+  transform-style: preserve-3d;
+}
+
+.artifact-showcase-card img {
+  transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1), filter 700ms ease;
+}
+
+.artifact-showcase-card:hover img {
+  transform: scale(1.08) rotate(2deg);
+  filter: saturate(1.08) contrast(1.03);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heritage-float-up,
+  .heritage-float-down,
+  .explore-rail-up,
+  .explore-rail-down,
+  .artifact-enter-left,
+  .artifact-enter-right {
+    animation: none;
+  }
+}
+
 @theme {
   --color-primary: #0f4c3a;
   --color-secondary: #c89b2c;

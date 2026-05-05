@@ -3,31 +3,35 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  ArrowLeft, MapPin, Calendar, Users, Ticket, ArrowRight, Star, 
-  Clock, Shield, Phone, Mail, Globe, Bus, Utensils, Music, 
-  ChevronLeft, ChevronRight, X, Check, Play
+import {
+  ArrowLeft, MapPin, Calendar, Users, Ticket, ArrowRight, Star,
+  Clock, Shield, Phone, Mail, Globe, Bus, Utensils, Music,
+  ChevronLeft, ChevronRight, X, Check, Play, Flag
 } from 'lucide-react';
 import apiClient from '@/lib/apiClient';
 import { Festival } from '@/types';
 import { useBooking } from '@/context/BookingContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import { getLocalizedText } from '@/utils/getLocalizedText';
+import { ReportModal } from '@/components/ReportModal';
 
 export default function EventPage() {
   const params = useParams();
   const router = useRouter();
   const eventId = params?.id as string;
-  
-   const { setEvent } = useBooking();
-   const { language, t } = useLanguage();
-  
+
+  const { setEvent } = useBooking();
+  const { language, t } = useLanguage();
+  const { user } = useAuth();
+
   const [festival, setFestival] = useState<Festival | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'about' | 'schedule' | 'location' | 'organizer'>('about');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -134,11 +138,24 @@ export default function EventPage() {
         
          {/* Back button */}
          <div className="absolute top-6 left-6 z-10">
-           <Link href="/festivals" className="flex items-center gap-2 text-white/80 hover:text-white">
-             <ArrowLeft className="w-5 h-5" />
-             <span className="text-sm font-bold uppercase tracking-widest">{t('festival.allEvents')}</span>
-           </Link>
-         </div>
+            <Link href="/festivals" className="flex items-center gap-2 text-white/80 hover:text-white">
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm font-bold uppercase tracking-widest">{t('festival.allEvents')}</span>
+            </Link>
+          </div>
+
+          {/* Report Button */}
+          {user && (
+            <div className="absolute top-6 right-6 z-10">
+              <button
+                onClick={() => setShowReportModal(true)}
+                className="flex items-center gap-2 bg-black/50 backdrop-blur-sm text-white/80 hover:text-white px-4 py-2 rounded-full transition-all"
+              >
+                <Flag className="w-4 h-4" />
+                <span className="text-sm font-bold">Report</span>
+              </button>
+            </div>
+          )}
         
         {/* Content overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
@@ -483,6 +500,17 @@ export default function EventPage() {
           </div>
         </div>
       </div>
+
+      {/* Report Modal */}
+      {showReportModal && festival && (
+        <ReportModal
+          targetId={eventId}
+          targetType="Event"
+          targetName={getLocalizedText(festival, 'name', language)}
+          onClose={() => setShowReportModal(false)}
+          userId={user?.id || ''}
+        />
+      )}
 
       {/* Lightbox */}
       {lightboxOpen && allImages.length > 0 && (

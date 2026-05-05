@@ -57,6 +57,14 @@ export const translations: Record<Language, TranslationDictionary> = {
       payNow: "Pay Now",
       secureCheckout: "Secure checkout powered by Chapa & Telebirr"
     },
+    productCard: {
+      onlyLeft: "Only {count} left",
+      by: "By:",
+      shipsIn: "Ships in",
+      details: "Details",
+      add: "Add",
+      addToWishlist: "Add {name} to wishlist"
+    },
     // Footer (Original English)
     footer: {
       tagline: "Preserving centuries of Ethiopian craftsmanship through a secure, unified marketplace aligned with the Digital Ethiopia 2025 strategy.",
@@ -211,6 +219,36 @@ export const translations: Record<Language, TranslationDictionary> = {
       analytics: "Analytics",
       helpCenter: "Help Center",
       approved: "Approved"
+    },
+
+    // Tourist Settings (Original English)
+    settings: {
+      accountSettings: "Account Settings",
+      profileInformation: "Profile Information",
+      fullName: "Full Name",
+      emailAddress: "Email Address",
+      phoneNumber: "Phone Number",
+      country: "Country",
+      nationality: "Nationality",
+      dateOfBirth: "Date of Birth",
+      profilePhoto: "Profile Photo",
+      chooseImage: "Choose Image",
+      imageUploaded: "Image uploaded!",
+      preview: "Preview",
+      saveChanges: "Save Changes",
+      security: "Security",
+      password: "Password",
+      lastChanged: "Last changed 3 months ago",
+      update: "Update",
+      twoFactorAuth: "Two-Factor Authentication",
+      addExtraLayer: "Add an extra layer of security",
+      enable: "Enable",
+      profile: "Profile",
+      uploadPhoto: "Upload a photo above",
+      preferences: "Preferences",
+      emailNotifications: "Email Notifications",
+      smsAlerts: "SMS Alerts",
+      newsletter: "Newsletter"
     },
     // Admin (Original English)
     admin: {
@@ -460,9 +498,36 @@ export const translations: Record<Language, TranslationDictionary> = {
       actionRequired: "Action Required"
     },
     // Public Pages (Original English)
-    home: {
-      unifiedPlatform: "Unified Cultural Platform",
-      discoverHeart: "Discover the Heart of",
+  home: {
+    unifiedPlatform: "Unified Cultural Platform",
+    curatedMarketplace: "Curated artisan market",
+    craftCelebrationMeet: "Where craft and celebration meet",
+    letsExploreEthiopia: "Let's Explore Ethiopia",
+    whereHeritageAwaits: "Where heritage awaits",
+    discoverHandmade: "Discover handmade Ethiopian cultural products, book festival experiences, and meet the artisans and organizers keeping living traditions moving from market stalls to grand public celebrations.",
+    bookInLandOfOrigins: "Book in the land of origins",
+    reserveFestivalPass: "Reserve a festival pass, explore local services, and plan cultural experiences around Ethiopia's living celebrations.",
+    upcomingEventsFestivals: "Upcoming Events & Festivals",
+    discoverCrafts: "Discover Crafts",
+    exploreFestivals: "Explore Festivals",
+    browseArtisans: "Browse Artisans",
+    viewAllFestivals: "View All Festivals",
+    bookNow: "Book Now",
+    startingAt: "Starting at",
+    ethioCraft: "Ethio Craft",
+    hub: "Hub",
+    handmadeCraftAlt: "Ethiopian handmade craft",
+    marketFestivalAlt: "Ethiopian market and festival detail",
+    timelessAttractions: "Timeless Attractions",
+    timelessCraftTraditions: "Timeless Craft Traditions",
+    timelessCraftDesc: "From woven cotton and coffee ceremony clayware to silver crosses and Harari baskets, every product carries a place, a maker, and a cultural memory.",
+    wovenTextiles: "Woven Textiles",
+    wovenTextilesMeta: "Dorze, Shema, Gabi",
+    coffeeCeremony: "Coffee Ceremony",
+    coffeeCeremonyMeta: "Jebena and serving sets",
+    heritageJewelry: "Heritage Jewelry",
+    heritageJewelryMeta: "Silver crosses and beadwork",
+    discoverHeart: "Discover the Heart of",
       ethiopianHeritage: "Ethiopian Heritage.",
       verifiedArtisans: "Verified Artisans",
       annualFestivals: "Annual Festivals",
@@ -553,20 +618,19 @@ export const translations: Record<Language, TranslationDictionary> = {
        results: " results",
        resultsShowing: "Showing {count} results"
      },
-    festival: {
-      hero: {
-        badge: "Official Holiday Directory",
-        titleLine1: "Experience the Sacred",
-        titleLine2: "Traditions of Ethiopia",
-        description: "Join millions in celebrating Ethiopia's ancient religious festivals, historical commemorations, and vibrant cultural holidays."
-      },
-      searchPlaceholder: "Search festivals or locations...",
-      types: {
-        religious: "Religious",
-        historical: "Historical",
-        harvest: "Harvest",
-        newyear: "New Year"
-      },
+      festival: {
+        hero: {
+          badge: "Official Holiday Directory",
+          titleLine1: "Experience the Sacred",
+          titleLine2: "Traditions of Ethiopia",
+          description: "Join millions in celebrating Ethiopia's ancient religious festivals, historical commemorations, and vibrant cultural holidays."
+        },
+        searchPlaceholder: "Search festivals or locations...",
+        types: {
+          religious: "Religious",
+          culturaltraditional: "Cultural / Traditional",
+          nationalpublicholidays: "National / Public Holidays"
+        },
       featured: {
         heading: "Featured Celebration",
         badge: "Trending Now"
@@ -721,14 +785,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       enhanceStay: "Enhance your stay with our meal packages available for this event",
       backToHotels: "Back to Hotels",
       selectedRoom: "Selected Room",
-      roomsLeft: "{count} rooms left",
-      // Facilities
-      freeWiFi: "Free WiFi",
-      swimmingPool: "Swimming Pool",
-      restaurant: "Restaurant",
-      fitnessCenter: "Fitness Center",
-      freeParking: "Free Parking",
-      spaWellness: "Spa & Wellness"
+      roomsLeft: "{count} rooms left"
     },
 
     transport: {
@@ -792,7 +849,7 @@ export const translations: Record<Language, TranslationDictionary> = {
 
   // ራስጌ (Header)
   header: {
-    searchPlaceholder: "ፈልግ...",
+    searchPlaceholder: "ፈልግ ወይገል...",
     welcome: "እንኳን ደህና መጣችሁ",
     signInRegister: "ግባ / ተመዝገብ",
     newHere: "አዲስ ነዎት?",
@@ -830,6 +887,15 @@ export const translations: Record<Language, TranslationDictionary> = {
     back: "ተመለስ",
     payNow: "አሁን ክፈል",
     secureCheckout: "በቻፓ እና ቴሌብር የተጎላበተ ደህንነቱ የተጠበቀ ክፍያ"
+  },
+
+  productCard: {
+    onlyLeft: "{count} ብቻ ቀርቷል",
+    by: "በ:",
+    shipsIn: "የሚላክበት ጊዜ",
+    details: "ዝርዝር",
+    add: "ጨምር",
+    addToWishlist: "{name}ን ወደ ምኞት ዝርዝር ጨምር"
   },
 
   // ግርጌ (Footer)
@@ -875,7 +941,6 @@ export const translations: Record<Language, TranslationDictionary> = {
     back: "ተመለስ",
      next: "ቀጣይ",
      previous: "ቀዳሚ",
-     category: "ምድብ",
      close: "ዝጋ",
     loading: "በመጫን ላይ...",
     error: "ስህተት",
@@ -1315,6 +1380,33 @@ export const translations: Record<Language, TranslationDictionary> = {
   // ህዝብ ገጾች (Public Pages)
   home: {
     unifiedPlatform: "የተዋሃደ የባህል መድረክ",
+    curatedMarketplace: "የተመረጠ የጥበብ ገበያ",
+    craftCelebrationMeet: "ጥበብ እና በዓል የሚገናኙበት",
+    letsExploreEthiopia: "ኢትዮጵያን እንመርምር",
+    whereHeritageAwaits: "ቅርስ የሚጠብቅበት",
+    discoverHandmade: "የኢትዮጵያ የእጅ ሥራ ባህላዊ ምርቶችን ያግኙ፣ የበዓል ተሞክሮዎችን ይያዙ፣ እና ህያው ባህሎችን ከገበያ እስከ ታላላቅ ሕዝባዊ ክብረ በዓላት የሚያንቀሳቅሱ የጥበብ ባለሙያዎችን እና አዘጋጆችን ያግኙ።",
+    bookInLandOfOrigins: "በመነሻዎች ምድር ይያዙ",
+    reserveFestivalPass: "የበዓል መግቢያ ይያዙ፣ የአካባቢ አገልግሎቶችን ያስሱ፣ እና በኢትዮጵያ ህያው ክብረ በዓላት ዙሪያ የባህል ተሞክሮዎችን ያቅዱ።",
+    upcomingEventsFestivals: "መጪ ዝግጅቶች እና በዓላት",
+    discoverCrafts: "የእጅ ሥራዎችን ያግኙ",
+    exploreFestivals: "በዓላትን ያስሱ",
+    browseArtisans: "የጥበብ ባለሙያዎችን ያስሱ",
+    viewAllFestivals: "ሁሉንም በዓላት ተመልከት",
+    bookNow: "አሁን ይያዙ",
+    startingAt: "መነሻ ዋጋ",
+    ethioCraft: "ኢትዮ ክራፍት",
+    hub: "ሃብ",
+    handmadeCraftAlt: "የኢትዮጵያ የእጅ ሥራ",
+    marketFestivalAlt: "የኢትዮጵያ ገበያ እና የበዓል ዝርዝር",
+    timelessAttractions: "ዘመን የማይሽራቸው መስህቦች",
+    timelessCraftTraditions: "ዘመን የማይሽራቸው የእጅ ሥራ ባህሎች",
+    timelessCraftDesc: "ከተሸመኑ ጥጥ ጨርቆች እና የቡና ሥነ ሥርዓት የሸክላ ዕቃዎች እስከ የብር መስቀሎች እና የሐረሪ ቅርጫቶች፣ እያንዳንዱ ምርት ቦታ፣ ፈጣሪ እና የባህል ትውስታ ይይዛል።",
+    wovenTextiles: "የተሸመኑ ጨርቆች",
+    wovenTextilesMeta: "ዶርዜ፣ ሸማ፣ ጋቢ",
+    coffeeCeremony: "የቡና ሥነ ሥርዓት",
+    coffeeCeremonyMeta: "ጀበና እና የማቅረቢያ ስብስቦች",
+    heritageJewelry: "የቅርስ ጌጣጌጥ",
+    heritageJewelryMeta: "የብር መስቀሎች እና የዶቃ ሥራ",
     discoverHeart: "የኢትዮጵያን ባህል",
     ethiopianHeritage: "ልብ ያግኙ።",
     verifiedArtisans: "የተረጋገጡ የጥበብ ባለሙያዎች",
@@ -1413,10 +1505,9 @@ export const translations: Record<Language, TranslationDictionary> = {
   },
   searchPlaceholder: "በዓላትን ወይም አካባቢዎችን ይፈልጉ...",
   types: {
-    religious: "ሃይማኖታዊ",
-    historical: "ታሪካዊ",
-    harvest: "መሸምወዝ",
-    newyear: "አዲስ ዓመት"
+    religious: "ሃይስኖታ",
+    culturaltraditional: "ባህላዊ / ባህላዊ",
+    nationalpublicholidays: "ብሔራ / የሕብሰት ቀንዎች"
   },
   featured: {
     heading: "የተመረጠ በዓላት",
@@ -1549,13 +1640,41 @@ export const translations: Record<Language, TranslationDictionary> = {
     }
   },
   guidelineNote: "ይህ ግምገማ የማህበረሰባችንን መመሪያ የሚያሟላ መሆኑን እንፈትሻለን። የማያሟላ ከሆነ፣ እናስወግደዋለን።",
-  cancel: "ይቅር",
-  submit: "አስገባ"
-}
+    cancel: "ይቅር",
+    submit: "አስገባ"
+  },
+
+  // Tourist Settings
+  settings: {
+    accountSettings: "የመለያ ቅንብሮች",
+    profileInformation: "የመገለጫ መረጃ",
+    fullName: "ሙሉ ስም",
+    emailAddress: "የኢሜይል አድራሻ",
+    phoneNumber: "የስልክ ቁር",
+    country: "አገር",
+    nationality: "ዜጋኝነት",
+    dateOfBirth: "የትልድ ቀን",
+    profilePhoto: "የመገለጫ ፎቶ",
+    chooseImage: "ምስኔ ምረጥ",
+    imageUploaded: "ምስኔ ተሰቀኮል!",
+    preview: "ቅድም",
+    saveChanges: "�ግርዎችን አቅት",
+    security: "ደህንት",
+    password: "የይለፍድ ቃል",
+    lastChanged: "መጨረሪያ ቀን",
+    update: "አስማምር",
+    twoFactorAuth: "ሁለ-ፋክተር ማውተንቲኬን",
+    addExtraLayer: "ተጨማ ደላው የደህንት �ይጨምሩ",
+    enable: "ነቅት",
+    profile: "መገለጫ",
+    uploadPhoto: "ምስኔ አስግት",
+    preferences: "ምድርዎች",
+    emailNotifications: "የኢሜይል ማሳወቂያዎች",
+    smsAlerts: "የSMS ማንቂቶዎች",
+    newsletter: "ዜውስለትተር"
+  }
 }  
-
+  
 };  
-
-
 
 export default translations;

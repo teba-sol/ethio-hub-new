@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '../../../../lib/mongodb';
 import User from '../../../../models/User';
 import bcrypt from 'bcryptjs';
+import { createHash } from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
 
     const body = await request.json();
-    const { token, newPassword, email } = body;
+    const { otp, newPassword, email } = body;
 
     // Development bypass: allow password reset by email directly (remove in production)
     if (email && newPassword && process.env.NODE_ENV !== 'production') {
@@ -32,10 +33,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Normal token-based reset
-    if (!token || !newPassword) {
+    // Normal OTP-based reset
+    if (!otp || !newPassword) {
       return new NextResponse(
-        JSON.stringify({ success: false, message: 'Token and new password are required' }),
+        JSON.stringify({ success: false, message: 'OTP and new password are required' }),
         { status: 400, headers: { 'content-type': 'application/json' } }
       );
     }
@@ -47,14 +48,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Hash the provided OTP and compare with stored hash
+    const otpHash = createHash('sha256').update(otp).digest('hex');
+
     const user = await User.findOne({
-      resetToken: token,
+      resetToken: otpHash,
       resetTokenExpiry: { $gt: new Date() }
     });
 
     if (!user) {
       return new NextResponse(
-        JSON.stringify({ success: false, message: 'Invalid or expired reset token' }),
+        JSON.stringify({ success: false, message: 'Invalid or expired OTP' }),
         { status: 400, headers: { 'content-type': 'application/json' } }
       );
     }
