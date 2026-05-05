@@ -44,6 +44,7 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
     { path: '/dashboard/admin/revenue', name: 'Revenue & Commission', icon: TrendingUp },
     { path: '/dashboard/admin/reports', name: 'Reports & Moderation', icon: Flag },
     { path: '/dashboard/admin/logs', name: 'System Logs', icon: FileText },
+    { path: '/dashboard/admin/support', name: 'Support', icon: Info },
     { path: '/dashboard/admin/settings', name: 'Settings', icon: Settings },
   ];
 
