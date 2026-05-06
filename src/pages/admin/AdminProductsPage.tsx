@@ -52,7 +52,7 @@ interface Product {
   shippingFee: string;
   deliveryTime: string;
   images: string[];
-  status: 'Draft' | 'Published' | 'Archived';
+  status: 'Draft' | 'Pending' | 'Published' | 'Out of Stock' | 'Dropped by Admin' | 'Archived';
   verificationStatus: VerificationStatus;
   rejectionReason?: string;
   createdAt: string;
@@ -99,7 +99,12 @@ export const AdminProductsPage: React.FC = () => {
         method: 'POST',
       });
       if (response.ok) {
-        setProducts(prev => prev.map(p => p._id === productId ? { ...p, verificationStatus: 'Approved' as VerificationStatus, rejectionReason: undefined } : p));
+        setProducts(prev => prev.map(p => p._id === productId ? { 
+          ...p, 
+          verificationStatus: 'Approved' as VerificationStatus, 
+          status: 'Published',
+          rejectionReason: undefined 
+        } : p));
         setViewProduct(null);
         alert(t('admin.productApproved'));
       } else {
@@ -123,7 +128,12 @@ export const AdminProductsPage: React.FC = () => {
         body: JSON.stringify({ reason: rejectionType + (actionReason ? ` - ${actionReason}` : '') }),
       });
       if (response.ok) {
-        setProducts(prev => prev.map(p => p._id === productId ? { ...p, verificationStatus: 'Rejected' as VerificationStatus, rejectionReason: rejectionType + (actionReason ? ` - ${actionReason}` : '') } : p));
+        setProducts(prev => prev.map(p => p._id === productId ? { 
+          ...p, 
+          verificationStatus: 'Rejected' as VerificationStatus, 
+          status: 'Dropped by Admin',
+          rejectionReason: rejectionType + (actionReason ? ` - ${actionReason}` : '') 
+        } : p));
         setRejectProduct(null);
         setViewProduct(null);
         setActionReason('');

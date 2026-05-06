@@ -51,6 +51,7 @@ export async function POST(
     }
 
     product.verificationStatus = 'Rejected';
+    product.status = 'Dropped by Admin';
     product.rejectionReason = reason;
     await product.save();
 

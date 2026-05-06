@@ -493,7 +493,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   const isCompleted = currentData.status === 'Completed' || new Date(currentData.endDate) < new Date();
                   const isPublished = !isRejected && !isPending && !isDraft && !isCompleted;
 
-                  if (isPublished || isCompleted) return null;
+                  if (isPublished || isCompleted || isPending) return null;
 
                   return (
                     <>

@@ -29,6 +29,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
    // Translation function
    const t = (key: string, params?: Record<string, any>): string => {
+     if (!key || typeof key !== 'string') {
+       console.warn('Translation key is missing or not a string:', key);
+       return '';
+     }
      const keys = key.split('.');
      let current: TranslationDictionary | string = translations[language];
 

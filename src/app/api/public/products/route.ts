@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     const search = searchParams.get('search');
     const artisanId = searchParams.get('artisanId');
 
-    const query: any = {};
+    const query: any = { status: 'Published' };
 
     if (artisanId) {
       if (mongoose.Types.ObjectId.isValid(artisanId)) {

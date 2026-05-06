@@ -5,7 +5,8 @@ import {
   Edit3, Trash2, Copy, Archive, Eye, TrendingUp, 
   DollarSign, Package, Tag, Truck, Calendar, ChevronLeft,
   ChevronRight, CheckSquare, Square, AlertCircle, ArrowUpDown,
-  Download, BarChart2, Save, Star, Clock, MoreHorizontal
+  Download, BarChart2, Save, Star, Clock, MoreHorizontal,
+  Upload, X, Loader2, Layers, Info
 } from 'lucide-react';
 import { Button, Badge, Input } from '../UI';
 import { 
@@ -22,7 +23,7 @@ interface Product {
   stock: number;
   sold?: number;
   rating?: number;
-  status: 'Published' | 'Draft' | 'Archived';
+  status: 'Draft' | 'Pending' | 'Published' | 'Out of Stock' | 'Dropped by Admin' | 'Archived';
   verificationStatus: 'Pending' | 'Approved' | 'Rejected';
   rejectionReason?: string;
   category: string;
@@ -116,7 +117,61 @@ export const ArtisanProductManager: React.FC = () => {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const itemsPerPage = 8;
+
+  const handleImageEditUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && editData) {
+      const files = Array.from(e.target.files);
+      if ((editData.images?.length || 0) + files.length > 5) {
+        alert('Maximum 5 images allowed');
+        return;
+      }
+      
+      setUploadingImage(true);
+      const newUrls: string[] = [];
+
+      try {
+        for (const file of files) {
+          const formDataUpload = new FormData();
+          formDataUpload.append('file', file);
+          formDataUpload.append('folder', 'products');
+          
+          const uploadRes = await fetch('/api/upload', {
+            method: 'POST',
+            body: formDataUpload
+          });
+          
+          const uploadResult = await uploadRes.json();
+          if (uploadResult.success) {
+            newUrls.push(uploadResult.url);
+          }
+        }
+
+        if (newUrls.length > 0) {
+          setEditData({
+            ...editData,
+            images: [...(editData.images || []), ...newUrls]
+          });
+        }
+      } catch (err) {
+        console.error('Upload error:', err);
+        alert('An error occurred during image upload');
+      } finally {
+        setUploadingImage(false);
+      }
+    }
+  };
+
+  const removeImage = (index: number) => {
+    if (!editData) return;
+    const newImages = [...editData.images];
+    newImages.splice(index, 1);
+    setEditData({ ...editData, images: newImages });
+  };
 
   useEffect(() => {
     fetchProducts();
@@ -174,6 +229,35 @@ export const ArtisanProductManager: React.FC = () => {
         console.error('Error deleting product:', error);
         alert('Failed to delete product');
       }
+    }
+  };
+
+  const handleInlineSave = async () => {
+    if (!editData) return;
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/artisan/products/${manageId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...editData,
+          status: 'Pending' // Always set to Pending for admin verification upon save
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setProducts(prev => prev.map(p => p._id === manageId ? data.product : p));
+        setIsEditing(false);
+        alert("Changes saved and submitted for verification!");
+      } else {
+        const data = await response.json();
+        alert(data.message || 'Failed to save changes');
+      }
+    } catch (error) {
+      console.error('Error saving product:', error);
+      alert('Failed to save product');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -269,13 +353,7 @@ export const ArtisanProductManager: React.FC = () => {
     }
 
     if (filterStatus !== 'All') {
-      if (filterStatus === 'Out of Stock') {
-        result = result.filter(p => p.stock === 0);
-      } else if (filterStatus === 'Active') {
-        result = result.filter(p => p.status === 'Published');
-      } else {
-        result = result.filter(p => p.status === filterStatus);
-      }
+      result = result.filter(p => p.status === filterStatus);
     }
 
     const now = new Date();
@@ -323,162 +401,429 @@ export const ArtisanProductManager: React.FC = () => {
   };
 
   const getStatusBadge = (product: Product) => {
-    if (product.stock === 0) return <Badge variant="error">Out of Stock</Badge>;
-    if (product.status === 'Draft') return <Badge variant="warning">Draft</Badge>;
-    if (product.status === 'Archived') return <Badge variant="outline">Archived</Badge>;
-    if (product.verificationStatus === 'Pending') return <Badge variant="warning">Pending Verification</Badge>;
-    if (product.verificationStatus === 'Rejected') return <Badge variant="error">Rejected</Badge>;
-    return <Badge variant="success">Published</Badge>;
+    switch (product.status) {
+      case 'Draft': return <Badge variant="warning">Draft</Badge>;
+      case 'Pending': return <Badge variant="warning">Pending Verification</Badge>;
+      case 'Published': return <Badge variant="success">Published</Badge>;
+      case 'Out of Stock': return <Badge variant="error">Out of Stock</Badge>;
+      case 'Dropped by Admin': return <Badge variant="error">Dropped by Admin</Badge>;
+      case 'Archived': return <Badge variant="outline">Archived</Badge>;
+      default: 
+        // Fallback to existing logic if status is something else
+        if (product.stock === 0) return <Badge variant="error">Out of Stock</Badge>;
+        if (product.verificationStatus === 'Pending') return <Badge variant="warning">Pending Verification</Badge>;
+        if (product.verificationStatus === 'Rejected') return <Badge variant="error">Rejected</Badge>;
+        return <Badge variant="success">Published</Badge>;
+    }
   };
 
   if (manageId) {
     const product = products.find(p => p._id === manageId);
     if (!product) return <div>Product not found</div>;
 
+    const currentData = isEditing ? editData : product;
+
     return (
       <div className="space-y-8 animate-in fade-in duration-300 pb-20">
         <header className="flex items-center justify-between sticky top-0 bg-gray-50/80 backdrop-blur-md z-20 py-4">
           <div className="flex items-center gap-4">
-            <button onClick={() => setManageId(null)} className="p-2 hover:bg-white rounded-xl transition-colors border border-transparent hover:border-gray-100">
+            <button onClick={() => { setManageId(null); setIsEditing(false); }} className="p-2 hover:bg-white rounded-xl transition-colors border border-transparent hover:border-gray-100">
               <ChevronLeft className="w-6 h-6 text-gray-500" />
             </button>
             <div>
-              <h1 className="text-3xl font-serif font-bold text-primary flex items-center gap-3">
-                {product.name}
-                {getStatusBadge(product)}
-              </h1>
+              {isEditing ? (
+                <input 
+                  type="text"
+                  className="text-3xl font-serif font-bold text-primary bg-white border border-gray-200 rounded-xl px-4 py-1 focus:ring-2 focus:ring-primary/10"
+                  value={editData.name}
+                  onChange={e => setEditData({...editData, name: e.target.value})}
+                />
+              ) : (
+                <h1 className="text-3xl font-serif font-bold text-primary flex items-center gap-3">
+                  {product.name}
+                  {getStatusBadge(product)}
+                </h1>
+              )}
               <p className="text-gray-500 text-sm">SKU: {product.sku || 'N/A'} • Created on {new Date(product.createdAt).toLocaleDateString()}</p>
             </div>
           </div>
           <div className="flex gap-3">
-            <Button leftIcon={Edit3} onClick={() => navigate(`/dashboard/artisan/products/edit/${product._id}`)}>Edit Product</Button>
-            <Button variant="outline" leftIcon={Eye} onClick={() => window.open(`/product/${product._id}`, '_blank')}>View Public</Button>
+            {isEditing ? (
+              <>
+                <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+                <Button leftIcon={Save} onClick={handleInlineSave} isLoading={saving}>Save Change</Button>
+              </>
+            ) : (
+              <Button leftIcon={Edit3} onClick={() => { setIsEditing(true); setEditData(product); }}>Edit</Button>
+            )}
           </div>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xl font-bold text-primary">Basic Information</h3>
-                <button onClick={() => navigate(`/dashboard/artisan/products/edit/${product._id}`)} className="text-emerald-600 text-sm font-bold hover:underline">Edit</button>
-              </div>
-              <div className="space-y-6">
-                {product.images && product.images.length > 0 && (
-                  <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-                    {product.images.map((img, i) => (
-                      <img key={i} src={img} className="w-32 h-32 rounded-2xl object-cover border border-gray-100 flex-shrink-0" alt="" />
-                    ))}
+        <div className="grid grid-cols-1 gap-8">
+          <div className="space-y-8">
+            <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-8">
+              <h3 className="text-xl font-bold text-primary">Basic Information</h3>
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Cover Image</label>
+                    <div className="flex gap-4 items-start">
+                      {isEditing ? (
+                        <>
+                          {editData.images?.[0] ? (
+                            <div className="relative w-32 h-32 rounded-2xl overflow-hidden border border-gray-100 group">
+                              <img src={editData.images[0]} alt="Cover" className="w-full h-full object-cover" />
+                              <button 
+                                onClick={() => {
+                                  const newImages = [...editData.images];
+                                  newImages.splice(0, 1);
+                                  setEditData({ ...editData, images: newImages });
+                                }}
+                                className="absolute top-1 right-1 p-1.5 bg-white/80 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <label className={`w-32 h-32 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all group ${
+                              uploadingImage ? 'bg-gray-50 border-gray-200 cursor-not-allowed' : 'border-gray-200 hover:border-primary/30 hover:bg-primary/5'
+                            }`}>
+                              {uploadingImage ? (
+                                <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                              ) : (
+                                <>
+                                  <Upload className="w-5 h-5 text-gray-300 group-hover:text-primary mb-1" />
+                                  <span className="text-[10px] font-bold text-gray-400 group-hover:text-primary">Cover</span>
+                                  <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                                    if (e.target.files?.[0]) {
+                                      setUploadingImage(true);
+                                      try {
+                                        const formData = new FormData();
+                                        formData.append('file', e.target.files[0]);
+                                        formData.append('folder', 'products');
+                                        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                                        const result = await res.json();
+                                        if (result.success) {
+                                          setEditData({ ...editData, images: [result.url, ...(editData.images || [])] });
+                                        }
+                                      } finally { setUploadingImage(false); }
+                                    }
+                                  }} />
+                                </>
+                              )}
+                            </label>
+                          )}
+                        </>
+                      ) : (
+                        <img src={product.images[0]} className="w-32 h-32 rounded-2xl object-cover border border-gray-100" alt="Cover" />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Detail Images (Max 5)</label>
+                    <div className="flex flex-wrap gap-4">
+                      {(isEditing ? editData.images?.slice(1) : product.images.slice(1))?.map((img: string, i: number) => (
+                        <div key={i} className="relative group">
+                          <img src={img} className="w-32 h-32 rounded-2xl object-cover border border-gray-100 shadow-sm" alt="" />
+                          {isEditing && (
+                            <button 
+                              onClick={() => removeImage(i + 1)}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {isEditing && (editData.images?.length || 0) < 6 && (
+                        <label className={`w-32 h-32 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all ${
+                          uploadingImage ? 'bg-gray-50 border-gray-200' : 'border-gray-200 hover:border-primary/30 hover:bg-primary/5 group'
+                        }`}>
+                          {uploadingImage ? (
+                            <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                          ) : (
+                            <>
+                              <Upload className="w-5 h-5 text-gray-300 group-hover:text-primary mb-1" />
+                              <span className="text-[10px] font-bold text-gray-400 group-hover:text-primary">Detail</span>
+                              <input type="file" className="hidden" accept="image/*" multiple onChange={handleImageEditUpload} />
+                            </>
+                          )}
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Product Name</label>
+                    {isEditing ? (
+                      <input 
+                        type="text"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                        value={editData.name}
+                        onChange={e => setEditData({...editData, name: e.target.value})}
+                      />
+                    ) : (
+                      <p className="text-lg font-bold text-primary">{product.name}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Category</label>
+                    {isEditing ? (
+                      <select 
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all appearance-none"
+                        value={editData.category}
+                        onChange={e => setEditData({...editData, category: e.target.value})}
+                      >
+                        <option value="Pottery">Pottery</option>
+                        <option value="Clothing">Clothing</option>
+                        <option value="Jewelry">Jewelry</option>
+                        <option value="Woodcraft">Woodcraft</option>
+                        <option value="Textile">Textile</option>
+                        <option value="Cultural Art">Cultural Art</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    ) : (
+                      <div><Badge variant="outline" className="px-4 py-1.5">{product.category}</Badge></div>
+                    )}
+                  </div>
+                </div>
+
+                {isEditing && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Subcategory (Optional)</label>
+                      <input 
+                        type="text"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                        value={editData.subcategory || ''}
+                        onChange={e => setEditData({...editData, subcategory: e.target.value})}
+                        placeholder="e.g. Scarves"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Tags (Optional)</label>
+                      <input 
+                        type="text"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                        value={Array.isArray(editData.tags) ? editData.tags.join(', ') : (editData.tags || '')}
+                        onChange={e => setEditData({...editData, tags: e.target.value})}
+                        placeholder="e.g. Handmade, Cotton"
+                      />
+                    </div>
                   </div>
                 )}
-                
+
                 <div className="space-y-2">
-                  <h4 className="text-sm font-bold text-gray-700">Description</h4>
-                  <p className="text-gray-600 text-sm leading-relaxed">{product.description}</p>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Description</label>
+                  {isEditing ? (
+                    <textarea 
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm text-gray-600 focus:ring-2 focus:ring-primary/10 min-h-[150px] transition-all"
+                      value={editData.description}
+                      onChange={e => setEditData({...editData, description: e.target.value})}
+                      placeholder="Write a detailed description of your artifact..."
+                    />
+                  ) : (
+                    <p className="text-gray-600 text-sm leading-relaxed bg-gray-50/50 p-4 rounded-2xl border border-gray-50">{product.description}</p>
+                  )}
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline">{product.category}</Badge>
-                  {product.tags && product.tags.map(tag => <Badge key={tag} variant="outline">{tag}</Badge>)}
-                </div>
-              </div>
-            </section>
-
-            <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xl font-bold text-primary">Pricing & Inventory</h3>
-                <button onClick={() => navigate(`/dashboard/artisan/products/edit/${product._id}`)} className="text-emerald-600 text-sm font-bold hover:underline">Edit</button>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div className="p-4 bg-gray-50 rounded-2xl">
-                  <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Price</p>
-                  <p className="text-xl font-bold text-primary mt-1">ETB {product.price}</p>
-                </div>
-                <div className="p-4 bg-gray-50 rounded-2xl">
-                  <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Stock</p>
-                  <p className={`text-xl font-bold mt-1 ${product.stock < 5 ? 'text-red-500' : 'text-primary'}`}>
-                    {product.stock} {product.stock < 5 && <AlertCircle className="w-4 h-4 inline ml-1" />}
-                  </p>
-                </div>
-                <div className="p-4 bg-gray-50 rounded-2xl">
-                  <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Discount</p>
-                  <p className="text-xl font-bold text-primary mt-1">{product.discountPrice ? `ETB ${product.discountPrice}` : 'None'}</p>
-                </div>
-                <div className="p-4 bg-gray-50 rounded-2xl">
-                  <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">SKU</p>
-                  <p className="text-xl font-bold text-primary mt-1">{product.sku || 'N/A'}</p>
-                </div>
-              </div>
-            </section>
-
-            <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xl font-bold text-primary">Shipping Information</h3>
-                <button onClick={() => navigate(`/dashboard/artisan/products/edit/${product._id}`)} className="text-emerald-600 text-sm font-bold hover:underline">Edit</button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="flex items-center gap-3 p-4 border border-gray-100 rounded-2xl">
-                  <Truck className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase font-bold">Shipping Fee</p>
-                    <p className="font-bold text-primary">{product.shippingFee}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Material</label>
+                    {isEditing ? (
+                      <input 
+                        type="text"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                        value={editData.material || ''}
+                        onChange={e => setEditData({...editData, material: e.target.value})}
+                        placeholder="e.g. 100% Cotton"
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-600">{product.material || 'N/A'}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Handmade By</label>
+                    {isEditing ? (
+                      <input 
+                        type="text"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                        value={editData.handmadeBy || ''}
+                        onChange={e => setEditData({...editData, handmadeBy: e.target.value})}
+                        placeholder="e.g. Dorze Weavers"
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-600">{product.handmadeBy || 'N/A'}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Region</label>
+                    {isEditing ? (
+                      <input 
+                        type="text"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                        value={editData.region || ''}
+                        onChange={e => setEditData({...editData, region: e.target.value})}
+                        placeholder="e.g. Southern Ethiopia"
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-600">{product.region || 'N/A'}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Care Instructions</label>
+                    {isEditing ? (
+                      <input 
+                        type="text"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                        value={editData.careInstructions || ''}
+                        onChange={e => setEditData({...editData, careInstructions: e.target.value})}
+                        placeholder="e.g. Hand wash only"
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-600">{product.careInstructions || 'N/A'}</p>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-4 border border-gray-100 rounded-2xl">
-                  <Clock className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase font-bold">Delivery Time</p>
-                    <p className="font-bold text-primary">{product.deliveryTime}</p>
-                  </div>
+              </div>
+            </section>
+
+            <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-8">
+              <h3 className="text-xl font-bold text-primary">Pricing & Inventory</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Base Price (ETB)</label>
+                  {isEditing ? (
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                      <input 
+                        type="number"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                        value={editData.price}
+                        onChange={e => setEditData({...editData, price: parseFloat(e.target.value)})}
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-50">
+                      <p className="text-2xl font-bold text-primary">ETB {product.price}</p>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-3 p-4 border border-gray-100 rounded-2xl">
-                  <Package className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase font-bold">Weight</p>
-                    <p className="font-bold text-primary">{product.weight || 'N/A'}</p>
-                  </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Discount Price</label>
+                  {isEditing ? (
+                    <div className="relative">
+                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                      <input 
+                        type="number"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                        value={editData.discountPrice || ''}
+                        onChange={e => setEditData({...editData, discountPrice: parseFloat(e.target.value)})}
+                        placeholder="Optional"
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-50">
+                      <p className="text-2xl font-bold text-primary">{product.discountPrice ? `ETB ${product.discountPrice}` : 'None'}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Stock Level</label>
+                  {isEditing ? (
+                    <div className="relative">
+                      <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                      <input 
+                        type="number"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                        value={editData.stock}
+                        onChange={e => setEditData({...editData, stock: parseInt(e.target.value)})}
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-50">
+                      <p className={`text-2xl font-bold ${product.stock < 5 ? 'text-red-500' : 'text-primary'}`}>
+                        {product.stock}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">SKU Number</label>
+                  {isEditing ? (
+                    <div className="relative">
+                      <Info className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                      <input 
+                        type="text"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                        value={editData.sku || ''}
+                        onChange={e => setEditData({...editData, sku: e.target.value})}
+                        placeholder="Optional SKU"
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-50">
+                      <p className="text-2xl font-bold text-primary">{product.sku || 'N/A'}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </section>
 
-            <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-6">
-              <h3 className="text-xl font-bold text-primary">Actions</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <button 
-                  onClick={() => navigate(`/dashboard/artisan/products/edit/${product._id}`)}
-                  className="p-4 border border-gray-100 rounded-2xl hover:bg-gray-50 hover:border-gray-200 transition-all flex flex-col items-center gap-2 text-center group"
-                >
-                  <Edit3 className="w-5 h-5 text-gray-400 group-hover:text-primary" />
-                  <span className="text-sm font-bold text-gray-600 group-hover:text-primary">Edit Product</span>
-                </button>
-                <button 
-                  onClick={() => handleDuplicate(product)}
-                  className="p-4 border border-gray-100 rounded-2xl hover:bg-gray-50 hover:border-gray-200 transition-all flex flex-col items-center gap-2 text-center group"
-                >
-                  <Copy className="w-5 h-5 text-gray-400 group-hover:text-primary" />
-                  <span className="text-sm font-bold text-gray-600 group-hover:text-primary">Duplicate</span>
-                </button>
-                <button 
-                  onClick={() => handleArchive(product._id)}
-                  className="p-4 border border-gray-100 rounded-2xl hover:bg-gray-50 hover:border-gray-200 transition-all flex flex-col items-center gap-2 text-center group"
-                >
-                  <Archive className="w-5 h-5 text-gray-400 group-hover:text-primary" />
-                  <span className="text-sm font-bold text-gray-600 group-hover:text-primary">Archive</span>
-                </button>
-                <button 
-                  onClick={() => handleDelete(product._id)}
-                  className={`p-4 border border-gray-100 rounded-2xl transition-all flex flex-col items-center gap-2 text-center group ${product.status === 'Published' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50 hover:border-red-200'}`}
-                  title={product.status === 'Published' ? "Cannot delete published product" : "Delete product"}
-                >
-                  <Trash2 className={`w-5 h-5 ${product.status === 'Published' ? 'text-gray-300' : 'text-gray-400 group-hover:text-red-500'}`} />
-                  <span className={`text-sm font-bold ${product.status === 'Published' ? 'text-gray-300' : 'text-gray-600 group-hover:text-red-500'}`}>Delete</span>
-                </button>
+            <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-8">
+              <h3 className="text-xl font-bold text-primary">Logistics & Delivery</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Delivery Time</label>
+                  {isEditing ? (
+                    <div className="relative">
+                      <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                      <select 
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-4 py-4 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 appearance-none"
+                        value={editData.deliveryTime}
+                        onChange={e => setEditData({...editData, deliveryTime: e.target.value})}
+                      >
+                        <option value="">Select Delivery Time</option>
+                        <option value="1-2 Business Days">1-2 Business Days</option>
+                        <option value="3-5 Business Days">3-5 Business Days</option>
+                        <option value="5-7 Business Days">5-7 Business Days</option>
+                        <option value="1-2 Weeks">1-2 Weeks</option>
+                        <option value="2-4 Weeks">2-4 Weeks</option>
+                        <option value="Custom">Custom</option>
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl border border-gray-50">
+                      <Clock className="w-6 h-6 text-secondary" />
+                      <p className="text-lg font-bold text-primary">{product.deliveryTime}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Package Weight</label>
+                  {isEditing ? (
+                    <div className="relative">
+                      <Layers className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                      <input 
+                        type="text"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-4 py-4 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                        value={editData.weight || ''}
+                        onChange={e => setEditData({...editData, weight: e.target.value})}
+                        placeholder="e.g. 0.5kg (Optional)"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl border border-gray-50">
+                      <Layers className="w-6 h-6 text-secondary" />
+                      <p className="text-lg font-bold text-primary">{product.weight || 'N/A'}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
-          </div>
-
-          <div className="space-y-8">
-            <ProductPerformanceCard product={product} />
           </div>
         </div>
       </div>
@@ -512,18 +857,17 @@ export const ArtisanProductManager: React.FC = () => {
               />
             </div>
             <div className="h-8 w-[1px] bg-gray-100 hidden md:block"></div>
-            <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 no-scrollbar">
-              {['All', 'Active', 'Draft', 'Out of Stock', 'Archived'].map(status => (
-                <button
-                  key={status}
-                  onClick={() => setFilterStatus(status)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                    filterStatus === status ? 'bg-primary text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-                  }`}
-                >
-                  {status}
-                </button>
-              ))}
+            <div className="relative">
+              <select 
+                className="appearance-none bg-gray-50 border-none rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary cursor-pointer focus:ring-2 focus:ring-primary/10"
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
+                {['All', 'Pending', 'Published', 'Draft', 'Out of Stock', 'Dropped by Admin', 'Archived'].map(status => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+              <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
             </div>
           </div>
 
@@ -571,17 +915,6 @@ export const ArtisanProductManager: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {selectedItems.length > 0 && (
-          <div className="bg-primary text-white p-4 rounded-2xl flex justify-between items-center animate-in slide-in-from-top-2">
-            <span className="text-sm font-bold">{selectedItems.length} items selected</span>
-            <div className="flex gap-3">
-              <button onClick={() => handleBulkAction('Archive')} className="px-4 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold transition-colors">Archive</button>
-              <button onClick={() => handleBulkAction('Delete')} className="px-4 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-xs font-bold transition-colors">Delete</button>
-              <button onClick={() => setSelectedItems([])} className="px-4 py-1.5 text-white/60 hover:text-white text-xs font-bold">Cancel</button>
-            </div>
-          </div>
-        )}
       </div>
 
       {paginatedProducts.length === 0 ? (
@@ -598,12 +931,7 @@ export const ArtisanProductManager: React.FC = () => {
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {paginatedProducts.map(product => (
-            <div key={product._id} className={`bg-white rounded-[24px] border transition-all overflow-hidden group relative ${selectedItems.includes(product._id) ? 'border-primary ring-1 ring-primary' : 'border-gray-100 hover:shadow-md'}`}>
-              <div className="absolute top-3 left-3 z-10">
-                <button onClick={(e) => { e.stopPropagation(); toggleSelection(product._id); }} className="bg-white/80 backdrop-blur-sm rounded-lg p-1.5 hover:bg-white transition-colors">
-                  {selectedItems.includes(product._id) ? <CheckSquare className="w-5 h-5 text-primary fill-primary/10" /> : <Square className="w-5 h-5 text-gray-400" />}
-                </button>
-              </div>
+            <div key={product._id} className={`bg-white rounded-[24px] border transition-all overflow-hidden group relative border-gray-100 hover:shadow-md`}>
               <div className="absolute top-3 right-3 z-10">
                 <div className="relative">
                   <button 
@@ -614,32 +942,35 @@ export const ArtisanProductManager: React.FC = () => {
                   </button>
                   {activeMenuId === product._id && (
                     <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-20 animate-in fade-in zoom-in-95 duration-200">
-                      <button 
-                        onClick={() => navigate(`/dashboard/artisan/products/edit/${product._id}`)}
-                        className="w-full text-left px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50 rounded-lg flex items-center gap-2"
-                      >
-                        <Edit3 className="w-3 h-3" /> Edit
-                      </button>
-                      <button 
-                        onClick={() => handleDuplicate(product)}
-                        className="w-full text-left px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50 rounded-lg flex items-center gap-2"
-                      >
-                        <Copy className="w-3 h-3" /> Duplicate
-                      </button>
-                      <button 
-                        onClick={() => handleArchive(product._id)}
-                        className="w-full text-left px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50 rounded-lg flex items-center gap-2"
-                      >
-                        <Archive className="w-3 h-3" /> Archive
-                      </button>
-                      <div className="h-px bg-gray-100 my-1"></div>
-                      <button 
-                        onClick={() => handleDelete(product._id)}
-                        disabled={product.status === 'Published'}
-                        className={`w-full text-left px-3 py-2 text-xs font-bold rounded-lg flex items-center gap-2 ${product.status === 'Published' ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:bg-red-50'}`}
-                      >
-                        <Trash2 className="w-3 h-3" /> Delete
-                      </button>
+                      {['Draft', 'Archived', 'Out of Stock'].includes(product.status) && (
+                        <button 
+                          onClick={() => navigate(`/dashboard/artisan/products/edit/${product._id}`)}
+                          className="w-full text-left px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50 rounded-lg flex items-center gap-2"
+                        >
+                          <Edit3 className="w-3 h-3" /> Edit
+                        </button>
+                      )}
+                      
+                      {['Pending', 'Published'].includes(product.status) && (
+                        <button 
+                          onClick={() => handleArchive(product._id)}
+                          className="w-full text-left px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50 rounded-lg flex items-center gap-2"
+                        >
+                          <Archive className="w-3 h-3" /> Archive
+                        </button>
+                      )}
+
+                      {product.status === 'Pending' && (
+                        <>
+                          <div className="h-px bg-gray-100 my-1"></div>
+                          <button 
+                            onClick={() => handleDelete(product._id)}
+                            className={`w-full text-left px-3 py-2 text-xs font-bold rounded-lg flex items-center gap-2 text-red-500 hover:bg-red-50`}
+                          >
+                            <Trash2 className="w-3 h-3" /> Delete
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -684,11 +1015,6 @@ export const ArtisanProductManager: React.FC = () => {
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50">
               <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                <th className="px-6 py-4 w-12">
-                  <button onClick={() => setSelectedItems(selectedItems.length === paginatedProducts.length ? [] : paginatedProducts.map(p => p._id))}>
-                    {selectedItems.length === paginatedProducts.length && paginatedProducts.length > 0 ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4 text-gray-400" />}
-                  </button>
-                </th>
                 <th className="px-6 py-4">Product</th>
                 <th className="px-6 py-4">Price</th>
                 <th className="px-6 py-4">Stock</th>
@@ -698,12 +1024,7 @@ export const ArtisanProductManager: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {paginatedProducts.map(product => (
-                <tr key={product._id} className={`hover:bg-gray-50 transition-colors ${selectedItems.includes(product._id) ? 'bg-primary/5' : ''}`}>
-                  <td className="px-6 py-4">
-                    <button onClick={() => toggleSelection(product._id)}>
-                      {selectedItems.includes(product._id) ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4 text-gray-300" />}
-                    </button>
-                  </td>
+                <tr key={product._id} className={`hover:bg-gray-50 transition-colors`}>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       {product.images && product.images.length > 0 ? (
@@ -726,16 +1047,19 @@ export const ArtisanProductManager: React.FC = () => {
                   <td className="px-6 py-4">{getStatusBadge(product)}</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setManageId(product._id)}><Edit3 className="w-4 h-4" /></Button>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className={`h-8 w-8 p-0 ${product.status === 'Published' ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-600'}`}
-                        onClick={() => handleDelete(product._id)}
-                        disabled={product.status === 'Published'}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {['Draft', 'Archived', 'Out of Stock'].includes(product.status) && (
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => navigate(`/dashboard/artisan/products/edit/${product._id}`)}><Edit3 className="w-4 h-4" /></Button>
+                      )}
+                      {product.status === 'Pending' && (
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className={`h-8 w-8 p-0 text-red-500 hover:text-red-600`}
+                          onClick={() => handleDelete(product._id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>

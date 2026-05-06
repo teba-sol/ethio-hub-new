@@ -58,106 +58,123 @@ export async function GET(request: NextRequest) {
 
     const requests: any[] = [];
 
-    if (role === 'all' || role === 'artisan') {
-      const artisanQuery: any = {
-        role: 'artisan',
-        artisanStatus: { $in: statusFilter },
-      };
+    // Parallelize artisan and organizer data fetching
+    const [artisanData, organizerData] = await Promise.all([
+      // Artisan block
+      (async () => {
+        if (role === 'all' || role === 'artisan') {
+          const artisanQuery: any = {
+            role: 'artisan',
+            artisanStatus: { $in: statusFilter },
+          };
 
-      if (search) {
-        artisanQuery.$or = [
-          { name: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } },
-        ];
-      }
+          if (search) {
+            artisanQuery.$or = [
+              { name: { $regex: search, $options: 'i' } },
+              { email: { $regex: search, $options: 'i' } },
+            ];
+          }
 
-      const [artisanUsers, artisanProfiles] = await Promise.all([
-        User.find(artisanQuery)
-          .select('-password')
-          .sort({ createdAt: -1 })
-          .lean(),
-        ArtisanProfile.find({}).lean(),
-      ]);
+          const artisanUsers = await User.find(artisanQuery)
+            .select('-password')
+            .sort({ createdAt: -1 })
+            .lean();
 
-      const artisanProfileMap = new Map();
-      artisanProfiles.forEach((p: any) => {
-        artisanProfileMap.set(p.userId.toString(), p);
-      });
+          if (artisanUsers.length > 0) {
+            const userIds = artisanUsers.map(u => u._id);
+            const artisanProfiles = await ArtisanProfile.find({ userId: { $in: userIds } }).lean();
 
-      artisanUsers.forEach((user: any) => {
-        const profile = artisanProfileMap.get(user._id.toString());
-        requests.push({
-          id: user._id.toString(),
-          userId: user._id.toString(),
-          userName: user.name,
-          userEmail: user.email,
-          userPhone: profile?.phone || '',
-          userRole: 'Artisan',
-          profileCompletion: profile ? calculateArtisanProfileCompletion(profile) : 0,
-          registrationDate: formatDate(user.createdAt),
-          submittedAt: profile ? formatDate(profile.createdAt) : '',
-          status: mapStatus(user.artisanStatus),
-          documents: profile ? buildArtisanDocuments(profile) : [],
-          profile: profile || null,
-          rejectionReason: user.rejectionReason || '',
-          userAvatar: profile?.profileImage || user.profileImage || null,
-          businessName: profile?.businessName || '',
-          category: profile?.category || '',
-          region: profile?.region || '',
-          city: profile?.city || '',
-        });
-      });
-    }
+            const artisanProfileMap = new Map();
+            artisanProfiles.forEach((p: any) => {
+              artisanProfileMap.set(p.userId.toString(), p);
+            });
 
-    if (role === 'all' || role === 'organizer') {
-      const organizerQuery: any = {
-        role: 'organizer',
-        organizerStatus: { $in: statusFilter },
-      };
+            return artisanUsers.map((user: any) => {
+              const profile = artisanProfileMap.get(user._id.toString());
+              return {
+                id: user._id.toString(),
+                userId: user._id.toString(),
+                userName: user.name,
+                userEmail: user.email,
+                userPhone: profile?.phone || '',
+                userRole: 'Artisan',
+                profileCompletion: profile ? calculateArtisanProfileCompletion(profile) : 0,
+                registrationDate: formatDate(user.createdAt),
+                submittedAt: profile ? formatDate(profile.createdAt) : '',
+                status: mapStatus(user.artisanStatus),
+                documents: profile ? buildArtisanDocuments(profile) : [],
+                profile: profile || null,
+                rejectionReason: user.rejectionReason || '',
+                userAvatar: profile?.profileImage || user.profileImage || null,
+                businessName: profile?.businessName || '',
+                category: profile?.category || '',
+                region: profile?.region || '',
+                city: profile?.city || '',
+              };
+            });
+          }
+        }
+        return [];
+      })(),
 
-      if (search) {
-        organizerQuery.$or = [
-          { name: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } },
-        ];
-      }
+      // Organizer block
+      (async () => {
+        if (role === 'all' || role === 'organizer') {
+          const organizerQuery: any = {
+            role: 'organizer',
+            organizerStatus: { $in: statusFilter },
+          };
 
-      const [organizerUsers, organizerProfiles] = await Promise.all([
-        User.find(organizerQuery)
-          .select('-password')
-          .sort({ createdAt: -1 })
-          .lean(),
-        OrganizerProfile.find({}).lean(),
-      ]);
+          if (search) {
+            organizerQuery.$or = [
+              { name: { $regex: search, $options: 'i' } },
+              { email: { $regex: search, $options: 'i' } },
+            ];
+          }
 
-      const organizerProfileMap = new Map();
-      organizerProfiles.forEach((p: any) => {
-        organizerProfileMap.set(p.userId.toString(), p);
-      });
+          const organizerUsers = await User.find(organizerQuery)
+            .select('-password')
+            .sort({ createdAt: -1 })
+            .lean();
 
-      organizerUsers.forEach((user: any) => {
-        const profile = organizerProfileMap.get(user._id.toString());
-        requests.push({
-          id: user._id.toString(),
-          userId: user._id.toString(),
-          userName: user.name,
-          userEmail: user.email,
-          userPhone: profile?.phone || '',
-          userRole: 'Organizer',
-          profileCompletion: profile ? calculateOrganizerProfileCompletion(profile) : 0,
-          registrationDate: formatDate(user.createdAt),
-          submittedAt: profile ? formatDate(profile.createdAt) : '',
-          status: mapStatus(user.organizerStatus),
-          documents: profile ? buildOrganizerDocuments(profile) : [],
-          profile: profile || null,
-          rejectionReason: user.rejectionReason || '',
-          userAvatar: profile?.logo || user.profileImage || null,
-          companyName: profile?.companyName || '',
-          region: profile?.region || '',
-          city: profile?.city || '',
-        });
-      });
-    }
+          if (organizerUsers.length > 0) {
+            const userIds = organizerUsers.map(u => u._id);
+            const organizerProfiles = await OrganizerProfile.find({ userId: { $in: userIds } }).lean();
+
+            const organizerProfileMap = new Map();
+            organizerProfiles.forEach((p: any) => {
+              organizerProfileMap.set(p.userId.toString(), p);
+            });
+
+            return organizerUsers.map((user: any) => {
+              const profile = organizerProfileMap.get(user._id.toString());
+              return {
+                id: user._id.toString(),
+                userId: user._id.toString(),
+                userName: user.name,
+                userEmail: user.email,
+                userPhone: profile?.phone || '',
+                userRole: 'Organizer',
+                profileCompletion: profile ? calculateOrganizerProfileCompletion(profile) : 0,
+                registrationDate: formatDate(user.createdAt),
+                submittedAt: profile ? formatDate(profile.createdAt) : '',
+                status: mapStatus(user.organizerStatus),
+                documents: profile ? buildOrganizerDocuments(profile) : [],
+                profile: profile || null,
+                rejectionReason: user.rejectionReason || '',
+                userAvatar: profile?.logo || user.profileImage || null,
+                companyName: profile?.companyName || '',
+                region: profile?.region || '',
+                city: profile?.city || '',
+              };
+            });
+          }
+        }
+        return [];
+      })()
+    ]);
+
+    requests.push(...artisanData, ...organizerData);
 
     requests.sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime());
 

@@ -16,10 +16,10 @@ export async function GET(
       return NextResponse.json({ message: 'Invalid product ID' }, { status: 400 });
     }
 
-    const product = await Product.findById(id).populate('artisanId', 'name email profilePicture');
+    const product = await Product.findOne({ _id: id, status: 'Published' }).populate('artisanId', 'name email profilePicture');
 
     if (!product) {
-      return NextResponse.json({ message: 'Product not found' }, { status: 404 });
+      return NextResponse.json({ message: 'Product not found or not published' }, { status: 404 });
     }
 
     const formattedProduct = {

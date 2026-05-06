@@ -153,11 +153,15 @@ export const EventStatusBadge: React.FC<EventStatusBadgeProps> = ({
   );
 };
 
-export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label?: string }> = ({ label, ...props }) => (
+export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label?: string, error?: boolean }> = ({ label, error, ...props }) => (
   <div className="flex flex-col space-y-1 w-full">
-    {label && <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1" htmlFor={props.id}>{label}</label>}
+    {label && <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${error ? 'text-red-500' : 'text-gray-500'}`} htmlFor={props.id}>{label}</label>}
     <input 
-      className="block w-full px-4 py-3 rounded-[12px] border border-gray-200 focus:ring-1 focus:ring-primary focus:border-primary transition-all bg-white text-sm"
+      className={`block w-full px-4 py-3 rounded-[12px] border focus:ring-1 transition-all bg-white text-sm ${
+        error 
+          ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50/30' 
+          : 'border-gray-200 focus:ring-primary focus:border-primary'
+      }`}
       {...props}
     />
   </div>
