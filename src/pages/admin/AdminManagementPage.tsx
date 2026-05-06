@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calendar, ShoppingBag, TrendingUp, 
   Package, Users, ChevronRight
@@ -6,9 +6,22 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { AdminEventManagementPage } from './AdminEventManagementPage';
 import { AdminProductManagementPage } from './AdminProductManagementPage';
+import { useSearchParams } from 'next/navigation';
 
 export const AdminManagementPage: React.FC = () => {
+  const searchParams = useSearchParams();
+  const viewParam = searchParams.get('view');
+  const idParam = searchParams.get('id');
+
   const [activeTab, setActiveTab] = useState<'events' | 'products'>('events');
+
+  useEffect(() => {
+    if (viewParam === 'event' || viewParam === 'events') {
+      setActiveTab('events');
+    } else if (viewParam === 'product' || viewParam === 'products') {
+      setActiveTab('products');
+    }
+  }, [viewParam]);
   
   const tabs = [
     { id: 'events', name: 'Event Management', icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
@@ -58,9 +71,9 @@ export const AdminManagementPage: React.FC = () => {
             transition={{ duration: 0.3 }}
           >
             {activeTab === 'events' ? (
-              <AdminEventManagementPage />
+              <AdminEventManagementPage initialId={idParam || undefined} />
             ) : (
-              <AdminProductManagementPage />
+              <AdminProductManagementPage initialId={idParam || undefined} />
             )}
           </motion.div>
         </AnimatePresence>

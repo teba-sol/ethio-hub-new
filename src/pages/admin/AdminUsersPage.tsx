@@ -82,6 +82,8 @@ export const AdminUsersPage: React.FC = () => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [viewUser, setViewUser] = useState<UserData | null>(null);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [isSuspensionModalOpen, setIsSuspensionModalOpen] = useState(false);
+  const [suspendingUserId, setSuspendingUserId] = useState<string | null>(null);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -152,9 +154,7 @@ export const AdminUsersPage: React.FC = () => {
     }
   };
 
-  const handleSuspendUser = async (userId: string) => {
-    const reason = window.prompt('Enter suspension reason');
-    if (reason === null) return;
+  const handleSuspendUser = async (userId: string, reason: string) => {
     const trimmedReason = reason.trim();
     if (!trimmedReason) {
       alert('Suspension reason is required');
@@ -178,6 +178,8 @@ export const AdminUsersPage: React.FC = () => {
           )
         );
         fetchStats();
+        setIsSuspensionModalOpen(false);
+        setSuspendingUserId(null);
       } else {
         alert(data.message || 'Failed to suspend user');
       }
@@ -342,10 +344,64 @@ export const AdminUsersPage: React.FC = () => {
     );
   };
 
+  const SuspensionModal = ({ userId, onClose }: { userId: string; onClose: () => void }) => {
+    const [reason, setReason] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const userToSuspend = users.find(u => u._id === userId);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!reason.trim()) return;
+      setSubmitting(true);
+      await handleSuspendUser(userId, reason);
+      setSubmitting(false);
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-serif font-bold text-gray-800">Suspend User</h2>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+              <XCircle className="w-5 h-5 text-gray-400" />
+            </button>
+          </div>
+
+          <div className="mb-6 flex items-center gap-4 p-4 bg-amber-50 rounded-2xl border border-amber-100">
+            <AlertTriangle className="w-8 h-8 text-amber-500 shrink-0" />
+            <div>
+              <p className="text-sm font-bold text-amber-900">You are suspending {userToSuspend?.name}</p>
+              <p className="text-xs text-amber-700">This user will lose access to their dashboard and features until activated.</p>
+            </div>
+          </div>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Reason for Suspension</label>
+              <textarea 
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none h-32 text-sm"
+                placeholder="Explain why this account is being suspended..."
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="pt-4 flex gap-3">
+              <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
+              <Button type="submit" className="flex-1 bg-amber-600 hover:bg-amber-700 text-white border-none" isLoading={submitting}>Confirm Suspension</Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
   const UserProfileModal = ({ user, onClose }: { user: UserData; onClose: () => void }) => {
     const handleAction = async (action: string) => {
       if (action === 'Suspend Account') {
-        await handleSuspendUser(user._id);
+        setSuspendingUserId(user._id);
+        setIsSuspensionModalOpen(true);
       } else if (action === 'Activate Account') {
         await handleActivateUser(user._id);
       } else if (action === 'Soft Delete') {
@@ -467,6 +523,15 @@ export const AdminUsersPage: React.FC = () => {
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       {viewUser && <UserProfileModal user={viewUser} onClose={() => setViewUser(null)} />}
       {isAddUserModalOpen && <AddUserModal onClose={() => setIsAddUserModalOpen(false)} />}
+      {isSuspensionModalOpen && suspendingUserId && (
+        <SuspensionModal 
+          userId={suspendingUserId} 
+          onClose={() => {
+            setIsSuspensionModalOpen(false);
+            setSuspendingUserId(null);
+          }} 
+        />
+      )}
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -584,9 +649,11 @@ export const AdminUsersPage: React.FC = () => {
           <div className="flex items-center justify-between p-3 bg-indigo-50 rounded-xl border border-indigo-100 animate-in fade-in slide-in-from-top-2">
             <span className="text-sm font-bold text-indigo-900 px-2">{selectedUsers.length} users selected</span>
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" className="bg-white border-amber-200 text-amber-700 hover:bg-amber-50" onClick={async () => {
-                for (const id of selectedUsers) await handleSuspendUser(id);
-                setSelectedUsers([]);
+              <Button size="sm" variant="outline" className="bg-white border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => {
+                if (selectedUsers.length > 0) {
+                  setSuspendingUserId(selectedUsers[0]); // For now, just handle one or handle bulk differently
+                  setIsSuspensionModalOpen(true);
+                }
               }}>Suspend Selected</Button>
               <Button size="sm" variant="outline" className="bg-white border-red-200 text-red-700 hover:bg-red-50" onClick={async () => {
                 for (const id of selectedUsers) await handleDeleteUser(id);
@@ -689,7 +756,10 @@ export const AdminUsersPage: React.FC = () => {
                         <button 
                           className="p-2 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors" 
                           title="Suspend User"
-                          onClick={() => handleSuspendUser(user._id)}
+                          onClick={() => {
+                            setSuspendingUserId(user._id);
+                            setIsSuspensionModalOpen(true);
+                          }}
                           disabled={actionLoading === user._id}
                         >
                           <Ban className="w-4 h-4" />

@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation';
 import { 
   MapIcon, Ticket, ShoppingCart, Heart, User as UserIcon,
   Search, Plus, Package, Calendar, CreditCard, ChevronRight,
-  ShieldCheck, HelpCircle, FileText, Mail, X, User, Phone
+  ShieldCheck, HelpCircle, FileText, Mail, X, User, Phone,
+  CheckCircle2, AlertTriangle
 } from 'lucide-react';
 import { Button, Input, Badge } from '../UI';
 import { useAuth } from '../../context/AuthContext';
@@ -708,6 +709,14 @@ export const TouristSettingsView: React.FC = () => {
   });
   const [passwordStatus, setPasswordStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const triggerSuccess = (msg: string) => {
+    setSuccessMessage(msg);
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 3000);
+  };
   
   // Get profile from user context
   const touristProfile = (user as any)?.touristProfile;
@@ -730,6 +739,7 @@ export const TouristSettingsView: React.FC = () => {
     if (!file) return;
     
     setUploadingImage(true);
+    setErrorMessage('');
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -742,13 +752,39 @@ export const TouristSettingsView: React.FC = () => {
       
       const data = await response.json();
       if (data.success) {
-        setProfileForm(prev => ({ ...prev, profileImage: data.url }));
+        const newImageUrl = data.url;
+        setProfileForm(prev => ({ ...prev, profileImage: newImageUrl }));
+        
+        // Save the profile image immediately to the backend
+        const saveResponse = await fetch('/api/tourist/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...profileForm,
+            profileImage: newImageUrl
+          }),
+          credentials: 'include'
+        });
+        
+        const saveData = await saveResponse.json();
+        if (saveData.success) {
+          updateUser({
+            ...user,
+            touristProfile: {
+              ...(user as any)?.touristProfile,
+              profileImage: newImageUrl
+            }
+          } as any);
+          triggerSuccess('Profile image updated successfully!');
+        } else {
+          setErrorMessage(saveData.message || 'Failed to save profile image');
+        }
       } else {
-        alert('Failed to upload image');
+        setErrorMessage('Failed to upload image');
       }
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload image');
+      setErrorMessage('Failed to upload image');
     } finally {
       setUploadingImage(false);
     }
@@ -757,8 +793,7 @@ export const TouristSettingsView: React.FC = () => {
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingProfile(true);
-    
-    console.log('Saving profile:', profileForm);
+    setErrorMessage('');
     
     try {
       const bodyData = {
@@ -769,7 +804,6 @@ export const TouristSettingsView: React.FC = () => {
         dateOfBirth: profileForm.dateOfBirth || null,
         profileImage: profileForm.profileImage || null
       };
-      console.log('Request body:', bodyData);
       
       const response = await fetch('/api/tourist/profile', {
         method: 'PUT',
@@ -779,10 +813,8 @@ export const TouristSettingsView: React.FC = () => {
       });
       
       const data = await response.json();
-      console.log('Save response:', data);
       
       if (data.success) {
-        // Update user context immediately so changes persist
         updateUser({
           name: profileForm.name,
           touristProfile: {
@@ -794,13 +826,13 @@ export const TouristSettingsView: React.FC = () => {
           }
         } as any);
         
-        alert('Profile saved successfully!');
+        triggerSuccess('Profile saved successfully!');
       } else {
-        alert(data.message || 'Failed to save profile');
+        setErrorMessage(data.message || 'Failed to save profile');
       }
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert('Failed to save profile');
+      setErrorMessage('Failed to save profile');
     } finally {
       setSavingProfile(false);
     }
@@ -837,7 +869,28 @@ export const TouristSettingsView: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Success Message Pop-out */}
+      {showSuccess && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top duration-300">
+          <div className="bg-emerald-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5" />
+            <span className="font-bold text-sm tracking-wide">{successMessage}</span>
+          </div>
+        </div>
+      )}
+
       <h2 className="text-3xl font-serif font-bold text-primary">{t('settings.accountSettings')}</h2>
+      
+      {errorMessage && (
+        <div className="bg-red-50 text-red-600 p-4 rounded-2xl border border-red-100 mb-6 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <AlertTriangle className="w-5 h-5" />
+          <span className="text-sm font-medium">{errorMessage}</span>
+          <button onClick={() => setErrorMessage('')} className="ml-auto p-1 hover:bg-red-100 rounded-full transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2 space-y-8">
           <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
@@ -921,13 +974,6 @@ export const TouristSettingsView: React.FC = () => {
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setShowPasswordModal(true)}>{t('settings.update')}</Button>
               </div>
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-                <div>
-                  <p className="font-bold text-primary">{t('settings.twoFactorAuth')}</p>
-                  <p className="text-xs text-gray-500">{t('settings.addExtraLayer')}</p>
-                </div>
-                <Button variant="outline" size="sm">{t('settings.enable')}</Button>
-              </div>
             </div>
           </section>
         </div>
@@ -939,24 +985,6 @@ export const TouristSettingsView: React.FC = () => {
                 <img src={profileForm.profileImage || "https://ui-avatars.com/api/?name=" + encodeURIComponent(profileForm.name || 'Tourist')} alt={t('settings.profile')} className="w-full h-full object-cover" />
               </div>
               <p className="text-xs text-gray-500">{t('settings.uploadPhoto')}</p>
-            </div>
-          </section>
-          
-          <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-            <h3 className="text-lg font-bold text-primary mb-4">{t('settings.preferences')}</h3>
-            <div className="space-y-3">
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm text-gray-600">{t('settings.emailNotifications')}</span>
-                <input type="checkbox" defaultChecked className="toggle" />
-              </label>
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm text-gray-600">{t('settings.smsAlerts')}</span>
-                <input type="checkbox" className="toggle" />
-              </label>
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm text-gray-600">{t('settings.newsletter')}</span>
-                <input type="checkbox" defaultChecked className="toggle" />
-              </label>
             </div>
           </section>
         </div>

@@ -2492,7 +2492,15 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
     </div>
   );
 };
-export const OrganizerOverview: React.FC<{ onManageEvent?: (id: string) => void; onCreate?: () => void }> = ({ onManageEvent: propOnManageEvent, onCreate: propOnCreate }) => {
+export const OrganizerOverview: React.FC<{ 
+  onManageEvent?: (id: string) => void; 
+  onCreate?: () => void;
+  disableCreate?: boolean;
+}> = ({ 
+  onManageEvent: propOnManageEvent, 
+  onCreate: propOnCreate,
+  disableCreate = false
+}) => {
   const [view, setView] = useState('overview'); // 'overview', 'eventDetail', 'createEvent'
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const router = useRouter();

@@ -1074,52 +1074,8 @@ label={t("organizer.createFestival.address")}
                                       <h5 className="font-medium text-primary">Room {roomIdx + 1}</h5>
                                       {hotel.rooms.length > 1 && (
                                         <Button variant="ghost" size="sm" leftIcon={Trash2} onClick={() => removeRoom(hotelIdx, roomIdx)} className="text-red-500">Remove</Button>
-                             )}
-                           </div>
-
-                           {/* Hotel Services (Pay at Hotel) */}
-                           <div className="mt-8 pt-6 border-t border-gray-200">
-                             <div className="flex justify-between items-center mb-4">
-                               <h4 className="text-lg font-bold">Hotel Services (Pay at Hotel)</h4>
-                               <Button variant="outline" size="sm" leftIcon={Plus} onClick={() => addHotelService(hotelIdx)}>Add Service</Button>
-                             </div>
-                             {hotel.hotelServices && hotel.hotelServices.length > 0 ? (
-                               <div className="space-y-4">
-                                 {hotel.hotelServices.map((service: any, sIdx: number) => (
-                                   <div key={sIdx} className="p-4 bg-white rounded-xl border border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                                     <Input
-                                       label="Service Name"
-                                       placeholder="e.g. Breakfast"
-                                       value={service.name || ''}
-                                       onChange={(e) => updateHotelService(hotelIdx, sIdx, 'name', e.target.value)}
-                                     />
-                                     <Input
-                                       label="Price"
-                                       type="number"
-                                       min="0"
-                                       placeholder="e.g. 15"
-                                       value={service.price || 0}
-                                       onChange={(e) => updateHotelService(hotelIdx, sIdx, 'price', parseFloat(e.target.value) || 0)}
-                                     />
-                                     <div className="flex items-end gap-2">
-                                       <Input
-                                         label="Description"
-                                         placeholder="e.g. Per person"
-                                         value={service.description || ''}
-                                         onChange={(e) => updateHotelService(hotelIdx, sIdx, 'description', e.target.value)}
-                                       />
-                                       <Button variant="ghost" size="sm" leftIcon={Trash2} onClick={() => removeHotelService(hotelIdx, sIdx)} className="text-red-500 mb-2">Remove</Button>
-                                     </div>
-                                   </div>
-                                 ))}
-                               </div>
-                             ) : (
-                               <div className="text-center p-4 border-2 border-dashed border-gray-100 rounded-xl text-gray-400 text-sm">
-                                 <p>No services added. These are display-only, tourists pay at the hotel.</p>
-                               </div>
-                             )}
-                           </div>
-                         </div>
+                                      )}
+                                    </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                       <DualLanguageField
                                         label="Room Name *"
@@ -1187,6 +1143,49 @@ label={t("organizer.createFestival.address")}
                             ) : (
                               <div className="text-center p-8 border-2 border-dashed border-gray-100 rounded-xl text-gray-400">
                                 <p>No room types defined. Add at least one room for this hotel.</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Hotel Services (Pay at Hotel) */}
+                          <div className="mt-8 pt-6 border-t border-gray-200">
+                            <div className="flex justify-between items-center mb-4">
+                              <h4 className="text-lg font-bold">Hotel Services (Pay at Hotel)</h4>
+                              <Button variant="outline" size="sm" leftIcon={Plus} onClick={() => addHotelService(hotelIdx)}>Add Service</Button>
+                            </div>
+                            {hotel.hotelServices && hotel.hotelServices.length > 0 ? (
+                              <div className="space-y-4">
+                                {hotel.hotelServices.map((service: any, sIdx: number) => (
+                                  <div key={sIdx} className="p-4 bg-white rounded-xl border border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                                    <Input
+                                      label="Service Name"
+                                      placeholder="e.g. Breakfast"
+                                      value={service.name || ''}
+                                      onChange={(e) => updateHotelService(hotelIdx, sIdx, 'name', e.target.value)}
+                                    />
+                                    <Input
+                                      label="Price"
+                                      type="number"
+                                      min="0"
+                                      placeholder="e.g. 15"
+                                      value={service.price || 0}
+                                      onChange={(e) => updateHotelService(hotelIdx, sIdx, 'price', parseFloat(e.target.value) || 0)}
+                                    />
+                                    <div className="flex items-end gap-2">
+                                      <Input
+                                        label="Service Description"
+                                        placeholder="e.g. Per person"
+                                        value={service.description || ''}
+                                        onChange={(e) => updateHotelService(hotelIdx, sIdx, 'description', e.target.value)}
+                                      />
+                                      <Button variant="ghost" size="sm" leftIcon={Trash2} onClick={() => removeHotelService(hotelIdx, sIdx)} className="text-red-500 mb-2">Remove</Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center p-4 border-2 border-dashed border-gray-100 rounded-xl text-gray-400 text-sm">
+                                <p>No services added. These are display-only, tourists pay at the hotel.</p>
                               </div>
                             )}
                           </div>
@@ -1509,20 +1508,8 @@ label={t("organizer.createFestival.address")}
                       placeholder="e.g. 18+, All ages, etc."
                       value={formData.policies.ageRestriction || ''}
                       onChange={(e) => setFormData({ ...formData, policies: { ...formData.policies, ageRestriction: e.target.value } })}
-                               />
-                             <div className="flex items-center gap-2 mt-4">
-                               <input
-                                 type="checkbox"
-                                 id={`vip-included-${idx}`}
-                                 checked={transport.vipIncluded || false}
-                                 onChange={(e) => updateTransport(idx, 'vipIncluded', e.target.checked)}
-                                 className="rounded border-gray-300 text-primary focus:ring-primary"
-                               />
-                               <label htmlFor={`vip-included-${idx}`} className="text-sm font-medium text-gray-700">
-                                 VIP Included (Free for VIP ticket holders)
-                               </label>
-                             </div>
-                             </div>
+                    />
+                  </div>
                 </div>
               )}
 

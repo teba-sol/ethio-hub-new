@@ -1,5 +1,5 @@
 // src/utils/getLocalizedText.ts
-import { Language } from '@/locales/translations';
+import { Language } from '../locales/translations';
 
 type LocalizedField = 'name' | 'description' | 'shortDescription' | 'fullDescription' | 'title' | 'type' | 'locationName' | 'cancellation' | 'terms' | 'safety' | 'activities';
 

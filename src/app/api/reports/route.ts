@@ -252,11 +252,28 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .lean();
 
+    // Fetch target details for each report to show names in the list
+    const reportsWithDetails = await Promise.all(reports.map(async (report: any) => {
+      let targetDetails = null;
+      try {
+        if (report.targetType === 'Event') {
+          targetDetails = await Festival.findById(report.targetId).select('name name_en name_am status coverImage startDate endDate').lean();
+        } else if (report.targetType === 'Product') {
+          targetDetails = await Product.findById(report.targetId).select('name name_en name_am status artisanName images').lean();
+        } else if (report.targetType === 'User') {
+          targetDetails = await User.findById(report.targetId).select('name email role status profileImage').lean();
+        }
+      } catch (err) {
+        console.error(`Error fetching details for ${report.targetType} ${report.targetId}:`, err);
+      }
+      return { ...report, targetDetails };
+    }));
+
     const total = await Report.countDocuments(query);
 
     return NextResponse.json({
       success: true,
-      reports,
+      reports: reportsWithDetails,
       pagination: {
         page,
         limit,

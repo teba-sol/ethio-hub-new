@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, Filter, Eye, DollarSign, Calendar, 
   Users, Package, TrendingUp, ArrowUpRight, 
   ArrowDownRight, ChevronRight, Download, 
-  Clock, CreditCard, Shield, History, Tag, MapPin
+  Clock, CreditCard, Shield, History, Tag, MapPin, XCircle
 } from 'lucide-react';
 import { Button, Badge } from '../../components/UI';
 
 // --- Types ---
-type EventStatus = 'Upcoming' | 'Ongoing' | 'Completed' | 'Cancelled';
+type EventStatus = 'Published' | 'Completed';
 type PaymentStatus = 'Paid' | 'Pending Payout' | 'Refunded';
 
 interface Booking {
@@ -28,6 +28,7 @@ interface Booking {
   };
 }
 
+// --- Activity Log ---
 interface ActivityLog {
   date: string;
   action: string;
@@ -66,99 +67,74 @@ interface EventManagementData {
   policies: string[];
 }
 
-// --- Mock Data ---
-const MOCK_EVENTS: EventManagementData[] = Array.from({ length: 8 }).map((_, i) => {
-  const capacity = 500 + (i * 100);
-  const booked = Math.floor(capacity * (0.4 + Math.random() * 0.5));
-  const ticketPrice = 500 + (i * 100);
-  const vipTicketPrice = ticketPrice * 2.5;
-  const revenue = booked * ticketPrice;
-  const commissionRate = 10;
-  const commission = (revenue * commissionRate) / 100;
-
-  const hotels = [
-    { name: 'Sheraton Addis', distance: '2.5 km', price: 'ETB 8,500/night' },
-    { name: 'Hilton Addis Ababa', distance: '3.1 km', price: 'ETB 7,200/night' }
-  ];
-
-  return {
-    id: `EVT-MGT-${1000 + i}`,
-    title: i % 2 === 0 ? 'Cultural Coffee Ceremony' : 'Traditional Dance Workshop',
-    organizer: i % 3 === 0 ? 'Addis Events' : 'Heritage Tours',
-    organizerEmail: `contact@${i % 3 === 0 ? 'addis' : 'heritage'}.com`,
-    category: 'Cultural',
-    location: 'Addis Ababa, Ethiopia',
-    status: i === 0 ? 'Upcoming' : i === 1 ? 'Ongoing' : 'Completed',
-    capacity,
-    booked,
-    ticketPrice,
-    vipTicketPrice,
-    revenue,
-    commissionRate,
-    refundAmount: i === 2 ? 1500 : 0,
-    paymentStatus: i % 3 === 0 ? 'Paid' : 'Pending Payout',
-    eventDate: '2025-11-15',
-    createdAt: '2025-10-01',
-    approvedAt: '2025-10-05',
-    lastUpdated: '2025-10-20',
-    description: 'A deep dive into the rich traditions of Ethiopia, featuring authentic ceremonies and expert-led workshops.',
-    images: [
-      `https://picsum.photos/seed/evt${i}1/800/600`,
-      `https://picsum.photos/seed/evt${i}2/800/600`,
-      `https://picsum.photos/seed/evt${i}3/800/600`
-    ],
-    schedule: [
-      { time: '09:00 AM', activity: 'Opening Ceremony' },
-      { time: '11:00 AM', activity: 'Morning Workshop' },
-      { time: '01:00 PM', activity: 'Traditional Lunch' },
-      { time: '03:00 PM', activity: 'Afternoon Performance' }
-    ],
-    hotels,
-    transportation: [
-      { type: 'Shuttle', provider: 'Ride Ethiopia', details: 'Available every 30 mins from Meskel Square' },
-      { type: 'Private', provider: 'Feres', details: 'Direct booking available via app' }
-    ],
-    services: ['Free WiFi', 'Translation Services', 'First Aid Station', 'VIP Lounge'],
-    policies: [
-      'No professional cameras without permit',
-      'Refunds available up to 48 hours before event',
-      'Must present valid ID at entrance'
-    ],
-    bookings: Array.from({ length: 5 }).map((_, j) => ({
-      id: `BK-${5000 + j}`,
-      user: `User ${j + 1}`,
-      userImage: `https://i.pravatar.cc/150?u=user${j+1}`,
-      email: `user${j+1}@example.com`,
-      date: '2025-10-10',
-      quantity: 1 + (j % 3),
-      totalPaid: (1 + (j % 3)) * ticketPrice,
-      paymentMethod: j % 2 === 0 ? 'Telebirr' : 'Chapa',
-      paymentStatus: 'Paid',
-      transactionId: `TXN-${9000 + j}`,
-      accommodation: j % 2 === 0 ? {
-        hotel: hotels[j % hotels.length].name,
-        roomType: j % 3 === 0 ? 'Deluxe Suite' : 'Standard Room'
-      } : undefined
-    })),
-    logs: [
-      { date: '2025-10-01', action: 'Event Created', user: 'Organizer' },
-      { date: '2025-10-05', action: 'Event Approved', user: 'Admin Sarah' },
-      { date: '2025-10-20', action: 'Status Updated to Ongoing', user: 'System' }
-    ]
-  };
-});
-
-export const AdminEventManagementPage: React.FC = () => {
+export const AdminEventManagementPage: React.FC<{ initialId?: string }> = ({ initialId }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
   const [selectedEvent, setSelectedEvent] = useState<EventManagementData | null>(null);
   const [showDateRange, setShowDateRange] = useState(false);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [appliedDateRange, setAppliedDateRange] = useState({ start: '', end: '' });
+  const [loading, setLoading] = useState(false);
+  const [events, setEvents] = useState<EventManagementData[]>([]);
 
-  const filteredEvents = MOCK_EVENTS.filter(event => 
-    (event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    event.organizer.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const fetchEvents = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/events');
+      const data = await res.json();
+      if (data.success) {
+        const mappedEvents: EventManagementData[] = data.requests
+          .filter((req: any) => ['Published', 'Completed'].includes(req.status))
+          .map((req: any) => ({
+            ...req,
+            organizer: req.organizer?.name || req.organizerName || 'Unknown',
+            location: typeof req.location === 'object' 
+              ? `${req.location.venue || ''}${req.location.venue && req.location.city ? ', ' : ''}${req.location.city || ''}`.trim() || 'Ethiopia'
+              : req.location || 'Ethiopia',
+            status: req.status as EventStatus,
+            eventDate: req.date ? new Date(req.date).toISOString().split('T')[0] : 'N/A',
+          }));
+        setEvents(mappedEvents);
+      }
+    } catch (error) {
+      console.error('Failed to fetch events:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  useEffect(() => {
+    if (initialId && events.length > 0) {
+      const event = events.find(e => e.id === initialId);
+      if (event) {
+        setSelectedEvent(event);
+      }
+    }
+  }, [initialId, events]);
+
+  const filteredEvents = events.filter(event => {
+     const title = String(event.title || '');
+     const organizer = String(event.organizer || '');
+     const search = (searchQuery || '').toLowerCase();
+     
+     const matchesSearch = title.toLowerCase().includes(search) || 
+                          organizer.toLowerCase().includes(search);
+     
+     const matchesStatus = statusFilter === 'All' || event.status === statusFilter;
+     
+     return matchesSearch && matchesStatus;
+   });
+
+  const stats = {
+    totalEvents: events.length,
+    totalBookings: events.reduce((sum, e) => sum + e.booked, 0),
+    totalRevenue: events.reduce((sum, e) => sum + e.revenue, 0),
+    totalCommission: events.reduce((sum, e) => sum + (e.revenue * e.commissionRate / 100), 0),
+  };
 
   const EventDetailModal = ({ event, onClose }: { event: EventManagementData; onClose: () => void }) => {
     const commission = (event.revenue * event.commissionRate) / 100;
@@ -172,9 +148,8 @@ export const AdminEventManagementPage: React.FC = () => {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Badge variant={
-                  event.status === 'Upcoming' ? 'info' : 
-                  event.status === 'Ongoing' ? 'warning' : 
-                  event.status === 'Completed' ? 'success' : 'error'
+                  event.status === 'Published' ? 'info' : 
+                  event.status === 'Completed' ? 'success' : 'warning'
                 }>
                   {event.status}
                 </Badge>
@@ -198,7 +173,7 @@ export const AdminEventManagementPage: React.FC = () => {
                     <Package className="w-4 h-4" /> Event Media
                   </h3>
                   <div className="grid grid-cols-2 gap-2">
-                    {event.images.map((img, idx) => (
+                    {(event.images || []).map((img, idx) => (
                       <img 
                         key={idx} 
                         src={img} 
@@ -253,7 +228,7 @@ export const AdminEventManagementPage: React.FC = () => {
                   <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
                     <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Services</h3>
                     <div className="flex flex-wrap gap-2">
-                      {event.services.map((s, i) => (
+                      {(event.services || []).map((s, i) => (
                         <span key={i} className="px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold">{s}</span>
                       ))}
                     </div>
@@ -261,7 +236,7 @@ export const AdminEventManagementPage: React.FC = () => {
                   <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
                     <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Policies</h3>
                     <ul className="space-y-2">
-                      {event.policies.map((p, i) => (
+                      {(event.policies || []).map((p, i) => (
                         <li key={i} className="text-[10px] text-gray-600 flex items-start gap-2">
                           <Shield className="w-3 h-3 text-gray-400 shrink-0 mt-0.5" />
                           {p}
@@ -281,7 +256,7 @@ export const AdminEventManagementPage: React.FC = () => {
                       <Clock className="w-4 h-4" /> Schedule
                     </h3>
                     <div className="space-y-4">
-                      {event.schedule.map((item, i) => (
+                      {(event.schedule || []).map((item, i) => (
                         <div key={i} className="flex justify-between items-center p-2 hover:bg-gray-50 rounded-xl transition-colors">
                           <span className="text-xs font-bold text-primary">{item.time}</span>
                           <span className="text-xs text-gray-700">{item.activity}</span>
@@ -295,14 +270,14 @@ export const AdminEventManagementPage: React.FC = () => {
                         <Tag className="w-4 h-4" /> Hotels & Transport
                       </h3>
                       <div className="space-y-3">
-                        {event.hotels.map((h, i) => (
+                        {(event.hotels || []).map((h, i) => (
                           <div key={i} className="text-xs flex justify-between">
                             <span className="font-bold text-gray-800">{h.name}</span>
                             <span className="text-gray-500">{h.distance} • {h.price}</span>
                           </div>
                         ))}
                         <div className="pt-2 border-t border-gray-100">
-                          {event.transportation.map((t, i) => (
+                          {(event.transportation || []).map((t, i) => (
                             <div key={i} className="mt-2">
                               <p className="text-[10px] font-bold text-primary uppercase">{t.type} - {t.provider}</p>
                               <p className="text-[10px] text-gray-500">{t.details}</p>
@@ -338,7 +313,7 @@ export const AdminEventManagementPage: React.FC = () => {
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                   <div className="p-6 border-b border-gray-50 flex justify-between items-center">
                     <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                      <Users className="w-4 h-4" /> Booking List ({event.bookings.length})
+                      <Users className="w-4 h-4" /> Booking List ({(event.bookings || []).length})
                     </h3>
                     <Button size="sm" variant="outline" leftIcon={Download}>Export CSV</Button>
                   </div>
@@ -357,7 +332,7 @@ export const AdminEventManagementPage: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
-                        {event.bookings.map((booking) => (
+                        {(event.bookings || []).map((booking) => (
                           <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
@@ -415,6 +390,11 @@ export const AdminEventManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+      {loading && (
+        <div className="fixed inset-0 bg-white/50 backdrop-blur-sm z-[60] flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      )}
       {selectedEvent && <EventDetailModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />}
 
       <div className="flex flex-col md:flex-row justify-end items-center gap-4">
@@ -424,10 +404,10 @@ export const AdminEventManagementPage: React.FC = () => {
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
-          { label: 'Total Events', value: '42', icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Total Bookings', value: '1,284', icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Total Revenue', value: 'ETB 842K', icon: DollarSign, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-          { label: 'Platform Comm.', value: 'ETB 84.2K', icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50' },
+          { label: 'Total Events', value: stats.totalEvents.toString(), icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Total Bookings', value: stats.totalBookings.toLocaleString(), icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Total Revenue', value: `ETB ${(stats.totalRevenue / 1000).toFixed(1)}K`, icon: DollarSign, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+          { label: 'Platform Comm.', value: `ETB ${(stats.totalCommission / 1000).toFixed(1)}K`, icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50' },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm">
             <div className="flex items-center gap-4">
@@ -456,11 +436,14 @@ export const AdminEventManagementPage: React.FC = () => {
           />
         </div>
         <div className="flex gap-2 items-center">
-          <select className="px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 border-none cursor-pointer">
-            <option>All Status</option>
-            <option>Upcoming</option>
-            <option>Ongoing</option>
-            <option>Completed</option>
+          <select 
+            className="px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 border-none cursor-pointer"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="All">All Status</option>
+            <option value="Published">Published</option>
+            <option value="Completed">Completed</option>
           </select>
           
           <div className="relative">
@@ -554,9 +537,8 @@ export const AdminEventManagementPage: React.FC = () => {
                     <td className="px-6 py-4 font-medium text-gray-700">{event.organizer}</td>
                     <td className="px-6 py-4">
                       <Badge variant={
-                        event.status === 'Upcoming' ? 'info' : 
-                        event.status === 'Ongoing' ? 'warning' : 
-                        event.status === 'Completed' ? 'success' : 'error'
+                        event.status === 'Published' ? 'info' : 
+                        event.status === 'Completed' ? 'success' : 'warning'
                       } size="sm">
                         {event.status}
                       </Badge>
