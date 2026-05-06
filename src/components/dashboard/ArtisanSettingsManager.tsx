@@ -58,7 +58,6 @@ export const ArtisanSettingsManager: React.FC = () => {
     { id: 'profile', label: 'Shop Profile', icon: Store },
     { id: 'business', label: 'Business Info', icon: Building2 },
     { id: 'payment', label: 'Payment & Payout', icon: CreditCard },
-    { id: 'shipping', label: 'Shipping', icon: Truck },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'account', label: 'Account', icon: UserCog },
@@ -328,72 +327,6 @@ export const ArtisanSettingsManager: React.FC = () => {
                   <Input type="number" defaultValue="1000" />
                 </div>
               </div>
-            </div>
-          </div>
-        );
-
-      case 'shipping':
-        return (
-          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            <SectionHeader title="Shipping & Delivery" description="Configure your shipping preferences and policies." />
-            
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Processing Time</label>
-                  <select className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none">
-                    <option>1-2 Business Days</option>
-                    <option>3-5 Business Days</option>
-                    <option>1 Week</option>
-                  </select>
-                  <p className="text-[10px] text-gray-400">How long it takes you to prepare an order.</p>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Default Return Window</label>
-                  <select className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none">
-                    <option>No Returns</option>
-                    <option>7 Days</option>
-                    <option>14 Days</option>
-                    <option>30 Days</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-gray-100 space-y-2">
-                <Toggle 
-                  label="Offer Free Shipping" 
-                  description="Apply free shipping to all products by default." 
-                  checked={false} 
-                  onChange={() => {}} 
-                />
-                <Toggle 
-                  label="International Shipping" 
-                  description="Enable shipping to countries outside Ethiopia." 
-                  checked={true} 
-                  onChange={() => {}} 
-                />
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-6">
-              <h3 className="text-base font-bold text-gray-900">Standard Shipping Rates</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Local (Addis Ababa)</label>
-                  <Input defaultValue="150" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Regional</label>
-                  <Input defaultValue="300" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">International</label>
-                  <Input defaultValue="2500" />
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end pt-4">
-              <Button leftIcon={Save}>Save Settings</Button>
             </div>
           </div>
         );
