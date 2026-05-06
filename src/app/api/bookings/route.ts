@@ -87,22 +87,35 @@ export async function POST(request: NextRequest) {
     }
 
     // ATOMIC INVENTORY CHECK & DECREMENT
-    let unitPrice = festival.pricing?.basePrice || 0;
-    let ticketDecrementResult;
+    let unitPrice = 0;
+    let ticketTypeName = ticketType;
 
     // 1. Decrement ticket type availability (atomic)
     if (ticketType && quantity > 0) {
-      ticketDecrementResult = await Festival.updateOne(
+      // Find the actual ticket type name in the database
+      const dbTicketType = festival.ticketTypes?.find((t: any) => 
+        t.name === ticketType || 
+        t.name.toLowerCase() === ticketType.toLowerCase() ||
+        (ticketType === 'vip' && t.name.toLowerCase().includes('vip')) ||
+        (ticketType === 'standard' && (t.name.toLowerCase().includes('standard') || t.name.toLowerCase().includes('regular'))) ||
+        (ticketType === 'earlyBird' && t.name.toLowerCase().includes('early'))
+      );
+
+      const actualTicketName = dbTicketType ? dbTicketType.name : ticketType;
+      console.log(`[BookingAPI] Matching ticketType "${ticketType}" to database name "${actualTicketName}"`);
+
+      const ticketDecrementResult = await Festival.updateOne(
         { 
           _id: festivalId, 
-          'ticketTypes.name': ticketType,
+          'ticketTypes.name': actualTicketName,
           'ticketTypes.available': { $gte: quantity }
         },
         { $inc: { 'ticketTypes.$.available': -quantity } },
-        { arrayFilters: [{ 'elem.name': ticketType }], session }
+        { session }
       );
 
       if (!ticketDecrementResult || ticketDecrementResult.matchedCount === 0) {
+        console.error(`[BookingAPI] Inventory update failed for ticket "${actualTicketName}". Matched: ${ticketDecrementResult?.matchedCount}`);
         await session.abortTransaction();
         return new NextResponse(
           JSON.stringify({ success: false, message: 'Not enough tickets available' }),
@@ -111,9 +124,9 @@ export async function POST(request: NextRequest) {
       }
 
       // Get the ticket price
-      const ticketTypeObj = festival.ticketTypes?.find((t: any) => t.name === ticketType);
-      if (ticketTypeObj) {
-        unitPrice = ticketTypeObj.price || 0;
+      if (dbTicketType) {
+        unitPrice = dbTicketType.price || 0;
+        ticketTypeName = dbTicketType.name || ticketType;
       }
     }
 
@@ -182,6 +195,7 @@ export async function POST(request: NextRequest) {
       festival: festivalId,
       organizer: festival.organizer,
       ticketType,
+      ticketTypeName,
       quantity,
       totalPrice,
       currency: festival.pricing?.currency || 'ETB',

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   BarChart3, Ticket, LogOut, Bell, Search, 
-  Calendar, CreditCard, Star, PieChart, Settings, CheckCircle, Menu, X, AlertTriangle
+  Calendar, Star, PieChart, Settings, CheckCircle, Menu, X, Wallet
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -30,7 +30,7 @@ export const OrganizerLayout: React.FC<{ children?: React.ReactNode }> = ({ chil
     { path: '/dashboard/organizer/overview', nameKey: 'dashboard.overview', icon: BarChart3 },
     { path: '/dashboard/organizer/festivals', nameKey: 'dashboard.myEvents', icon: Calendar },
     { path: '/dashboard/organizer/bookings', nameKey: 'dashboard.bookings', icon: Ticket },
-    { path: '/dashboard/organizer/revenue', nameKey: 'dashboard.revenue', icon: CreditCard },
+    { path: '/dashboard/organizer/wallet', label: 'Wallet', icon: Wallet },
     { path: '/dashboard/organizer/reviews', nameKey: 'dashboard.reviews', icon: Star },
     { path: '/dashboard/organizer/analytics', nameKey: 'dashboard.analytics', icon: PieChart },
     { path: '/dashboard/organizer/settings', nameKey: 'dashboard.settings', icon: Settings },
@@ -84,7 +84,7 @@ export const OrganizerLayout: React.FC<{ children?: React.ReactNode }> = ({ chil
               }`}
             >
               <item.icon className={`w-5 h-5 ${pathname === item.path ? 'text-white' : 'text-gray-400'}`} />
-              <span>{t(item.nameKey)}</span>
+                <span>{item.label || (item.nameKey ? t(item.nameKey as string) : '')}</span>
             </Link>
           ))}
         </div>

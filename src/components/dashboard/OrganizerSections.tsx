@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Calendar, Users, DollarSign, ShieldCheck, TrendingUp, 
@@ -25,39 +25,12 @@ import {
 } from 'recharts';
 
 import apiClient from '../../lib/apiClient';
+import { getImageUrl as getCloudImageUrl } from '../../lib/cloudinary';
 
-const REVENUE_DATA = [
-  { name: 'Jan', revenue: 45000, bookings: 120, users: 400, sales: 85 },
-  { name: 'Feb', revenue: 52000, bookings: 145, users: 450, sales: 92 },
-  { name: 'Mar', revenue: 48000, bookings: 130, users: 480, sales: 110 },
-  { name: 'Apr', revenue: 61000, bookings: 170, users: 520, sales: 130 },
-  { name: 'May', revenue: 55000, bookings: 155, users: 590, sales: 125 },
-  { name: 'Jun', revenue: 67000, bookings: 190, users: 650, sales: 150 },
-  { name: 'Jul', revenue: 72000, bookings: 210, users: 710, sales: 180 },
-];
-
-const SNAPSHOT_DATA = [
-  { day: 'Mon', bookings: 12 },
-  { day: 'Tue', bookings: 18 },
-  { day: 'Wed', bookings: 15 },
-  { day: 'Thu', bookings: 25 },
-  { day: 'Fri', bookings: 32 },
-  { day: 'Sat', bookings: 45 },
-  { day: 'Sun', bookings: 38 },
-];
-
-const NOTIFICATIONS = [
-  { id: 1, type: 'booking', message: 'New booking from Sarah J.', time: '2m ago' },
-  { id: 2, type: 'review', message: '5-star review on Timket 2025', time: '1h ago' },
-  { id: 3, type: 'payout', message: 'Payout of ETB 45,000 processed', time: '1d ago' },
-];
-
-const ENGAGEMENT_DATA = [
-  { city: 'Addis Ababa', visitors: '45%' },
-  { city: 'Washington DC', visitors: '15%' },
-  { city: 'London', visitors: '10%' },
-  { city: 'Dubai', visitors: '8%' },
-];
+const REVENUE_DATA = [];
+const SNAPSHOT_DATA = [];
+const NOTIFICATIONS = [];
+const ENGAGEMENT_DATA = [];
 
 const MOCK_REVIEWS: Review[] = [
   { id: 'rev-1', userId: 'u1', userName: 'Abebe Bikila', userImage: 'https://picsum.photos/seed/abebe/100/100', targetId: 'f1', targetName: 'Timket 2025 (Epiphany)', rating: 5, comment: 'An absolutely breathtaking experience.', date: 'Jan 22, 2025', isVerified: true },
@@ -87,6 +60,9 @@ const getImageUrl = (path: string | undefined | null) => {
       const baseUrl = window.location.origin;
       return `${baseUrl}${path}`;
     }
+    if (path.startsWith('ethio-hub/')) {
+      return getCloudImageUrl(path, { width: 800, height: 400 });
+    }
     return path;
   };
 
@@ -96,6 +72,9 @@ const getImageUrl = (path: string | undefined | null) => {
     if (path.startsWith('/uploads/')) {
       const baseUrl = window.location.origin;
       return `${baseUrl}${path}`;
+    }
+    if (path.startsWith('ethio-hub/')) {
+      return getCloudImageUrl(path, { width: 400, height: 400 });
     }
     return path;
   };
@@ -330,8 +309,9 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <RefreshCw className="w-10 h-10 text-primary animate-spin" />
+      <div className="flex flex-col items-center justify-center h-[60vh] animate-in fade-in duration-700">
+        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+        <p className="text-gray-400 font-medium">Loading event details...</p>
       </div>
     );
   }
@@ -352,13 +332,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
   }
 
   if (!festival || !editData) {
-    return (
-      <div className="text-center h-[60vh] flex flex-col items-center justify-center">
-        <h3 className="text-2xl font-bold text-primary">Event Not Found</h3>
-        <p className="text-gray-500">The requested event could not be found.</p>
-        <Button variant="outline" size="sm" className="mt-4" onClick={onBack}>Go Back</Button>
-      </div>
-    );
+    return null;
   }
 
   const currentData = isEditing ? editData : festival;
@@ -370,16 +344,11 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
         <div className="flex flex-col lg:flex-row gap-10 items-start lg:items-center">
           <div className="w-full lg:w-72 h-48 rounded-[32px] overflow-hidden shadow-lg flex-shrink-0 relative group">
   <img 
-    src={getImageUrl(currentData?.coverImage, 'coverImage')} 
+    src={getImageUrl(currentData?.coverImage)}
     className="w-full h-full object-cover" 
     alt={currentData?.name || 'Event'} 
   />
-  {/* Debug: Show cover image URL */}
-  {process.env.NODE_ENV === 'development' && (
-    <div className="absolute bottom-0 left-0 bg-black/70 text-white text-[10px] px-1">
-      Cover: {currentData?.coverImage || 'none'}
-    </div>
-  )}
+    {/* Cover image displayed here - debug removed */}
   {isEditing && (
     <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
       <label className="cursor-pointer bg-white text-primary px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
@@ -405,7 +374,8 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                  <ChevronLeft className="w-5 h-5" />
                </button>
                <Badge variant="secondary" className="bg-secondary/10 text-secondary border-none">
-                 {new Date(currentData.startDate) > new Date() ? 'Upcoming' : 'Live'}
+                 {currentData.status === 'Completed' || new Date(currentData.endDate) < new Date() ? 'Completed' : 
+                  currentData.status === 'Published' ? 'Published' : 'Draft'}
                </Badge>
                {currentData.isVerified && <VerifiedBadge />}
                {/* Verification Status Badge */}
@@ -426,12 +396,24 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                    </Badge>
                  )}
                  {currentData.verificationStatus === 'Rejected' && (
-                   <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500">
-                     Rejected
-                   </Badge>
-                 )}
+                 <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500">
+                   Rejected
+                 </Badge>
+               )}
                </span>
              </div>
+
+             {currentData.verificationStatus === 'Rejected' && (
+               <div className="p-4 bg-red-50 border border-red-100 rounded-2xl mb-4">
+                 <div className="flex items-start gap-3">
+                   <AlertCircle className="w-5 h-5 text-red-500 mt-0.5" />
+                   <div>
+                     <p className="text-xs font-bold text-red-600 uppercase mb-1">Rejection Reason</p>
+                     <p className="text-sm text-red-700">{currentData.rejectionReason || 'Your event was not approved. Please review the details, make necessary changes, and resubmit.'}</p>
+                   </div>
+                 </div>
+               </div>
+             )}
             
             {isEditing ? (
               <input
@@ -505,25 +487,59 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
               </>
             ) : (
               <>
-                <Button 
-                  variant="outline" 
-                  className="flex-1 lg:flex-none" 
-                  onClick={() => setIsEditing(true)} 
-                  leftIcon={Edit3}
-                >
-                  Edit Event
-                </Button>
-                <Button variant="primary" className="flex-1 lg:flex-none" leftIcon={Globe}>
-                  View Public Page
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="flex-1 lg:flex-none text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600 hover:border-red-300" 
-                  onClick={() => setShowDeleteConfirm(true)}
-                  leftIcon={Trash2}
-                >
-                  Delete Event
-                </Button>
+                {(() => {
+                  const isRejected = currentData.verificationStatus === 'Rejected';
+                  const isPending = currentData.verificationStatus === 'Pending Approval' || currentData.verificationStatus === 'Pending Review';
+                  const isDraft = currentData.status === 'Draft';
+                  const isCompleted = currentData.status === 'Completed' || new Date(currentData.endDate) < new Date();
+                  const isPublished = !isRejected && !isPending && !isDraft && !isCompleted;
+
+                  if (isPublished || isCompleted) return null;
+
+                  return (
+                    <>
+                      {isRejected && !isEditing && (
+                        <Button 
+                          variant="secondary" 
+                          className="flex-1 lg:flex-none" 
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(`/api/organizer/festivals/${eventId}/submit`, { method: 'POST' });
+                              const data = await res.json();
+                              if (data.success) {
+                                setFestival({ ...festival!, verificationStatus: 'Pending Approval', submittedAt: new Date().toISOString() });
+                                setEditData({ ...editData!, verificationStatus: 'Pending Approval', submittedAt: new Date().toISOString() });
+                                alert('Event resubmitted for review');
+                              } else {
+                                alert(data.message || 'Failed to resubmit');
+                              }
+                            } catch (err) {
+                              alert('Error resubmitting event');
+                            }
+                          }}
+                        >
+                          Resubmit for Review
+                        </Button>
+                      )}
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 lg:flex-none" 
+                        onClick={() => setIsEditing(true)} 
+                        leftIcon={Edit3}
+                      >
+                        Edit Event
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 lg:flex-none text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600 hover:border-red-300" 
+                        onClick={() => setShowDeleteConfirm(true)}
+                        leftIcon={Trash2}
+                      >
+                        Delete Event
+                      </Button>
+                    </>
+                  );
+                })()}
               </>
             )}
           </div>
@@ -869,7 +885,8 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={() => handleAddArrayItem('hotels', { 
+        onClick={() => handleAddArrayItem('hotels', { 
+  id: `hotel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             name: '', 
             starRating: 5, 
             address: '', 
@@ -1567,7 +1584,8 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => handleAddArrayItem('transportation', { 
+                 onClick={() => handleAddArrayItem('transportation', { 
+  id: `trans-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
                     type: '', 
                     price: 0, 
                     description: '', 
@@ -2110,110 +2128,345 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
         )}
 
         {/* ==================== PRICING TAB ==================== */}
-        {activeTab === 'pricing' && (
-          <div className="space-y-10 animate-in fade-in duration-500">
-            <h3 className="text-2xl font-serif font-bold text-primary">Pricing & Inventory</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {/* Base Price Card */}
-              <div className="bg-primary p-10 rounded-[40px] text-white shadow-xl space-y-6">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Standard Ticket</p>
-                {isEditing ? (
-                  <input
-                    type="number"
-                    value={currentData.pricing?.basePrice || 0}
-                    onChange={(e) => handleNestedChange('pricing', 'basePrice', parseNumberInput(e.target.value))}
-                    className="text-5xl font-serif font-bold bg-transparent border-b border-white/30 text-white w-full"
-                  />
-                ) : (
-                  <h4 className="text-5xl font-serif font-bold">
-                    {currentData.pricing?.currency || 'ETB'} {currentData.pricing?.basePrice || '0'}
-                  </h4>
-                )}
-                <ul className="space-y-3 text-sm opacity-80">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> General Admission</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Standard Seating</li>
-                  {currentData.pricing?.earlyBird > 0 && (
-                    <li className="flex items-center gap-2"><Clock className="w-4 h-4" /> Early Bird: {currentData.pricing.earlyBird}% off</li>
-                  )}
-                </ul>
-              </div>
+      // ==================== PRICING TAB WITH TIER LOGIC ====================
+{activeTab === 'pricing' && (
+  <div className="space-y-10 animate-in fade-in duration-500">
+    <h3 className="text-2xl font-serif font-bold text-primary">Pricing & Ticket Tiers</h3>
+    
+    {/* Currency & Global Settings */}
+    <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div>
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Currency</p>
+          {isEditing ? (
+            <select
+              value={currentData.pricing?.currency || 'ETB'}
+              onChange={(e) => handleNestedChange('pricing', 'currency', e.target.value)}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+            >
+              <option>ETB - Ethiopian Birr</option>
+              <option>USD - US Dollar</option>
+              <option>EUR - Euro</option>
+            </select>
+          ) : (
+            <p className="text-sm font-bold text-primary">{currentData.pricing?.currency || 'ETB'}</p>
+          )}
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Total Capacity</p>
+          {isEditing ? (
+            <input
+              type="number"
+              value={currentData.capacity || 1000}
+              onChange={(e) => handleInputChange('capacity', parseNumberInput(e.target.value))}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+            />
+          ) : (
+            <p className="text-sm font-bold text-primary">{currentData.capacity?.toLocaleString()} people</p>
+          )}
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Early Bird Deadline</p>
+          {isEditing ? (
+            <input
+              type="date"
+              value={currentData.pricing?.earlyBirdDeadline?.split('T')[0] || ''}
+              onChange={(e) => handleNestedChange('pricing', 'earlyBirdDeadline', e.target.value)}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+            />
+          ) : (
+            <p className="text-sm font-bold text-primary">
+              {currentData.pricing?.earlyBirdDeadline ? new Date(currentData.pricing.earlyBirdDeadline).toDateString() : 'No early bird'}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
 
-              {/* VIP Price Card */}
-              <div className="bg-secondary p-10 rounded-[40px] text-white shadow-xl space-y-6">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">VIP Experience</p>
-                {isEditing ? (
-                  <input
-                    type="number"
-                    value={currentData.pricing?.vipPrice || 0}
-                    onChange={(e) => handleNestedChange('pricing', 'vipPrice', parseNumberInput(e.target.value))}
-                    className="text-5xl font-serif font-bold bg-transparent border-b border-white/30 text-white w-full"
-                  />
-                ) : (
-                  <h4 className="text-5xl font-serif font-bold">
-                    {currentData.pricing?.currency || 'ETB'} {currentData.pricing?.vipPrice || (currentData.pricing?.basePrice ? currentData.pricing.basePrice * 3 : 750)}
-                  </h4>
-                )}
-                <ul className="space-y-3 text-sm opacity-80">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Priority Entry</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Exclusive Lounge Access</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Meet & Greet</li>
-                </ul>
-              </div>
+    {/* STANDARD TICKET CARD */}
+    <div className="bg-white p-8 rounded-[40px] border-2 border-gray-200 shadow-sm">
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <div className="inline-flex items-center gap-2 bg-gray-100 px-4 py-1.5 rounded-full mb-3">
+            <Ticket className="w-4 h-4 text-gray-500" />
+            <span className="text-[10px] font-black uppercase text-gray-600 tracking-wider">TIER 1</span>
+          </div>
+          <h4 className="text-2xl font-serif font-bold text-primary">Standard Ticket</h4>
+          <p className="text-sm text-gray-500 mt-1">General admission with optional add-ons</p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Price</p>
+          {isEditing ? (
+            <input
+              type="number"
+              value={currentData.pricing?.standardPrice || 0}
+              onChange={(e) => handleNestedChange('pricing', 'standardPrice', parseNumberInput(e.target.value))}
+              className="text-3xl font-bold text-primary bg-gray-50 border border-gray-200 rounded-xl p-2 w-32 text-right"
+            />
+          ) : (
+            <p className="text-3xl font-bold text-primary">
+              {currentData.pricing?.currency || 'ETB'} {currentData.pricing?.standardPrice?.toLocaleString() || '0'}
+            </p>
+          )}
+        </div>
+      </div>
 
-              {/* Inventory & Discounts Card */}
-              <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Inventory & Discounts</p>
-                <div className="space-y-6">
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Currency</p>
-                    {isEditing ? (
-                      <select
-                        value={currentData.pricing?.currency || 'ETB'}
-                        onChange={(e) => handleNestedChange('pricing', 'currency', e.target.value)}
-                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+      {/* Standard Ticket Benefits */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-2xl">
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <CheckCircle2 className="w-4 h-4 text-emerald-500" /> General Admission
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Standard Seating
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Access to All Days
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Clock className="w-4 h-4 text-amber-500" /> Early Bird Available
+        </div>
+      </div>
+
+      {/* Standard: Hotel & Transport are OPTIONAL (extra fee) - Show info only */}
+      <div className="border-t border-gray-100 pt-6 mt-2">
+        <p className="text-xs text-gray-400 flex items-center gap-2">
+          <Info className="w-3 h-3" />
+          Standard ticket holders can add hotels and transport as paid extras during checkout
+        </p>
+      </div>
+    </div>
+
+    {/* VIP TICKET CARD */}
+    <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 p-8 rounded-[40px] border-2 border-secondary/30 shadow-lg">
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <div className="inline-flex items-center gap-2 bg-secondary/20 px-4 py-1.5 rounded-full mb-3">
+            <Star className="w-4 h-4 text-secondary" />
+            <span className="text-[10px] font-black uppercase text-secondary tracking-wider">TIER 2 • PREMIUM</span>
+          </div>
+          <h4 className="text-2xl font-serif font-bold text-primary">VIP Ticket</h4>
+          <p className="text-sm text-gray-600 mt-1">Premium experience with hotel & transport INCLUDED</p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Price (All Inclusive)</p>
+          {isEditing ? (
+            <input
+              type="number"
+              value={currentData.pricing?.vipPrice || 0}
+              onChange={(e) => handleNestedChange('pricing', 'vipPrice', parseNumberInput(e.target.value))}
+              className="text-3xl font-bold text-secondary bg-white border border-secondary/30 rounded-xl p-2 w-32 text-right"
+            />
+          ) : (
+            <p className="text-3xl font-bold text-secondary">
+              {currentData.pricing?.currency || 'ETB'} {currentData.pricing?.vipPrice?.toLocaleString() || '0'}
+            </p>
+          )}
+          <p className="text-[10px] text-gray-400 mt-1">Includes hotel + transport</p>
+        </div>
+      </div>
+
+      {/* VIP Benefits */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
+          <CheckCircle2 className="w-4 h-4 text-secondary" /> Priority Entry
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
+          <CheckCircle2 className="w-4 h-4 text-secondary" /> VIP Lounge Access
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
+          <CheckCircle2 className="w-4 h-4 text-secondary" /> Meet & Greet
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
+          <CheckCircle2 className="w-4 h-4 text-secondary" /> Complimentary Drinks
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
+          <Hotel className="w-4 h-4 text-secondary" /> Hotel Included (1 night)
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
+          <Car className="w-4 h-4 text-secondary" /> Transport Included
+        </div>
+      </div>
+
+      {/* VIP Settings - Which hotels/transport are available for VIP choice */}
+      {isEditing && (
+        <div className="border-t border-secondary/20 pt-6 mt-4">
+          <p className="text-sm font-bold text-primary mb-4 flex items-center gap-2">
+            <Settings className="w-4 h-4 text-secondary" />
+            VIP Package Configuration
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* VIP Hotel Selection */}
+            <div className="bg-white p-5 rounded-2xl">
+              <p className="text-xs font-black uppercase text-gray-400 tracking-wider mb-3">
+                VIP Included Hotels (user chooses 1)
+              </p>
+              <div className="space-y-2">
+                {(currentData.pricing?.vipIncludedHotels || []).map((hotelId: string, idx: number) => {
+                  const hotel = currentData.hotels?.find((h: any) => h.id === hotelId);
+                  return (
+                    <div key={idx} className="flex items-center justify-between bg-gray-50 p-3 rounded-xl">
+                      <span className="text-sm font-medium text-primary">{hotel?.name || hotelId}</span>
+                      <button
+                        onClick={() => {
+                          const newList = (currentData.pricing?.vipIncludedHotels || []).filter((_: string, i: number) => i !== idx);
+                          handleNestedChange('pricing', 'vipIncludedHotels', newList);
+                        }}
+                        className="text-red-500 text-xs"
                       >
-                        <option>ETB</option>
-                        <option>USD</option>
-                        <option>EUR</option>
-                      </select>
-                    ) : (
-                      <p className="text-sm font-bold text-primary">{currentData.pricing?.currency || 'ETB'}</p>
-                    )}
-                  </div>
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })}
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const currentList = currentData.pricing?.vipIncludedHotels || [];
+                      handleNestedChange('pricing', 'vipIncludedHotels', [...currentList, e.target.value]);
+                    }
+                  }}
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+                  defaultValue=""
+                >
+                  <option value="">-- Add hotel to VIP package --</option>
+                  {(currentData.hotels || []).map((hotel: any) => (
+                    <option key={hotel.id} value={hotel.id}>{hotel.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Early Bird Discount</p>
-                    {isEditing ? (
-                      <input
-                        type="number"
-                        value={currentData.pricing?.earlyBird || 0}
-                        onChange={(e) => handleNestedChange('pricing', 'earlyBird', parseNumberInput(e.target.value))}
-                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                      />
-                    ) : (
-                      <p className="text-sm font-bold text-primary">{currentData.pricing?.earlyBird || 0}% off</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Group Discount</p>
-                    {isEditing ? (
-                      <input
-                        type="number"
-                        value={currentData.pricing?.groupDiscount || 0}
-                        onChange={(e) => handleNestedChange('pricing', 'groupDiscount', parseNumberInput(e.target.value))}
-                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                      />
-                    ) : (
-                      <p className="text-sm font-bold text-primary">{currentData.pricing?.groupDiscount || 10}% off for groups of 10+</p>
-                    )}
-                  </div>
-                </div>
+            {/* VIP Transport Selection */}
+            <div className="bg-white p-5 rounded-2xl">
+              <p className="text-xs font-black uppercase text-gray-400 tracking-wider mb-3">
+                VIP Included Transport (user chooses 1)
+              </p>
+              <div className="space-y-2">
+                {(currentData.pricing?.vipIncludedTransport || []).map((transportId: string, idx: number) => {
+                  const transport = currentData.transportation?.find((t: any) => t.id === transportId);
+                  return (
+                    <div key={idx} className="flex items-center justify-between bg-gray-50 p-3 rounded-xl">
+                      <span className="text-sm font-medium text-primary">{transport?.type || transportId}</span>
+                      <button
+                        onClick={() => {
+                          const newList = (currentData.pricing?.vipIncludedTransport || []).filter((_: string, i: number) => i !== idx);
+                          handleNestedChange('pricing', 'vipIncludedTransport', newList);
+                        }}
+                        className="text-red-500 text-xs"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })}
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const currentList = currentData.pricing?.vipIncludedTransport || [];
+                      handleNestedChange('pricing', 'vipIncludedTransport', [...currentList, e.target.value]);
+                    }
+                  }}
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+                  defaultValue=""
+                >
+                  <option value="">-- Add transport to VIP package --</option>
+                  {(currentData.transportation || []).map((transport: any) => (
+                    <option key={transport.id} value={transport.id}>{transport.type}</option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
+      {/* Non-editing mode: Show what's included */}
+      {!isEditing && currentData.pricing?.vipIncludedHotels?.length > 0 && (
+        <div className="border-t border-secondary/20 pt-6 mt-4">
+          <p className="text-xs text-gray-500 flex items-center gap-2">
+            <Hotel className="w-3 h-3" />
+            VIP includes choice of: {currentData.pricing.vipIncludedHotels.map((id: string) => {
+              const hotel = currentData.hotels?.find((h: any) => h.id === id);
+              return hotel?.name;
+            }).filter(Boolean).join(', ')}
+          </p>
+        </div>
+      )}
+    </div>
+
+    {/* Early Bird Settings */}
+    <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+      <h4 className="font-bold text-primary mb-4 flex items-center gap-2">
+        <Clock className="w-4 h-4 text-secondary" />
+        Early Bird Discount
+      </h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Standard Early Bird (%)</p>
+          {isEditing ? (
+            <input
+              type="number"
+              value={currentData.pricing?.standardEarlyBird || 0}
+              onChange={(e) => handleNestedChange('pricing', 'standardEarlyBird', parseNumberInput(e.target.value))}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+            />
+          ) : (
+            <p className="text-sm font-bold text-primary">{currentData.pricing?.standardEarlyBird || 0}% off</p>
+          )}
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">VIP Early Bird (%)</p>
+          {isEditing ? (
+            <input
+              type="number"
+              value={currentData.pricing?.vipEarlyBird || 0}
+              onChange={(e) => handleNestedChange('pricing', 'vipEarlyBird', parseNumberInput(e.target.value))}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+            />
+          ) : (
+            <p className="text-sm font-bold text-primary">{currentData.pricing?.vipEarlyBird || 0}% off</p>
+          )}
+        </div>
+      </div>
+    </div>
+
+    {/* Group Discount */}
+    <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+      <h4 className="font-bold text-primary mb-4 flex items-center gap-2">
+        <Users className="w-4 h-4 text-secondary" />
+        Group Discount
+      </h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Minimum Group Size</p>
+          {isEditing ? (
+            <input
+              type="number"
+              value={currentData.pricing?.groupMinSize || 10}
+              onChange={(e) => handleNestedChange('pricing', 'groupMinSize', parseNumberInput(e.target.value))}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+            />
+          ) : (
+            <p className="text-sm font-bold text-primary">{currentData.pricing?.groupMinSize || 10}+ people</p>
+          )}
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Group Discount (%)</p>
+          {isEditing ? (
+            <input
+              type="number"
+              value={currentData.pricing?.groupDiscount || 0}
+              onChange={(e) => handleNestedChange('pricing', 'groupDiscount', parseNumberInput(e.target.value))}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+            />
+          ) : (
+            <p className="text-sm font-bold text-primary">{currentData.pricing?.groupDiscount || 0}% off</p>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
         {/* ==================== REVIEWS TAB ==================== */}
         {activeTab === 'reviews' && (
           <div className="space-y-10 animate-in fade-in duration-500">
@@ -2239,21 +2492,26 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
     </div>
   );
 };
-export const OrganizerOverview: React.FC<{ onCreate?: () => void; disableCreate?: boolean }> = ({ onCreate: onCreateProp, disableCreate = false }) => {
+export const OrganizerOverview: React.FC<{ onManageEvent?: (id: string) => void; onCreate?: () => void }> = ({ onManageEvent: propOnManageEvent, onCreate: propOnCreate }) => {
   const [view, setView] = useState('overview'); // 'overview', 'eventDetail', 'createEvent'
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleManageEvent = (id: string) => {
-    setSelectedEventId(id);
-    setView('eventDetail');
+    if (propOnManageEvent) {
+      propOnManageEvent(id);
+    } else {
+      setSelectedEventId(id);
+      setView('eventDetail');
+    }
   };
 
   const handleCreate = () => {
-    // In a real app, this would likely navigate to a creation form/page
-    // For this example, we'll just log it.
-    console.log('Navigate to create event view');
-    // Or, if a create view component exists:
-    // setView('createEvent'); 
+    if (propOnCreate) {
+      propOnCreate();
+    } else {
+      router.push('/dashboard/organizer/festivals/create');
+    }
   };
 
   const handleBack = () => {
@@ -2267,9 +2525,8 @@ export const OrganizerOverview: React.FC<{ onCreate?: () => void; disableCreate?
 
 // The rest of the component is the overview itself
   const onManageEvent = handleManageEvent;
-  const onCreate = onCreateProp ?? handleCreate;
+  const onCreate = propOnCreate || handleCreate;
   const { user } = useAuth();
-  const router = useRouter();
   const navigate = (to: string) => router.push(to);
   
   const [analytics, setAnalytics] = useState<any>(null);
@@ -2306,12 +2563,65 @@ export const OrganizerOverview: React.FC<{ onCreate?: () => void; disableCreate?
     fetchData();
   }, []);
   
-  const activeListings = analytics?.festivals?.published || festivals.length;
-  const totalAttendees = analytics?.bookings?.confirmed || 0;
-  // Split payment breakdown
-  const grossRevenue = analytics?.revenue?.gross || 0;
-  const platformFee = analytics?.revenue?.platformFee || 0;
-  const netEarnings = analytics?.revenue?.net || grossRevenue;
+  const publishedFestivals = useMemo(() => {
+    return (festivals || [])
+      .filter(f => f.verificationStatus === 'Approved')
+      .sort((a, b) => new Date(b.submittedAt || b.createdAt || 0).getTime() - new Date(a.submittedAt || a.createdAt || 0).getTime());
+  }, [festivals]);
+
+  const recentPublishedEvent = publishedFestivals[0] || null;
+
+  const activeListings = publishedFestivals.length;
+  const totalCapacity = publishedFestivals.reduce((acc, f) => acc + (Number(f.totalCapacity) || 0), 0);
+  const recentEventBookings = recentPublishedEvent ? (recentPublishedEvent.ticketsSold || 0) : 0;
+
+  // Process Booking Trend Data - Filter for recent event if possible, otherwise use global but label it
+  const bookingTrendData = useMemo(() => {
+    // If the API provided specific chart data for the recent event, we'd use it here.
+    // For now, we use the trend data and ensure it's presented as the recent event's trend.
+    if (!analytics?.charts?.bookingsByDay) return [];
+    
+    return Object.entries(analytics.charts.bookingsByDay).map(([date, count]) => {
+      const dayName = new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
+      return { day: dayName, bookings: count };
+    });
+  }, [analytics?.charts?.bookingsByDay]);
+
+  // Process Visitor Locations
+  const visitorLocations = useMemo(() => {
+    if (!analytics?.visitorLocations || analytics.visitorLocations.length === 0) return [];
+    
+    return analytics.visitorLocations.map((loc: any) => ({
+      city: loc.country,
+      visitors: `${loc.percentage}%`
+    }));
+  }, [analytics?.visitorLocations]);
+
+  // Process Latest Alerts
+  const latestAlerts = useMemo(() => {
+    if (!analytics?.latestAlerts || analytics.latestAlerts.length === 0) return [];
+    
+    return analytics.latestAlerts.map((alert: any) => {
+      const date = new Date(alert.time);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMin = Math.round(diffMs / 60000);
+      const diffHr = Math.round(diffMs / 3600000);
+      const diffDay = Math.round(diffMs / 86400000);
+      
+      let timeStr = 'Just now';
+      if (diffDay > 0) timeStr = `${diffDay}d ago`;
+      else if (diffHr > 0) timeStr = `${diffHr}h ago`;
+      else if (diffMin > 0) timeStr = `${diffMin}m ago`;
+      
+      return {
+        id: alert.id,
+        type: alert.type,
+        message: alert.message,
+        time: timeStr
+      };
+    });
+  }, [analytics?.latestAlerts]);
   
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) return `ETB ${(amount / 1000000).toFixed(1)}M`;
@@ -2325,18 +2635,11 @@ export const OrganizerOverview: React.FC<{ onCreate?: () => void; disableCreate?
   };
   
   const myEvents = festivals;
+  const activePublishedEvents = publishedFestivals.slice(0, 3);
   const hasEvents = myEvents.length > 0;
   const [showSupport, setShowSupport] = useState(false);
   const [showTips, setShowTips] = useState(false);
-  
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <RefreshCw className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
        {/* Header with Notifications */}
@@ -2367,32 +2670,17 @@ export const OrganizerOverview: React.FC<{ onCreate?: () => void; disableCreate?
        </div>
 
 {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
          {[
           { label: 'Active Listings', val: activeListings.toString(), icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Global Attendees', val: formatNumber(totalAttendees), icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Net Earnings (10% fee)', val: formatCurrency(netEarnings), icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50', tooltip: `Gross: ${formatCurrency(grossRevenue)} | Platform Fee: ${formatCurrency(platformFee)}` },
-        ].map((stat, i) => (
+          { label: 'Total Capacity', val: formatNumber(totalCapacity), icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Recent Event Bookings', val: formatNumber(recentEventBookings), icon: FileText, color: 'text-purple-600', bg: 'bg-purple-50' },
+        ].map((stat: any, i) => (
           <div key={`stat-${i}`} className="bg-white p-8 rounded-3xl border border-gray-100 flex items-center justify-between shadow-sm relative group">
             <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{stat.label}</p><p className="text-2xl font-bold text-primary">{stat.val}</p></div>
             <div className={`p-4 ${stat.bg} rounded-[20px]`}><stat.icon className={`w-6 h-6 ${stat.color}`} /></div>
-            {stat.tooltip && (
-              <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs p-2 rounded whitespace-nowrap z-50">
-                {stat.tooltip}
-              </div>
-            )}
           </div>
         ))}
-         <div className="bg-white p-8 rounded-3xl border border-gray-100 flex flex-col justify-between relative overflow-hidden shadow-sm">
-            <div className="flex justify-between items-start z-10">
-               <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Trust Level</p><p className="text-2xl font-bold text-primary">{user?.organizerProfile?.isVerified ? 'Verified' : 'Pending'}</p></div>
-               <div className="p-4 bg-secondary/10 rounded-[20px]"><ShieldCheck className="w-6 h-6 text-secondary" /></div>
-            </div>
-            <div className="mt-4 z-10">
-              <div className="flex justify-between text-[10px] font-bold text-gray-400 mb-1"><span>Progress to Top Rated</span><span>{Math.min(80, Math.round((totalAttendees / 100) * 100))}%</span></div>
-              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-secondary w-[80%]"></div></div>
-            </div>
-         </div>
        </div>
 
        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -2403,7 +2691,7 @@ export const OrganizerOverview: React.FC<{ onCreate?: () => void; disableCreate?
                 <h3 className="text-lg font-serif font-bold text-primary mb-6 flex items-center gap-2"><CalendarClock className="w-5 h-5 text-secondary" /> Upcoming Timeline</h3>
                 <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
                    {myEvents.slice(0, 5).map((ev: any, i: number) => (
-                      <div key={ev._id || i} className="min-w-[200px] p-4 bg-ethio-bg/30 rounded-2xl border border-gray-50 flex gap-4 items-center cursor-pointer hover:bg-ethio-bg/50 transition-colors" onClick={() => onManageEvent(ev._id)}>
+                      <div key={ev._id || i} className="min-w-[200px] p-4 bg-ethio-bg/30 rounded-2xl border border-gray-50 flex gap-4 items-center cursor-pointer hover:bg-ethio-bg/50 transition-colors" onClick={() => onManageEvent(ev._id || ev.id)}>
                          <div className="w-12 h-12 bg-white rounded-xl flex flex-col items-center justify-center shadow-sm text-primary font-bold leading-tight">
                             <span className="text-[10px] uppercase text-gray-400">{ev.startDate ? new Date(ev.startDate).toLocaleString('en-US', { month: 'short' }) : 'TBD'}</span>
                             <span className="text-lg">{ev.startDate ? new Date(ev.startDate).getDate() : '--'}</span>
@@ -2421,24 +2709,37 @@ export const OrganizerOverview: React.FC<{ onCreate?: () => void; disableCreate?
              {/* Quick Analytics Snapshot */}
              <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-center mb-6">
-                   <h3 className="text-lg font-serif font-bold text-primary flex items-center gap-2"><TrendingUp className="w-5 h-5 text-blue-600" /> 7-Day Booking Trend</h3>
-                   <Badge variant="outline" className="text-blue-600 bg-blue-50 border-blue-100">+12% vs last week</Badge>
+                   <h3 className="text-lg font-serif font-bold text-primary flex items-center gap-2">
+                     <TrendingUp className="w-5 h-5 text-blue-600" /> 
+                     {recentPublishedEvent ? `7-Day Booking Trend: ${recentPublishedEvent.name}` : '7-Day Booking Trend'}
+                   </h3>
+                   {bookingTrendData.length > 0 && (
+                     <Badge variant="outline" className="text-blue-600 bg-blue-50 border-blue-100">
+                       Real-time Data
+                     </Badge>
+                   )}
                 </div>
                 <div className="h-48 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={SNAPSHOT_DATA}>
-                      <defs>
-                        <linearGradient id="colorSnapshot" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                      <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af'}} />
-                      <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
-                      <Area type="monotone" dataKey="bookings" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorSnapshot)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  {bookingTrendData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={bookingTrendData}>
+                        <defs>
+                          <linearGradient id="colorSnapshot" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                        <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af'}} />
+                        <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
+                        <Area type="monotone" dataKey="bookings" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorSnapshot)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                      <p className="text-sm text-gray-400">No booking data yet</p>
+                    </div>
+                  )}
                 </div>
              </section>
 
@@ -2447,50 +2748,62 @@ export const OrganizerOverview: React.FC<{ onCreate?: () => void; disableCreate?
                 <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
                    <h4 className="font-bold text-primary mb-4 flex items-center gap-2"><Globe className="w-4 h-4 text-emerald-600" /> Top Visitor Locations</h4>
                    <div className="space-y-3">
-                      {ENGAGEMENT_DATA.map((loc, i) => (
-                         <div key={loc.city || i} className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600">{loc.city}</span>
-                            <div className="flex items-center gap-2 w-1/2">
-                               <div className="h-1.5 bg-gray-100 rounded-full flex-1 overflow-hidden">
-                                  <div className="h-full bg-emerald-500" style={{width: loc.visitors}}></div>
-                               </div>
-                               <span className="text-xs font-bold text-primary w-8 text-right">{loc.visitors}</span>
-                            </div>
-                         </div>
-                      ))}
+                      {visitorLocations.length > 0 ? (
+                        visitorLocations.map((loc, i) => (
+                           <div key={loc.city || i} className="flex justify-between items-center">
+                              <span className="text-sm text-gray-600">{loc.city}</span>
+                              <div className="flex items-center gap-2 w-1/2">
+                                 <div className="h-1.5 bg-gray-100 rounded-full flex-1 overflow-hidden">
+                                    <div className="h-full bg-emerald-500" style={{width: loc.visitors}}></div>
+                                 </div>
+                                 <span className="text-xs font-bold text-primary w-8 text-right">{loc.visitors}</span>
+                              </div>
+                           </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-400 italic py-4">No location data available yet.</p>
+                      )}
                    </div>
                 </div>
                 <div 
                   className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm cursor-pointer hover:shadow-md transition-all group"
-                  onClick={() => myEvents[0] && onManageEvent(myEvents[0].id)}
+                  onClick={() => analytics?.mostBookedEvent && onManageEvent(analytics.mostBookedEvent.id)}
                 >
-                   <h4 className="font-bold text-primary mb-4 flex items-center gap-2"><Eye className="w-4 h-4 text-purple-600" /> Most Viewed Event</h4>
-                   {myEvents[0] ? (
+                   <h4 className="font-bold text-primary mb-4 flex items-center gap-2"><Ticket className="w-4 h-4 text-purple-600" /> Most Booked Event</h4>
+                   {analytics?.mostBookedEvent ? (
                      <div className="space-y-4">
                         <div className="h-32 rounded-2xl overflow-hidden relative">
-                           <img src={myEvents[0].coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
-                           <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded-lg">1.2k Views</div>
+                           <img src={analytics.mostBookedEvent.coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
+                           <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded-lg">{analytics.mostBookedEvent.bookings} Bookings</div>
                         </div>
                         <div>
-                           <p className="font-bold text-primary group-hover:text-secondary transition-colors">{myEvents[0].name}</p>
-                           <p className="text-xs text-gray-500 mt-1">245 views today</p>
+                           <p className="font-bold text-primary group-hover:text-secondary transition-colors">{analytics.mostBookedEvent.name}</p>
+                           <p className="text-xs text-gray-500 mt-1">{analytics.mostBookedEvent.bookings} tourists booked this event</p>
                         </div>
                      </div>
-                   ) : <p className="text-sm text-gray-400">No events yet.</p>}
+                   ) : <p className="text-sm text-gray-400 italic py-4">No booking data yet.</p>}
                 </div>
              </section>
 
              {/* Existing My Events List */}
-             {!hasEvents ? (
-                <section className="bg-white p-12 rounded-[48px] border border-gray-100 text-center space-y-8"><div className="w-24 h-24 bg-ethio-bg rounded-[32px] flex items-center justify-center mx-auto"><Briefcase className="w-10 h-10 text-gray-300" /></div><h3 className="text-3xl font-serif font-bold text-primary">Ready to showcase your heritage?</h3><Button size="lg" onClick={onCreate} disabled={disableCreate}>List Your First Festival</Button></section>
+             {!hasEvents || activePublishedEvents.length === 0 ? (
+                <section className="bg-white p-12 rounded-[48px] border border-gray-100 text-center space-y-8"><div className="w-24 h-24 bg-ethio-bg rounded-[32px] flex items-center justify-center mx-auto"><Briefcase className="w-10 h-10 text-gray-300" /></div><h3 className="text-3xl font-serif font-bold text-primary">Ready to showcase your heritage?</h3><Button size="lg" onClick={onCreate}>List Your First Festival</Button></section>
               ) : (
                 <div className="space-y-6">
                   <h3 className="text-xl font-serif font-bold text-primary">Your Active Events</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {myEvents.slice(0, 4).map((fest, index) => (
-                      <div key={fest.id || `fest-${index}`} onClick={() => onManageEvent(fest.id)} className="bg-white rounded-[32px] overflow-hidden border border-gray-100 shadow-sm cursor-pointer group hover:shadow-md transition-all">
-                        <div className="h-44 overflow-hidden"><img src={fest.coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" /></div>
-                        <div className="p-6"><h4 className="text-xl font-serif font-bold text-primary group-hover:text-secondary transition-colors">{fest.name}</h4><p className="text-[10px] text-gray-400 uppercase font-bold">{fest.locationName}</p></div>
+                       <div key={fest.id || `fest-${index}`} onClick={() => onManageEvent(fest.id)} className="bg-white rounded-[32px] overflow-hidden border border-gray-100 shadow-sm cursor-pointer group hover:shadow-md transition-all">
+                         <div className="h-44 overflow-hidden">
+                           {fest.coverImage ? (
+                             <img src={fest.coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
+                           ) : (
+                             <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                               <Calendar className="w-12 h-12 text-gray-400" />
+                             </div>
+                           )}
+                         </div>
+                         <div className="p-6"><h4 className="text-xl font-serif font-bold text-primary group-hover:text-secondary transition-colors">{fest.name}</h4><p className="text-[10px] text-gray-400 uppercase font-bold">{fest.locationName}</p></div>
                       </div>
                     ))}
                   </div>
@@ -2504,18 +2817,22 @@ export const OrganizerOverview: React.FC<{ onCreate?: () => void; disableCreate?
              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-center mb-6">
                    <h3 className="text-lg font-serif font-bold text-primary">Latest Alerts</h3>
-                   <button className="text-xs font-bold text-secondary hover:underline">View All</button>
+                   <button onClick={() => navigate('/dashboard/organizer/bookings')} className="text-xs font-bold text-secondary hover:underline">View All</button>
                 </div>
                 <div className="space-y-4">
-                   {NOTIFICATIONS.map(notif => (
-                      <div key={notif.id} className="flex gap-3 items-start p-3 bg-gray-50 rounded-2xl border border-gray-100">
-                         <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${notif.type === 'booking' ? 'bg-blue-500' : notif.type === 'review' ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
-                         <div>
-                            <p className="text-sm font-bold text-primary leading-tight">{notif.message}</p>
-                            <p className="text-[10px] text-gray-400 mt-1">{notif.time}</p>
-                         </div>
-                      </div>
-                   ))}
+                   {latestAlerts.length > 0 ? (
+                     latestAlerts.map(notif => (
+                        <div key={notif.id} className="flex gap-3 items-start p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                           <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${notif.type === 'booking' ? 'bg-blue-500' : notif.type === 'review' ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
+                           <div>
+                              <p className="text-sm font-bold text-primary leading-tight">{notif.message}</p>
+                              <p className="text-[10px] text-gray-400 mt-1">{notif.time}</p>
+                           </div>
+                        </div>
+                     ))
+                   ) : (
+                     <p className="text-sm text-gray-400 italic py-4">No recent alerts.</p>
+                   )}
                 </div>
              </div>
 
@@ -2801,8 +3118,7 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
           </div>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" leftIcon={Printer}>Print Invoice</Button>
-          <Button variant="primary" leftIcon={QrCode}>View QR Code</Button>
+          {/* Unnecessary buttons removed */}
         </div>
       </header>
 
@@ -2813,7 +3129,6 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
             {[
               { id: 'overview', label: 'Overview', icon: Info },
               { id: 'payment', label: 'Payment Details', icon: CreditCard },
-              { id: 'history', label: 'Activity Log', icon: History },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -2853,106 +3168,118 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
                     </p>
                   </div>
                 </div>
-                {booking.specialRequests && (
-                  <div className="pt-4 border-t border-gray-50">
-                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Special Requests</p>
-                    <p className="text-sm text-gray-600 italic">"{booking.specialRequests}"</p>
+                <div className="pt-4 border-t border-gray-50 grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Booking Date & Time</p>
+                    <p className="text-sm font-bold text-primary">
+                      {new Date(booking.createdAt).toLocaleDateString()} at {new Date(booking.createdAt).toLocaleTimeString()}
+                    </p>
                   </div>
-                )}
+                  {booking.specialRequests && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Special Requests</p>
+                      <p className="text-sm text-gray-600 italic">"{booking.specialRequests}"</p>
+                    </div>
+                  )}
+                </div>
               </section>
 
-              {/* Event Ticket */}
+              {/* Event Ticket & Detailed Booking Information */}
               <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
                 <h3 className="text-lg font-serif font-bold text-primary flex items-center gap-2">
-                  <Ticket className="w-5 h-5 text-secondary" /> Event Ticket
+                  <Ticket className="w-5 h-5 text-secondary" /> Detailed Booking Information
                 </h3>
+                
+                {/* Main Event Ticket */}
                 <div className="bg-ethio-bg/30 p-6 rounded-3xl border border-gray-50 flex flex-col md:flex-row justify-between gap-6">
                   <div className="space-y-4">
                     <div>
                       <h4 className="text-xl font-serif font-bold text-primary">{booking.festival?.name || 'Festival'}</h4>
                       <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
-                        Date: {booking.festival?.startDate ? new Date(booking.festival.startDate).toLocaleDateString() : 'TBD'}
+                        Event Date: {booking.festival?.startDate ? new Date(booking.festival.startDate).toLocaleDateString() : 'TBD'}
                       </p>
                     </div>
                     <Badge variant="secondary" className="bg-primary text-white border-none capitalize">{booking.ticketType} x{booking.quantity}</Badge>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-right">
+                  <div className="grid grid-cols-2 md:grid-cols-2 gap-8 text-right">
                     <div>
                       <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Quantity</p>
                       <p className="text-lg font-bold text-primary">x{booking.quantity}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Price</p>
-                      <p className="text-lg font-bold text-primary">ETB {booking.totalPrice / booking.quantity}</p>
-                    </div>
-                    <div className="col-span-2 md:col-span-1">
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Subtotal</p>
-                      <p className="text-lg font-bold text-secondary">ETB {booking.totalPrice}</p>
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Total Price</p>
+                      <p className="text-lg font-bold text-secondary">
+                        ETB {(booking.organizerAmount || (booking.totalPrice ? booking.totalPrice * 0.9 : 0)).toLocaleString()}
+                      </p>
                     </div>
                   </div>
                 </div>
+
+                {/* Accommodation Details */}
+                {booking.bookingDetails?.room && (
+                  <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-amber-50 rounded-xl text-amber-600">
+                        <Hotel className="w-5 h-5" />
+                      </div>
+                      <h4 className="text-lg font-bold text-primary">Accommodation Booking</h4>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-4">
+                        <div>
+                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Hotel Name</p>
+                          <p className="text-lg font-bold text-primary">{booking.bookingDetails.room.hotelName}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Room Type & Services</p>
+                          <p className="text-sm font-bold text-secondary">{booking.bookingDetails.room.roomName}</p>
+                          <p className="text-xs text-gray-500 mt-1">Includes all standard amenities and breakfast.</p>
+                        </div>
+                      </div>
+                      <div className="text-right space-y-4">
+                        <div>
+                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Price Per Night</p>
+                          <p className="text-xl font-bold text-primary">ETB {booking.bookingDetails.room.roomPrice?.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Transport Details */}
+                {booking.bookingDetails?.transport && (
+                  <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-50 rounded-xl text-blue-600">
+                        <Car className="w-5 h-5" />
+                      </div>
+                      <h4 className="text-lg font-bold text-primary">Transportation Details</h4>
+                    </div>
+                    <div className="flex flex-col md:flex-row gap-8">
+                      {booking.bookingDetails.transport.image && (
+                        <div className="w-full md:w-48 h-32 rounded-2xl overflow-hidden border border-gray-100">
+                          <img 
+                            src={booking.bookingDetails.transport.image} 
+                            alt={booking.bookingDetails.transport.type}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 flex justify-between items-start">
+                        <div>
+                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Vehicle Type</p>
+                          <h4 className="text-xl font-bold text-primary">{booking.bookingDetails.transport.type}</h4>
+                          <p className="text-sm text-gray-500 mt-1">Private Transfer - Selected Option</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Fixed Rate</p>
+                          <p className="text-xl font-bold text-primary">ETB {booking.bookingDetails.transport.price?.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </section>
-
-              {/* Accommodation */}
-              {booking.bookingDetails?.room && (
-                <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
-                  <h3 className="text-lg font-serif font-bold text-primary flex items-center gap-2">
-                    <Hotel className="w-5 h-5 text-secondary" /> Accommodation
-                  </h3>
-                  <div className="space-y-6">
-                    <div className="flex flex-col md:flex-row justify-between gap-6">
-                      <div>
-                        <h4 className="text-xl font-serif font-bold text-primary">{booking.bookingDetails.room.hotelName}</h4>
-                        <p className="text-sm font-bold text-secondary">{booking.bookingDetails.room.roomName}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Per Night</p>
-                        <p className="text-lg font-bold text-primary">ETB {booking.bookingDetails.room.roomPrice}</p>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {/* Transport */}
-              {booking.bookingDetails?.transport && (
-                <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
-                  <h3 className="text-lg font-serif font-bold text-primary flex items-center gap-2">
-                    <Car className="w-5 h-5 text-secondary" /> Transport
-                  </h3>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h4 className="text-xl font-serif font-bold text-primary">{booking.bookingDetails.transport.type}</h4>
-                      <p className="text-sm text-gray-500">Private Transfer</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Fixed Rate</p>
-                      <p className="text-lg font-bold text-primary">ETB {booking.bookingDetails.transport.price}</p>
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {/* Fee Breakdown */}
-              {booking.status === 'confirmed' && (
-                <section className="bg-emerald-50 p-8 rounded-[40px] border border-emerald-100 space-y-4">
-                  <h3 className="text-lg font-serif font-bold text-emerald-800">Your Earnings Breakdown</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white p-4 rounded-2xl">
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Gross Amount</p>
-                      <p className="text-xl font-bold text-primary">ETB {booking.totalPrice}</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-2xl">
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Platform Fee ({booking.commissionPercent || 10}%)</p>
-                      <p className="text-xl font-bold text-red-500">- ETB {booking.platformFee || 0}</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-2xl">
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">You Receive</p>
-                      <p className="text-xl font-bold text-emerald-600">ETB {booking.organizerAmount || (booking.totalPrice - (booking.platformFee || 0))}</p>
-                    </div>
-                  </div>
-                </section>
-              )}
             </div>
           )}
 
@@ -2969,14 +3296,10 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
                   </span>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Booking Status</p>
-                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold capitalize ${booking.status === 'confirmed' ? 'bg-green-100 text-green-700' : booking.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
-                    {booking.status}
-                  </span>
-                </div>
-                <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Total Amount</p>
-                  <p className="text-lg font-bold text-primary">{booking.currency} {booking.totalPrice}</p>
+                  <p className="text-lg font-bold text-primary">
+                    {booking.currency} {(booking.organizerAmount || (booking.totalPrice ? booking.totalPrice * 0.9 : 0)).toLocaleString()}
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Booked On</p>
@@ -3031,30 +3354,6 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
         {/* Sidebar */}
         <aside className="space-y-6">
           <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
-            <h3 className="text-lg font-serif font-bold text-primary mb-4">Booking Actions</h3>
-            <div className="space-y-3">
-              {booking.status === 'pending' && (
-                <>
-                  <Button className="w-full" onClick={() => handleStatusUpdate('confirmed')} disabled={updating}>
-                    {updating ? 'Processing...' : 'Confirm Booking'}
-                  </Button>
-                  <Button variant="outline" className="w-full text-red-500 border-red-200 hover:bg-red-50" onClick={() => handleStatusUpdate('cancelled')} disabled={updating}>
-                    Cancel Booking
-                  </Button>
-                </>
-              )}
-              {booking.status === 'confirmed' && (
-                <Button variant="outline" className="w-full text-red-500 border-red-200 hover:bg-red-50" onClick={() => handleStatusUpdate('cancelled')} disabled={updating}>
-                  Cancel Booking
-                </Button>
-              )}
-              {booking.status === 'cancelled' && (
-                <div className="text-center text-gray-500 text-sm">This booking has been cancelled</div>
-              )}
-            </div>
-          </div>
-          
-          <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
             <h3 className="text-lg font-serif font-bold text-primary mb-4">Quick Stats</h3>
             <div className="space-y-4">
               <div className="flex justify-between">
@@ -3062,12 +3361,14 @@ export const BookingDetailView: React.FC<{ booking: any; onBack: () => void }> =
                 <span className="font-bold text-primary">{booking.quantity}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Total</span>
-                <span className="font-bold text-primary">{booking.currency} {booking.totalPrice}</span>
+                <span className="text-gray-500 text-sm">Total Price</span>
+                <span className="font-bold text-secondary">
+                  ETB {(booking.organizerAmount || (booking.totalPrice ? booking.totalPrice * 0.9 : 0)).toLocaleString()}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 text-sm">Guest</span>
-                <span className="font-bold text-primary">{booking.tourist?.name || 'Guest'}</span>
+                <span className="font-bold text-primary">{booking.contactInfo?.fullName || 'Guest'}</span>
               </div>
             </div>
           </div>
@@ -3087,17 +3388,23 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
   const [showDateRange, setShowDateRange] = useState(false);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [bookings, setBookings] = useState<any[]>([]);
+  const [festivals, setFestivals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchBookings = async () => {
+    const fetchData = async () => {
       try {
-        const response = await apiClient.get('/api/organizer/bookings');
-        if (response.success) {
-          setBookings(response.bookings);
-        } else {
-          setError(response.message || 'Failed to fetch bookings');
+        const [bookingsRes, festivalsRes] = await Promise.all([
+          apiClient.get('/api/organizer/bookings'),
+          apiClient.get('/api/organizer/festivals')
+        ]);
+
+        if (bookingsRes.success) {
+          setBookings(bookingsRes.bookings);
+        }
+        if (festivalsRes.success) {
+          setFestivals(festivalsRes.festivals);
         }
       } catch (err: any) {
         setError(err.message || 'An error occurred');
@@ -3105,7 +3412,7 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
         setLoading(false);
       }
     };
-    fetchBookings();
+    fetchData();
   }, []);
 
   const handleExportCSV = () => {
@@ -3133,12 +3440,34 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
   };
 
   const filteredBookings = bookings.filter(b => {
-    const guestName = b.contactInfo?.fullName || '';
-    const eventName = b.festival?.name || '';
-    if (searchQuery && !b._id?.toLowerCase().includes(searchQuery.toLowerCase()) && !guestName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (eventFilter !== 'All Events' && eventName !== eventFilter) return false;
-    if (statusFilter !== 'All' && b.status !== statusFilter.toLowerCase()) return false;
+    const guestName = (b.contactInfo?.fullName || '').toLowerCase();
+    const guestEmail = (b.contactInfo?.email || '').toLowerCase();
+    const eventName = (b.festival?.name || '').toLowerCase();
+    const bookingId = (b._id || '').toLowerCase();
+    const query = searchQuery.toLowerCase();
+
+    // Search filter: ID, Name, Email, or Event Name
+    const matchesSearch = !searchQuery || 
+      bookingId.includes(query) || 
+      guestName.includes(query) || 
+      guestEmail.includes(query) || 
+      eventName.includes(query);
+
+    if (!matchesSearch) return false;
+
+    // Event filter
+    if (eventFilter !== 'All Events' && b.festival?.name !== eventFilter) return false;
+    
+    // Status filter
+    if (statusFilter !== 'All') {
+      const isCompleted = b.festival?.endDate && new Date(b.festival.endDate) < new Date();
+      const eventStatus = isCompleted ? 'Completed' : 'Published';
+      if (eventStatus !== statusFilter) return false;
+    }
+    
+    // Ticket Type filter
     if (ticketTypeFilter !== 'All' && b.ticketType !== ticketTypeFilter.toLowerCase()) return false;
+    
     return true;
   });
 
@@ -3174,12 +3503,34 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
     }
   };
 
-  const totalTickets = filteredBookings.reduce((acc, b) => acc + (b.quantity || 0), 0);
-  const confirmedBookings = filteredBookings.filter(b => b.status === 'confirmed').reduce((acc, b) => acc + (b.quantity || 0), 0);
-  const totalRevenue = filteredBookings.reduce((acc, b) => acc + (b.totalPrice || 0), 0);
+  // Summary Stats based on Event Filter ONLY (not affected by search or status filters)
+  const eventScopedBookings = bookings.filter(b => {
+    if (eventFilter !== 'All Events' && b.festival?.name !== eventFilter) return false;
+    return true;
+  });
 
-  if (loading) {
-    return <div className="text-center p-10">Loading bookings...</div>;
+  const totalTicketsSold = eventScopedBookings.reduce((acc, b) => acc + (b.quantity || 0), 0);
+  // Count all booked tickets for the scoped events
+   const confirmedTicketsCount = eventScopedBookings
+     .reduce((acc, b) => acc + (b.quantity || 0), 0);
+
+   const netIncomeValue = eventScopedBookings
+     .reduce((acc, b) => {
+       // Use pre-calculated organizerAmount if available, else calculate manually (90%)
+       const amount = b.organizerAmount || (b.totalPrice ? b.totalPrice * 0.9 : 0);
+       return acc + amount;
+     }, 0);
+
+  // Total Capacity Calculation
+  let totalCapacityValue = 0;
+  if (eventFilter === 'All Events') {
+    totalCapacityValue = festivals.reduce((acc, f) => {
+      const festivalCapacity = f.totalCapacity || f.ticketTypes?.reduce((tAcc: number, t: any) => tAcc + (t.quantity || t.capacity || 0), 0) || 0;
+      return acc + festivalCapacity;
+    }, 0);
+  } else {
+    const selectedFestival = festivals.find(f => f.name === eventFilter);
+    totalCapacityValue = selectedFestival?.totalCapacity || selectedFestival?.ticketTypes?.reduce((tAcc: number, t: any) => tAcc + (t.quantity || t.capacity || 0), 0) || 0;
   }
 
   if (error) {
@@ -3198,42 +3549,78 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
         </div>
       </header>
 
+      {/* Event Context Banner */}
+      <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-2xl bg-primary/10 text-primary">
+            <Info className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-0.5">Active Scope</p>
+            <h3 className="text-xl font-serif font-bold text-primary">
+              {eventFilter === 'All Events' ? 'All Published Events' : `Event: ${eventFilter}`}
+            </h3>
+          </div>
+        </div>
+        <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-ethio-bg rounded-xl border border-gray-100">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+          <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Live Monitoring</span>
+        </div>
+      </div>
+
       {/* Real-Time Check-in Counter & Payout Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-blue-50 text-blue-600">
-            <Ticket className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Total Tickets</p>
-            <p className="text-xl font-bold text-primary">{totalTickets}</p>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600">
-            <UserCheck className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Confirmed</p>
-            <p className="text-xl font-bold text-primary">{confirmedBookings}</p>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-amber-50 text-amber-600">
-            <Users className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Remaining</p>
-            <p className="text-xl font-bold text-primary">{totalTickets - confirmedBookings}</p>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-purple-50 text-purple-600">
-            <DollarSign className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Net Income</p>
-            <p className="text-xl font-bold text-primary">ETB {totalRevenue.toLocaleString()}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {eventFilter !== 'All Events' && (
+          <>
+            <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+              <div className="flex items-center gap-4">
+                <div className="p-4 rounded-2xl bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                  <Ticket className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Total Capacity</p>
+                  <p className="text-2xl font-bold text-primary">{totalCapacityValue.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+              <div className="flex items-center gap-4">
+                <div className="p-4 rounded-2xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                  <UserCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Booked Ticket</p>
+                  <p className="text-2xl font-bold text-primary">{confirmedTicketsCount.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+              <div className="flex items-center gap-4">
+                <div className="p-4 rounded-2xl bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
+                  <Users className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Remaining</p>
+                  <p className="text-2xl font-bold text-primary">{Math.max(0, totalCapacityValue - confirmedTicketsCount).toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+        
+        <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-all">
+              <DollarSign className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">
+                {eventFilter === 'All Events' ? 'Net Income for All Event' : 'Net Income'}
+              </p>
+              <p className="text-2xl font-bold text-primary">ETB {netIncomeValue.toLocaleString()}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -3259,8 +3646,9 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
               className="appearance-none bg-gray-50 border-none rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer"
             >
               <option>All Events</option>
-              <option>Timket 2025 (Epiphany)</option>
-              <option>Meskel Festival</option>
+              {festivals.map(f => (
+                <option key={f.id || f._id} value={f.name}>{f.name}</option>
+              ))}
             </select>
             <ArrowUpDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
           </div>
@@ -3272,12 +3660,8 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
               className="appearance-none bg-gray-50 border-none rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer"
             >
               <option>All</option>
-              <option>Pending</option>
-              <option>Confirmed</option>
-              <option>Cancelled</option>
-              <option>Refunded</option>
-              <option>Checked-in</option>
-              <option>No-show</option>
+              <option>Published</option>
+              <option>Completed</option>
             </select>
             <ArrowUpDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
           </div>
@@ -3348,9 +3732,13 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
           <span className="text-sm font-bold">{selectedBookings.length} bookings selected</span>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/10">Export Selected</Button>
-            <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/10">Mark Checked-in</Button>
-            <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/10">Cancel</Button>
-            <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/10">Refund</Button>
+            <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/10" onClick={() => {
+              if (window.confirm(`Are you sure you want to cancel ${selectedBookings.length} bookings?`)) {
+                // Bulk cancel logic
+                selectedBookings.forEach(id => handleBookingStatusUpdate(id, 'cancelled'));
+                setSelectedBookings([]);
+              }
+            }}>Cancel</Button>
           </div>
         </div>
       )}
@@ -3412,45 +3800,33 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
                   <span className="text-sm font-bold text-primary">x{booking.quantity}</span>
                 </td>
                 <td className="px-6 py-4">
-                  <p className="text-sm font-bold text-secondary">{booking.currency} {booking.totalPrice}</p>
+                  <p className="text-sm font-bold text-secondary">
+                    {booking.currency} {(booking.organizerAmount || (booking.totalPrice ? booking.totalPrice * 0.9 : 0)).toLocaleString()}
+                  </p>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm text-gray-600 capitalize">{booking.paymentStatus}</span>
+                  <span className="text-sm text-gray-600 capitalize">
+                    {booking.paymentStatus?.toLowerCase() === 'pending' ? 'Chapa' : (booking.paymentMethod || booking.paymentStatus || 'Chapa')}
+                  </span>
                 </td>
                 <td className="px-6 py-4">
-                  <Badge variant="secondary" className={`border-none ${
-                    booking.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : 
-                    booking.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                    booking.status === 'completed' ? 'bg-blue-100 text-blue-700' :
-                    booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                    'bg-gray-100 text-gray-700'
-                  }`}>
-                    {booking.status}
-                  </Badge>
+                  {(() => {
+                    const isCompleted = booking.festival?.endDate && new Date(booking.festival.endDate) < new Date();
+                    const statusText = isCompleted ? 'Completed' : 'Published';
+                    return (
+                      <Badge variant="secondary" className={`border-none ${
+                        isCompleted ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
+                      }`}>
+                        {statusText}
+                      </Badge>
+                    );
+                  })()}
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => onViewBooking(booking._id)} className="p-2 bg-white border border-gray-100 rounded-xl text-primary hover:bg-primary hover:text-white transition-all shadow-sm">
+                    <button onClick={() => onViewBooking(booking._id || '')} className="p-2 bg-white border border-gray-100 rounded-xl text-primary hover:bg-primary hover:text-white transition-all shadow-sm">
                       <Eye className="w-4 h-4" />
                     </button>
-                    {booking.status === 'pending' && (
-                      <>
-                        <button 
-                          onClick={() => handleBookingStatusUpdate(booking._id, 'confirmed')}
-                          className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
-                          title="Confirm"
-                        >
-                          <Check className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleBookingStatusUpdate(booking._id, 'cancelled')}
-                          className="p-2 bg-red-50 border border-red-200 rounded-xl text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm"
-                          title="Cancel"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
                   </div>
                 </td>
               </tr>
@@ -3487,19 +3863,36 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
   }, []);
 
   const [activeTab, setActiveTab] = useState('All');
-  const [sortBy, setSortBy] = useState('Newest');
+  const [sortBy, setSortBy] = useState('Newest First');
   const [viewMode, setViewMode] = useState<'grid' | 'calendar'>('grid');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [showDateRange, setShowDateRange] = useState(false);
+  const [expandedRejection, setExpandedRejection] = useState<string | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [eventIdToDelete, setEventIdToDelete] = useState<string | null>(null);
 
-  const tabs = ['All', 'Draft', 'Upcoming', 'Live', 'Completed', 'Cancelled'];
+  const tabs = ['All', 'Pending', 'Published', 'Completed', 'Draft', 'Rejected'];
+
+  const isMandatoryFieldsFilled = (festival: Festival) => {
+    const f = festival as any;
+    return (
+      (f.name_en || f.name) &&
+      f.startDate &&
+      f.endDate &&
+      (f.locationName || (f.location && (f.location.name_en || f.location.name))) &&
+      (f.shortDescription_en || f.shortDescription) &&
+      (f.fullDescription_en || f.fullDescription) &&
+      f.coverImage &&
+      (f.pricing && (f.pricing.basePrice !== undefined || f.pricing.regularPrice !== undefined))
+    );
+  };
 
   const handleUpdateStatus = (id: string, newStatus: string) => {
-    setFestivals(prev => prev.map(f => f.id === id ? { ...f, status: newStatus } : f));
+    setFestivals(prev => prev.map(f => f._id === id ? { ...f, status: newStatus as any } : f));
     setOpenDropdown(null);
   };
 
@@ -3517,7 +3910,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
       const response = await apiClient.delete(`/api/organizer/festivals/${eventIdToDelete}`);
       
       if (response.success) {
-        setFestivals(prev => prev.filter(f => f.id !== eventIdToDelete));
+        setFestivals(prev => prev.filter(f => f._id !== eventIdToDelete));
         setShowDeleteConfirm(false);
       } else {
         setError(response.message || 'Failed to delete event');
@@ -3533,24 +3926,68 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
   };
 
   const filteredFestivals = festivals.filter(f => {
-    if (activeTab !== 'All' && f.status !== activeTab) return false;
-    if (searchQuery && !f.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    // Status Filter logic
+    if (activeTab === 'All') {
+      // In "All", only show Pending, Published, and Completed
+      const isPending = f.verificationStatus === 'Pending Approval' || f.verificationStatus === 'Pending Review';
+      const isPublished = f.verificationStatus === 'Approved';
+      const isCompleted = f.verificationStatus === 'Approved' && new Date(f.endDate) < new Date();
+      
+      if (!isPending && !isPublished && !isCompleted) return false;
+    } else {
+      if (activeTab === 'Pending') {
+        if (f.verificationStatus !== 'Pending Approval' && f.verificationStatus !== 'Pending Review') return false;
+      } else if (activeTab === 'Published') {
+        if (f.verificationStatus !== 'Approved') return false;
+      } else if (activeTab === 'Completed') {
+        if (!(f.verificationStatus === 'Approved' && new Date(f.endDate) < new Date())) return false;
+      } else if (activeTab === 'Draft') {
+        if (f.verificationStatus !== 'Draft') return false;
+      } else if (activeTab === 'Rejected') {
+        if (f.verificationStatus !== 'Rejected') return false;
+      }
+    }
+    
+    // Search by localized name
+    const localizedName = (getLocalizedText(f, 'name', language) || f.name || '').toLowerCase();
+    if (searchQuery && !localizedName.includes(searchQuery.toLowerCase())) return false;
+    
+    // Date Range Filter
+    if (dateRange.start || dateRange.end) {
+      const festivalStartDate = new Date(f.startDate);
+      const festivalEndDate = new Date(f.endDate);
+      
+      // Reset times for date-only comparison
+      festivalStartDate.setHours(0, 0, 0, 0);
+      festivalEndDate.setHours(23, 59, 59, 999);
+      
+      if (dateRange.start) {
+        const filterStartDate = new Date(dateRange.start);
+        filterStartDate.setHours(0, 0, 0, 0);
+        if (festivalEndDate < filterStartDate) return false;
+      }
+      
+      if (dateRange.end) {
+        const filterEndDate = new Date(dateRange.end);
+        filterEndDate.setHours(23, 59, 59, 999);
+        if (festivalStartDate > filterEndDate) return false;
+      }
+    }
+    
     return true;
   }).sort((a, b) => {
-    if (sortBy === 'Highest Revenue') return b.revenue - a.revenue;
-    if (sortBy === 'Most Booked') return b.ticketsSold - a.ticketsSold;
-    if (sortBy === 'Soonest Event Date') return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
-    return 0; // Default Newest
+    // Only apply sorting for Completed tab
+    if (activeTab === 'Completed') {
+      if (sortBy === 'Most Booked') return ((b as any).ticketsSold || 0) - ((a as any).ticketsSold || 0);
+      if (sortBy === 'Soonest') return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+      if (sortBy === 'Newest First') return new Date((b as any).createdAt || b.submittedAt || 0).getTime() - new Date((a as any).createdAt || a.submittedAt || 0).getTime();
+    }
+    return 0;
   });
 
   const totalEvents = festivals.length;
-  const activeEvents = festivals.filter(f => ['Live', 'Upcoming'].includes(f.status)).length;
-  const totalTickets = festivals.reduce((acc, f) => acc + f.ticketsSold, 0);
-  const totalRevenue = festivals.reduce((acc, f) => acc + f.revenue, 0);
-
-  if (loading) {
-    return <div className="text-center p-10">Loading your events...</div>;
-  }
+  const activeEvents = festivals.filter(f => f.status === 'Published').length;
+  const totalTickets = festivals.reduce((acc, f) => acc + ((f as any).ticketsSold || 0), 0);
 
   if (error) {
     return <div className="text-center p-10 text-red-500">Error: {error}</div>;
@@ -3578,9 +4015,112 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
 
       {/* Festivals List */}
       <div className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm">
-        <div className="flex justify-between items-center mb-8">
-          <h3 className="text-xl font-serif font-bold text-primary">Your Active & Upcoming Festivals ({festivals.length})</h3>
-          {/* Add filtering/sorting options here if needed */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
+          <h3 className="text-2xl font-serif font-bold text-primary">
+            {filteredFestivals.length} {filteredFestivals.length === 1 ? 'Posted Event' : 'Posted Events'}
+          </h3>
+          
+          <div className="w-full lg:w-auto flex flex-wrap items-center gap-4">
+            {/* Search */}
+            <div className="relative flex-1 min-w-[320px]">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input 
+                type="text" 
+                placeholder="Search by festival title..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-gray-50 border-none rounded-2xl py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/10 transition-all shadow-inner"
+              />
+            </div>
+
+            {/* Status Dropdown */}
+            <div className="relative min-w-[140px]">
+              <select 
+                value={activeTab}
+                onChange={(e) => setActiveTab(e.target.value)}
+                className="w-full appearance-none bg-gray-50 border-none rounded-2xl py-3 pl-5 pr-12 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer shadow-sm"
+              >
+                {tabs.map(tab => (
+                  <option key={tab} value={tab}>{tab}</option>
+                ))}
+              </select>
+              <ArrowUpDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+
+            {/* Date Range Picker */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowDateRange(!showDateRange)}
+                className="flex items-center gap-3 bg-gray-50 rounded-2xl py-3 px-5 text-sm font-bold text-primary hover:bg-gray-100 transition-all"
+              >
+                <Calendar className="w-4 h-4 text-secondary" />
+                {dateRange.start && dateRange.end ? `${dateRange.start} - ${dateRange.end}` : 'Date Range'}
+                <ArrowUpDown className="w-4 h-4 text-gray-400" />
+              </button>
+              
+              {showDateRange && (
+                <div className="absolute top-full right-0 mt-3 bg-white p-6 rounded-[32px] shadow-2xl border border-gray-100 z-30 w-80 animate-in fade-in zoom-in-95">
+                  <div className="space-y-5">
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Start Date</label>
+                      <input 
+                        type="date" 
+                        value={dateRange.start}
+                        onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                        className="w-full bg-gray-50 border-none rounded-xl py-2.5 px-4 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">End Date</label>
+                      <input 
+                        type="date" 
+                        value={dateRange.end}
+                        onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                        className="w-full bg-gray-50 border-none rounded-xl py-2.5 px-4 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                      />
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 rounded-xl" 
+                        onClick={() => {
+                          setDateRange({ start: '', end: '' });
+                          setShowDateRange(false);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        variant="primary" 
+                        size="sm" 
+                        className="flex-1 rounded-xl" 
+                        onClick={() => setShowDateRange(false)}
+                      >
+                        OK
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sort Dropdown - Only show for Completed tab */}
+            {activeTab === 'Completed' && (
+              <div className="relative min-w-[160px]">
+                <select 
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="w-full appearance-none bg-gray-50 border-none rounded-2xl py-3 pl-5 pr-12 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer shadow-sm hover:bg-gray-100"
+                >
+                  <option value="Newest First">Newest First</option>
+                  <option value="Soonest">Soonest</option>
+                  <option value="Most Booked">Most Booked</option>
+                </select>
+                <ArrowUpDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+            )}
+          </div>
         </div>
 
         {festivals.length === 0 ? (
@@ -3591,16 +4131,26 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {festivals.map(festival => (
-              <div key={festival._id} onClick={() => onManageEvent(festival._id)} className="bg-white border border-gray-100 rounded-[32px] overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 group cursor-pointer">
+            {filteredFestivals.map(festival => (
+              <div key={festival._id} onClick={() => onManageEvent(festival._id || festival.id)} className="bg-white border border-gray-100 rounded-[32px] overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 group cursor-pointer">
                 <div className="h-48 overflow-hidden">
                   <img src={festival.coverImage || `https://picsum.photos/seed/${festival._id}/600/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={getLocalizedText(festival, 'name', language)} />
                 </div>
                 <div className="p-6 space-y-4">
                   <div className="flex justify-between items-start">
                     <h4 className="text-lg font-serif font-bold text-primary leading-tight pr-4">{getLocalizedText(festival, 'name', language)}</h4>
-                    <Badge variant={new Date(festival.startDate) > new Date() ? 'secondary' : 'success'}>
-                      {new Date(festival.startDate) > new Date() ? 'Upcoming' : 'Live'}
+                    <Badge variant={
+                      festival.verificationStatus === 'Rejected' ? 'error' : 
+                      (festival.verificationStatus === 'Pending Approval' || festival.verificationStatus === 'Pending Review') ? 'warning' :
+                      festival.status === 'Draft' ? 'secondary' : 
+                      (festival.status === 'Completed' || new Date(festival.endDate) < new Date() ? 'outline' : 'success')
+                    }>
+                      {
+                        festival.verificationStatus === 'Rejected' ? 'Rejected' : 
+                        (festival.verificationStatus === 'Pending Approval' || festival.verificationStatus === 'Pending Review') ? 'Pending' :
+                        festival.status === 'Draft' ? 'Draft' : 
+                        (festival.status === 'Completed' || new Date(festival.endDate) < new Date() ? 'Completed' : 'Published')
+                      }
                     </Badge>
                   </div>
                   <div className="text-xs text-gray-400 font-bold uppercase tracking-wider space-y-2">
@@ -3608,11 +4158,71 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
                     <p className="flex items-center gap-2"><MapPin className="w-3 h-3 text-secondary" /> {getLocalizedText(festival, 'locationName', language)}</p>
                   </div>
                   <div className="pt-4 border-t border-gray-100 flex flex-col gap-2">
-                  <div className="flex gap-2">
-                   <Button variant="primary" size="sm" className="flex-1" onClick={() => onManageEvent(festival._id)}>Manage</Button>
-                      <Button variant="outline" size="sm" className="flex-1" disabled={festival.verificationStatus === 'Approved'}>View Public</Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="primary" 
+                        size="sm" 
+                        className="flex-1" 
+                        onClick={(e) => { e.stopPropagation(); onManageEvent(festival._id || festival.id); }}
+                      >
+                        {(() => {
+                          const isRejected = festival.verificationStatus === 'Rejected';
+                          const isPending = festival.verificationStatus === 'Pending Approval' || festival.verificationStatus === 'Pending Review';
+                          const isDraft = festival.status === 'Draft';
+                          const isCompleted = festival.status === 'Completed' || new Date(festival.endDate) < new Date();
+                          
+                          if (isCompleted || (!isRejected && !isPending && !isDraft)) {
+                            return 'Details';
+                          }
+                          return 'Manage';
+                        })()}
+                      </Button>
                     </div>
-                     {[(festival as any).verificationStatus === 'Draft', (festival as any).verificationStatus === 'Rejected'].includes(true) && (
+                     {festival.verificationStatus === 'Rejected' && (
+                       <div className="space-y-3">
+                         <div className="p-3 bg-red-50 border border-red-100 rounded-xl">
+                           <div 
+                             className="flex justify-between items-center cursor-pointer"
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               setExpandedRejection(expandedRejection === festival._id ? null : festival._id || null);
+                             }}
+                           >
+                             <p className="text-[10px] font-bold text-red-600 uppercase">Rejection Reason</p>
+                             <ChevronRight className={`w-3 h-3 text-red-600 transition-transform ${expandedRejection === festival._id ? 'rotate-90' : ''}`} />
+                           </div>
+                           {expandedRejection === festival._id && (
+                             <p className="text-xs text-red-700 mt-2 animate-in fade-in slide-in-from-top-1">
+                               {festival.rejectionReason || 'Please edit and resubmit your event'}
+                             </p>
+                           )}
+                         </div>
+                         <Button 
+                           variant="secondary" 
+                           size="sm" 
+                           className="w-full"
+                           onClick={async (e) => {
+                             e.stopPropagation();
+                             try {
+                               const res = await fetch(`/api/organizer/festivals/${festival._id}/submit`, { method: 'POST' });
+                               const data = await res.json();
+                               if (data.success) {
+                                 setFestivals(prev => prev.map(f => f._id === festival._id ? { ...f, verificationStatus: 'Pending Approval', submittedAt: new Date().toISOString() } : f));
+                                 alert('Event resubmitted for review');
+                               } else {
+                                 alert(data.message || 'Failed to resubmit');
+                               }
+                             } catch (err) {
+                               alert('Error resubmitting event');
+                             }
+                           }}
+                         >
+                           Resubmit for Review
+                         </Button>
+                       </div>
+                     )}
+
+                     {festival.status === 'Draft' && festival.verificationStatus === 'Draft' && isMandatoryFieldsFilled(festival) && (
                        <Button 
                          variant="secondary" 
                          size="sm" 
@@ -3623,7 +4233,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
                              const res = await fetch(`/api/organizer/festivals/${festival._id}/submit`, { method: 'POST' });
                              const data = await res.json();
                              if (data.success) {
-                               setFestivals(prev => prev.map(f => f._id === festival._id ? { ...f, verificationStatus: 'Pending Review', submittedAt: new Date().toISOString() } : f));
+                               setFestivals(prev => prev.map(f => f._id === festival._id ? { ...f, verificationStatus: 'Pending Approval', submittedAt: new Date().toISOString() } : f));
                                alert('Event submitted for review');
                              } else {
                                alert(data.message || 'Failed to submit');
@@ -3633,43 +4243,29 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
                            }
                          }}
                        >
-                         {(festival as any).verificationStatus === 'Rejected' ? 'Resubmit for Review' : 'Submit for Review'}
+                         Submit for Review
                        </Button>
                      )}
-                    {(festival as any).verificationStatus === 'Pending Review' && (
-                      <div className="text-center text-xs text-amber-600 py-1 bg-amber-50 rounded-lg">
+                    {(festival.verificationStatus === 'Pending Approval' || festival.verificationStatus === 'Pending Review') && (
+                      <div className="text-center text-xs text-amber-600 py-2 bg-amber-50 rounded-xl font-bold uppercase tracking-wider border border-amber-100">
                         Awaiting Admin Review
                       </div>
                     )}
-                    {festival.verificationStatus === 'Approved' && (
+                    {festival.verificationStatus === 'Approved' && festival.status === 'Published' && (
                       <>
-                        <div className="text-center text-xs text-emerald-600 py-1 bg-emerald-50 rounded-lg">
-                          Published
+                        <div className="text-center text-xs text-emerald-600 py-2 bg-emerald-50 rounded-xl font-bold uppercase tracking-wider border border-emerald-100">
+                          Published & Live
                         </div>
-                        {(festival as any).isEditedAfterApproval && (
-                          <div className="text-center text-xs text-amber-600 py-1 bg-amber-50 rounded-lg mt-1">
+                        {festival.isEditedAfterApproval && (
+                          <div className="text-center text-xs text-amber-600 py-2 bg-amber-50 rounded-xl font-bold uppercase tracking-wider border border-amber-100 mt-1">
                             Pending Re-verification
                           </div>
                         )}
                       </>
                     )}
-                    {festival.verificationStatus === 'Rejected' && (
-                      <div className="space-y-2">
-                        <div className="p-3 bg-red-50 border border-red-100 rounded-xl">
-                          <p className="text-[10px] font-bold text-red-600 uppercase mb-1">Rejection Reason</p>
-                          <p className="text-xs text-red-700">{(festival as any).rejectionReason || 'Please edit and resubmit your event'}</p>
-                        </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="w-full text-red-600 border-red-200 hover:bg-red-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onManageEvent(festival._id);
-                          }}
-                        >
-                          Edit & Resubmit
-                        </Button>
+                    {(festival.status === 'Completed' || (festival.status === 'Published' && new Date(festival.endDate) < new Date())) && (
+                      <div className="text-center text-xs text-gray-500 py-2 bg-gray-50 rounded-xl font-bold uppercase tracking-wider border border-gray-100">
+                        Event Completed
                       </div>
                     )}
                   </div>
@@ -3690,7 +4286,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
               </div>
               <h3 className="text-xl font-bold text-primary mb-2">Delete Event?</h3>
               <p className="text-gray-500 mb-6">
-                Are you sure you want to delete <strong className="text-primary">{festivals.find(f => f.id === eventIdToDelete)?.name}</strong>? 
+                Are you sure you want to delete <strong className="text-primary">{festivals.find(f => f._id === eventIdToDelete)?.name}</strong>? 
                 This action cannot be undone and all data will be permanently lost.
               </p>
               <div className="flex gap-3">
@@ -3730,7 +4326,7 @@ export const OrganizerDashboard: React.FC = () => {
 
   const handleManageEvent = (id: string) => setSelectedEventId(id);
   const handleBack = () => setSelectedEventId(null);
-  const handleCreate = () => router.push('/dashboard/organizer/create-event');
+  const handleCreate = () => router.push('/dashboard/organizer/festivals/create');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -3765,34 +4361,40 @@ export const OrganizerDashboard: React.FC = () => {
         </div>
         <Button variant="primary" size="lg" leftIcon={Plus} onClick={handleCreate}>Create Event</Button>
       </header>
-      {loading ? (
-        <div className="flex items-center justify-center h-64"><RefreshCw className="w-10 h-10 text-primary animate-spin" /></div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {festivals.map((festival) => (
-            <div key={festival._id} className="bg-white rounded-[32px] overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 group">
-              <div className="h-48 overflow-hidden">
-                <img src={festival.coverImage || 'https://images.unsplash.com/photo-1533174072545-7a4b6dad2cf7?w=800&h=400&fit=crop'} alt={getLocalizedText(festival, 'name', language)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {festivals.map((festival) => (
+          <div key={festival._id} onClick={() => handleManageEvent(festival._id || festival.id)} className="bg-white rounded-[32px] overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 group cursor-pointer">
+            <div className="h-48 overflow-hidden">
+              <img src={festival.coverImage || 'https://images.unsplash.com/photo-1533174072545-7a4b6dad2cf7?w=800&h=400&fit=crop'} alt={festival.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            </div>
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-lg font-bold text-primary line-clamp-1">{festival.name}</h3>
+                <Badge variant={
+                  festival.verificationStatus === 'Rejected' ? 'error' : 
+                  (festival.verificationStatus === 'Pending Approval' || festival.verificationStatus === 'Pending Review') ? 'warning' :
+                  festival.status === 'Draft' ? 'secondary' : 
+                  (festival.status === 'Completed' || new Date(festival.endDate) < new Date() ? 'outline' : 'success')
+                }>
+                  {
+                    festival.verificationStatus === 'Rejected' ? 'Rejected' : 
+                    (festival.verificationStatus === 'Pending Approval' || festival.verificationStatus === 'Pending Review') ? 'Pending' :
+                    festival.status === 'Draft' ? 'Draft' : 
+                    (festival.status === 'Completed' || new Date(festival.endDate) < new Date() ? 'Completed' : 'Published')
+                  }
+                </Badge>
               </div>
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-lg font-bold text-primary line-clamp-1">{getLocalizedText(festival, 'name', language)}</h3>
-                  <Badge variant={festival.status === 'published' ? 'success' : 'warning'}>{festival.status}</Badge>
-                </div>
-                <p className="text-xs text-gray-400 mb-3">{festival.startDate ? new Date(festival.startDate).toLocaleDateString() : 'TBA'}</p>
-                <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
-                  <p className="flex items-center gap-1"><Ticket className="w-3 h-3" /> {festival.ticketsSold || 0} sold</p>
-                  <p className="flex items-center gap-1"><DollarSign className="w-3 h-3" /> ETB {festival.revenue || 0}</p>
-                </div>
-                <div className="pt-4 border-t border-gray-100 flex gap-3">
-                  <Button variant="primary" size="sm" className="flex-1" onClick={() => onManageEvent(festival._id)}>Manage</Button>
-                  <Button variant="outline" size="sm" className="flex-1">View Public</Button>
-                </div>
+              <p className="text-xs text-gray-400 mb-3">{festival.startDate ? new Date(festival.startDate).toLocaleDateString() : 'TBA'}</p>
+              <div className="items-center gap-4 text-xs text-gray-500 mb-4 flex">
+                <p className="flex items-center gap-1"><Ticket className="w-3 h-3" /> {festival.ticketsSold || 0} sold</p>
+              </div>
+              <div className="pt-4 border-t border-gray-100 flex gap-3">
+                <Button variant="primary" size="sm" className="flex-1" onClick={(e) => { e.stopPropagation(); handleManageEvent(festival._id || festival.id); }}>Manage</Button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

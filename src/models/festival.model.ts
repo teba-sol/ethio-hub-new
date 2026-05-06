@@ -18,7 +18,7 @@ export interface ITicketType {
   price: number;
   quantity: number;       // Total inventory
   available: number;      // Available (decremented on booking)
-  benefits?: string[];
+  perks?: string[];       // Priority perks (VIP only)
 }
 
 export interface IRoom extends Document {
@@ -35,6 +35,7 @@ export interface IRoom extends Document {
   description_en?: string;
   description_am?: string;
   sqm?: number;           // Room size in square meters
+  tier: 'vip' | 'standard' | 'both';  // Which ticket tiers can book this room
   amenities?: string[];    // Room amenities (WiFi, AC, etc.)
 }
 
@@ -58,6 +59,11 @@ export interface IHotel extends Document {
   facilities?: string[];
   gallery?: string[];
   rooms: IRoom[];
+  hotelServices?: Array<{  // Pay-at-hotel services (display only)
+    name: string;
+    price: number;
+    description?: string;
+  }>;
 }
 
 export interface ITransportation extends Document {
@@ -73,6 +79,8 @@ export interface ITransportation extends Document {
   availability?: number;  // Total vehicles available
   available?: number;     // Available vehicles (decremented on booking)
   capacity?: number;      // Passenger capacity per vehicle
+  vipIncluded?: boolean;  // If true, VIP ticket holders get this transport free
+  features?: string[];    // Vehicle features (matches schema)
   pickupLocations?: string;
 }
 
@@ -111,6 +119,7 @@ export interface IFestival extends Document {
   fullDescription_am: string;
   startDate: Date;
   endDate: Date;
+  totalCapacity: number;
   location: {
     name: string; // for backward compatibility
     name_en: string;
@@ -121,7 +130,7 @@ export interface IFestival extends Document {
   organizer: mongoose.Types.ObjectId;
   coverImage?: string;
   gallery?: string[];
-  status: 'Draft' | 'Published' | 'Cancelled';
+  status: 'Draft' | 'Published' | 'Completed' | 'Cancelled';
   isVerified: boolean;
   verificationStatus: 'Draft' | 'Pending Approval' | 'Under Review' | 'Approved' | 'Rejected';
   submittedAt?: Date;
@@ -141,6 +150,7 @@ export interface IFestival extends Document {
   pricing: IPricing;
   createdAt: Date;
   updatedAt: Date;
+  reportsCount: number;
 }
 
 // Define schemas
@@ -161,7 +171,7 @@ const TicketTypeSchema: Schema = new Schema({
   price: { type: Number, required: true },
   quantity: { type: Number, required: true, default: 0 },     // Total inventory
   available: { type: Number, required: true, default: 0 },     // Available (decremented on booking)
-  benefits: [{ type: String }],
+  perks: [{ type: String }],  // Priority perks (VIP only)
 }, { _id: true });
 
 // SIMPLIFIED: Room Schema - with all fields
@@ -179,6 +189,7 @@ const RoomSchema: Schema = new Schema({
   description_en: { type: String },
   description_am: { type: String },
   sqm: { type: Number },                            // Room size in sqm
+  tier: { type: String, enum: ['vip', 'standard', 'both'], default: 'both' },  // Which tiers can book
   amenities: [{ type: String }],                    // Room amenities
 }, { _id: true });
 
@@ -214,6 +225,11 @@ const HotelSchema: Schema = new Schema({
   facilities: [{ type: String }],
   gallery: [{ type: String }],
   rooms: [RoomSchema],
+  hotelServices: [{  // Pay-at-hotel services (display only)
+    name: { type: String, required: true },
+    price: { type: Number, required: true },
+    description: { type: String }
+  }],
 });
 
 const TransportationSchema: Schema = new Schema({
@@ -229,6 +245,7 @@ const TransportationSchema: Schema = new Schema({
   availability: { type: Number },       // Total vehicles available
   available: { type: Number },          // Available vehicles (decremented on booking)
   capacity: { type: Number },
+  vipIncluded: { type: Boolean, default: false },  // VIP ticket holders get this free
   features: [{ type: String }],
   pickupLocations: { type: String },
 });
@@ -274,6 +291,7 @@ const FestivalSchema: Schema = new Schema(
     fullDescription_am: { type: String, required: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
+    totalCapacity: { type: Number, default: 0 },
     location: {
   name: { type: String },
       name_en: { type: String, required: true },
@@ -293,7 +311,7 @@ const FestivalSchema: Schema = new Schema(
     gallery: [{ type: String }],
     status: {
       type: String,
-      enum: ['Draft', 'Published', 'Cancelled'],
+      enum: ['Draft', 'Published', 'Completed', 'Cancelled'],
       default: 'Draft',
     },
     isVerified: { type: Boolean, default: false },
@@ -317,6 +335,7 @@ const FestivalSchema: Schema = new Schema(
     services: ServicesSchema,
     policies: PoliciesSchema,
     pricing: PricingSchema,
+    reportsCount: { type: Number, default: 0 },
   },
   {
     timestamps: true,

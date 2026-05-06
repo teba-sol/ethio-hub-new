@@ -103,14 +103,18 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
     return ticketSelection.price * ticketSelection.quantity;
   };
   
-  const getHotelTotal = () => {
-    if (!selectedRoom || !checkIn || !checkOut) return 0;
-    const roomTotal = selectedRoom.pricePerNight * hotelNights * guests;
-    const foodTotal = (selectedFoodPackages || []).reduce(
-      (sum: number, pkg: any) => sum + (pkg?.pricePerPerson || 0) * guests, 0
-    );
-    return roomTotal + foodTotal;
-  };
+const getHotelTotal = () => {
+  if (!selectedRoom || !checkIn || !checkOut) return 0;
+  // VIP guests get included rooms free if room tier matches
+  const isVip = ticketSelection?.type === 'vip';
+  const roomIncluded = isVip && (selectedRoom.tier === 'vip' || selectedRoom.tier === 'both');
+  if (roomIncluded) return 0;
+  const roomTotal = selectedRoom.pricePerNight * hotelNights * guests;
+  const foodTotal = (selectedFoodPackages || []).reduce(
+    (sum: number, pkg: any) => sum + (pkg?.pricePerPerson || 0) * guests, 0
+  );
+  return roomTotal + foodTotal;
+};
   
   const getFoodPackageTotal = () => {
     return (selectedFoodPackages || []).reduce(
@@ -118,10 +122,14 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
     );
   };
   
-  const getTransportTotal = () => {
-    if (!selectedTransport) return 0;
-    return selectedTransport.price * transportDays;
-  };
+const getTransportTotal = () => {
+  if (!selectedTransport) return 0;
+  // VIP guests get included transport free if vipIncluded is true
+  const isVip = ticketSelection?.type === 'vip';
+  const transportIncluded = isVip && selectedTransport.vipIncluded;
+  if (transportIncluded) return 0;
+  return selectedTransport.price * transportDays;
+};
   
   const getGrandTotal = () => {
     return getTicketTotal() + getHotelTotal() + getTransportTotal() + getServiceFee();

@@ -57,6 +57,14 @@ export const translations: Record<Language, TranslationDictionary> = {
       payNow: "Pay Now",
       secureCheckout: "Secure checkout powered by Chapa & Telebirr"
     },
+    productCard: {
+      onlyLeft: "Only {count} left",
+      by: "By:",
+      shipsIn: "Ships in",
+      details: "Details",
+      add: "Add",
+      addToWishlist: "Add {name} to wishlist"
+    },
     // Footer (Original English)
     footer: {
       tagline: "Preserving centuries of Ethiopian craftsmanship through a secure, unified marketplace aligned with the Digital Ethiopia 2025 strategy.",
@@ -581,7 +589,6 @@ export const translations: Record<Language, TranslationDictionary> = {
         showBothFields: "Show fields for both languages",
         englishOnly: "English Only (Foreign Audience)",
         amharicOnly: "Amharic Only (Native Audience)",
-        festivalType: "Festival Type",
         typeReligious: "Religious",
         typeCulturalTraditional: "Cultural / Traditional",
         typeNationalPublicHolidays: "National / Public Holidays"
@@ -627,6 +634,23 @@ export const translations: Record<Language, TranslationDictionary> = {
     upcomingEventsFestivals: "Upcoming Events & Festivals",
     discoverCrafts: "Discover Crafts",
     exploreFestivals: "Explore Festivals",
+    browseArtisans: "Browse Artisans",
+    viewAllFestivals: "View All Festivals",
+    bookNow: "Book Now",
+    startingAt: "Starting at",
+    ethioCraft: "Ethio Craft",
+    hub: "Hub",
+    handmadeCraftAlt: "Ethiopian handmade craft",
+    marketFestivalAlt: "Ethiopian market and festival detail",
+    timelessAttractions: "Timeless Attractions",
+    timelessCraftTraditions: "Timeless Craft Traditions",
+    timelessCraftDesc: "From woven cotton and coffee ceremony clayware to silver crosses and Harari baskets, every product carries a place, a maker, and a cultural memory.",
+    wovenTextiles: "Woven Textiles",
+    wovenTextilesMeta: "Dorze, Shema, Gabi",
+    coffeeCeremony: "Coffee Ceremony",
+    coffeeCeremonyMeta: "Jebena and serving sets",
+    heritageJewelry: "Heritage Jewelry",
+    heritageJewelryMeta: "Silver crosses and beadwork",
     discoverHeart: "Discover the Heart of",
       ethiopianHeritage: "Ethiopian Heritage.",
       verifiedArtisans: "Verified Artisans",
@@ -716,23 +740,7 @@ export const translations: Record<Language, TranslationDictionary> = {
        sortBy: "Sort by:",
        showing: "Showing ",
        results: " results",
-       resultsShowing: "Showing {count} results",
-      // Additional homepage strings
-      viewAllFestivals: "View All Festivals",
-      timelessAttractions: "Timeless Attractions",
-      timelessCraftTraditions: "Timeless Craft Traditions",
-      craftDescription: "From woven cotton and coffee ceremony clayware to silver crosses and Harari baskets, every product carries a place, a maker, and a cultural memory.",
-      startingAt: "Starting at",
-      bookNow: "Book Now",
-      browseArtisans: "Browse Artisans",
-      wovenTextiles: "Woven Textiles",
-      coffeeCeremony: "Coffee Ceremony",
-      heritageJewelry: "Heritage Jewelry",
-      wovenTextilesMeta: "Dorze, Shema, Gabi",
-      coffeeCeremonyMeta: "Jebena and serving sets",
-      heritageJewelryMeta: "Silver crosses and beadwork",
-      ethioCraft: "Ethio Craft",
-      hub: "Hub"
+       resultsShowing: "Showing {count} results"
       },
       festival: {
         hero: {
@@ -984,6 +992,15 @@ export const translations: Record<Language, TranslationDictionary> = {
     back: "ተመለስ",
     payNow: "አሁን ክፈል",
     secureCheckout: "በቻፓ እና ቴሌብር የተጎላበተ ደህንነቱ የተጠበቀ ክፍያ"
+  },
+
+  productCard: {
+    onlyLeft: "{count} ብቻ ቀርቷል",
+    by: "በ:",
+    shipsIn: "የሚላክበት ጊዜ",
+    details: "ዝርዝር",
+    add: "ጨምር",
+    addToWishlist: "{name}ን ወደ ምኞት ዝርዝር ጨምር"
   },
 
   // ግርጌ (Footer)
@@ -1550,7 +1567,6 @@ helpCenter: "የእርዳታ ማዕከል",
       showBothFields: "ለሁለቱም ቋንቋዎች መስኮች አሳይ",
       englishOnly: "እንግሊዝ alone (ውጭ ታዳሚዎች)",
       amharicOnly: "አምሐርክ alone (አገር ቤት ታዳሚዎች)",
-      festivalType: "የበጎች አይነት",
       typeReligious: "ሃይማኖናዊ",
       typeCulturalTraditional: "ባህላዊ / ባህራዊ",
       typeNationalPublicHolidays: "ሀገርናዊ / የህዝብ አስታራቂት"
@@ -1590,6 +1606,33 @@ helpCenter: "የእርዳታ ማዕከል",
   // ህዝብ ገጾች (Public Pages)
   home: {
     unifiedPlatform: "የተዋሃደ የባህል መድረክ",
+    curatedMarketplace: "የተመረጠ የጥበብ ገበያ",
+    craftCelebrationMeet: "ጥበብ እና በዓል የሚገናኙበት",
+    letsExploreEthiopia: "ኢትዮጵያን እንመርምር",
+    whereHeritageAwaits: "ቅርስ የሚጠብቅበት",
+    discoverHandmade: "የኢትዮጵያ የእጅ ሥራ ባህላዊ ምርቶችን ያግኙ፣ የበዓል ተሞክሮዎችን ይያዙ፣ እና ህያው ባህሎችን ከገበያ እስከ ታላላቅ ሕዝባዊ ክብረ በዓላት የሚያንቀሳቅሱ የጥበብ ባለሙያዎችን እና አዘጋጆችን ያግኙ።",
+    bookInLandOfOrigins: "በመነሻዎች ምድር ይያዙ",
+    reserveFestivalPass: "የበዓል መግቢያ ይያዙ፣ የአካባቢ አገልግሎቶችን ያስሱ፣ እና በኢትዮጵያ ህያው ክብረ በዓላት ዙሪያ የባህል ተሞክሮዎችን ያቅዱ።",
+    upcomingEventsFestivals: "መጪ ዝግጅቶች እና በዓላት",
+    discoverCrafts: "የእጅ ሥራዎችን ያግኙ",
+    exploreFestivals: "በዓላትን ያስሱ",
+    browseArtisans: "የጥበብ ባለሙያዎችን ያስሱ",
+    viewAllFestivals: "ሁሉንም በዓላት ተመልከት",
+    bookNow: "አሁን ይያዙ",
+    startingAt: "መነሻ ዋጋ",
+    ethioCraft: "ኢትዮ ክራፍት",
+    hub: "ሃብ",
+    handmadeCraftAlt: "የኢትዮጵያ የእጅ ሥራ",
+    marketFestivalAlt: "የኢትዮጵያ ገበያ እና የበዓል ዝርዝር",
+    timelessAttractions: "ዘመን የማይሽራቸው መስህቦች",
+    timelessCraftTraditions: "ዘመን የማይሽራቸው የእጅ ሥራ ባህሎች",
+    timelessCraftDesc: "ከተሸመኑ ጥጥ ጨርቆች እና የቡና ሥነ ሥርዓት የሸክላ ዕቃዎች እስከ የብር መስቀሎች እና የሐረሪ ቅርጫቶች፣ እያንዳንዱ ምርት ቦታ፣ ፈጣሪ እና የባህል ትውስታ ይይዛል።",
+    wovenTextiles: "የተሸመኑ ጨርቆች",
+    wovenTextilesMeta: "ዶርዜ፣ ሸማ፣ ጋቢ",
+    coffeeCeremony: "የቡና ሥነ ሥርዓት",
+    coffeeCeremonyMeta: "ጀበና እና የማቅረቢያ ስብስቦች",
+    heritageJewelry: "የቅርስ ጌጣጌጥ",
+    heritageJewelryMeta: "የብር መስቀሎች እና የዶቃ ሥራ",
     discoverHeart: "የኢትዮጵያን ባህል",
     ethiopianHeritage: "ልብ ያግኙ።",
     verifiedArtisans: "የተረጋገጡ የጥበብ ባለሙያዎች",
@@ -1675,28 +1718,7 @@ helpCenter: "የእርዳታ ማዕከል",
     sortBy: "ደርድር:",
     showing: "",
     results: " የሚታዩ ውጤቶች",
-     resultsShowing: "የሚታዩ ውጤቶች {count}",
-      // Additional homepage strings (Amharic)
-      viewAllFestivals: "ሁሉንም በዓላት ተመልከት",
-      timelessAttractions: "ዘመናት መውደያዎች",
-      timelessCraftTraditions: "ዘመናት የእጅ ጥበብ ባህላዊ",
-      craftDescription: "ከየቅድ እህል እና ከቡና ሥርያ ጡብ እስከ ብር መስቀልና ሀረሪ ቀረጥ፣ እያንዳንዱ ምርት ቦታ፣ ፈጸቢ እና ባህላዊ የማስታወስ የትዕዛዝ ታሪክ ይይዟል።",
-      startingAt: "ከ",
-      bookNow: "አሁን ይታዘዙ",
-      browseArtisans: "የጥበብ ባለሙያዎችን ያስሱ",
-      wovenTextiles: "የተወለዱ ጨርባዎች",
-      coffeeCeremony: "የቡና ሥርያ",
-      heritageJewelry: "የቅርስ ጌጣጌጥ",
-      wovenTextilesMeta: "ዶርዜ፣ ሸማ፣ ጋቢ",
-      coffeeCeremonyMeta: "ጀበና እና የመጫያ ስብስቦች",
-      heritageJewelryMeta: "የብር መስቀሎች እና የምስክር ስራ",
-      ethioCraft: "ኢትዮ ክራፍት",
-      hub: "ሃብ",
-      // Missing Amharic translations for homepage
-      whereHeritageAwaits: "የቅርስ መጠበቅ",
-      discoverHandmade: "የኢትዮጵያን ባህላዊ ተወልዶ የተሰሩ ምርቶችን ያግኙ፣ የበዓላት ልምድን ያስይዙ፣ ከገበያ ተሸጠዎችን እና አዘጋጆችን ያግኙ የሚያገሩትን ባህላዊ ልምዶች ከገበያ ተሸጠዎች እስከ ትልቅ የህብ በዓላት ስርዓማቸዎች ያድሉ።",
-      discoverCrafts: "ቅርሶችን ያግኙ",
-      exploreFestivals: "በዓላትን ያሰሱ"
+     resultsShowing: "የሚታዩ ውጤቶች {count}"
     },
 
   // በዓላት (Festivals)
@@ -1818,38 +1840,6 @@ helpCenter: "የእርዳታ ማዕከል",
       verifiedOrganizer: "የተረጋገጠ አዘጋጅ",
       organizerInfoSoon: "የአዘጋጅ መረጃ በቀጥታ ይመልከቱ"
     },
-
-    reviews: {
-  verifiedPurchase: "የተረጋገጠ ግዢ",
-  reviewedOn: "ግምገማ የተሰጠበት ቀን",
-  helpful: "ጠቃሚ",
-  thankFeedback: "አስተያየትዎ እናመሰግናለን",
-  report: "ሪፖርት አድርግ",
-  reported: "ሪፖርት ተደርጓል",
-  reportTitle: "ይህን ግምገማ ሪፖርት አድርግ",
-  optionalReason: "አማራጭ: ለምን ሪፖርት እያደረጉ ነው?",
-  reasons: {
-    offTopic: { 
-      label: "ከርዕስ ውጪ", 
-      desc: "ስለ ምርቱ አይደለም" 
-    },
-    inappropriate: { 
-      label: "ተገቢ ያልሆነ", 
-      desc: "አክብሮት የጎደለው፣ አስጸያፊ፣ ጸያፍ" 
-    },
-    fake: { 
-      label: "ውሸት", 
-      desc: "በዋጋ የተገዛ፣ ትክክለኛ ያልሆነ" 
-    },
-    other: { 
-      label: "ሌላ", 
-      desc: "ሌላ ነገር" 
-    }
-  },
-  guidelineNote: "ይህ ግምገማ የማህበረሰባችንን መመሪያ የሚያሟላ መሆኑን እንፈትሻለን። የማያሟላ ከሆነ፣ እናስወግደዋለን።",
-    cancel: "ይቅር",
-    submit: "አስገባ"
-  },
 
   // Tourist Settings
   settings: {

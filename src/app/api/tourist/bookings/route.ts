@@ -2,11 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '../../../../lib/mongodb';
 import Booking from '../../../../models/booking.model';
 import Festival from '../../../../models/festival.model';
+import User from '../../../../models/User';
+import Wallet from '../../../../models/wallet.model';
+import Transaction from '../../../../models/transaction.model';
+import Payment from '../../../../models/payment.model';
 import mongoose from 'mongoose';
 import * as jose from 'jose';
 import { attachAvailabilityToFestival, findRoomAvailability, findTransportAvailability } from '../../../../lib/festivalAvailability';
 
+const CHAPA_API_URL = 'https://api.chapa.co/v1';
+const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY;
+const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
+
 const EARLY_BIRD_WINDOW_HOURS = Number(process.env.EARLY_BIRD_WINDOW_HOURS || 5);
+
+function generateTxRef(): string {
+  return 'TXN-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+}
 
 const getEarlyBirdExpiry = (festival: any) => {
   const postedAtRaw = festival?.createdAt || festival?.submittedAt;
@@ -138,11 +150,12 @@ export async function PUT(request: NextRequest) {
       // Restore inventory on cancellation
       if (booking.status !== 'cancelled') {
         // Restore ticket availability
-        if (booking.ticketType && booking.quantity > 0) {
+        const ticketToRestore = booking.ticketTypeName || booking.ticketType;
+        if (ticketToRestore && booking.quantity > 0) {
           await Festival.updateOne(
-            { _id: booking.festival, 'ticketTypes.name': booking.ticketType },
+            { _id: booking.festival, 'ticketTypes.name': ticketToRestore },
             { $inc: { 'ticketTypes.$.available': booking.quantity } },
-            { arrayFilters: [{ 'elem.name': booking.ticketType }], session }
+            { session }
           );
         }
 
@@ -151,7 +164,7 @@ export async function PUT(request: NextRequest) {
           await Festival.updateOne(
             { _id: booking.festival, 'hotels.rooms._id': booking.bookingDetails.room.roomId },
             { $inc: { 'hotels.rooms.$.available': 1 } },
-            { arrayFilters: [{ 'elem._id': booking.bookingDetails.room.roomId }], session }
+            { session }
           );
         }
 
@@ -160,7 +173,7 @@ export async function PUT(request: NextRequest) {
           await Festival.updateOne(
             { _id: booking.festival, 'transportation._id': booking.bookingDetails.transport.transportId },
             { $inc: { 'transportation.$.available': 1 } },
-            { arrayFilters: [{ 'elem._id': booking.bookingDetails.transport.transportId }], session }
+            { session }
           );
         }
       }
@@ -373,29 +386,45 @@ export async function POST(request: NextRequest) {
     // ATOMIC INVENTORY CHECK & DECREMENT
     // 1. Decrement ticket type availability (atomic)
     if (ticketType && quantity > 0) {
-      const ticketDecrementResult = await Festival.updateOne(
-        {
-          _id: festivalId,
-          'ticketTypes.name': ticketType,
-          'ticketTypes.available': { $gte: quantity }
-        },
-        { $inc: { 'ticketTypes.$.available': -quantity } },
-        { arrayFilters: [{ 'elem.name': ticketType }], session }
+      // Find the actual ticket type name in the database
+      const dbTicketType = festival.ticketTypes?.find((t: any) => 
+        t.name === ticketType || 
+        t.name.toLowerCase() === ticketType.toLowerCase() ||
+        (ticketType === 'vip' && t.name.toLowerCase().includes('vip')) ||
+        (ticketType === 'standard' && (t.name.toLowerCase().includes('standard') || t.name.toLowerCase().includes('regular'))) ||
+        (ticketType === 'earlyBird' && t.name.toLowerCase().includes('early'))
       );
 
-      if (!ticketDecrementResult || ticketDecrementResult.matchedCount === 0) {
-        await session.abortTransaction();
-        return new NextResponse(
-          JSON.stringify({ success: false, message: 'Not enough tickets available' }),
-          { status: 409, headers: { 'content-type': 'application/json' } }
+      // Robust check: if ticketTypes array exists but the requested type isn't there, or available is too low
+      if (festival.ticketTypes && festival.ticketTypes.length > 0) {
+        const actualTicketName = dbTicketType ? dbTicketType.name : ticketType;
+        
+        const ticketDecrementResult = await Festival.updateOne(
+          {
+            _id: festivalId,
+            'ticketTypes.name': actualTicketName,
+            'ticketTypes.available': { $gte: quantity }
+          },
+          { $inc: { 'ticketTypes.$.available': -quantity } },
+          { session }
         );
+
+        if (!ticketDecrementResult || ticketDecrementResult.matchedCount === 0) {
+          console.error(`[BookingAPI] Inventory update failed for ticket "${actualTicketName}". Festival has ${festival.ticketTypes.length} ticket types.`);
+          await session.abortTransaction();
+          return new NextResponse(
+            JSON.stringify({ success: false, message: 'Not enough tickets available or ticket type not found' }),
+            { status: 409, headers: { 'content-type': 'application/json' } }
+          );
+        }
+      } else {
+        console.warn(`[BookingAPI] Festival ${festivalId} has no ticketTypes array. Skipping inventory check.`);
       }
 
-      // Get the ticket price
-      const ticketTypeObj = festival.ticketTypes?.find((t: any) => t.name === ticketType);
-      if (ticketTypeObj) {
-        unitPrice = ticketTypeObj.price || 0;
-        ticketTypeName = ticketTypeObj.name || ticketType;
+      // Get the ticket price from the matched object
+      if (dbTicketType) {
+        unitPrice = dbTicketType.price || 0;
+        ticketTypeName = dbTicketType.name || ticketType;
       }
     }
 
@@ -462,6 +491,8 @@ export async function POST(request: NextRequest) {
       calculatedTotalPrice += selectedTransport.price;
     }
 
+    const txRef = generateTxRef();
+
     // Create booking
     const bookingData: any = {
       tourist: touristId,
@@ -474,6 +505,7 @@ export async function POST(request: NextRequest) {
       currency: currency || festival.pricing?.currency || 'ETB',
       status: 'pending',
       paymentStatus: 'pending',
+      paymentRef: txRef,
       contactInfo: {
         fullName: contactInfo.fullName,
         email: contactInfo.email,
@@ -507,38 +539,165 @@ export async function POST(request: NextRequest) {
 
     bookingData.hasHotelBooking = hasHotel;
 
-    const booking = await Booking.create([bookingData], { session });
+    const [booking] = await Booking.create([bookingData], { session });
+
+    // Initialize Organizer Wallet (Pending)
+    const organizerId = festival.organizer;
+    let organizerWallet = await Wallet.findOne({ userId: organizerId, userRole: 'organizer' }).session(session);
+    if (!organizerWallet) {
+      organizerWallet = new Wallet({
+        userId: organizerId,
+        userRole: 'organizer',
+        pendingBalance: 0,
+        availableBalance: 0,
+        lifetimeEarned: 0,
+        lifetimePaidOut: 0,
+        lifetimeRefunded: 0,
+        currency: 'ETB',
+      });
+    }
+    organizerWallet.pendingBalance = (organizerWallet.pendingBalance || 0) + bookingData.organizerAmount;
+    await organizerWallet.save({ session });
+
+    // Create Organizer Transaction (Pending)
+    await Transaction.create([{
+      walletId: organizerWallet._id,
+      userId: organizerId,
+      bookingId: booking._id,
+      type: 'ORDER_PAYMENT',
+      amount: bookingData.organizerAmount,
+      currency: 'ETB',
+      status: 'PENDING',
+      paymentRef: txRef,
+      metadata: {
+        bookingId: booking._id.toString(),
+        totalAmount: calculatedTotalPrice,
+        commissionRate: bookingData.commissionPercent / 100,
+        paymentMethod: 'chapa',
+        payerId: touristId,
+        receiverId: organizerId.toString(),
+        role: 'organizer'
+      },
+    }], { session });
+
+    // Initialize Admin Wallet (Pending)
+    const adminUser = await User.findOne({ role: 'admin' }).session(session);
+    if (adminUser) {
+      let adminWallet = await Wallet.findOne({ userId: adminUser._id, userRole: 'admin' }).session(session);
+      if (!adminWallet) {
+        adminWallet = new Wallet({
+          userId: adminUser._id,
+          userRole: 'admin',
+          pendingBalance: 0,
+          availableBalance: 0,
+          lifetimeEarned: 0,
+          lifetimePaidOut: 0,
+          lifetimeRefunded: 0,
+          currency: 'ETB',
+        });
+      }
+      adminWallet.pendingBalance = (adminWallet.pendingBalance || 0) + bookingData.platformFee;
+      await adminWallet.save({ session });
+
+      // Create Admin Transaction (Pending)
+      await Transaction.create([{
+        walletId: adminWallet._id,
+        userId: adminUser._id,
+        bookingId: booking._id,
+        type: 'ADMIN_COMMISSION',
+        amount: bookingData.platformFee,
+        currency: 'ETB',
+        status: 'PENDING',
+        paymentRef: txRef,
+        metadata: {
+          bookingId: booking._id.toString(),
+          totalAmount: calculatedTotalPrice,
+          commissionRate: bookingData.commissionPercent / 100,
+          organizerId: organizerId.toString(),
+          paymentMethod: 'chapa',
+          payerId: touristId,
+          receiverId: adminUser._id.toString(),
+          role: 'organizer'
+        },
+      }], { session });
+    }
+
+    // Create Payment Record (Pending)
+    await Payment.create([{
+      userId: new mongoose.Types.ObjectId(touristId),
+      bookingId: booking._id,
+      transactionRef: txRef,
+      method: 'chapa',
+      amount: calculatedTotalPrice,
+      status: 'Pending',
+    }], { session });
+
+    // Initialize Chapa
+    const chapaPayload = {
+      amount: calculatedTotalPrice.toString(),
+      currency: 'ETB',
+      email: contactInfo.email || 'customer@example.com',
+      first_name: contactInfo.fullName?.split(' ')[0] || 'Guest',
+      last_name: contactInfo.fullName?.split(' ').slice(1).join(' ') || 'User',
+      phone_number: contactInfo.phone || '0900000000',
+      tx_ref: txRef,
+      callback_url: `${FRONTEND_URL}/api/payment/chapa/callback`,
+      return_url: `${FRONTEND_URL}/payment-success?bookingId=${booking._id}&status=success&tx_ref=${txRef}`,
+      customization: {
+        title: "EthioHub Booking",
+        description: `Booking for ${festival.name}`
+      },
+      meta: {
+        bookingId: booking._id.toString(),
+        type: 'booking'
+      },
+    };
+
+    if (!CHAPA_SECRET_KEY) {
+      throw new Error('Chapa not configured');
+    }
+
+    const chapaResponse = await fetch(`${CHAPA_API_URL}/transaction/initialize`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${CHAPA_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(chapaPayload),
+    });
+
+    const chapaData = await chapaResponse.json();
+
+    if (!chapaResponse.ok || !chapaData.data?.checkout_url) {
+      console.error('Chapa error:', chapaData);
+      throw new Error(chapaData.message || 'Failed to initialize Chapa');
+    }
+
+    // Update Payment with invoice URL
+    await Payment.updateOne(
+      { transactionRef: txRef },
+      { $set: { invoiceUrl: chapaData.data.checkout_url } },
+      { session }
+    );
 
     await session.commitTransaction();
 
-    const populatedBooking = await Booking.findById(booking[0]._id)
-      .populate('tourist', 'name email')
-      .populate('festival', 'name startDate endDate')
-      .populate('organizer', 'name email');
-
     return new NextResponse(
-      JSON.stringify({ success: true, booking: populatedBooking }),
+      JSON.stringify({ 
+        success: true, 
+        booking, 
+        checkoutUrl: chapaData.data.checkout_url,
+        txRef
+      }),
       { status: 201, headers: { 'content-type': 'application/json' } }
     );
 
   } catch (error: any) {
     await session.abortTransaction();
-    console.error('Error creating booking:', error);
-    if (error.code === 'ERR_JWT_EXPIRED' || error.code === 'ERR_JWS_INVALID') {
-      return new NextResponse(
-        JSON.stringify({ success: false, message: 'Authentication failed: Invalid token' }),
-        { status: 401, headers: { 'content-type': 'application/json' } }
-      );
-    }
-    if (error.name === 'CastError') {
-      return new NextResponse(
-        JSON.stringify({ success: false, message: 'Invalid ID format' }),
-        { status: 400, headers: { 'content-type': 'application/json' } }
-      );
-    }
+    console.error('Error in integrated booking process:', error);
     return new NextResponse(
-      JSON.stringify({ success: false, message: 'Internal Server Error' }),
-      { status: 500, headers: { 'content-type': 'application/json' } }
+      JSON.stringify({ success: false, message: error.message || 'Internal Server Error' }),
+      { status: error.status || 500, headers: { 'content-type': 'application/json' } }
     );
   } finally {
     session.endSession();

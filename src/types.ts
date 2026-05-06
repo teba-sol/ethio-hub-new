@@ -105,6 +105,7 @@ export interface RoomType {
   sqm: number;
   amenities: string[];
   bedType: string;
+  tier: 'vip' | 'standard' | 'both';  // Which tiers can book this room
   initialAvailability?: number;
   bookedCount?: number;
   remaining?: number;
@@ -143,6 +144,11 @@ export interface HotelAccommodation {
   checkOutTime: string;
   facilities: string[];
   rooms: RoomType[];
+  hotelServices?: Array<{  // Pay-at-hotel services (display only)
+    name: string;
+    price: number;
+    description?: string;
+  }>;
   gallery: string[];
 }
 
@@ -157,6 +163,7 @@ export interface TransportOption {
   price: number;
   availability?: number;
   capacity?: number;
+  vipIncluded: boolean;  // If true, VIP ticket holders get this free
   features?: string[];
   description: string; // For backward compatibility
   description_en: string;
@@ -197,6 +204,12 @@ export interface Festival {
   culturalServices: string[];
   baseTicketPrice?: number;
   vipTicketPrice?: number;
+  vipPerks?: string[];  // Priority perks included with VIP ticket
+  ticketTypes?: Array<{
+    name: string;
+    price: number;
+    perks?: string[];
+  }>;
   earlyBirdPrice?: number;
   currency: string;
   cancellationPolicy: string;
@@ -206,8 +219,10 @@ export interface Festival {
   organizerId: string;
   isVerified: boolean;
   ticketsAvailable: number;
-  status: 'Draft' | 'Published' | 'Cancelled';
-  verificationStatus: 'Not Submitted' | 'Pending Review' | 'Under Review' | 'Approved' | 'Rejected';
+  ticketsSold?: number;
+  revenue?: number;
+  status: 'Draft' | 'Published' | 'Completed' | 'Cancelled';
+  verificationStatus: 'Draft' | 'Pending Approval' | 'Pending Review' | 'Under Review' | 'Approved' | 'Rejected' | 'Not Submitted';
   submittedAt?: string;
   reviewedAt?: string;
   rejectionReason?: string;

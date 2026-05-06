@@ -45,21 +45,41 @@ export default function HotelsPage() {
           apiClient.get(`/api/festivals/${eventId}`),
           apiClient.get(`/api/festivals/${eventId}/availability`),
         ]);
-        const festivalData = festRes?.festival || festRes;
+        
+        if (!festRes || !festRes.success) {
+          console.error('Festival fetch failed:', festRes);
+          setLoading(false);
+          return;
+        }
+        
+        const festivalData = festRes?.festival;
         
         if (festivalData) {
           setFestival(festivalData);
           setEvent(festivalData);
         }
         
+        if (!availabilityRes || !availabilityRes.success) {
+          console.error('Availability fetch failed:', availabilityRes);
+          setHotels([]);
+          setFilteredHotels([]);
+          setLoading(false);
+          return;
+        }
+        
         const hotelsData = availabilityRes?.hotels || festivalData?.hotels || [];
         
+        const tier = ticketSelection?.type === 'vip' ? 'vip' : 'standard'; // earlyBird treated as standard
         const normalizedHotels = hotelsData.map((hotel: any, index: number) => ({
           ...hotel,
           id: hotel._id || hotel.id || `hotel-${index}`,
-          rooms: (hotel.rooms || []).map((room: any, roomIndex: number) => ({
+          rooms: (hotel.rooms || []).filter((room: any) => {
+            const roomTier = room.tier || 'both';
+            return roomTier === 'both' || roomTier === tier;
+          }).map((room: any, roomIndex: number) => ({
             ...room,
             id: room._id || room.id || `room-${index}-${roomIndex}`,
+            remaining: (room.availability || 0) - (room.bookedCount || 0),
           })),
         }));
         

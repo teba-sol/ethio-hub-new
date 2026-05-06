@@ -15,6 +15,8 @@ interface WalletData {
     lifetimePaidOut: number;
     lifetimeRefunded: number;
     currency: string;
+    artisanTotalEarned?: number;
+    organizerTotalEarned?: number;
   };
   transactions: Transaction[];
   pagination: {
@@ -34,9 +36,11 @@ interface Transaction {
   paymentRef?: string;
   createdAt: string;
   orderId?: string;
+  bookingId?: string;
   productId?: string;
   productName?: string;
   artisanName?: string;
+  role?: 'artisan' | 'organizer';
   quantity?: number;
   unitPrice?: number;
   details?: TransactionDetails;
@@ -55,6 +59,7 @@ interface TransactionDetails {
   productSku?: string | null;
   productCategory?: string | null;
   orderId?: string;
+  bookingId?: string;
   quantity?: number;
   unitPrice?: number;
   totalPrice?: number;
@@ -67,6 +72,7 @@ interface TransactionDetails {
   paymentDate?: string;
   orderStatus?: string | null;
   paymentStatus?: string | null;
+  role?: 'artisan' | 'organizer';
   shippingAddress?: {
     street?: string;
     city?: string;
@@ -77,7 +83,7 @@ interface TransactionDetails {
 }
 
 interface WalletPanelProps {
-  userType: 'artisan' | 'admin';
+  userType: 'artisan' | 'admin' | 'organizer';
   title?: string;
   showWithdraw?: boolean;
 }
@@ -111,19 +117,28 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [page, setPage] = useState(1);
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [showCommissionBreakdown, setShowCommissionBreakdown] = useState(false);
+  const [showDateFilter, setShowDateFilter] = useState(false);
 
-  const fetchWallet = async (pageNum: number = 1) => {
+  const fetchWallet = async (pageNum: number = 1, role: string = 'all', dates = dateRange) => {
     try {
       setLoading(true);
       setError(null);
 
-      const endpoint = userType === 'admin' ? '/api/admin/wallet' : '/api/artisan/wallet';
-      const res = await fetch(`${endpoint}?page=${pageNum}&limit=10`);
+      const endpoint = userType === 'admin' ? '/api/admin/wallet' : userType === 'organizer' ? '/api/organizer/wallet' : '/api/artisan/wallet';
+      const roleParam = role !== 'all' ? `&role=${role}` : '';
+      let dateParam = '';
+      if (dates.start) dateParam += `&startDate=${dates.start}`;
+      if (dates.end) dateParam += `&endDate=${dates.end}`;
+      
+      const res = await fetch(`${endpoint}?page=${pageNum}&limit=10${roleParam}${dateParam}`);
       const data = await res.json();
 
       if (data.success) {
@@ -139,8 +154,8 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
   };
 
   useEffect(() => {
-    fetchWallet(page);
-  }, [page]);
+    fetchWallet(page, roleFilter, dateRange);
+  }, [page, roleFilter, dateRange]);
 
   const formatCurrency = (amount: number) => {
     return `ETB ${(amount || 0).toLocaleString()}`;
@@ -184,7 +199,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
     setWithdrawError(null);
 
     try {
-      const endpoint = userType === 'admin' ? '/api/admin/wallet/withdraw' : '/api/artisan/wallet/withdraw';
+      const endpoint = userType === 'admin' ? '/api/admin/wallet/withdraw' : userType === 'organizer' ? '/api/organizer/wallet/withdraw' : '/api/artisan/wallet/withdraw';
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -194,6 +209,12 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
       const data = await res.json();
 
       if (data.success) {
+        if ((userType === 'admin' || userType === 'organizer') && data.checkoutUrl) {
+          // Redirect admin or organizer to Chapa for withdrawal confirmation
+          window.location.href = data.checkoutUrl;
+          return;
+        }
+        
         setWithdrawSuccess(true);
         setWithdrawAmount('');
         setTimeout(() => {
@@ -251,63 +272,101 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-serif font-bold text-primary">{title}</h2>
-          <p className="text-gray-500 text-sm">
-            {userType === 'admin' ? 'Platform earnings and commissions' : 'Your earnings and withdrawals'}
-          </p>
+      {userType !== 'organizer' && userType !== 'admin' && (
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-serif font-bold text-primary">{title}</h2>
+            <p className="text-gray-500 text-sm">
+              Your earnings and withdrawals
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchWallet(page)}
+              leftIcon={RefreshCw}
+            >
+              Refresh
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchWallet(page)}
-            leftIcon={RefreshCw}
-          >
-            Refresh
-          </Button>
-        </div>
-      </div>
+      )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-gray-100">
+      <div className={`grid grid-cols-1 ${userType === 'admin' ? 'md:grid-cols-3' : 'md:grid-cols-3'} gap-6`}>
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-emerald-100 rounded-lg">
               <DollarSign className="w-5 h-5 text-emerald-600" />
             </div>
-            <span className="text-xs font-bold text-gray-400 uppercase">Available</span>
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Available</span>
           </div>
           <p className="text-2xl font-bold text-primary">{formatCurrency(wallet.availableBalance)}</p>
           <p className="text-xs text-gray-400 mt-1">Withdrawable balance</p>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-gray-100">
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-amber-100 rounded-lg">
               <Clock className="w-5 h-5 text-amber-600" />
             </div>
-            <span className="text-xs font-bold text-gray-400 uppercase">Pending</span>
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Pending</span>
           </div>
           <p className="text-2xl font-bold text-primary">{formatCurrency(wallet.pendingBalance)}</p>
           <p className="text-xs text-gray-400 mt-1">Awaiting clearance</p>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-gray-100">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <TrendingUp className="w-5 h-5 text-blue-600" />
+        <div 
+          onClick={() => userType === 'admin' && setShowCommissionBreakdown(!showCommissionBreakdown)}
+          className={`bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all ${userType === 'admin' ? 'cursor-pointer hover:border-blue-200 group' : ''}`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg transition-colors ${showCommissionBreakdown ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-600 group-hover:bg-blue-200'}`}>
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Earned</span>
             </div>
-            <span className="text-xs font-bold text-gray-400 uppercase">Lifetime Earned</span>
+            {userType === 'admin' && (
+              <div className={`text-xs font-medium px-2 py-1 rounded-full transition-colors ${showCommissionBreakdown ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'}`}>
+                {showCommissionBreakdown ? 'Hide Details' : 'View Details'}
+              </div>
+            )}
           </div>
           <p className="text-2xl font-bold text-primary">{formatCurrency(wallet.lifetimeEarned)}</p>
-          <p className="text-xs text-gray-400 mt-1">Total earnings</p>
+          <p className="text-xs text-gray-400 mt-1">{userType === 'admin' ? 'Total cleared commission' : 'Lifetime platform earnings'}</p>
         </div>
       </div>
 
-      {/* Withdraw Section (Artisan only) */}
-      {showWithdraw && (
+      {userType === 'admin' && showCommissionBreakdown && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 animate-in slide-in-from-top-4 duration-300">
+          <div className="bg-gradient-to-br from-white to-blue-50/30 p-6 rounded-2xl border border-blue-100 shadow-sm hover:shadow-md transition-all">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-blue-600" />
+              </div>
+              <span className="text-xs font-bold text-blue-500 uppercase tracking-wider">Total from Artisan</span>
+            </div>
+            <p className="text-2xl font-bold text-primary">{formatCurrency(wallet.artisanTotalEarned || 0)}</p>
+            <p className="text-xs text-blue-400 mt-1">Total cleared commission from product sales</p>
+          </div>
+          
+          <div className="bg-gradient-to-br from-white to-purple-50/30 p-6 rounded-2xl border border-purple-100 shadow-sm hover:shadow-md transition-all">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Coins className="w-5 h-5 text-purple-600" />
+              </div>
+              <span className="text-xs font-bold text-purple-500 uppercase tracking-wider">Total from Organizer</span>
+            </div>
+            <p className="text-2xl font-bold text-primary">{formatCurrency(wallet.organizerTotalEarned || 0)}</p>
+            <p className="text-xs text-purple-400 mt-1">Total cleared commission from festival bookings</p>
+          </div>
+        </div>
+      )}
+
+      {/* Withdraw Section (Artisan, Organizer, and Admin) */}
+      {(showWithdraw || userType === 'admin') && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100">
             <h3 className="text-xl font-bold text-primary mb-4">Withdraw via Chapa</h3>
@@ -376,9 +435,71 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
       )}
 
       {/* Transactions Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100">
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+        <div className="p-6 border-b border-gray-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <h3 className="text-xl font-bold text-primary">Recent Transactions</h3>
+          
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Date Range Toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDateFilter(!showDateFilter)}
+              className={`text-xs font-bold ${showDateFilter ? 'text-primary bg-primary/5' : 'text-gray-500'}`}
+              leftIcon={Clock}
+            >
+              {showDateFilter ? 'Hide Dates' : 'Filter by Date'}
+            </Button>
+
+            {/* Date Range Filter */}
+            {showDateFilter && (
+              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2 duration-200">
+                <span className="text-sm text-gray-500 font-medium">Date:</span>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="date"
+                    value={dateRange.start}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                    className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
+                  />
+                  <span className="text-gray-400">-</span>
+                  <input
+                    type="date"
+                    value={dateRange.end}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                    className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
+                  />
+                  {(dateRange.start || dateRange.end) && (
+                    <button
+                      onClick={() => setDateRange({ start: '', end: '' })}
+                      className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-red-500 transition-colors"
+                      title="Clear dates"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {userType === 'admin' && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 font-medium">Role:</span>
+                <select
+                  value={roleFilter}
+                  onChange={(e) => {
+                    setRoleFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
+                >
+                  <option value="all">All Roles</option>
+                  <option value="artisan">Artisan (Products)</option>
+                  <option value="organizer">Organizer (Festivals)</option>
+                </select>
+              </div>
+            )}
+          </div>
         </div>
 
         {transactions.length === 0 ? (
@@ -396,41 +517,52 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                     <th className="px-6 py-4 text-left">Type</th>
                     <th className="px-6 py-4 text-left">Details</th>
                     <th className="px-6 py-4 text-right">Amount</th>
-                    <th className="px-6 py-4 text-center">Status</th>
-                    {(userType === 'artisan' || userType === 'admin') && (
-                      <th className="px-6 py-4 text-center">View Detail</th>
-                    )}
+                    <th className="px-6 py-4 text-center">Payment Status</th>
+{(userType === 'artisan' || userType === 'admin' || userType === 'organizer') && (
+                       <th className="px-6 py-4 text-center">View Detail</th>
+                     )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {transactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-gray-50">
+                    <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {new Date(tx.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4">
-                        <Badge variant={transactionTypeVariants[tx.type] || 'secondary'} size="sm">
-                          {transactionTypeLabels[tx.type] || tx.type}
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge variant={transactionTypeVariants[tx.type] || 'secondary'} size="sm">
+                            {transactionTypeLabels[tx.type] || tx.type}
+                          </Badge>
+                          {tx.role && (
+                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full w-fit ${
+                              tx.role === 'artisan' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'
+                            }`}>
+                              {tx.role}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div>
+                        <div className="max-w-xs">
                           <div className="flex items-center gap-2">
-                            <p className="font-medium text-gray-800 text-sm">{tx.productName || 'N/A'}</p>
+                            <p className="font-semibold text-gray-900 text-sm truncate">{tx.productName || 'N/A'}</p>
                             {(tx.type === 'ORDER_PAYMENT' || tx.type === 'ADMIN_COMMISSION') && tx.quantity && tx.quantity > 1 && (
                               <span className="text-xs font-bold text-primary bg-primary/5 px-2 py-0.5 rounded">
                                 x{tx.quantity}
                               </span>
                             )}
                           </div>
-                          {(tx.type === 'ORDER_PAYMENT' || tx.type === 'ADMIN_COMMISSION') && tx.quantity && (
-                            <p className="text-xs text-gray-400">
-                              Quantity: {tx.quantity}
-                              {tx.unitPrice ? ` x ${formatCurrency(tx.unitPrice)}` : ''}
+                          {(tx.type === 'ORDER_PAYMENT' || tx.type === 'ADMIN_COMMISSION') && (
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {tx.artisanName && (
+                                <span className="font-medium">{tx.artisanName}</span>
+                              )}
+                              {tx.quantity && tx.unitPrice ? ` • ${tx.quantity} x ${formatCurrency(tx.unitPrice)}` : ''}
                             </p>
                           )}
                           {tx.paymentRef && (
-                            <p className="text-xs text-gray-400 font-mono">{tx.paymentRef}</p>
+                            <p className="text-[10px] text-gray-400 font-mono mt-1">{tx.paymentRef}</p>
                           )}
                         </div>
                       </td>
@@ -442,19 +574,19 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                           {tx.status}
                         </Badge>
                       </td>
-                      {(userType === 'artisan' || userType === 'admin') && (
-                        <td className="px-6 py-4 text-center">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            leftIcon={Eye}
-                            onClick={() => setSelectedTransaction(tx)}
-                            className="text-xs"
-                          >
-                            View
-                          </Button>
-                        </td>
-                      )}
+{(userType === 'artisan' || userType === 'admin' || userType === 'organizer') && (
+                         <td className="px-6 py-4 text-center">
+                           <Button
+                             variant="ghost"
+                             size="sm"
+                             leftIcon={Eye}
+                             onClick={() => setSelectedTransaction(tx)}
+                             className="text-xs"
+                           >
+                             View
+                           </Button>
+                         </td>
+                       )}
                     </tr>
                   ))}
                 </tbody>
@@ -487,7 +619,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
       </div>
 
       {/* Transaction Detail Modal */}
-      {(userType === 'artisan' || userType === 'admin') && selectedTransaction && (
+      {(userType === 'artisan' || userType === 'admin' || userType === 'organizer') && selectedTransaction && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
           onClick={() => setSelectedTransaction(null)}
@@ -516,18 +648,18 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">
-                    {userType === 'admin' ? 'Admin Commission' : 'Artisan Earning'}
+                    {userType === 'admin' ? 'Admin Commission' : (userType === 'organizer' || selectedTransaction.role === 'organizer') ? 'Organizer Earning' : 'Artisan Earning'}
                   </p>
                   <p className="text-xl font-bold text-emerald-800 mt-1">
                     {formatCurrency(
                       userType === 'admin'
                         ? selectedTransaction.details?.adminCommission || selectedTransaction.amount
-                        : selectedTransaction.details?.artisanEarnings || selectedTransaction.amount
+                        : selectedTransaction.amount
                     )}
                   </p>
                 </div>
                 <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-700">Tourist Paid</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-700">{selectedTransaction.bookingId ? 'Tourist Paid' : 'Customer Paid'}</p>
                   <p className="text-xl font-bold text-blue-800 mt-1">
                     {selectedTransaction.details?.totalPrice
                       ? formatCurrency(selectedTransaction.details.totalPrice)
@@ -535,17 +667,19 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                   </p>
                 </div>
                 <div className="p-4 rounded-xl bg-amber-50 border border-amber-100">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">Artisan Got</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">
+                    {(userType === 'organizer' || (userType === 'artisan' && selectedTransaction.role !== 'artisan')) ? 'Admin Commission' : selectedTransaction.role === 'organizer' ? 'Organizer Got' : 'Artisan Got'}
+                  </p>
                   <p className="text-xl font-bold text-amber-800 mt-1">
-                    {selectedTransaction.details?.artisanEarnings
-                      ? formatCurrency(selectedTransaction.details.artisanEarnings)
-                      : selectedTransaction.details?.totalPrice
-                        ? formatCurrency(selectedTransaction.details.totalPrice - (selectedTransaction.details?.adminCommission || 0))
-                        : 'N/A'}
+                    {formatCurrency(
+                      (userType === 'organizer' || userType === 'artisan')
+                        ? selectedTransaction.details?.adminCommission || 0
+                        : selectedTransaction.details?.artisanEarnings || (selectedTransaction.details?.totalPrice ? (selectedTransaction.details.totalPrice - selectedTransaction.amount) : 0)
+                    )}
                   </p>
                 </div>
                 <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Status</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Transaction Status</p>
                   <div className="mt-2">
                     <Badge variant={selectedTransaction.status === 'COMPLETED' ? 'success' : 'warning'} size="sm">
                       {selectedTransaction.status}
@@ -565,22 +699,21 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
 
               {userType === 'admin' && (
                 <div>
-                  <h4 className="font-bold text-primary mb-4">Artisan Information</h4>
+                  <h4 className="font-bold text-primary mb-4">{selectedTransaction.role === 'organizer' ? 'Organizer Information' : 'Artisan Information'}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <DetailItem label="Full Name" value={selectedTransaction.details?.artisanFullName || selectedTransaction.artisanName} />
                     <DetailItem label="Email" value={selectedTransaction.details?.artisanEmail} />
                     <DetailItem label="Phone" value={selectedTransaction.details?.artisanPhone} />
-                    <DetailItem label="Artisan ID" value={selectedTransaction.details?.artisanId} />
+                    <DetailItem label={selectedTransaction.role === 'organizer' ? 'Organizer ID' : 'Artisan ID'} value={selectedTransaction.details?.artisanId} />
                   </div>
                 </div>
               )}
 
               <div>
-                <h4 className="font-bold text-primary mb-4">Product and Order</h4>
+                <h4 className="font-bold text-primary mb-4">{selectedTransaction.bookingId ? 'Festival and Booking' : 'Product and Order'}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <DetailItem label="Product Name" value={selectedTransaction.details?.productName || selectedTransaction.productName} />
-                  <DetailItem label="Product ID" value={selectedTransaction.details?.productId || selectedTransaction.productId} />
-                  <DetailItem label="Order ID" value={selectedTransaction.details?.orderId || selectedTransaction.orderId} />
+                  <DetailItem label={selectedTransaction.bookingId ? 'Festival Name' : 'Product Name'} value={selectedTransaction.details?.productName || selectedTransaction.productName} />
+                  <DetailItem label={selectedTransaction.bookingId ? 'Booking ID' : 'Order ID'} value={selectedTransaction.details?.bookingId || selectedTransaction.details?.orderId || selectedTransaction.orderId} />
                   <DetailItem label="Quantity" value={selectedTransaction.details?.quantity || selectedTransaction.quantity} />
                   <DetailItem
                     label="Unit Price"
@@ -590,9 +723,13 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                         : null
                     }
                   />
-                  <DetailItem label="SKU" value={selectedTransaction.details?.productSku} />
-                  <DetailItem label="Category" value={selectedTransaction.details?.productCategory} />
-                  <DetailItem label="Order Status" value={selectedTransaction.details?.orderStatus} />
+                  {!selectedTransaction.bookingId && (
+                    <>
+                      <DetailItem label="SKU" value={selectedTransaction.details?.productSku} />
+                      <DetailItem label="Category" value={selectedTransaction.details?.productCategory} />
+                    </>
+                  )}
+                  <DetailItem label="Status" value={selectedTransaction.details?.orderStatus} />
                   <DetailItem label="Payment Status" value={selectedTransaction.details?.paymentStatus} />
                 </div>
               </div>
@@ -600,6 +737,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
               <div>
                 <h4 className="font-bold text-primary mb-4">Payment Information</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <DetailItem label="Payment Status" value={selectedTransaction.details?.paymentStatus || selectedTransaction.status} />
                   <DetailItem label="Chapa Reference" value={selectedTransaction.details?.paymentRef || selectedTransaction.paymentRef} />
                   <DetailItem label="Gateway Reference" value={selectedTransaction.details?.paymentGatewayId} />
                   <DetailItem label="Payment Method" value={selectedTransaction.details?.paymentMethod} />

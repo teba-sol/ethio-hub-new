@@ -193,6 +193,7 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
                 paymentGatewayId: metadataPayload?.reference || metadataObject?.reference,
                 payerId: cartOrder.tourist,
                 receiverId: artisanId,
+                role: 'artisan'
               },
             });
           }
@@ -266,6 +267,7 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
                   paymentGatewayId: metadataPayload?.reference || metadataObject?.reference,
                   payerId: cartOrder.tourist,
                   receiverId: adminId,
+                  role: 'artisan'
                 },
               });
             }
@@ -445,6 +447,7 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
               paymentGatewayId: metadataPayload?.reference || metadataObject?.reference,
               payerId: order.tourist,
               receiverId: artisanId,
+              role: 'artisan'
             },
           });
           console.log(`[PaymentService] Artisan transaction created: ${artisanTx._id}`);
@@ -532,6 +535,7 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
                   paymentGatewayId: metadataPayload?.reference || metadataObject?.reference,
                   payerId: order.tourist,
                   receiverId: adminId,
+                  role: 'artisan'
                 },
               });
               console.log(`[PaymentService] Admin transaction created: ${adminTx._id}`);
@@ -626,10 +630,7 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
           await Transaction.create({
             walletId: organizerWallet._id,
             userId: organizerId,
-            orderId: booking._id,
-            paymentGatewayId: metadata?.reference,
-            payerId: booking.tourist,
-            receiverId: organizerId,
+            bookingId: booking._id,
             type: 'ORDER_PAYMENT',
             amount: organizerEarnings,
             currency: 'ETB',
@@ -639,6 +640,10 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
               bookingId: booking._id,
               totalAmount,
               commissionRate: COMMISSION_RATE,
+              paymentGatewayId: metadata?.reference,
+              payerId: booking.tourist,
+              receiverId: organizerId,
+              role: 'organizer'
             },
           });
         } catch (txError: any) {
@@ -675,10 +680,7 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
           await Transaction.create({
             walletId: adminWallet?._id,
             userId: adminId,
-            orderId: booking._id,
-            paymentGatewayId: metadata?.reference,
-            payerId: booking.tourist,
-            receiverId: adminId,
+            bookingId: booking._id,
             type: 'ADMIN_COMMISSION',
             amount: adminCommission,
             currency: 'ETB',
@@ -689,6 +691,10 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
               totalAmount,
               commissionRate: COMMISSION_RATE,
               organizerId: organizerId,
+              paymentGatewayId: metadata?.reference,
+              payerId: booking.tourist,
+              receiverId: adminId,
+              role: 'organizer'
             },
           });
         } catch (txError: any) {

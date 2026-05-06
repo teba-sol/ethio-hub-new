@@ -12,6 +12,9 @@ interface TicketCardProps {
   onSelect: () => void;
   disabled?: boolean;
   disabledReason?: string;
+  isVip?: boolean;
+  includesHotelTransport?: boolean;
+  vipPerks?: string[];
 }
 
 export const TicketCard: React.FC<TicketCardProps> = ({ 
@@ -97,18 +100,46 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         </div>
       </div>
       
-      {/* Benefits */}
-      <div className={`p-6 ${variant.bodyClass}`}>
-        <ul className="space-y-3">
-          {benefits.map((benefit, idx) => (
-            <li key={idx} className="flex items-start gap-3">
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${variant.iconClass}`}>
-                <Check className="w-3 h-3" />
-              </div>
-              <span className="text-gray-600 text-sm leading-relaxed">{benefit}</span>
-            </li>
-          ))}
-        </ul>
+        {/* Benefits */}
+        <div className={`p-6 ${variant.bodyClass}`}>
+          <ul className="space-y-3">
+            {benefits.map((benefit, idx) => (
+              <li key={idx} className="flex items-start gap-3">
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${variant.iconClass}`}>
+                  <Check className="w-3 h-3" />
+                </div>
+                <span className="text-gray-600 text-sm leading-relaxed">{benefit}</span>
+              </li>
+            ))}
+          </ul>
+          {isVip && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Includes (Free)</p>
+              <ul className="space-y-2">
+                <li className="flex items-center gap-2 text-sm text-gray-600">
+                  <Check className="w-4 h-4 text-green-500" />
+                  Hotel Stay (Choose from VIP options)
+                </li>
+                <li className="flex items-center gap-2 text-sm text-gray-600">
+                  <Check className="w-4 h-4 text-green-500" />
+                  Transport (Choose from VIP options)
+                </li>
+              </ul>
+              {vipPerks && vipPerks.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Priority Perks</p>
+                  <ul className="space-y-2">
+                    {vipPerks.map((perk, idx) => (
+                      <li key={idx} className="flex items-center gap-2 text-sm text-gray-600">
+                        <Check className="w-4 h-4 text-amber-500" />
+                        {perk}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         
         {/* Select Button */}
         <button

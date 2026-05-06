@@ -20,31 +20,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const checkUserSession = async () => {
-      try {
-        const response = await fetch('/api/auth/session', { cache: 'no-store' });
-        if (response.ok) {
-          const data = await response.json();
-          console.log('AuthContext - Session data received:', data);
-          if (data && data.success && data.user) {
-            const userData = {
-              ...data.user,
-              role: data.user.role?.toUpperCase()
-            };
-            console.log('AuthContext - User status set to:', userData.status);
-            setUser(userData);
-          }
-        }
-      } catch (error) {
-        console.error('Session check failed:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+   useEffect(() => {
+     const checkUserSession = async () => {
+       try {
+         const response = await fetch('/api/auth/session', { cache: 'no-store' });
+         const data = await response.json();
+         if (data && data.success && data.user) {
+           const userData = {
+             ...data.user,
+             role: data.user.role // Keep original case stored in DB
+           };
+           setUser(userData);
+         } else {
+           setUser(null);
+         }
+       } catch (error) {
+         console.error('Session check failed:', error);
+         setUser(null);
+       } finally {
+         setLoading(false);
+       }
+     };
 
-    checkUserSession();
-  }, []);
+     checkUserSession();
+   }, []);
 
   const login = async (credentials: any) => {
     setLoading(true);

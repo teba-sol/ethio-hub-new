@@ -7,6 +7,7 @@ export interface ITransaction extends Document {
   walletId?: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   orderId?: mongoose.Types.ObjectId;
+  bookingId?: mongoose.Types.ObjectId;
   productId?: mongoose.Types.ObjectId;
   quantity?: number;
   unitPrice?: number;
@@ -34,6 +35,10 @@ const TransactionSchema: Schema = new Schema(
     orderId: {
       type: Schema.Types.ObjectId,
       ref: 'Order',
+    },
+    bookingId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Booking',
     },
     productId: {
       type: Schema.Types.ObjectId,
@@ -82,6 +87,7 @@ const TransactionSchema: Schema = new Schema(
 // Index for faster queries
 TransactionSchema.index({ userId: 1, createdAt: -1 });
 TransactionSchema.index({ orderId: 1 });
+TransactionSchema.index({ bookingId: 1 });
 TransactionSchema.index({ type: 1 });
 
 const Transaction = mongoose.models.Transaction || mongoose.model<ITransaction>('Transaction', TransactionSchema);

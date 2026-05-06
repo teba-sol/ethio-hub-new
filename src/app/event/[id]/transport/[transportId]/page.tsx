@@ -298,25 +298,45 @@ export default function TransportDetailPage() {
                   {isSoldOut ? t('transport.soldOut') : isCurrentTransportSelected ? t('transport.removeSelection') : t('transport.selectThisCar')}
                 </Button>
 
-                <Button
-                  className="w-full py-3"
-                  onClick={handleContinue}
-                  disabled={!selectedTransport}
-                 >
-                   {t('festival.continueToCheckout')}
-                 </button>
+                 <Button
+                   className="w-full py-3"
+                   onClick={handleContinue}
+                   disabled={!selectedTransport}
+                  >
+                    {t('festival.continueToCheckout')}
+                  </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {lightboxOpen && (
+        <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
           <button
-            onClick={() => setActiveImageIndex(Math.max(0, activeImageIndex - 1))}
-            className="absolute left-6 p-3 text-white hover:bg-white/20 rounded-full transition-colors"
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-6 right-6 p-3 text-white hover:bg-white/20 rounded-full transition-colors"
           >
-            <ChevronLeft className="w-8 h-8" />
+            <X className="w-8 h-8" />
           </button>
-          <button
-            onClick={() => setActiveImageIndex(Math.min(gallery.length - 1, activeImageIndex + 1))}
-            className="absolute right-6 p-3 text-white hover:bg-white/20 rounded-full transition-colors"
-          >
-            <ChevronRight className="w-8 h-8" />
-          </button>
+
+          {gallery.length > 1 && (
+            <>
+              <button
+                onClick={() => setActiveImageIndex(Math.max(0, activeImageIndex - 1))}
+                className="absolute left-6 p-3 text-white hover:bg-white/20 rounded-full transition-colors"
+              >
+                <ChevronLeft className="w-8 h-8" />
+              </button>
+              <button
+                onClick={() => setActiveImageIndex(Math.min(gallery.length - 1, activeImageIndex + 1))}
+                className="absolute right-6 p-3 text-white hover:bg-white/20 rounded-full transition-colors"
+              >
+                <ChevronRight className="w-8 h-8" />
+              </button>
+            </>
+          )}
+
           <img
             src={gallery[activeImageIndex]}
             alt=""

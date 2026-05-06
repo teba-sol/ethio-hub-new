@@ -1,21 +1,14 @@
 export const isFestivalCompleteForReview = (festival: any) => {
   const hasCore =
-    !!festival?.name_en &&
-    !!festival?.name_am &&
-    !!festival?.shortDescription_en &&
-    !!festival?.shortDescription_am &&
-    !!festival?.fullDescription_en &&
-    !!festival?.fullDescription_am &&
+    (!!festival?.name_en || !!festival?.name_am) &&
+    (!!festival?.shortDescription_en || !!festival?.shortDescription_am) &&
+    (!!festival?.fullDescription_en || !!festival?.fullDescription_am) &&
     !!festival?.startDate &&
     !!festival?.endDate &&
-    !!festival?.location?.name_en &&
-    !!festival?.location?.name_am;
+    (!!festival?.location?.name_en || !!festival?.location?.name_am);
 
-  const hasHotels = Array.isArray(festival?.hotels) && festival.hotels.length > 0;
-  const hasTransport =
-    Array.isArray(festival?.transportation) && festival.transportation.length > 0;
-
-  return hasCore && hasHotels && hasTransport;
+  // Hotels and transportation are now optional for completion review
+  return hasCore;
 };
 
 export const isProductCompleteForReview = (product: any) =>

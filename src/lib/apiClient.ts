@@ -25,7 +25,23 @@ const apiClient = {
         headers,
         credentials: 'include',
       });
-      return response.json();
+      const text = await response.text();
+      if (!text) {
+        return { success: false, message: 'Empty response' };
+      }
+      if (!response.ok) {
+        try {
+          const errorData = JSON.parse(text);
+          return { success: false, message: errorData.message || `HTTP error ${response.status}` };
+        } catch {
+          return { success: false, message: `HTTP error ${response.status}` };
+        }
+      }
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { success: false, message: 'Invalid JSON response' };
+      }
     } catch (e: any) {
       console.error('API GET error:', e);
       return { success: false, message: e.message };
@@ -39,7 +55,23 @@ const apiClient = {
         body: JSON.stringify(data),
         credentials: 'include',
       });
-      return response.json();
+      const text = await response.text();
+      if (!text) {
+        return { success: false, message: 'Empty response' };
+      }
+      if (!response.ok) {
+        try {
+          const errorData = JSON.parse(text);
+          return { success: false, message: errorData.message || `HTTP error ${response.status}` };
+        } catch {
+          return { success: false, message: `HTTP error ${response.status}` };
+        }
+      }
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { success: false, message: 'Invalid JSON response' };
+      }
     } catch (e: any) {
       console.error('API POST error:', e);
       return { success: false, message: e.message };
@@ -53,7 +85,23 @@ const apiClient = {
         body: JSON.stringify(data),
         credentials: 'include',
       });
-      return response.json();
+      const text = await response.text();
+      if (!text) {
+        return { success: false, message: 'Empty response' };
+      }
+      if (!response.ok) {
+        try {
+          const errorData = JSON.parse(text);
+          return { success: false, message: errorData.message || `HTTP error ${response.status}` };
+        } catch {
+          return { success: false, message: `HTTP error ${response.status}` };
+        }
+      }
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { success: false, message: 'Invalid JSON response' };
+      }
     } catch (e: any) {
       console.error('API PUT error:', e);
       return { success: false, message: e.message };
@@ -67,7 +115,23 @@ const apiClient = {
         body: JSON.stringify(data),
         credentials: 'include',
       });
-      return response.json();
+      const text = await response.text();
+      if (!text) {
+        return { success: false, message: 'Empty response' };
+      }
+      if (!response.ok) {
+        try {
+          const errorData = JSON.parse(text);
+          return { success: false, message: errorData.message || `HTTP error ${response.status}` };
+        } catch {
+          return { success: false, message: `HTTP error ${response.status}` };
+        }
+      }
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { success: false, message: 'Invalid JSON response' };
+      }
     } catch (e: any) {
       console.error('API PATCH error:', e);
       return { success: false, message: e.message };
@@ -80,7 +144,23 @@ const apiClient = {
           headers,
           credentials: 'include',
       });
-      return response.json();
+      const text = await response.text();
+      if (!text) {
+        return { success: false, message: 'Empty response' };
+      }
+      if (!response.ok) {
+        try {
+          const errorData = JSON.parse(text);
+          return { success: false, message: errorData.message || `HTTP error ${response.status}` };
+        } catch {
+          return { success: false, message: `HTTP error ${response.status}` };
+        }
+      }
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { success: false, message: 'Invalid JSON response' };
+      }
     } catch (e: any) {
       console.error('API DELETE error:', e);
       return { success: false, message: e.message };

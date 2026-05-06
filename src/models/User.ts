@@ -13,6 +13,12 @@ const UserSchema = new mongoose.Schema(
       unique: true
     },
 
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true
+    },
+
     password: {
       type: String,
       required: true
@@ -131,6 +137,7 @@ phone: {
     },
     adminApprovalReviewedAt: { type: Date, default: null },
     adminApprovalReason: { type: String, default: null },
+    reportsCount: { type: Number, default: 0 },
   },
   {
     timestamps: true

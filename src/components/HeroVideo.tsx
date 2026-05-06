@@ -3,14 +3,13 @@ import Link from 'next/link';
 import { Button } from './UI';
 import { useLanguage } from '@/context/LanguageContext';
 
-// Local video files from public/uploads/videos
 const videoSources = [
   '/uploads/videos/13530688_1440_2560_30fps.mp4',
   '/uploads/videos/15185809_4096_2160_25fps.mp4',
   '/uploads/videos/3967245-uhd_4096_2160_24fps.mp4',
 ];
 
-const posterImage = '/uploads/avatars/festivalandproductimage/festivalimage1.webp';
+const posterImage = 'https://res.cloudinary.com/dmhu32ya9/image/upload/w_1920,h_1080,c_fill/v1777798803/ethio-hub/avatars/festivalandproductimage/fzfj0bverugasrobafk0.webp';
 
 export const HeroVideo: React.FC = () => {
   const { t } = useLanguage();
@@ -116,21 +115,20 @@ export const HeroVideo: React.FC = () => {
         </div>
       </div>
 
-      {/* Video Cycle Indicators */}
-      {!isMobile && videoSources.length > 1 && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-          {videoSources.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentVideoIndex(index)}
-              className={`w-3 h-3 rounded-full transition-all ${
-                index === currentVideoIndex ? 'bg-secondary w-8' : 'bg-white/30'
-              }`}
-              aria-label={`Switch to video ${index + 1}`}
-            />
-          ))}
-        </div>
-      )}
+      {/* Diagonal Inclined Divider - Gold Line */}
+      <div className="absolute -bottom-px left-0 right-0 z-20 overflow-hidden">
+        <svg
+          className="w-full h-12 md:h-20"
+          viewBox="0 0 1440 120"
+          preserveAspectRatio="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M0,0 L1440,80 L1440,120 L0,120 Z"
+            fill="#D4AF37"
+          />
+        </svg>
+      </div>
     </section>
   );
 };

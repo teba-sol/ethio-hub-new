@@ -16,7 +16,21 @@ export default function TicketsPage() {
   const router = useRouter();
   const eventId = params?.id as string;
   
-  const { setEvent, ticketSelection, setTicketSelection } = useBooking();
+  const { 
+    setEvent, 
+    ticketSelection, 
+    setTicketSelection,
+    getGrandTotal,
+    getServiceFee,
+    selectedRoom,
+    checkIn,
+    checkOut,
+    selectedTransport,
+    selectedHotel,
+    setSelectedHotel,
+  } = useBooking();
+  
+  const [processingPayment, setProcessingPayment] = useState(false);
   
   const [festival, setFestival] = useState<Festival | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,6 +104,66 @@ export default function TicketsPage() {
     return basePrice;
   };
 
+  const handlePayment = async () => {
+    if (!ticketSelection || !festival) return;
+    
+    setProcessingPayment(true);
+
+    try {
+      const grandTotal = getGrandTotal();
+      const serviceFee = getServiceFee();
+
+      // 1. Create booking and initialize payment in one step
+      const bookingResponse = await apiClient.post('/api/tourist/bookings', {
+        festivalId: eventId,
+        ticketType: ticketSelection.type,
+        quantity: ticketSelection.quantity,
+        totalPrice: grandTotal,
+        currency: festival.pricing?.currency || 'ETB',
+        hasHotelBooking: !!(selectedRoom && checkIn && checkOut),
+        touristServiceFee: serviceFee,
+        bookingDetails: {
+          ...(selectedRoom ? {
+            room: {
+              hotelId: selectedHotel?._id || selectedHotel?.id || '',
+              roomId: selectedRoom._id || selectedRoom.id,
+              hotelName: selectedHotel?.name || '',
+              roomName: selectedRoom.name,
+              roomPrice: selectedRoom.pricePerNight,
+            },
+          } : {}),
+          ...(selectedTransport ? {
+            transport: {
+              transportId: selectedTransport._id || selectedTransport.id,
+              type: selectedTransport.type,
+              price: selectedTransport.price,
+            },
+          } : {}),
+        },
+        contactInfo: {
+          fullName: 'Guest', // In a real app, you'd get this from a form or user profile
+          email: 'guest@email.com',
+          phone: '0912345678',
+        },
+      });
+
+      if (!bookingResponse.success) {
+        throw new Error(bookingResponse.message || 'Failed to create booking');
+      }
+
+      // 2. Redirect to Chapa if checkoutUrl is provided
+      if (bookingResponse.checkoutUrl) {
+        window.location.href = bookingResponse.checkoutUrl;
+      } else {
+        throw new Error('Payment initialization failed: No checkout URL received');
+      }
+    } catch (e: any) {
+      console.error('Payment error:', e);
+      alert(e.message || 'Payment failed');
+      setProcessingPayment(false);
+    }
+  };
+
   const TICKET_TYPES = [
     {
       type: 'vip' as const,
@@ -101,24 +175,36 @@ export default function TicketsPage() {
         'Complimentary refreshments',
         'Reserved parking',
       ],
+      isVip: true,
+      includesHotelTransport: true,
+      vipPerks: festival?.vipPerks || [
+        'Front row seating',
+        'VIP lounge access',
+        'Fast entry',
+        'Welcome drink',
+      ],
     },
     {
       type: 'standard' as const,
       label: 'Standard Entry',
       benefits: [
-        'General admissions access',
+        'General admission access',
         'Food court access',
         'Standard viewing area',
       ],
+      isVip: false,
+      includesHotelTransport: false,
     },
     {
       type: 'earlyBird' as const,
       label: 'Early Bird',
       benefits: [
-        'General admissions access',
+        'General admission access',
         'Discounted price',
         'Food court access',
       ],
+      isVip: false,
+      includesHotelTransport: false,
     },
   ];
 
@@ -149,7 +235,7 @@ export default function TicketsPage() {
         {/* Page Header */}
         <div className="mb-12">
           <h1 className="text-4xl font-serif font-bold text-primary mb-4">
-            Select Your Tickets
+            Book Your Experience
           </h1>
           
         </div>
@@ -166,6 +252,9 @@ export default function TicketsPage() {
                   price={getTicketPrice(ticket.type)}
                   benefits={ticket.benefits}
                   isSelected={ticketSelection?.type === ticket.type}
+                  isVip={ticket.isVip}
+                  includesHotelTransport={ticket.includesHotelTransport}
+                  vipPerks={ticket.vipPerks}
                   disabled={ticket.type === 'earlyBird' && !isEarlyBirdAvailable}
                   disabledReason={
                     ticket.type === 'earlyBird' && !isEarlyBirdAvailable
@@ -175,8 +264,21 @@ export default function TicketsPage() {
                   onSelect={() => handleSelect(ticket.type)}
                 />
               ))}
-             </div>
-           </div>
+            </div>
+            
+            {/* Continue */}
+            <button
+              onClick={handlePayment}
+              disabled={!ticketSelection || processingPayment}
+              className={`w-full mt-8 py-4 rounded-xl font-bold transition-colors ${
+                ticketSelection 
+                  ? 'bg-primary text-white hover:bg-primary/90' 
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              {processingPayment ? 'Processing...' : 'Continue to Checkout'}
+            </button>
+          </div>
 
            {/* Price Summary */}
            <div className="lg:col-span-1">

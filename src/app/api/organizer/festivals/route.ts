@@ -12,16 +12,11 @@ const isMissing = (value: any) => value === undefined || value === null || value
 const validateCreateAvailability = (hotels: any, transportation: any) => {
   const issues: string[] = [];
 
-  if (!Array.isArray(hotels) || hotels.length === 0) {
-    issues.push('At least one hotel with at least one room is required.');
-  }
-
-  let roomCount = 0;
+  // Hotels and transportation are optional now
   if (Array.isArray(hotels)) {
     hotels.forEach((hotel: any, hotelIndex: number) => {
       const hotelLabel = String(hotel?.name || '').trim() || `Hotel ${hotelIndex + 1}`;
       const rooms = Array.isArray(hotel?.rooms) ? hotel.rooms : [];
-      roomCount += rooms.length;
 
       rooms.forEach((room: any, roomIndex: number) => {
         const roomLabel = String(room?.name || '').trim() || `Room ${roomIndex + 1}`;
@@ -29,28 +24,22 @@ const validateCreateAvailability = (hotels: any, transportation: any) => {
 
         if (isMissing(room?.availability) || Number.isNaN(availability)) {
           issues.push(`${hotelLabel} - ${roomLabel}: room availability must be numeric.`);
-        } else if (availability <= 0) {
-          issues.push(`${hotelLabel} - ${roomLabel}: room availability must be greater than 0.`);
+        } else if (availability < 0) { // Changed from <= 0 to < 0 to allow 0 if they really want
+          issues.push(`${hotelLabel} - ${roomLabel}: room availability must be at least 0.`);
         }
       });
     });
   }
 
-  if (roomCount === 0) {
-    issues.push('At least one hotel room is required.');
-  }
-
-  if (!Array.isArray(transportation) || transportation.length === 0) {
-    issues.push('At least one transportation option is required.');
-  } else {
+  if (Array.isArray(transportation)) {
     transportation.forEach((transport: any, transportIndex: number) => {
       const transportLabel = String(transport?.type || '').trim() || `Transport ${transportIndex + 1}`;
       const availability = Number(transport?.availability);
 
       if (isMissing(transport?.availability) || Number.isNaN(availability)) {
         issues.push(`${transportLabel}: car availability must be numeric.`);
-      } else if (availability <= 0) {
-        issues.push(`${transportLabel}: car availability must be greater than 0.`);
+      } else if (availability < 0) {
+        issues.push(`${transportLabel}: car availability must be at least 0.`);
       }
     });
   }
@@ -277,15 +266,30 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const {
-      name, name_en, name_am,
+    const { 
+      name,
+      name_en,
+      name_am,
       type,
-      shortDescription, shortDescription_en, shortDescription_am,
-      fullDescription, fullDescription_en, fullDescription_am,
-      startDate, endDate, location,
-      coverImage, gallery, schedule,
-      hotels, transportation, services, policies, pricing,
-      verificationStatus
+      shortDescription,
+      shortDescription_en,
+      shortDescription_am,
+      fullDescription,
+      fullDescription_en,
+      fullDescription_am,
+      startDate, 
+      endDate, 
+      location, 
+      coverImage, 
+      gallery,
+      schedule,
+      hotels,
+      transportation,
+      services,
+      policies,
+      pricing,
+      verificationStatus,
+      totalCapacity
     } = body;
 
     const requestedStatus = verificationStatus === 'Pending Approval' ? 'Pending Approval' : 'Draft';
@@ -300,17 +304,13 @@ export async function POST(request: NextRequest) {
     const normalizedLocationNameAm = textValue(location?.name_am, location?.name);
 
     if (!isDraft && (
-      !normalizedNameEn ||
-      !normalizedNameAm ||
-      !normalizedShortEn ||
-      !normalizedShortAm ||
-      !normalizedFullEn ||
-      !normalizedFullAm ||
+      (!normalizedNameEn && !normalizedNameAm) ||
+      (!normalizedShortEn && !normalizedShortAm) ||
+      (!normalizedFullEn && !normalizedFullAm) ||
       !startDate ||
       !endDate ||
       !location ||
-      !normalizedLocationNameEn ||
-      !normalizedLocationNameAm
+      (!normalizedLocationNameEn && !normalizedLocationNameAm)
     )) {
       return new NextResponse(
         JSON.stringify({ success: false, message: 'Missing required fields' }),
@@ -364,6 +364,7 @@ export async function POST(request: NextRequest) {
       fullDescription_am: normalizedFullAm || normalizedFullEn || 'Draft festival description',
       startDate: startDate || new Date(),
       endDate: endDate || startDate || new Date(),
+      totalCapacity: Number(totalCapacity) || 0,
       location: {
         ...(location || {}),
         name: normalizedLocationNameEn || normalizedLocationNameAm || 'Draft location',

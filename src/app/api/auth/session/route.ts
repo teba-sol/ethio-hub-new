@@ -29,13 +29,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-return new NextResponse(
-      JSON.stringify({ 
-        success: true, 
-        user: { 
-          id: user._id, 
-          name: user.name, 
-          email: user.email, 
+    // Check if account is suspended or banned
+    if (user.status === 'Suspended' || user.status === 'Banned') {
+      return new NextResponse(
+        JSON.stringify({ success: false, user: null, message: 'Account suspended or banned' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    return new NextResponse(
+      JSON.stringify({
+        success: true,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
           role: user.role,
           status: user.status,
           suspensionReason: user.suspensionReason || null,
@@ -51,15 +59,15 @@ return new NextResponse(
             dateOfBirth: user.touristProfile?.dateOfBirth || null,
             profileImage: user.touristProfile?.profileImage || null,
           } : null,
-        } 
+        }
       }),
-      { 
-        status: 200, 
-        headers: { 
+      {
+        status: 200,
+        headers: {
           'content-type': 'application/json',
           'Cache-Control': 'no-store, no-cache, must-revalidate',
           'Pragma': 'no-cache'
-        } 
+        }
       }
     );
 

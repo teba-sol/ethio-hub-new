@@ -42,6 +42,10 @@ const serialized = serialize("sessionToken", token, {
 
     return response;
   } catch (error: any) {
-    return NextResponse.json({ message: error.message }, { status: 400 });
+    console.error('Login error:', error);
+    return NextResponse.json(
+      { success: false, message: error.message || 'Login failed' },
+      { status: 400 }
+    );
   }
 }

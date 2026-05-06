@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Mail, CheckCircle2, AlertCircle } from "lucide-react";
-import { Button, Input } from "../../../../components/UI";
-import { useLanguage } from "../../../../context/LanguageContext";
+import { Button, Input } from '../../../components/UI';
+import { useLanguage } from '../../../context/LanguageContext';
 
 export default function ForgotPasswordPage() {
   const { t } = useLanguage();

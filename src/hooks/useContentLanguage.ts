@@ -45,7 +45,24 @@ export function useContentLanguage() {
 
       // Fallback to base field (for backward compatibility)
       const baseValue = values[field];
-      return typeof baseValue === 'string' ? baseValue : '';
+      if (typeof baseValue === 'string') {
+        return baseValue;
+      }
+      if (baseValue && typeof baseValue === 'object') {
+        const langKey = language.toLowerCase();
+        if (baseValue[langKey] && typeof baseValue[langKey] === 'string') {
+          return baseValue[langKey];
+        }
+        if (baseValue['en'] && typeof baseValue['en'] === 'string') {
+          return baseValue['en'];
+        }
+        for (const key in baseValue) {
+          if (typeof baseValue[key] === 'string') {
+            return baseValue[key];
+          }
+        }
+      }
+      return '';
     },
     [language]
   );
