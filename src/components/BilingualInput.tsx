@@ -30,6 +30,8 @@ interface DualLanguageFieldProps {
   showEnglish?: boolean;
   showAmharic?: boolean;
   hideLabel?: boolean;
+  type?: string;
+  icon?: any;
 }
 
 export const BilingualInput: React.FC<BilingualInputProps & { hideLabel?: boolean }> = ({
@@ -71,7 +73,7 @@ export const BilingualInput: React.FC<BilingualInputProps & { hideLabel?: boolea
             value={value}
             onChange={handleChange}
             rows={rows}
-            className="w-full p-4 bg-gray-50/50 border border-gray-200 rounded-[14px] text-sm focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white outline-none transition-all duration-200 placeholder:text-gray-400 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 hover:bg-white"
+            className="w-full px-4 py-4 bg-gray-50/30 border border-gray-200 rounded-[16px] text-sm transition-all duration-300 placeholder:text-gray-400 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 focus:outline-none shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 hover:bg-white hover:shadow-md resize-none"
             placeholder={placeholder || (language === 'en' ? 'Enter in English...' : 'አማርኛ ያስገቡ...')}
             required={required}
             dir="ltr"
@@ -81,7 +83,7 @@ export const BilingualInput: React.FC<BilingualInputProps & { hideLabel?: boolea
             type="text"
             value={value}
             onChange={handleChange}
-            className="w-full px-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-[14px] text-sm focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white outline-none transition-all duration-200 placeholder:text-gray-400 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 hover:bg-white"
+            className="w-full px-4 py-4 bg-gray-50/30 border border-gray-200 rounded-[16px] text-sm transition-all duration-300 placeholder:text-gray-400 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 focus:outline-none shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 hover:bg-white hover:shadow-md"
             placeholder={placeholder || (language === 'en' ? 'Enter in English...' : 'አማርኛ ያስገቡ...')}
             required={required}
             dir="ltr"
@@ -107,52 +109,68 @@ export const DualLanguageField: React.FC<DualLanguageFieldProps> = ({
   showEnglish = true,
   showAmharic = true,
   hideLabel = false,
+  type = 'text',
+  icon: Icon,
 }) => {
-  const baseClass = 'w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all';
+  const inputBaseClass = `w-full ${Icon ? 'pl-11 pr-4' : 'px-4'} py-4 bg-gray-50/30 border border-gray-200 rounded-[16px] text-sm transition-all duration-300 placeholder:text-gray-400 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 hover:bg-white hover:shadow-md focus:bg-white focus:outline-none`;
+  const textareaBaseClass = 'w-full px-4 py-4 bg-gray-50/30 border border-gray-200 rounded-[16px] text-sm transition-all duration-300 placeholder:text-gray-400 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 hover:bg-white hover:shadow-md focus:bg-white focus:outline-none resize-none';
+  const focusClass = 'focus:border-primary focus:ring-4 focus:ring-primary/10';
   const Field = textarea ? 'textarea' : 'input';
 
   return (
     <div className={`space-y-3 ${className}`}>
       {label && !hideLabel && (
-        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">
           {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
       <div className={`grid ${(showEnglish && showAmharic) ? 'grid-cols-1 md:grid-cols-2 gap-4' : 'grid-cols-1'} gap-4`}>
         {showEnglish && (
-          <div className="space-y-2">
+          <div className="relative">
             {!hideLabel && (
-              <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-700">
+              <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-700 mb-2">
                 English
               </span>
             )}
-            <Field
-              {...(textarea ? { rows } : { type: 'text' })}
-              value={englishValue}
-              onChange={(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onEnglishChange(event.target.value)}
-              className={baseClass}
-              placeholder={englishPlaceholder}
-              required={required}
-              dir="ltr"
-            />
+            <div className="relative group">
+              {Icon && !textarea && (
+                <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 transition-colors group-focus-within:text-primary z-10" />
+              )}
+              <Field
+                {...(textarea ? { rows } : { type })}
+                value={englishValue}
+                onChange={(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onEnglishChange(event.target.value)}
+                className={`${textarea ? textareaBaseClass : inputBaseClass} ${focusClass}`}
+                placeholder={englishPlaceholder}
+                required={required}
+                dir="ltr"
+              />
+              <div className="absolute inset-0 rounded-[16px] pointer-events-none border border-transparent transition-all duration-300 group-hover:border-primary/20 group-focus-within:border-primary/30" />
+            </div>
           </div>
         )}
         {showAmharic && (
-          <div className="space-y-2">
+          <div className="relative">
             {!hideLabel && (
-              <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-700">
-                Amharic
+              <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-700 mb-2">
+                አማርኛ
               </span>
             )}
-            <Field
-              {...(textarea ? { rows } : { type: 'text' })}
-              value={amharicValue}
-              onChange={(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onAmharicChange(event.target.value)}
-              className={baseClass}
-              placeholder={amharicPlaceholder}
-              required={required}
-              dir="auto"
-            />
+            <div className="relative group">
+              {Icon && !textarea && (
+                <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 transition-colors group-focus-within:text-primary z-10" />
+              )}
+              <Field
+                {...(textarea ? { rows } : { type })}
+                value={amharicValue}
+                onChange={(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onAmharicChange(event.target.value)}
+                className={`${textarea ? textareaBaseClass : inputBaseClass} ${focusClass}`}
+                placeholder={amharicPlaceholder}
+                required={required}
+                dir="auto"
+              />
+              <div className="absolute inset-0 rounded-[16px] pointer-events-none border border-transparent transition-all duration-300 group-hover:border-primary/20 group-focus-within:border-primary/30" />
+            </div>
           </div>
         )}
       </div>

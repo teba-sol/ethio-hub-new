@@ -202,9 +202,9 @@ export const EventStatusBadge: React.FC<EventStatusBadgeProps> = ({
 };
 
 export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label?: string; hideLabel?: boolean; icon?: LucideIcon }> = ({ label, hideLabel, icon: Icon, ...props }) => (
-  <div className="flex flex-col space-y-2 w-full group">
+  <div className="flex flex-col w-full group">
     {label && !hideLabel && (
-      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 transition-colors group-focus-within:text-primary" htmlFor={props.id}>
+      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 mb-2 transition-colors group-focus-within:text-primary" htmlFor={props.id}>
         {label} {props.required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
     )}
@@ -216,10 +216,11 @@ export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { lab
       )}
       <input 
         className={`
-          block w-full rounded-[14px] border border-gray-200 bg-gray-50/50 px-4 py-3.5 text-sm transition-all duration-200
-          placeholder:text-gray-300 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none
-          shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 hover:bg-white
+          block w-full rounded-[16px] border border-gray-200 bg-gray-50/30 px-4 py-4 text-sm transition-all duration-300
+          placeholder:text-gray-400 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 focus:outline-none
+          shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 hover:bg-white hover:shadow-md
           ${Icon ? 'pl-12' : 'px-4'}
+          ${props.type === 'number' ? '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none' : ''}
           ${props.className || ''}
         `}
         {...props}
@@ -229,17 +230,17 @@ export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { lab
 );
 
 export const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label?: string; hideLabel?: boolean }> = ({ label, hideLabel, ...props }) => (
-  <div className="flex flex-col space-y-2 w-full group">
+  <div className="flex flex-col w-full group">
     {label && !hideLabel && (
-      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 transition-colors group-focus-within:text-primary" htmlFor={props.id}>
+      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 mb-2 transition-colors group-focus-within:text-primary" htmlFor={props.id}>
         {label}
       </label>
     )}
     <textarea 
       className={`
-        block w-full rounded-[14px] border border-gray-200 bg-gray-50/50 px-4 py-3.5 text-sm transition-all duration-200
-        placeholder:text-gray-400 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none
-        shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 hover:bg-white
+        block w-full rounded-[16px] border border-gray-200 bg-gray-50/30 px-4 py-4 text-sm transition-all duration-300
+        placeholder:text-gray-400 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 focus:outline-none
+        shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 hover:bg-white hover:shadow-md resize-none
         ${props.className || ''}
       `}
       {...props}

@@ -1,10 +1,11 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { 
   X, ChevronLeft, ChevronRight, Image as ImageIcon, Camera, 
-  MapPin, Search, RefreshCw, Plus, Ticket, Star, Hotel, Car,
+  MapPin, Search, RefreshCw, Plus, Minus, Ticket, Star, Hotel, Car,
   Box, DollarSign, CheckCircle2, Trash2, Calendar, Clock,
   Users, Shield, Info, Eye, Save, Globe, Map as MapIcon,
-  Utensils, Music, Heart, AlertCircle, Layout, Maximize2
+  Utensils, Music, Heart, AlertCircle, Layout, Maximize2,
+  Zap, FileText, LayoutGrid
 } from 'lucide-react';
 import { Button, Badge, Input, Textarea, VerifiedBadge } from '../UI';
 import { HotelAccommodation, TransportOption, RoomType } from '../../types';
@@ -36,6 +37,81 @@ const ROOM_FACILITIES = [
   'Mini Bar', 'Coffee Machine', 'Safe Box', 'Bathtub', 'City View'
 ];
 
+const NumberStepperInput: React.FC<{
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+  icon?: React.ElementType;
+  min?: number;
+  max?: number;
+  step?: number;
+  placeholder?: string;
+  required?: boolean;
+  iconPosition?: 'left' | 'right';
+  className?: string;
+}> = ({ label, value, onChange, icon: Icon, min = 0, max, step = 1, placeholder, required, className = '' }) => {
+  const handleDecrement = () => {
+    const newValue = value - step;
+    if (min !== undefined && newValue < min) return;
+    onChange(newValue);
+  };
+
+  const handleIncrement = () => {
+    const newValue = value + step;
+    if (max !== undefined && newValue > max) return;
+    onChange(newValue);
+  };
+
+  return (
+    <div className={`space-y-2 ${className}`}>
+      {label && <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">{label}</label>}
+      <div className="relative flex items-center">
+        {Icon && Icon !== DollarSign && (
+          <div className="absolute left-4 z-10 pointer-events-none">
+            <Icon className="w-5 h-5 text-gray-300" />
+          </div>
+        )}
+        {Icon === DollarSign && (
+          <div className="absolute left-4 z-10 pointer-events-none">
+            <span className="text-xs font-black text-gray-300">ETB</span>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={handleDecrement}
+          disabled={min !== undefined && value <= min}
+          className="absolute left-12 p-1.5 rounded-l-xl bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+        >
+          <Minus className="w-4 h-4" />
+        </button>
+        <input
+          type="number"
+          value={value || ''}
+          onChange={(e) => {
+            const val = parseInt(e.target.value) || min;
+            if (min !== undefined && val < min) return;
+            if (max !== undefined && val > max) return;
+            onChange(val);
+          }}
+          placeholder={placeholder}
+          min={min}
+          max={max}
+          className={`w-full pl-24 pr-12 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all duration-200 text-sm font-bold text-gray-700 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 ${Icon ? 'pl-28' : ''}`}
+          required={required}
+        />
+        <button
+          type="button"
+          onClick={handleIncrement}
+          disabled={max !== undefined && value >= max}
+          className="absolute right-1 top-1 bottom-1 px-2.5 rounded-r-xl bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export const FestivalCreationWizard: React.FC<{ 
   onCancel: () => void;
   initialData?: any;
@@ -45,6 +121,8 @@ export const FestivalCreationWizard: React.FC<{
   const [step, setStep] = useState(1);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [hotelMapTarget, setHotelMapTarget] = useState<{ hotelIdx: number } | null>(null);
+  const [coreLocationSelected, setCoreLocationSelected] = useState(!!initialData?.location?.coordinates);
   const [languagePreference, setLanguagePreference] = useState<'both' | 'en' | 'am'>('both');
   const [formData, setFormData] = useState({
     core: {
@@ -236,6 +314,8 @@ export const FestivalCreationWizard: React.FC<{
     fullDescription_en: '',
     fullDescription_am: '',
     address: '',
+    coordinates: { lat: 9.0333, lng: 38.7500 },
+    locationSelected: false,
     starRating: 3,
     image: '',
     gallery: [] as string[],
@@ -552,7 +632,7 @@ export const FestivalCreationWizard: React.FC<{
         location: {
           name_en: formData.core.locationName_en,
           name_am: formData.core.locationName_am,
-          address: formData.core.address,
+          address: `${formData.core.locationName_en || formData.core.locationName_am}`, // Use location name as address since manual text field is removed
           coordinates: formData.core.coordinates,
         },
         schedule: formData.schedule,
@@ -597,7 +677,7 @@ export const FestivalCreationWizard: React.FC<{
     if (!formData.core.startDate) allMissing.push('Start Date');
     if (!formData.core.endDate) allMissing.push('End Date');
     if (!formData.core.locationName_en && !formData.core.locationName_am) allMissing.push('Location Name (English or Amharic)');
-    if (!formData.core.address) allMissing.push('Address');
+    if (!formData.core.coordinates) allMissing.push('Specific Location on Map');
     if (!formData.core.shortDescription_en && !formData.core.shortDescription_am) allMissing.push('Short Description (English or Amharic)');
     if (!formData.core.fullDescription_en && !formData.core.fullDescription_am) allMissing.push('Full Description (English or Amharic)');
 
@@ -623,7 +703,7 @@ export const FestivalCreationWizard: React.FC<{
         location: {
           name_en: formData.core.locationName_en,
           name_am: formData.core.locationName_am,
-          address: formData.core.address,
+          address: `${formData.core.locationName_en || formData.core.locationName_am}`, // Use location name as address since manual text field is removed
           coordinates: formData.core.coordinates,
         },
         schedule: formData.schedule,
@@ -662,61 +742,54 @@ export const FestivalCreationWizard: React.FC<{
   };
 
   const renderStepIndicator = () => (
-    <div className="flex items-center justify-between mb-12 overflow-x-auto pb-4 scrollbar-hide">
-      {STEPS.map((s, i) => (
-        <React.Fragment key={s.id}>
-          <div 
-            className={`flex flex-col items-center min-w-[100px] cursor-pointer transition-all ${step >= s.id ? 'text-primary' : 'text-gray-300'}`}
-            onClick={() => setStep(s.id)}
-          >
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 border-2 transition-all ${
-              step === s.id ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 
-              step > s.id ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white border-gray-100'
-            }`}>
-              {step > s.id ? <CheckCircle2 className="w-5 h-5" /> : <s.icon className="w-5 h-5" />}
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-center">{s.name}</span>
+    <div className="bg-white p-2 rounded-[24px] border border-gray-100 shadow-sm mb-12 flex items-center gap-1 overflow-x-auto scrollbar-hide">
+      {STEPS.map((s) => (
+        <button
+          key={s.id}
+          onClick={() => setStep(s.id)}
+          className={`
+            flex items-center gap-3 px-6 py-3.5 rounded-xl transition-all duration-300 flex-shrink-0
+            ${step === s.id 
+              ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]' 
+              : step > s.id 
+                ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' 
+                : 'bg-transparent text-gray-400 hover:bg-gray-50'}
+          `}
+        >
+          <div className={`
+            w-8 h-8 rounded-lg flex items-center justify-center transition-colors
+            ${step === s.id ? 'bg-white/20' : step > s.id ? 'bg-emerald-100' : 'bg-gray-100'}
+          `}>
+            {step > s.id ? <CheckCircle2 className="w-4 h-4" /> : <s.icon className="w-4 h-4" />}
           </div>
-          {i < STEPS.length - 1 && (
-            <div className={`h-[2px] flex-1 min-w-[20px] mx-2 ${step > s.id ? 'bg-emerald-500' : 'bg-gray-100'}`} />
-          )}
-        </React.Fragment>
+          <div className="text-left">
+            <p className="text-[10px] font-black uppercase tracking-widest leading-none opacity-60 mb-1">Step 0{s.id}</p>
+            <p className="text-xs font-bold whitespace-nowrap">{s.name}</p>
+          </div>
+        </button>
       ))}
     </div>
   );
 
-  // const renderStepIndicator = () => (
-  //   <div className="flex items-center justify-between mb-12 overflow-x-auto pb-4 scrollbar-hide">
-  //     {STEPS.map((s, i) => (
-  //       <React.Fragment key={s.id}>
-  //         <div 
-  //           className={`flex flex-col items-center min-w-[100px] cursor-pointer transition-all ${step >= s.id ? 'text-primary' : 'text-gray-300'}`}
-  //           onClick={() => setStep(s.id)}
-  //         >
-  //           <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 border-2 transition-all ${
-  //             step === s.id ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 
-  //             step > s.id ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white border-gray-100'
-  //           }`}>
-  //             {step > s.id ? <CheckCircle2 className="w-5 h-5" /> : <s.icon className="w-5 h-5" />}
-  //           </div>
-  //           <span className="text-[10px] font-bold uppercase tracking-wider text-center">{s.name}</span>
-  //         </div>
-  //         {i < STEPS.length - 1 && (
-  //           <div className={`h-[2px] flex-1 min-w-[20px] mx-2 ${step > s.id ? 'bg-emerald-500' : 'bg-gray-100'}`} />
-  //         )}
-  //       </React.Fragment>
-  //     ))}
-  //   </div>
-  // );
-
-    return (
+   return (
     <div className="max-w-[1400px] mx-auto pb-20">
       <MapPickerModal 
         isOpen={isMapModalOpen}
-        onClose={() => setIsMapModalOpen(false)}
-        initialPosition={formData.core.coordinates}
+        onClose={() => {
+          setIsMapModalOpen(false);
+          setHotelMapTarget(null);
+        }}
+        initialPosition={hotelMapTarget ? formData.hotels[hotelMapTarget.hotelIdx]?.coordinates : formData.core.coordinates}
         onLocationSelect={(coords) => {
-          setFormData(prev => ({ ...prev, core: { ...prev.core, coordinates: coords } }));
+          if (hotelMapTarget) {
+            updateHotel(hotelMapTarget.hotelIdx, 'coordinates', coords);
+            updateHotel(hotelMapTarget.hotelIdx, 'locationSelected', true);
+            setHotelMapTarget(null);
+          } else {
+            setFormData(prev => ({ ...prev, core: { ...prev.core, coordinates: coords } }));
+            setCoreLocationSelected(true);
+          }
+          setIsMapModalOpen(false);
         }}
       />
       <header className="flex justify-between items-center mb-12">
@@ -767,49 +840,55 @@ export const FestivalCreationWizard: React.FC<{
                     </div>
 
                     <div className="grid grid-cols-1 gap-6">
-                      <DualLanguageField
-                        label="Festival Name"
-                        hideLabel
-                        englishPlaceholder="Festival Name (English) *"
-                        amharicPlaceholder="á‹¨áŒáˆµá‰²á‰«áˆ áˆµáˆ (áŠ áˆ›áˆ­áŠ›) *"
-                        englishValue={formData.core.name_en}
-                        amharicValue={formData.core.name_am}
-                        onEnglishChange={(value) => setFormData(prev => ({...prev, core: {...prev.core, name_en: value}}))}
-                        onAmharicChange={(value) => setFormData(prev => ({...prev, core: {...prev.core, name_am: value}}))}
-                        showEnglish={languagePreference !== 'am'}
-                        showAmharic={languagePreference !== 'en'}
-                        className={errors.name_en || errors.name_am ? 'ring-1 ring-red-500 rounded-xl' : ''}
-                      />
-                      {(errors.name_en || errors.name_am) && (
-                        <p className="text-[10px] text-red-500 ml-1 mt-[-15px]">{errors.name_en || errors.name_am}</p>
-                      )}
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Festival Name *</label>
+                        <DualLanguageField
+                          hideLabel
+                          englishPlaceholder="Meskel Festival"
+                          amharicPlaceholder="መስቀል በዓል"
+                          englishValue={formData.core.name_en}
+                          amharicValue={formData.core.name_am}
+                          onEnglishChange={(value) => setFormData(prev => ({...prev, core: {...prev.core, name_en: value}}))}
+                          onAmharicChange={(value) => setFormData(prev => ({...prev, core: {...prev.core, name_am: value}}))}
+                          showEnglish={languagePreference !== 'am'}
+                          showAmharic={languagePreference !== 'en'}
+                          className={errors.name_en || errors.name_am ? 'ring-1 ring-red-500 rounded-xl' : ''}
+                        />
+                        {(errors.name_en || errors.name_am) && (
+                          <p className="text-xs text-red-500 ml-1 mt-1">{errors.name_en || errors.name_am}</p>
+                        )}
+                      </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="relative">
+                        <div className="space-y-2">
+                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Slug</label>
                           <Input
-                            placeholder="Slug (Auto-generated)"
+                            placeholder="auto-generated-url-slug"
                             hideLabel
                             value={formData.core.slug}
                             readOnly
                             className="bg-gray-50 border-dashed"
                           />
                         </div>
-                        <select
-                          value={formData.core.type}
-                          onChange={(e) => setFormData(prev => ({...prev, core: {...prev.core, type: e.target.value as any}}))}
-                          className="w-full px-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-[14px] focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all duration-200 text-sm font-medium shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300"
-                        >
-                          <option value="CulturalTraditional">Cultural / Traditional *</option>
-                          <option value="Religious">Religious *</option>
-                          <option value="NationalPublicHolidays">National / Public Holidays *</option>
-                        </select>
+                        <div className="space-y-2">
+                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Festival Type *</label>
+                          <select
+                            value={formData.core.type}
+                            onChange={(e) => setFormData(prev => ({...prev, core: {...prev.core, type: e.target.value as any}}))}
+                            className="w-full px-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-[14px] focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all duration-200 text-sm font-medium shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300"
+                          >
+                            <option value="CulturalTraditional">Cultural / Traditional *</option>
+                            <option value="Religious">Religious *</option>
+                            <option value="NationalPublicHolidays">National / Public Holidays *</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
 
                     {/* Professional Date Range Selection */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Start Date *</label>
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Start Date *</label>
                         <div className="relative group">
                           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors pointer-events-none">
                             <Calendar className="w-4 h-4" />
@@ -827,11 +906,11 @@ export const FestivalCreationWizard: React.FC<{
                             `}
                           />
                         </div>
-                        {errors.startDate && <p className="text-[10px] text-red-500 ml-1">{errors.startDate}</p>}
+                        {errors.startDate && <p className="text-xs text-red-500 ml-1 mt-1">{errors.startDate}</p>}
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">End Date *</label>
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">End Date *</label>
                         <div className="relative group">
                           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors pointer-events-none">
                             <Calendar className="w-4 h-4" />
@@ -849,65 +928,74 @@ export const FestivalCreationWizard: React.FC<{
                             `}
                           />
                         </div>
-                        {errors.endDate && <p className="text-[10px] text-red-500 ml-1">{errors.endDate}</p>}
+                        {errors.endDate && <p className="text-xs text-red-500 ml-1 mt-1">{errors.endDate}</p>}
                       </div>
                     </div>
 
-                    {/* Descriptions Moved Up */}
+                    {/* Descriptions */}
                     <div className="space-y-6">
-                      <DualLanguageField
-                        label="Short Description"
-                        hideLabel
-                        englishPlaceholder="Short description (English) *"
-                        amharicPlaceholder="áŠ áŒ­áˆ­ áˆ˜áŒáˆˆáŒ« (áŠ áˆ›áˆ­áŠ›) *"
-                        englishValue={formData.core.shortDescription_en}
-                        amharicValue={formData.core.shortDescription_am}
-                        onEnglishChange={(value) => setFormData(prev => ({...prev, core: {...prev.core, shortDescription_en: value}}))}
-                        onAmharicChange={(value) => setFormData(prev => ({...prev, core: {...prev.core, shortDescription_am: value}}))}
-                        textarea
-                        rows={2}
-                        showEnglish={languagePreference !== 'am'}
-                        showAmharic={languagePreference !== 'en'}
-                      />
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Short Description *</label>
+                        <DualLanguageField
+                          hideLabel
+                          englishPlaceholder="Brief summary of the festival..."
+                          amharicPlaceholder="የበዓሉ አጭር መግለጫ..."
+                          englishValue={formData.core.shortDescription_en}
+                          amharicValue={formData.core.shortDescription_am}
+                          onEnglishChange={(value) => setFormData(prev => ({...prev, core: {...prev.core, shortDescription_en: value}}))}
+                          onAmharicChange={(value) => setFormData(prev => ({...prev, core: {...prev.core, shortDescription_am: value}}))}
+                          textarea
+                          rows={2}
+                          showEnglish={languagePreference !== 'am'}
+                          showAmharic={languagePreference !== 'en'}
+                        />
+                      </div>
 
-                      <DualLanguageField
-                        label="Full Description"
-                        hideLabel
-                        englishPlaceholder="Full detailed description (English) *"
-                        amharicPlaceholder="á‹áˆ­á‹áˆ­ áˆ˜áŒáˆˆáŒ« (áŠ áˆ›áˆ­áŠ›) *"
-                        englishValue={formData.core.fullDescription_en}
-                        amharicValue={formData.core.fullDescription_am}
-                        onEnglishChange={(value) => setFormData(prev => ({...prev, core: {...prev.core, fullDescription_en: value}}))}
-                        onAmharicChange={(value) => setFormData(prev => ({...prev, core: {...prev.core, fullDescription_am: value}}))}
-                        textarea
-                        rows={5}
-                        showEnglish={languagePreference !== 'am'}
-                        showAmharic={languagePreference !== 'en'}
-                      />
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Full Description *</label>
+                        <DualLanguageField
+                          hideLabel
+                          englishPlaceholder="Detailed description of the festival, including history, traditions, and what to expect..."
+                          amharicPlaceholder="የበዓሉ ዝርዝር መግለጫ፣ ታሪክ፣ ባህሎች እና ምን እንደሚጠብቅዎት ያካትታል..."
+                          englishValue={formData.core.fullDescription_en}
+                          amharicValue={formData.core.fullDescription_am}
+                          onEnglishChange={(value) => setFormData(prev => ({...prev, core: {...prev.core, fullDescription_en: value}}))}
+                          onAmharicChange={(value) => setFormData(prev => ({...prev, core: {...prev.core, fullDescription_am: value}}))}
+                          textarea
+                          rows={5}
+                          showEnglish={languagePreference !== 'am'}
+                          showAmharic={languagePreference !== 'en'}
+                        />
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-1">
-                        <Input 
-                          placeholder="Total Capacity *"
+                    <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+                      <div className="space-y-2">
+                        <DualLanguageField
+                          label="Total Capacity"
                           hideLabel
                           type="number"
-                          min="1"
-                          value={formData.core.totalCapacity || ''}
-                          onChange={e => setFormData(prev => ({...prev, core: {...prev.core, totalCapacity: parseInt(e.target.value) || 0}}))}
+                          englishPlaceholder="capacity"
+                          amharicPlaceholder="የስቀል"
+                          englishValue={String(formData.core.totalCapacity || '')}
+                          amharicValue={String(formData.core.totalCapacity || '')}
+                          onEnglishChange={(value) => setFormData(prev => ({...prev, core: {...prev.core, totalCapacity: parseInt(value) || 0}}))}
+                          onAmharicChange={(value) => setFormData(prev => ({...prev, core: {...prev.core, totalCapacity: parseInt(value) || 0}}))}
                           icon={Users}
-                          className={errors.totalCapacity ? 'border-red-500 bg-red-50' : ''}
+                          showEnglish={languagePreference !== 'am'}
+                          showAmharic={languagePreference !== 'en'}
+                          className={errors.totalCapacity ? 'ring-1 ring-red-500 rounded-xl' : ''}
                         />
                         {errors.totalCapacity && (
-                          <p className="text-[10px] text-red-500 ml-1">{errors.totalCapacity}</p>
+                          <p className="text-xs text-red-500 ml-1 mt-1">{errors.totalCapacity}</p>
                         )}
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <DualLanguageField
                           label="Location Name"
                           hideLabel
-                          englishPlaceholder="Location Name (English) *"
-                          amharicPlaceholder="á‹¨á‰¦á‰³ áˆµáˆ (áŠ áˆ›áˆ­áŠ›) *"
+                          englishPlaceholder="e.g., Meskel Square"
+                          amharicPlaceholder="ለምሳሌ፦ መስቀል አደባባይ"
                           englishValue={formData.core.locationName_en}
                           amharicValue={formData.core.locationName_am}
                           onEnglishChange={(value) => setFormData(prev => ({...prev, core: {...prev.core, locationName_en: value}}))}
@@ -917,38 +1005,42 @@ export const FestivalCreationWizard: React.FC<{
                           className={errors.locationName_en || errors.locationName_am ? 'ring-1 ring-red-500 rounded-xl' : ''}
                         />
                         {(errors.locationName_en || errors.locationName_am) && (
-                          <p className="text-[10px] text-red-500 ml-1">{errors.locationName_en || errors.locationName_am}</p>
+                          <p className="text-xs text-red-500 ml-1 mt-1">{errors.locationName_en || errors.locationName_am}</p>
                         )}
                       </div>
                     </div>
 
                     <div className="space-y-4">
-                      <div className="flex gap-4">
-                        <div className="flex-1 space-y-1">
-                          <Input 
-                            placeholder="Address (Specific Point) *" 
-                            hideLabel
-                            value={formData.core.address} 
-                            onChange={e => setFormData(prev => ({...prev, core: {...prev.core, address: e.target.value}}))} 
-                            icon={MapPin}
-                          />
-                        </div>
-                        <Button 
-                          variant="outline" 
-                          leftIcon={MapIcon}
-                          onClick={() => setIsMapModalOpen(true)}
-                          className="rounded-xl px-4 h-[46px]"
-                        >
-                          Pick on Map
-                        </Button>
-                      </div>
-                      
-                      {formData.core.coordinates && (
-                        <div className="text-[10px] text-gray-400 flex items-center gap-2 ml-1">
-                          <MapPin className="w-3 h-3" />
-                          Lat: {formData.core.coordinates.lat.toFixed(4)}, Lng: {formData.core.coordinates.lng.toFixed(4)}
-                        </div>
-                      )}
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Specific Location on Map *</label>
+                       <button 
+                         type="button"
+                         onClick={() => setIsMapModalOpen(true)}
+                         className={`w-full group relative overflow-hidden rounded-[32px] border-2 border-dashed transition-all duration-300 p-8 text-center ${coreLocationSelected 
+                             ? 'bg-emerald-50/30 border-emerald-200 hover:border-emerald-300' 
+                             : 'bg-gray-50/50 border-gray-200 hover:border-primary/30 hover:bg-white'}`}
+                       >
+                         <div className="relative z-10 flex flex-col items-center gap-3">
+                           <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-500 ${coreLocationSelected ? 'bg-emerald-100 text-emerald-600 scale-110' : 'bg-white text-gray-400 group-hover:text-primary group-hover:scale-110 shadow-sm'}`}>
+                             <MapPin className={`w-8 h-8 ${coreLocationSelected ? 'animate-bounce' : ''}`} />
+                           </div>
+                           <div>
+                             <p className={`text-lg font-bold ${coreLocationSelected ? 'text-emerald-700' : 'text-gray-800'}`}>
+                               {coreLocationSelected ? 'Location Marked Successfully' : 'Select Exact Spot on Map'}
+                             </p>
+                             <p className="text-sm text-gray-400 mt-1">
+                               {coreLocationSelected 
+                                 ? `Lat: ${formData.core.coordinates.lat.toFixed(6)}, Lng: ${formData.core.coordinates.lng.toFixed(6)}`
+                                 : 'Click to open map and pin the precise festival grounds'}
+                             </p>
+                           </div>
+                           {coreLocationSelected && (
+                             <div className="mt-2 flex items-center gap-2 px-4 py-1.5 bg-emerald-100/50 rounded-full text-[10px] font-black uppercase tracking-widest text-emerald-600">
+                               <CheckCircle2 className="w-3 h-3" /> Pin Set
+                             </div>
+                           )}
+                         </div>
+                         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                       </button>
                     </div>
                   </div>
 
@@ -956,50 +1048,53 @@ export const FestivalCreationWizard: React.FC<{
                   <div className="space-y-8">
                     <div className="sticky top-8 space-y-8">
                       {/* Upload Card */}
-                      <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-xl space-y-6">
-                        <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Festival Media</h4>
+                      <div className="bg-gray-50/50 rounded-[32px] p-8 border border-gray-100 space-y-6">
+                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Festival Media</h4>
                         
                         {/* Cover Image Upload */}
-                        <div className="relative group aspect-video rounded-2xl overflow-hidden bg-gray-50 border-2 border-dashed border-gray-100 flex items-center justify-center cursor-pointer hover:border-primary/20 transition-all">
-                          {formData.core.coverImage ? (
-                            <>
-                              <img src={formData.core.coverImage} alt="Cover" className="w-full h-full object-cover" />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    document.getElementById('cover-image-upload')?.click();
-                                  }}
-                                  className="p-2 bg-white text-primary rounded-full hover:scale-110 transition-transform"
-                                >
-                                  <RefreshCw className="w-5 h-5" />
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setFormData(prev => ({ ...prev, core: { ...prev.core, coverImage: '' } }));
-                                  }}
-                                  className="p-2 bg-white text-red-500 rounded-full hover:scale-110 transition-transform"
-                                >
-                                  <Trash2 className="w-5 h-5" />
-                                </button>
-                              </div>
-                            </>
-                          ) : (
-                            <label htmlFor="cover-image-upload" className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
-                              <Camera className="w-8 h-8 text-gray-300 mb-2" />
-                              <span className="text-xs font-bold text-gray-400">Cover Image</span>
-                            </label>
-                          )}
-                          <input type="file" className="hidden" id="cover-image-upload" onChange={e => e.target.files && handleFileUpload(e.target.files[0], true)} />
+                        <div className="space-y-2">
+                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Cover Image *</label>
+                          <div className="relative group aspect-video rounded-2xl overflow-hidden bg-gray-50 border-2 border-dashed border-gray-100 flex items-center justify-center cursor-pointer hover:border-primary/20 transition-all">
+                            {formData.core.coverImage ? (
+                              <>
+                                <img src={formData.core.coverImage} alt="Cover" className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      document.getElementById('cover-image-upload')?.click();
+                                    }}
+                                    className="p-2 bg-white text-primary rounded-full hover:scale-110 transition-transform"
+                                  >
+                                    <RefreshCw className="w-5 h-5" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setFormData(prev => ({ ...prev, core: { ...prev.core, coverImage: '' } }));
+                                    }}
+                                    className="p-2 bg-white text-red-500 rounded-full hover:scale-110 transition-transform"
+                                  >
+                                    <Trash2 className="w-5 h-5" />
+                                  </button>
+                                </div>
+                              </>
+                            ) : (
+                              <label htmlFor="cover-image-upload" className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
+                                <Camera className="w-8 h-8 text-gray-300 mb-2" />
+                                <span className="text-xs font-bold text-gray-400">Upload Cover Image</span>
+                              </label>
+                            )}
+                            <input type="file" className="hidden" id="cover-image-upload" onChange={e => e.target.files && handleFileUpload(e.target.files[0], true)} />
+                          </div>
                         </div>
 
                         {/* Gallery Upload */}
                         <div className="space-y-4">
                           <div className="flex justify-between items-center">
-                            <span className="text-xs font-bold text-gray-500">Gallery Photos</span>
+                            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Gallery Photos</label>
                             <label htmlFor="gallery-upload" className="text-xs font-bold text-primary hover:underline cursor-pointer flex items-center gap-1">
-                              <Plus className="w-3 h-3" /> Add More
+                              <Plus className="w-3 h-3" /> Add Photos
                             </label>
                           </div>
                           <input type="file" className="hidden" id="gallery-upload" multiple onChange={e => e.target.files && Array.from(e.target.files).forEach(file => handleFileUpload(file))} />
@@ -1025,14 +1120,10 @@ export const FestivalCreationWizard: React.FC<{
                         {uploadingFile && (
                           <div className="flex items-center justify-center gap-2 py-2 bg-primary/5 rounded-xl">
                             <RefreshCw className="w-3 h-3 text-primary animate-spin" />
-                            <span className="text-[10px] font-bold text-primary uppercase">Uploading...</span>
+                            <span className="text-xs font-bold text-primary uppercase">Uploading...</span>
                           </div>
                         )}
                       </div>
-
-                      {/* Preview removed from Step 1 as requested by UI overhaul or integrated? 
-                          User said "remove this from the card From $0 View Details"
-                      */}
                     </div>
                   </div>
                 </div>
@@ -1064,7 +1155,7 @@ export const FestivalCreationWizard: React.FC<{
 
                   <div className="space-y-6">
                     {formData.schedule.map((day, idx) => (
-                      <div key={idx} className="flex gap-8 p-8 bg-white border border-gray-100 rounded-[32px] shadow-sm hover:shadow-md transition-all relative">
+                      <div key={idx} className="flex gap-8 p-8 bg-gray-50/30 border border-gray-100 rounded-[32px] hover:bg-white hover:shadow-xl hover:shadow-primary/5 transition-all relative group">
                         <div className="flex flex-col items-center gap-4">
                           <div className="w-16 h-16 bg-primary/10 rounded-2xl flex flex-col items-center justify-center text-primary flex-shrink-0">
                             <span className="text-[10px] font-black uppercase tracking-widest">Day</span>
@@ -1080,12 +1171,12 @@ export const FestivalCreationWizard: React.FC<{
                           )}
                         </div>
                         <div className="flex-1 space-y-6">
-                          <div className="space-y-1">
+                          <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Day Title *</label>
                             <DualLanguageField
-                              label="Day Title"
                               hideLabel
-                              englishPlaceholder="Day Title (English) *"
-                              amharicPlaceholder="á‹¨á‰€áŠ• áˆ­á‹•áˆµ (áŠ áˆ›áˆ­áŠ›) *"
+                              englishPlaceholder="e.g., Opening Ceremony"
+                              amharicPlaceholder="ለምሳሌ፦ የመክፈቻ ሥነ-ሥርዓት"
                               englishValue={day.title_en}
                               amharicValue={day.title_am}
                               onEnglishChange={(value) => {
@@ -1103,16 +1194,14 @@ export const FestivalCreationWizard: React.FC<{
                               className={errors[`schedule_${idx}_title_en`] ? 'ring-1 ring-red-500 rounded-xl' : ''}
                             />
                             {errors[`schedule_${idx}_title_en`] && (
-                              <p className="text-[10px] text-red-500 ml-1">{errors[`schedule_${idx}_title_en`]}</p>
+                              <p className="text-xs text-red-500 ml-1 mt-1">{errors[`schedule_${idx}_title_en`]}</p>
                             )}
                           </div>
-                          <div className="space-y-1">
+                          <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Activities *</label>
                             <DualLanguageField
-                              label="Activities"
                               hideLabel
-                              englishPlaceholder="Activities and details (English) *"
-                              amharicPlaceholder="á‰°áŒá‰£áˆ«á‰µ áŠ¥áŠ“ á‹áˆ­á‹áˆ®á‰½ (áŠ áˆ›áˆ­áŠ›) *"
-                              englishValue={day.activities_en}
+                              englishPlaceholder="Detailed activities, timings, and highlights for the day..."
                               amharicValue={day.activities_am}
                               onEnglishChange={(value) => {
                                 const newSchedule = [...formData.schedule];
@@ -1131,28 +1220,39 @@ export const FestivalCreationWizard: React.FC<{
                               className={errors[`schedule_${idx}_activities_en`] ? 'ring-1 ring-red-500 rounded-xl' : ''}
                             />
                             {errors[`schedule_${idx}_activities_en`] && (
-                              <p className="text-[10px] text-red-500 ml-1">{errors[`schedule_${idx}_activities_en`]}</p>
+                              <p className="text-xs text-red-500 ml-1 mt-1">{errors[`schedule_${idx}_activities_en`]}</p>
                             )}
                           </div>
-                          <Input
-                            placeholder="Performers / Guests (comma-separated)"
-                            hideLabel
-                            value={day.performers.join(', ')}
-                            onChange={(e) => {
-                              const newSchedule = [...formData.schedule];
-                              newSchedule[idx].performers = e.target.value.split(',').map(p => p.trim());
-                              setFormData({ ...formData, schedule: newSchedule });
-                            }}
-                            icon={Users}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Step 3: Hotels */}
+                          <div className="space-y-2">
+                            <DualLanguageField
+                              label="Performers / Guests"
+                              hideLabel
+                              englishPlaceholder="e.g., Teddy Afro, Traditional Dancers, Local Bands (comma-separated)"
+                              amharicPlaceholder="ለምሳሌ፦ ተዲ አፍሮ፣ ባህላዊ አዳማጭዎች፣ አገርያዊ ባንዶች (በኮማ የሚለያዩ)"
+                              englishValue={day.performers.join(', ')}
+                              amharicValue={day.performers.join(', ')}
+                              onEnglishChange={(value) => {
+                                const newSchedule = [...formData.schedule];
+                                newSchedule[idx].performers = value.split(',').map(p => p.trim());
+                                setFormData({ ...formData, schedule: newSchedule });
+                              }}
+                              onAmharicChange={(value) => {
+                                const newSchedule = [...formData.schedule];
+                                newSchedule[idx].performers = value.split(',').map(p => p.trim());
+                                setFormData({ ...formData, schedule: newSchedule });
+                              }}
+                              showEnglish={languagePreference !== 'am'}
+                              showAmharic={languagePreference !== 'en'}
+                             />
+                           </div>
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+               )}
+                 
+                 {/* Step 3: Hotels */}
               {step === 3 && (
                 <div className="space-y-8">
                   <div className="flex justify-between items-center">
@@ -1199,12 +1299,12 @@ export const FestivalCreationWizard: React.FC<{
                   ) : (
                     <div className="space-y-12">
                       {formData.hotels.map((hotel: any, hotelIdx: number) => (
-                        <div key={hotelIdx} className="p-10 bg-white rounded-[48px] border border-gray-100 shadow-xl relative overflow-hidden group">
+                        <div key={hotelIdx} className="p-10 bg-gray-50/30 rounded-[48px] border border-gray-100 relative overflow-hidden group/hotel hover:bg-white hover:shadow-2xl transition-all duration-500">
                           {/* Top Right Actions */}
-                          <div className="absolute top-8 right-8 flex gap-2">
+                          <div className="absolute top-8 right-8 flex gap-2 opacity-0 group-hover/hotel:opacity-100 transition-opacity">
                             <button 
                               onClick={() => removeHotel(hotelIdx)}
-                              className="p-3 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 transition-colors"
+                              className="p-3 bg-white text-red-500 rounded-2xl border border-red-50 hover:bg-red-50 transition-colors shadow-sm"
                             >
                               <Trash2 className="w-5 h-5" />
                             </button>
@@ -1213,33 +1313,36 @@ export const FestivalCreationWizard: React.FC<{
                           <div className="flex flex-col lg:flex-row gap-10">
                             {/* Left: Image Uploaders */}
                             <div className="w-full lg:w-72 space-y-6">
-                              <div className="relative group/hotel-img aspect-square rounded-3xl overflow-hidden bg-gray-50 border-2 border-dashed border-gray-100 flex items-center justify-center cursor-pointer hover:border-primary/20 transition-all">
-                                {hotel.image ? (
-                                  <>
-                                    <img src={hotel.image} className="w-full h-full object-cover" alt="" />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/hotel-img:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                      <label htmlFor={`hotel-img-${hotelIdx}`} className="p-2 bg-white text-primary rounded-full cursor-pointer hover:scale-110 transition-transform">
-                                        <RefreshCw className="w-4 h-4" />
-                                      </label>
-                                    </div>
-                                  </>
-                                ) : (
-                                  <label htmlFor={`hotel-img-${hotelIdx}`} className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
-                                    <Camera className="w-8 h-8 text-gray-300 mb-2" />
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase">Main Photo</span>
-                                  </label>
-                                )}
-                                <input 
-                                  type="file" 
-                                  className="hidden" 
-                                  id={`hotel-img-${hotelIdx}`} 
-                                  onChange={e => e.target.files && handleHotelImageUpload(hotelIdx, e.target.files[0])} 
-                                />
+                              <div className="space-y-2">
+                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Hotel Image *</label>
+                                <div className="relative group/hotel-img aspect-square rounded-3xl overflow-hidden bg-gray-50 border-2 border-dashed border-gray-100 flex items-center justify-center cursor-pointer hover:border-primary/20 transition-all">
+                                  {hotel.image ? (
+                                    <>
+                                      <img src={hotel.image} className="w-full h-full object-cover" alt="" />
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/hotel-img:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                        <label htmlFor={`hotel-img-${hotelIdx}`} className="p-2 bg-white text-primary rounded-full cursor-pointer hover:scale-110 transition-transform">
+                                          <RefreshCw className="w-4 h-4" />
+                                        </label>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <label htmlFor={`hotel-img-${hotelIdx}`} className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
+                                      <Camera className="w-8 h-8 text-gray-300 mb-2" />
+                                      <span className="text-xs font-bold text-gray-400 uppercase">Upload Photo</span>
+                                    </label>
+                                  )}
+                                  <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    id={`hotel-img-${hotelIdx}`} 
+                                    onChange={e => e.target.files && handleHotelImageUpload(hotelIdx, e.target.files[0])} 
+                                  />
+                                </div>
                               </div>
 
                               <div className="space-y-3">
                                 <div className="flex justify-between items-center px-1">
-                                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Media Gallery</span>
+                                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Media Gallery</label>
                                   <label htmlFor={`hotel-gallery-${hotelIdx}`} className="p-1 text-primary hover:bg-primary/5 rounded-lg cursor-pointer">
                                     <Plus className="w-4 h-4" />
                                   </label>
@@ -1277,12 +1380,12 @@ export const FestivalCreationWizard: React.FC<{
                             {/* Right: Hotel Info */}
                             <div className="flex-1 space-y-6">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-1">
+                                <div className="space-y-2">
+                                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Hotel Name *</label>
                                   <DualLanguageField
-                                    label="Hotel Name"
                                     hideLabel
-                                    englishPlaceholder="Hotel Name (English) *"
-                                    amharicPlaceholder="á‹¨áˆ†á‰´áˆ áˆµáˆ (áŠ áˆ›áˆ­áŠ›) *"
+                                    englishPlaceholder="e.g., Hilton Addis Ababa"
+                                    amharicPlaceholder="ለምሳሌ፦ ሂልተን አዲስ አበባ"
                                     englishValue={hotel.name_en || ''}
                                     amharicValue={hotel.name_am || ''}
                                     onEnglishChange={(value) => updateHotel(hotelIdx, 'name_en', value)}
@@ -1292,11 +1395,11 @@ export const FestivalCreationWizard: React.FC<{
                                     className={errors[`hotel_${hotelIdx}_name_en`] ? 'ring-1 ring-red-500 rounded-xl' : ''}
                                   />
                                   {errors[`hotel_${hotelIdx}_name_en`] && (
-                                    <p className="text-[10px] text-red-500 ml-1">{errors[`hotel_${hotelIdx}_name_en`]}</p>
+                                    <p className="text-xs text-red-500 ml-1 mt-1">{errors[`hotel_${hotelIdx}_name_en`]}</p>
                                   )}
                                 </div>
                                 <div className="flex items-center gap-4 bg-gray-50/50 px-6 rounded-2xl border border-gray-100">
-                                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Star Rating</span>
+                                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Star Rating</label>
                                   <div className="flex items-center gap-1">
                                     {[1,2,3,4,5].map(star => (
                                       <Star
@@ -1309,34 +1412,71 @@ export const FestivalCreationWizard: React.FC<{
                                 </div>
                               </div>
 
-                              <Input
-                                placeholder="Hotel Address (Specific Point) *"
-                                hideLabel
-                                value={hotel.address || ''}
-                                onChange={(e) => updateHotel(hotelIdx, 'address', e.target.value)}
-                                icon={MapPin}
-                              />
+                              <div className="space-y-4">
+                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Location on Map *</label>
+                                <button 
+                                  type="button"
+                                  onClick={() => {
+                                    setHotelMapTarget({ hotelIdx });
+                                    setIsMapModalOpen(true);
+                                  }}
+                                  className={`
+                                    w-full group relative overflow-hidden rounded-[24px] border-2 border-dashed transition-all duration-300
+                                    ${hotel.locationSelected 
+                                      ? 'bg-emerald-50/30 border-emerald-200 hover:border-emerald-300' 
+                                      : 'bg-gray-50/50 border-gray-200 hover:border-primary/30 hover:bg-white'}
+                                    p-6 text-center
+                                  `}
+                                >
+                                  <div className="relative z-10 flex flex-col items-center gap-2">
+                                    <div className={`
+                                      w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500
+                                      ${hotel.locationSelected ? 'bg-emerald-100 text-emerald-600 scale-110' : 'bg-white text-gray-400 group-hover:text-primary group-hover:scale-110 shadow-sm'}
+                                    `}>
+                                      <MapPin className={`w-6 h-6 ${hotel.locationSelected ? 'animate-bounce' : ''}`} />
+                                    </div>
+                                    <div>
+                                      <p className={`text-base font-bold ${hotel.locationSelected ? 'text-emerald-700' : 'text-gray-800'}`}>
+                                        {hotel.locationSelected ? 'Location Marked Successfully' : 'Select Location on Map'}
+                                      </p>
+                                      <p className="text-xs text-gray-400 mt-1">
+                                        {hotel.locationSelected 
+                                          ? `Lat: ${hotel.coordinates.lat.toFixed(6)}, Lng: ${hotel.coordinates.lng.toFixed(6)}`
+                                          : 'Click to open map and pin the hotel location'}
+                                      </p>
+                                    </div>
+                                    {hotel.locationSelected && (
+                                      <div className="mt-1 flex items-center gap-2 px-3 py-1 bg-emerald-100/50 rounded-full text-[9px] font-black uppercase tracking-widest text-emerald-600">
+                                        <CheckCircle2 className="w-3 h-3" /> Pin Set
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className={`absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`} />
+                                </button>
+                              </div>
 
-                              <DualLanguageField
-                                label="Description"
-                                hideLabel
-                                textarea
-                                rows={3}
-                                englishPlaceholder="Brief hotel description (English) *"
-                                amharicPlaceholder="á‹¨áˆ†á‰´áˆ áŠ áŒ­áˆ­ áˆ˜áŒáˆˆáŒ« (áŠ áˆ›áˆ­áŠ›) *"
-                                englishValue={hotel.description_en || ''}
-                                amharicValue={hotel.description_am || ''}
-                                onEnglishChange={(value) => updateHotel(hotelIdx, 'description_en', value)}
-                                onAmharicChange={(value) => updateHotel(hotelIdx, 'description_am', value)}
-                                showEnglish={languagePreference !== 'am'}
-                                showAmharic={languagePreference !== 'en'}
-                              />
+                              <div className="space-y-2">
+                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Description *</label>
+                                <DualLanguageField
+                                  hideLabel
+                                  textarea
+                                  rows={3}
+                                  englishPlaceholder="Describe the hotel, its amenities, and unique features..."
+                                  amharicPlaceholder="የሆቴሉን፣ አገልግሎቶቹን እና ልዩ ባህሪያቱን ይግለጹ..."
+                                  englishValue={hotel.description_en || ''}
+                                  amharicValue={hotel.description_am || ''}
+                                  onEnglishChange={(value) => updateHotel(hotelIdx, 'description_en', value)}
+                                  onAmharicChange={(value) => updateHotel(hotelIdx, 'description_am', value)}
+                                  showEnglish={languagePreference !== 'am'}
+                                  showAmharic={languagePreference !== 'en'}
+                                />
+                              </div>
 
                               {/* New Hotel Facilities & Info Section */}
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
                                 <div className="space-y-4">
                                   <div className="space-y-2 group">
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 transition-colors group-focus-within:text-primary">Property Type</label>
+                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1 transition-colors group-focus-within:text-primary">Property Type</label>
                                     <select
                                       value={hotel.propertyType || 'Hotel'}
                                       onChange={(e) => updateHotel(hotelIdx, 'propertyType', e.target.value)}
@@ -1352,7 +1492,7 @@ export const FestivalCreationWizard: React.FC<{
                                   
                                   <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Check-in</label>
+                                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Check-in</label>
                                       <Input 
                                         hideLabel
                                         value={hotel.checkInTime || '12:00 PM'} 
@@ -1361,7 +1501,7 @@ export const FestivalCreationWizard: React.FC<{
                                       />
                                     </div>
                                     <div className="space-y-2">
-                                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Check-out</label>
+                                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Check-out</label>
                                       <Input 
                                         hideLabel
                                         value={hotel.checkOutTime || '11:00 AM'} 
@@ -1374,19 +1514,19 @@ export const FestivalCreationWizard: React.FC<{
 
                                 <div className="space-y-4">
                                   <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Facilities</label>
                                     <Textarea
-                                      label="Facilities (comma-separated)"
                                       rows={2}
-                                      placeholder="Wake-up call, Car hire, Flat Tv, Laundry..."
+                                      placeholder="e.g., Free WiFi, Swimming Pool, Gym, Spa (comma-separated)"
                                       value={(hotel.facilities || []).join(', ')}
                                       onChange={(e) => updateHotel(hotelIdx, 'facilities', e.target.value.split(',').map(v => v.trim()))}
                                     />
                                   </div>
                                   <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Food & Drink</label>
                                     <Textarea
-                                      label="Food & Drink (comma-separated)"
                                       rows={2}
-                                      placeholder="Fries, Fruit, vegetable salad..."
+                                      placeholder="e.g., Breakfast Buffet, Restaurant, Bar, Room Service (comma-separated)"
                                       value={(hotel.foodAndDrink || []).join(', ')}
                                       onChange={(e) => updateHotel(hotelIdx, 'foodAndDrink', e.target.value.split(',').map(v => v.trim()))}
                                     />
@@ -1395,10 +1535,10 @@ export const FestivalCreationWizard: React.FC<{
                               </div>
 
                               <div className="space-y-2 pt-4 border-t border-gray-100">
+                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Hotel Rules & Policies</label>
                                 <Textarea
-                                  label="Hotel Rules & Policies (comma-separated)"
                                   rows={2}
-                                  placeholder="No smoking in rooms, No pets, etc."
+                                  placeholder="e.g., No smoking in rooms, No pets, 24-hour front desk (comma-separated)"
                                   value={(hotel.hotelRules || []).join(', ')}
                                   onChange={(e) => updateHotel(hotelIdx, 'hotelRules', e.target.value.split(',').map(v => v.trim()))}
                                 />
@@ -1420,157 +1560,160 @@ export const FestivalCreationWizard: React.FC<{
                               <p className="text-xs text-red-500 bg-red-50 p-3 rounded-xl border border-red-100 mb-6">{errors[`hotel_${hotelIdx}_rooms`]}</p>
                             )}
                             
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                               {(hotel.rooms || []).map((room: any, roomIdx: number) => (
-                                <div key={roomIdx} className="p-8 bg-gray-50/50 rounded-[40px] border border-gray-100 relative group/room">
+                                <div key={roomIdx} className="group/room relative bg-gray-50/30 rounded-[32px] border border-gray-100 p-8 transition-all duration-300 hover:bg-white hover:shadow-2xl hover:shadow-primary/5 hover:border-primary/20">
+                                  {/* Delete Button */}
                                   <button 
                                     onClick={() => removeRoom(hotelIdx, roomIdx)}
-                                    className="absolute top-6 right-6 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover/room:opacity-100"
+                                    className="absolute -top-3 -right-3 w-10 h-10 bg-white text-red-500 rounded-full shadow-lg border border-red-50 flex items-center justify-center opacity-0 group-hover/room:opacity-100 transition-all hover:bg-red-50 z-20"
                                   >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Trash2 className="w-5 h-5" />
                                   </button>
 
-                                  <div className="flex gap-6 mb-6">
-                                    <div className="w-24 h-24 rounded-2xl overflow-hidden bg-white border-2 border-dashed border-gray-200 flex items-center justify-center flex-shrink-0 cursor-pointer relative group/room-img">
-                                      {room.image ? (
-                                        <>
-                                          <img src={room.image} className="w-full h-full object-cover" alt="" />
-                                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/room-img:opacity-100 transition-opacity flex items-center justify-center">
-                                            <label htmlFor={`room-img-${hotelIdx}-${roomIdx}`} className="p-1.5 bg-white text-primary rounded-full cursor-pointer">
-                                              <RefreshCw className="w-3.5 h-3.5" />
-                                            </label>
-                                          </div>
-                                        </>
-                                      ) : (
-                                        <label htmlFor={`room-img-${hotelIdx}-${roomIdx}`} className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
-                                          <Camera className="w-6 h-6 text-gray-200 mb-1" />
-                                          <span className="text-[8px] font-bold text-gray-300 uppercase">Room Photo</span>
-                                        </label>
-                                      )}
-                                      <input 
-                                        type="file" 
-                                        className="hidden" 
-                                        id={`room-img-${hotelIdx}-${roomIdx}`} 
-                                        onChange={e => e.target.files && handleRoomImageUpload(hotelIdx, roomIdx, e.target.files[0])} 
-                                      />
-                                    </div>
-                                    <div className="flex-1 space-y-6">
-                                      <DualLanguageField
-                                        label="Room Name"
-                                        hideLabel
-                                        englishPlaceholder="Room Name (e.g. Deluxe Suite) *"
-                                        amharicPlaceholder="á‹¨áŠ­ááˆ áˆµáˆ (áˆˆáˆáˆ³áˆŒ á‹´áˆ‰áŠ­áˆµ) *"
-                                        englishValue={room.name_en || ''}
-                                        amharicValue={room.name_am || ''}
-                                        onEnglishChange={(value) => updateRoom(hotelIdx, roomIdx, 'name_en', value)}
-                                        onAmharicChange={(value) => updateRoom(hotelIdx, roomIdx, 'name_am', value)}
-                                        showEnglish={languagePreference !== 'am'}
-                                        showAmharic={languagePreference !== 'en'}
-                                      />
-                                       
-                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                                         {room.tier !== 'vip' && (
-                                           <div className="space-y-1.5">
-                                             <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Price / Night</p>
-                                             <Input
-                                               placeholder="Amount"
-                                               hideLabel
-                                               type="number"
-                                               min="0"
-                                               value={room.pricePerNight || ''}
-                                               onChange={(e) => updateRoom(hotelIdx, roomIdx, 'pricePerNight', parseFloat(e.target.value) || 0)}
-                                               icon={DollarSign}
-                                               className={errors[`hotel_${hotelIdx}_room_${roomIdx}_price`] ? 'border-red-500 bg-red-50' : ''}
-                                               required
-                                             />
-                                           </div>
-                                         )}
-                                         {room.tier === 'vip' && (
-                                           <div className="space-y-1.5 col-span-2">
-                                             <p className="text-[10px] font-black uppercase text-amber-600 tracking-widest ml-1">VIP Room - Auto-Set</p>
-                                             <div className="px-4 py-3 bg-amber-50/50 rounded-[14px] border border-amber-100 flex items-center gap-2">
-                                               <Info className="w-4 h-4 text-amber-600" />
-                                               <span className="text-xs text-amber-700 font-medium">Availability auto-set to VIP ticket count (1 room per VIP ticket)</span>
-                                             </div>
-                                           </div>
-                                         )}
-                                        <div className="space-y-1.5">
-                                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Max Guests (Persons)</p>
-                                          <Input
-                                            placeholder="e.g. 2"
-                                            hideLabel
-                                            type="number"
-                                            min="1"
-                                            value={room.capacity || ''}
-                                            onChange={(e) => updateRoom(hotelIdx, roomIdx, 'capacity', parseInt(e.target.value) || 1)}
-                                            icon={Users}
-                                            required
-                                          />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Total Rooms Available</p>
-                                          <Input
-                                            placeholder="e.g. 10"
-                                            hideLabel
-                                            type="number"
-                                            min="1"
-                                            value={room.availability || ''}
-                                            onChange={(e) => updateRoom(hotelIdx, roomIdx, 'availability', parseInt(e.target.value) || 0)}
-                                            icon={Hotel}
-                                            required
-                                          />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Room Size (sqm)</p>
-                                          <Input
-                                            placeholder="e.g. 30"
-                                            hideLabel
-                                            type="number"
-                                            min="1"
-                                            value={room.sqm || ''}
-                                            onChange={(e) => updateRoom(hotelIdx, roomIdx, 'sqm', parseInt(e.target.value) || 30)}
-                                            icon={Maximize2}
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="space-y-6 pt-6 border-t border-gray-50">
-                                    <div className="space-y-3">
-                                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Room Amenities</p>
-                                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
-                                        {['Free WiFi', 'Air Conditioning', 'Mini Bar', 'Flat-screen TV', 'Safe', 'Coffee Machine', 'Jacuzzi', 'Bathtub', 'Balcony', 'City View'].map(facility => (
-                                          <label key={facility} className="flex items-center gap-3 cursor-pointer group/fac hover:bg-gray-50 p-1.5 rounded-lg transition-colors">
-                                            <input 
-                                              type="checkbox"
-                                              checked={(room.amenities || []).includes(facility)}
-                                              onChange={(e) => {
-                                                const current = room.amenities || [];
-                                                const next = e.target.checked 
-                                                  ? [...current, facility] 
-                                                  : current.filter((f: string) => f !== facility);
-                                                updateRoom(hotelIdx, roomIdx, 'amenities', next);
-                                              }}
-                                              className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary/20"
-                                            />
-                                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider group-hover/fac:text-primary transition-colors">{facility}</span>
+                                  <div className="flex flex-col gap-8">
+                                    {/* Room Header: Image and Name */}
+                                    <div className="flex gap-6 items-start">
+                                      <div className="w-32 h-32 rounded-2xl overflow-hidden bg-white border-2 border-dashed border-gray-200 flex items-center justify-center cursor-pointer relative group/room-img flex-shrink-0 shadow-sm">
+                                        {room.image ? (
+                                          <>
+                                            <img src={room.image} className="w-full h-full object-cover" alt="" />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/room-img:opacity-100 transition-opacity flex items-center justify-center">
+                                              <label htmlFor={`room-img-${hotelIdx}-${roomIdx}`} className="p-2 bg-white text-primary rounded-full cursor-pointer hover:scale-110 transition-transform">
+                                                <RefreshCw className="w-4 h-4" />
+                                              </label>
+                                            </div>
+                                          </>
+                                        ) : (
+                                          <label htmlFor={`room-img-${hotelIdx}-${roomIdx}`} className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
+                                            <Camera className="w-8 h-8 text-gray-200 mb-2" />
+                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Add Photo</span>
                                           </label>
-                                        ))}
+                                        )}
+                                        <input 
+                                          type="file" 
+                                          className="hidden" 
+                                          id={`room-img-${hotelIdx}-${roomIdx}`} 
+                                          onChange={e => e.target.files && handleRoomImageUpload(hotelIdx, roomIdx, e.target.files[0])} 
+                                        />
+                                      </div>
+
+                                      <div className="flex-1 space-y-4">
+                                        <div className="space-y-2">
+                                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Room Name *</label>
+                                          <DualLanguageField
+                                            hideLabel
+                                            englishPlaceholder="e.g., Deluxe Suite"
+                                            amharicPlaceholder="ለምሳሌ፦ ዴሉክስ ስዊት"
+                                            englishValue={room.name_en || ''}
+                                            amharicValue={room.name_am || ''}
+                                            onEnglishChange={(value) => updateRoom(hotelIdx, roomIdx, 'name_en', value)}
+                                            onAmharicChange={(value) => updateRoom(hotelIdx, roomIdx, 'name_am', value)}
+                                            showEnglish={languagePreference !== 'am'}
+                                            showAmharic={languagePreference !== 'en'}
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Room Tier</label>
+                                          <select 
+                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all text-sm font-bold text-gray-600 shadow-sm"
+                                            value={room.tier || 'both'}
+                                            onChange={(e) => updateRoom(hotelIdx, roomIdx, 'tier', e.target.value)}
+                                          >
+                                            <option value="both">All Tiers (Standard & VIP)</option>
+                                            <option value="vip">VIP Only (Included in Package)</option>
+                                            <option value="standard">Standard Only</option>
+                                          </select>
+                                        </div>
                                       </div>
                                     </div>
-                                    
-                                    <div className="space-y-2">
-                                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Room Tier Access</p>
-                                      <select 
-                                        className="w-full px-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-[14px] focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all duration-200 text-sm font-bold text-gray-600 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300"
-                                        value={room.tier || 'both'}
-                                        onChange={(e) => updateRoom(hotelIdx, roomIdx, 'tier', e.target.value)}
-                                      >
-                                        <option value="both">All Tiers (Standard & VIP)</option>
-                                        <option value="vip">VIP Only (Included in VIP Package)</option>
-                                        <option value="standard">Standard Only</option>
-                                      </select>
+
+                                    {/* Room Stats Grid */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                      {room.tier !== 'vip' ? (
+                                        <NumberStepperInput
+                                          label="Price / Night *"
+                                          value={room.pricePerNight || 0}
+                                          onChange={(value) => updateRoom(hotelIdx, roomIdx, 'pricePerNight', value)}
+                                          icon={DollarSign}
+                                          min={0}
+                                          placeholder="e.g., 150"
+                                          required
+                                          className={errors[`hotel_${hotelIdx}_room_${roomIdx}_price`] ? 'ring-1 ring-red-500 rounded-xl' : ''}
+                                        />
+                                      ) : (
+                                        <div className="space-y-2">
+                                          <label className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">VIP Pricing</label>
+                                          <div className="px-4 py-3.5 bg-amber-50 rounded-xl border border-amber-100 flex items-center gap-2">
+                                            <VerifiedBadge className="w-4 h-4 text-amber-600" />
+                                            <span className="text-[10px] text-amber-800 font-black uppercase">Included</span>
+                                          </div>
+                                        </div>
+                                      )}
+                                      <NumberStepperInput
+                                        label="Capacity *"
+                                        value={room.capacity || 1}
+                                        onChange={(value) => updateRoom(hotelIdx, roomIdx, 'capacity', value)}
+                                        icon={Users}
+                                        min={1}
+                                        required
+                                      />
+                                      <NumberStepperInput
+                                        label="Availability *"
+                                        value={room.availability || 0}
+                                        onChange={(value) => updateRoom(hotelIdx, roomIdx, 'availability', value)}
+                                        icon={Hotel}
+                                        min={1}
+                                        required
+                                      />
+                                      <NumberStepperInput
+                                        label="Size (sqm)"
+                                        value={room.sqm || 30}
+                                        onChange={(value) => updateRoom(hotelIdx, roomIdx, 'sqm', value)}
+                                        icon={Maximize2}
+                                        min={1}
+                                      />
+                                    </div>
+
+                                    {/* Amenities Grid */}
+                                    <div className="space-y-4 pt-6 border-t border-gray-100">
+                                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Room Amenities</label>
+                                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                        {['Free WiFi', 'Air Conditioning', 'Mini Bar', 'Flat-screen TV', 'Safe', 'Coffee Machine', 'Jacuzzi', 'Bathtub', 'Balcony', 'City View'].map(facility => {
+                                          const isChecked = (room.amenities || []).includes(facility);
+                                          return (
+                                            <label 
+                                              key={facility} 
+                                              className={`
+                                                flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer group/fac
+                                                ${isChecked 
+                                                  ? 'bg-primary/5 border-primary/20 text-primary shadow-sm' 
+                                                  : 'bg-white border-gray-100 text-gray-500 hover:border-gray-200 hover:bg-gray-50'}
+                                              `}
+                                            >
+                                              <div className={`
+                                                w-5 h-5 rounded flex items-center justify-center transition-all
+                                                ${isChecked ? 'bg-primary text-white scale-110' : 'bg-gray-100 text-transparent'}
+                                              `}>
+                                                <CheckCircle2 className="w-3 h-3" />
+                                              </div>
+                                              <input 
+                                                type="checkbox"
+                                                checked={isChecked}
+                                                onChange={(e) => {
+                                                  const current = room.amenities || [];
+                                                  const next = e.target.checked 
+                                                    ? [...current, facility] 
+                                                    : current.filter((f: string) => f !== facility);
+                                                  updateRoom(hotelIdx, roomIdx, 'amenities', next);
+                                                }}
+                                                className="hidden"
+                                              />
+                                              <span className="text-[10px] font-bold uppercase tracking-wider">{facility}</span>
+                                            </label>
+                                          );
+                                        })}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
@@ -1578,7 +1721,7 @@ export const FestivalCreationWizard: React.FC<{
                             </div>
                           </div>
 
-                          {/* Food Packages (Moved from global services) */}
+                          {/* Food Packages */}
                           <div className="mt-12 pt-10 border-t border-gray-100">
                             <div className="flex justify-between items-center mb-6">
                               <div>
@@ -1610,35 +1753,43 @@ export const FestivalCreationWizard: React.FC<{
                                   </button>
                                   
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                    <DualLanguageField
-                                      label="Package Name"
-                                      hideLabel
-                                      englishPlaceholder="Package Name *"
-                                      amharicPlaceholder="á‹¨áŒ¥á‰…áˆ‰ áˆµáˆ *"
-                                      englishValue={pkg.name_en || ''}
-                                      amharicValue={pkg.name_am || ''}
-                                      onEnglishChange={(value) => updateHotelFoodPackage(hotelIdx, pIdx, 'name_en', value)}
-                                      onAmharicChange={(value) => updateHotelFoodPackage(hotelIdx, pIdx, 'name_am', value)}
-                                      showEnglish={languagePreference !== 'am'}
-                                      showAmharic={languagePreference !== 'en'}
-                                    />
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Package Name *</label>
+                                      <DualLanguageField
+                                        hideLabel
+                                        englishPlaceholder="e.g., Full Board"
+                                        amharicPlaceholder="ለምሳሌ፦ ሙሉ ቦርድ"
+                                        englishValue={pkg.name_en || ''}
+                                        amharicValue={pkg.name_am || ''}
+                                        onEnglishChange={(value) => updateHotelFoodPackage(hotelIdx, pIdx, 'name_en', value)}
+                                        onAmharicChange={(value) => updateHotelFoodPackage(hotelIdx, pIdx, 'name_am', value)}
+                                        showEnglish={languagePreference !== 'am'}
+                                        showAmharic={languagePreference !== 'en'}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Price per Person *</label>
+                                      <Input
+                                        placeholder="e.g., 50"
+                                        hideLabel
+                                        type="number"
+                                        min="0"
+                                        value={pkg.pricePerPerson || ''}
+                                        onChange={(e) => updateHotelFoodPackage(hotelIdx, pIdx, 'pricePerPerson', parseFloat(e.target.value) || 0)}
+                                        icon={() => <span className="text-[10px] font-black text-gray-400">ETB</span>}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Included Items</label>
                                     <Input
-                                      placeholder="Price per Person *"
+                                      placeholder="e.g., Breakfast, Lunch, Dinner, Coffee (comma-separated)"
                                       hideLabel
-                                      type="number"
-                                      min="0"
-                                      value={pkg.pricePerPerson || ''}
-                                      onChange={(e) => updateHotelFoodPackage(hotelIdx, pIdx, 'pricePerPerson', parseFloat(e.target.value) || 0)}
-                                      icon={DollarSign}
+                                      value={pkg.items ? pkg.items.join(', ') : ''}
+                                      onChange={(e) => updateHotelFoodPackage(hotelIdx, pIdx, 'items', e.target.value.split(',').map(v => v.trim()))}
+                                      icon={Utensils}
                                     />
                                   </div>
-                                  <Input
-                                    placeholder="Included Items (e.g. Breakfast, Dinner, Wine)"
-                                    hideLabel
-                                    value={pkg.items ? pkg.items.join(', ') : ''}
-                                    onChange={(e) => updateHotelFoodPackage(hotelIdx, pIdx, 'items', e.target.value.split(',').map(v => v.trim()))}
-                                    icon={Utensils}
-                                  />
                                 </div>
                               ))}
                             </div>
@@ -1691,10 +1842,10 @@ export const FestivalCreationWizard: React.FC<{
                   ) : (
                     <div className="space-y-6">
                       {formData.transportation.map((transport: any, idx: number) => (
-                        <div key={idx} className="p-10 bg-white rounded-[40px] border border-gray-100 shadow-xl relative group">
+                        <div key={idx} className="p-10 bg-gray-50/30 rounded-[40px] border border-gray-100 relative group/trans hover:bg-white hover:shadow-2xl transition-all duration-500">
                           <button 
                             onClick={() => removeTransport(idx)}
-                            className="absolute top-8 right-8 p-3 bg-red-50 text-red-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-all"
+                            className="absolute top-8 right-8 p-3 bg-white text-red-500 rounded-2xl border border-red-50 opacity-0 group-hover/trans:opacity-100 transition-all hover:bg-red-50"
                           >
                             <Trash2 className="w-5 h-5" />
                           </button>
@@ -1702,70 +1853,77 @@ export const FestivalCreationWizard: React.FC<{
                           <div className="flex flex-col lg:flex-row gap-8">
                             {/* Left: Transport Image */}
                             <div className="w-full lg:w-48">
-                              <div className="relative aspect-square rounded-3xl overflow-hidden bg-gray-50 border-2 border-dashed border-gray-100 flex items-center justify-center cursor-pointer hover:border-primary/20 transition-all group/trans-img">
-                                {transport.image ? (
-                                  <>
-                                    <img src={transport.image} className="w-full h-full object-cover" alt="" />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/trans-img:opacity-100 transition-opacity flex items-center justify-center">
-                                      <label htmlFor={`trans-img-${idx}`} className="p-2 bg-white text-primary rounded-full cursor-pointer">
-                                        <RefreshCw className="w-4 h-4" />
-                                      </label>
-                                    </div>
-                                  </>
-                                ) : (
-                                  <label htmlFor={`trans-img-${idx}`} className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-center p-4">
-                                    <Car className="w-8 h-8 text-gray-300 mb-2" />
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase">Vehicle Photo</span>
-                                  </label>
-                                )}
-                                <input 
-                                  type="file" 
-                                  className="hidden" 
-                                  id={`trans-img-${idx}`} 
-                                  onChange={e => e.target.files && handleTransportImageUpload(idx, e.target.files[0])} 
-                                />
+                              <div className="space-y-2">
+                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Vehicle Image</label>
+                                <div className="relative aspect-square rounded-3xl overflow-hidden bg-gray-50 border-2 border-dashed border-gray-100 flex items-center justify-center cursor-pointer hover:border-primary/20 transition-all group/trans-img">
+                                  {transport.image ? (
+                                    <>
+                                      <img src={transport.image} className="w-full h-full object-cover" alt="" />
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/trans-img:opacity-100 transition-opacity flex items-center justify-center">
+                                        <label htmlFor={`trans-img-${idx}`} className="p-2 bg-white text-primary rounded-full cursor-pointer">
+                                          <RefreshCw className="w-4 h-4" />
+                                        </label>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <label htmlFor={`trans-img-${idx}`} className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-center p-4">
+                                      <Car className="w-8 h-8 text-gray-300 mb-2" />
+                                      <span className="text-xs font-bold text-gray-400 uppercase">Upload Photo</span>
+                                    </label>
+                                  )}
+                                  <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    id={`trans-img-${idx}`} 
+                                    onChange={e => e.target.files && handleTransportImageUpload(idx, e.target.files[0])} 
+                                  />
+                                </div>
                               </div>
                             </div>
 
                             {/* Right: Transport Details */}
                             <div className="flex-1 space-y-6">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <DualLanguageField
-                                  label="Transport Type"
-                                  hideLabel
-                                  englishPlaceholder="Vehicle Type (e.g. Minibus) *"
-                                  amharicPlaceholder="á‹¨áˆ˜áŒ“áŒ“á‹£ áŠ á‹­áŠá‰µ (áˆˆáˆáˆ³áˆŒ áˆšáŠ’á‰£áˆµ) *"
-                                  englishValue={transport.type_en || ''}
-                                  amharicValue={transport.type_am || ''}
-                                  onEnglishChange={(value) => updateTransport(idx, 'type_en', value)}
-                                  onAmharicChange={(value) => updateTransport(idx, 'type_am', value)}
-                                  showEnglish={languagePreference !== 'am'}
-                                  showAmharic={languagePreference !== 'en'}
-                                />
+                                <div className="space-y-2">
+                                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Transport Type *</label>
+                                  <DualLanguageField
+                                    hideLabel
+                                    englishPlaceholder="e.g., Private Minibus"
+                                    amharicPlaceholder="ለምሳሌ፦ የግል ሚኒባስ"
+                                    englishValue={transport.type_en || ''}
+                                    amharicValue={transport.type_am || ''}
+                                    onEnglishChange={(value) => updateTransport(idx, 'type_en', value)}
+                                    onAmharicChange={(value) => updateTransport(idx, 'type_am', value)}
+                                    showEnglish={languagePreference !== 'am'}
+                                    showAmharic={languagePreference !== 'en'}
+                                  />
+                                </div>
                                 <div className="grid grid-cols-2 gap-4">
                                    {transport.vipIncluded !== true && (
-                                     <div className="space-y-1">
+                                     <div className="space-y-2">
+                                       <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Price *</label>
                                        <Input
-                                         placeholder="Price *"
+                                         placeholder="e.g., 30"
                                          hideLabel
                                          type="number"
                                          min="0"
                                          value={transport.price || ''}
                                          onChange={(e) => updateTransport(idx, 'price', parseFloat(e.target.value) || 0)}
-                                         icon={DollarSign}
-                                         className={errors[`transport_${idx}_price`] ? 'border-red-500 bg-red-50' : ''}
+                                         icon={() => <span className="text-[10px] font-black text-gray-400">ETB</span>}
+                                         className={`pl-12 ${errors[`transport_${idx}_price`] ? 'border-red-500 bg-red-50' : ''}`}
                                        />
                                        {errors[`transport_${idx}_price`] && (
-                                         <p className="text-[10px] text-red-500 ml-1">{errors[`transport_${idx}_price`]}</p>
+                                         <p className="text-xs text-red-500 ml-1 mt-1">{errors[`transport_${idx}_price`]}</p>
                                        )}
                                      </div>
                                    )}
-                                   <div className="space-y-1">
+                                   <div className="space-y-2">
                                      {transport.vipIncluded === true && (
-                                       <p className="text-[10px] font-medium text-amber-600 ml-1 mb-1">VIP Transport - Auto-Set</p>
+                                       <p className="text-xs font-semibold text-amber-600 ml-1 mb-1">VIP Transport</p>
                                      )}
+                                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Capacity</label>
                                      <Input
-                                       placeholder={transport.vipIncluded === true ? "Auto-set to VIP ticket count" : "Capacity *"}
+                                       placeholder={transport.vipIncluded === true ? "Auto-set to VIP ticket count" : "e.g., 15"}
                                        hideLabel
                                        type="number"
                                        min="0"
@@ -1773,28 +1931,31 @@ export const FestivalCreationWizard: React.FC<{
                                        onChange={(e) => updateTransport(idx, 'capacity', parseInt(e.target.value) || 0)}
                                        icon={Users}
                                        disabled={transport.vipIncluded === true}
+                                       className="pl-12"
                                      />
                                      {transport.vipIncluded === true && (
-                                       <p className="text-[10px] text-amber-600/60 ml-1 mt-1">Capacity auto-set to VIP ticket count (shared among VIP holders)</p>
+                                       <p className="text-xs text-amber-600/60 ml-1 mt-1">Capacity auto-set to VIP ticket count (shared among VIP holders)</p>
                                      )}
                                    </div>
                                  </div>
                               </div>
 
-                              <DualLanguageField
-                                label="Description"
-                                hideLabel
-                                textarea
-                                rows={2}
-                                englishPlaceholder="Service description (e.g. Air-conditioned, free water) *"
-                                amharicPlaceholder="á‹¨áŠ áŒˆáˆáŒáˆŽá‰µ áˆ˜áŒáˆˆáŒ« (áˆˆáˆáˆ³áˆŒ áŠ á‹¨áˆ­ áˆ›á‰€á‹á‰€á‹£ á‹«áˆˆá‹) *"
-                                englishValue={transport.description_en || ''}
-                                amharicValue={transport.description_am || ''}
-                                onEnglishChange={(value) => updateTransport(idx, 'description_en', value)}
-                                onAmharicChange={(value) => updateTransport(idx, 'description_am', value)}
-                                showEnglish={languagePreference !== 'am'}
-                                showAmharic={languagePreference !== 'en'}
-                              />
+                              <div className="space-y-2">
+                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Description *</label>
+                                <DualLanguageField
+                                  hideLabel
+                                  textarea
+                                  rows={2}
+                                  englishPlaceholder="Describe the service, amenities, pickup/drop-off points..."
+                                  amharicPlaceholder="አገልግሎቱን፣ አመቺነቶችን፣ የመሳፈሪያ/የማረፊያ ቦታዎችን ይግለጹ..."
+                                  englishValue={transport.description_en || ''}
+                                  amharicValue={transport.description_am || ''}
+                                  onEnglishChange={(value) => updateTransport(idx, 'description_en', value)}
+                                  onAmharicChange={(value) => updateTransport(idx, 'description_am', value)}
+                                  showEnglish={languagePreference !== 'am'}
+                                  showAmharic={languagePreference !== 'en'}
+                                />
+                              </div>
 
                               <div className="flex items-center gap-3 px-4 py-3 bg-primary/5 rounded-2xl border border-primary/10">
                                 <input
@@ -1804,7 +1965,7 @@ export const FestivalCreationWizard: React.FC<{
                                   onChange={(e) => updateTransport(idx, 'vipIncluded', e.target.checked)}
                                   className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
                                 />
-                                <label htmlFor={`vip-included-${idx}`} className="text-xs font-bold text-primary uppercase tracking-wider cursor-pointer">
+                                <label htmlFor={`vip-included-${idx}`} className="text-xs font-semibold text-primary uppercase tracking-wider cursor-pointer">
                                   Free for VIP ticket holders
                                 </label>
                               </div>
@@ -1826,7 +1987,7 @@ export const FestivalCreationWizard: React.FC<{
                   </div>
                   
                   {/* Cultural Services */}
-                  <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-xl">
+                  <section className="bg-gray-50/30 p-8 rounded-[40px] border border-gray-100 hover:bg-white transition-all">
                     <div className="flex items-center gap-3 mb-6">
                       <div className="p-3 bg-secondary/10 rounded-2xl text-secondary">
                         <Music className="w-6 h-6" />
@@ -1836,10 +1997,11 @@ export const FestivalCreationWizard: React.FC<{
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {languagePreference !== 'am' && (
                         <div className="space-y-2">
+                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">English</label>
                           <Textarea
-                            label="English (comma-separated)"
+                            hideLabel
                             rows={4}
-                            placeholder="e.g. Traditional dance performances, Coffee ceremony, Craft workshops..."
+                            placeholder="e.g., Traditional Coffee Ceremony, Cultural Dance Workshop, Guided Heritage Tour (comma-separated)"
                             value={(formData.services.culturalServices_en || []).join(', ')}
                             onChange={(e) => updateServiceArray('culturalServices', 'en', e.target.value)}
                           />
@@ -1847,10 +2009,11 @@ export const FestivalCreationWizard: React.FC<{
                       )}
                       {languagePreference !== 'en' && (
                         <div className="space-y-2">
+                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">አማርኛ</label>
                           <Textarea
-                            label="Amharic (comma-separated)"
+                            hideLabel
                             rows={4}
-                            placeholder="e.g. á‹¨á‰£áˆ…áˆ á‹³áŠ•áˆµ á‰µáˆ­á‹’á‰¶á‰½á£ á‹¨á‰¡áŠ“ áˆ¥áŠ-áˆ¥áˆ­á‹“á‰µá£ á‹¨áŠ¥áŒ… áŒ¥á‰ á‰¥ áˆ¥áˆ«á‹Žá‰½..."
+                            placeholder="ለምሳሌ፦ ባህላዊ ቡና ማብሰያ፣ የባህል ዳንስ አውደ ጥናት፣ በአመራር የሚደረግ የቅርስ ጉብኝት (በነጠላ ሰረዝ ይለዩ)"
                             value={(formData.services.culturalServices_am || []).join(', ')}
                             onChange={(e) => updateServiceArray('culturalServices', 'am', e.target.value)}
                             dir="auto"
@@ -1861,7 +2024,7 @@ export const FestivalCreationWizard: React.FC<{
                   </section>
 
                   {/* Special Assistance */}
-                  <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-xl">
+                  <section className="bg-gray-50/30 p-8 rounded-[40px] border border-gray-100 hover:bg-white transition-all">
                     <div className="flex items-center gap-3 mb-6">
                       <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
                         <Heart className="w-6 h-6" />
@@ -1871,10 +2034,11 @@ export const FestivalCreationWizard: React.FC<{
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {languagePreference !== 'am' && (
                         <div className="space-y-2">
+                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">English</label>
                           <Textarea
-                            label="English (comma-separated)"
+                            hideLabel
                             rows={4}
-                            placeholder="e.g. Translation services, Medical support, Accessibility aid..."
+                            placeholder="e.g., Wheelchair Access, Sign Language Interpreter, Medical Assistance (comma-separated)"
                             value={(formData.services.specialAssistance_en || []).join(', ')}
                             onChange={(e) => updateServiceArray('specialAssistance', 'en', e.target.value)}
                           />
@@ -1882,10 +2046,11 @@ export const FestivalCreationWizard: React.FC<{
                       )}
                       {languagePreference !== 'en' && (
                         <div className="space-y-2">
+                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">አማርኛ</label>
                           <Textarea
-                            label="Amharic (comma-separated)"
+                            hideLabel
                             rows={4}
-                            placeholder="e.g. á‹¨á‰µáˆ­áŒ‰áˆ áŠ áŒˆáˆáŒáˆŽá‰µá£ á‹¨áˆ•áŠ­áˆáŠ“ á‹µáŒ‹áá£ á‹¨áŠ áŠ«áˆ áŒ‰á‹³á‰°áŠ› á‹µáŒ‹á..."
+                            placeholder="ለምሳሌ፦ ዊልቼር መድረሻ፣ የምልክት ቋንቋ አስተርጓሚ፣ የህክምና እርዳታ (በነጠላ ሰረዝ ይለዩ)"
                             value={(formData.services.specialAssistance_am || []).join(', ')}
                             onChange={(e) => updateServiceArray('specialAssistance', 'am', e.target.value)}
                             dir="auto"
@@ -1896,7 +2061,7 @@ export const FestivalCreationWizard: React.FC<{
                   </section>
 
                   {/* Extras */}
-                  <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-xl">
+                  <section className="bg-gray-50/30 p-8 rounded-[40px] border border-gray-100 hover:bg-white transition-all">
                     <div className="flex items-center gap-3 mb-6">
                       <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
                         <Plus className="w-6 h-6" />
@@ -1906,10 +2071,11 @@ export const FestivalCreationWizard: React.FC<{
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {languagePreference !== 'am' && (
                         <div className="space-y-2">
+                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">English</label>
                           <Textarea
-                            label="English (comma-separated)"
+                            hideLabel
                             rows={4}
-                            placeholder="e.g. Photography, Souvenir kits, Guided city tours..."
+                            placeholder="e.g., Photography Pass, Souvenir Package, VIP Lounge Access (comma-separated)"
                             value={(formData.services.extras_en || []).join(', ')}
                             onChange={(e) => updateServiceArray('extras', 'en', e.target.value)}
                           />
@@ -1917,10 +2083,11 @@ export const FestivalCreationWizard: React.FC<{
                       )}
                       {languagePreference !== 'en' && (
                         <div className="space-y-2">
+                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">አማርኛ</label>
                           <Textarea
-                            label="Amharic (comma-separated)"
+                            hideLabel
                             rows={4}
-                            placeholder="e.g. áŽá‰¶áŒáˆ«áá£ á‹¨á‰…áˆ­áˆ³á‰…áˆ­á‰… áˆµáŒ¦á‰³á‹Žá‰½á£ á‹¨áŠ¨á‰°áˆ› áŒ‰á‰¥áŠá‰µ..."
+                            placeholder="ለምሳሌ፦ የፎቶግራፍ ፓስ፣ የመታሰቢያ ጥቅል፣ የቪአይፒ ላውንጅ መድረሻ (በነጠላ ሰረዝ ይለዩ)"
                             value={(formData.services.extras_am || []).join(', ')}
                             onChange={(e) => updateServiceArray('extras', 'am', e.target.value)}
                             dir="auto"
@@ -1942,14 +2109,13 @@ export const FestivalCreationWizard: React.FC<{
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-4">
-                      <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                      <div className="bg-gray-50/30 p-6 rounded-[32px] border border-gray-100 hover:bg-white transition-all">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1 mb-2 block">Cancellation Policy *</label>
                         <DualLanguageField
-                          label="Cancellation Policy *"
+                          hideLabel
                           textarea
                           rows={4}
-                          englishPlaceholder="Explain cancellation terms, refund policy... *"
-                          amharicPlaceholder="á‹¨áˆ›á‰‹áˆ¨áŒ« á–áˆŠáˆ² áˆ˜áŒáˆˆáŒ«... *"
-                          englishValue={formData.policies.cancellation_en || ''}
+                          englishPlaceholder="Cancellation terms, refund policy, deadlines..."
                           amharicValue={formData.policies.cancellation_am || ''}
                           onEnglishChange={(value) => setFormData(prev => ({ ...prev, policies: { ...prev.policies, cancellation_en: value } }))}
                           onAmharicChange={(value) => setFormData(prev => ({ ...prev, policies: { ...prev.policies, cancellation_am: value } }))}
@@ -1958,17 +2124,16 @@ export const FestivalCreationWizard: React.FC<{
                           className={errors.cancellation_en ? 'ring-1 ring-red-500 rounded-xl' : ''}
                         />
                         {errors.cancellation_en && (
-                          <p className="text-[10px] text-red-500 ml-1 mt-2">{errors.cancellation_en}</p>
+                          <p className="text-xs text-red-500 ml-1 mt-2">{errors.cancellation_en}</p>
                         )}
                       </div>
-                      <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                      <div className="bg-gray-50/30 p-6 rounded-[32px] border border-gray-100 hover:bg-white transition-all">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1 mb-2 block">Booking Terms *</label>
                         <DualLanguageField
-                          label="Booking Terms *"
+                          hideLabel
                           textarea
                           rows={4}
-                          englishPlaceholder="Terms and conditions for bookings... *"
-                          amharicPlaceholder="áˆˆá‰¦áŠªáŠ•áŒŽá‰½ á‹áˆŽá‰½ áŠ¥áŠ“ á‹áŒ¤á‰¶á‰½... *"
-                          englishValue={formData.policies.terms_en || ''}
+                          englishPlaceholder="Booking conditions, payment terms, modifications..."
                           amharicValue={formData.policies.terms_am || ''}
                           onEnglishChange={(value) => setFormData(prev => ({ ...prev, policies: { ...prev.policies, terms_en: value } }))}
                           onAmharicChange={(value) => setFormData(prev => ({ ...prev, policies: { ...prev.policies, terms_am: value } }))}
@@ -1977,20 +2142,19 @@ export const FestivalCreationWizard: React.FC<{
                           className={errors.terms_en ? 'ring-1 ring-red-500 rounded-xl' : ''}
                         />
                         {errors.terms_en && (
-                          <p className="text-[10px] text-red-500 ml-1 mt-2">{errors.terms_en}</p>
+                          <p className="text-xs text-red-500 ml-1 mt-2">{errors.terms_en}</p>
                         )}
                       </div>
                     </div>
 
                     <div className="space-y-4">
-                      <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                      <div className="bg-gray-50/30 p-6 rounded-[32px] border border-gray-100 hover:bg-white transition-all">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1 mb-2 block">Safety Rules</label>
                         <DualLanguageField
-                          label="Safety Rules"
+                          hideLabel
                           textarea
                           rows={4}
-                          englishPlaceholder="Safety guidelines and rules..."
-                          amharicPlaceholder="á‹¨á‹°áˆ…áŠ•áŠá‰µ áˆ˜áˆ˜áˆªá‹«á‹Žá‰½ áŠ¥áŠ“ áˆ…áŒŽá‰½..."
-                          englishValue={formData.policies.safety_en || ''}
+                          englishPlaceholder="Safety guidelines, emergency procedures, prohibited items..."
                           amharicValue={formData.policies.safety_am || ''}
                           onEnglishChange={(value) => setFormData({ ...formData, policies: { ...formData.policies, safety_en: value } })}
                           onAmharicChange={(value) => setFormData({ ...formData, policies: { ...formData.policies, safety_am: value } })}
@@ -1998,13 +2162,15 @@ export const FestivalCreationWizard: React.FC<{
                           showAmharic={languagePreference !== 'en'}
                         />
                       </div>
-                      <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                      <div className="bg-gray-50/30 p-6 rounded-[32px] border border-gray-100 hover:bg-white transition-all">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1 mb-2 block">Age Restriction</label>
                         <Input
-                          label="Age Restriction"
-                          placeholder="e.g. 18+, All ages, etc."
+                          hideLabel
+                          placeholder="e.g., 18+, All ages, Family-friendly"
                           value={formData.policies.ageRestriction || ''}
                           onChange={(e) => setFormData({ ...formData, policies: { ...formData.policies, ageRestriction: e.target.value } })}
                           icon={Users}
+                          className="pl-12"
                         />
                       </div>
                     </div>
@@ -2058,6 +2224,59 @@ export const FestivalCreationWizard: React.FC<{
                       })()}
                     </div>
                   </div>
+
+                  {/* Early Bird Section */}
+                  <div className="max-w-3xl mx-auto mb-8">
+                    <div className="bg-white p-8 rounded-[32px] border border-emerald-100 shadow-lg relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-110" />
+                      <div className="relative">
+                        <div className="flex items-center gap-4 mb-6">
+                          <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
+                            <Zap className="w-6 h-6 text-emerald-600" />
+                          </div>
+                          <div>
+                            <h4 className="text-lg font-bold text-gray-800">Early Bird Offer</h4>
+                            <p className="text-sm text-gray-400">Encourage early bookings with special pricing</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Early Bird Price</label>
+                            <div className="flex items-center gap-3 px-4 py-3.5 bg-emerald-50/30 rounded-[14px] border border-emerald-100 focus-within:bg-white focus-within:border-emerald-300 transition-all">
+                              <span className="text-xs font-black text-emerald-600">ETB</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={formData.pricing.earlyBirdPrice || ''}
+                                onChange={(e) => setFormData(prev => ({ 
+                                  ...prev, 
+                                  pricing: { ...prev.pricing, earlyBirdPrice: parseFloat(e.target.value) || 0 }
+                                }))}
+                                className="flex-1 text-lg font-bold bg-transparent border-0 outline-none text-emerald-700 placeholder-emerald-200"
+                                placeholder="e.g., 50"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Early Bird Deadline</label>
+                            <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50/30 rounded-[14px] border border-emerald-100 focus-within:bg-white focus-within:border-emerald-300 transition-all">
+                              <Calendar className="w-5 h-5 text-emerald-600" />
+                              <input
+                                type="date"
+                                value={formData.pricing.earlyBirdDeadline || ''}
+                                onChange={(e) => setFormData(prev => ({ 
+                                  ...prev, 
+                                  pricing: { ...prev.pricing, earlyBirdDeadline: e.target.value }
+                                }))}
+                                className="flex-1 text-lg font-bold bg-transparent border-0 outline-none text-emerald-700"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
                     {/* Standard Ticket Card */}
@@ -2072,8 +2291,8 @@ export const FestivalCreationWizard: React.FC<{
                         
                         {/* Standard Ticket Quantity */}
                         <div className="mb-6 space-y-2">
-                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Ticket Quantity</label>
-                          <div className="flex items-center gap-3 px-4 py-3.5 bg-gray-50/50 rounded-[14px] border border-gray-200">
+                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Ticket Quantity *</label>
+                          <div className="flex items-center gap-3 px-4 py-3.5 bg-gray-50/50 rounded-[14px] border border-gray-200 focus-within:bg-white focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 transition-all">
                             <Users className="w-5 h-5 text-primary" />
                             <input
                               type="number"
@@ -2088,9 +2307,6 @@ export const FestivalCreationWizard: React.FC<{
                                 const total = formData.core.totalCapacity || 0;
                                 const vipQty = formData.ticketTypes?.find((t: any) => t.name_en === 'VIP' || t.name === 'VIP')?.quantity || 0;
                                 
-                                // Cap the quantity to total - vipQty if needed, or just let them overfill and show error
-                                // Let's allow it but maybe auto-adjust or just show validation error later.
-                                // For better UX, let's cap it.
                                 const cappedQty = Math.min(newQty, total - vipQty);
                                 
                                 let found = false;
@@ -2122,33 +2338,36 @@ export const FestivalCreationWizard: React.FC<{
                         </div>
 
                         {/* Standard Price */}
-                        <div className={`flex items-center gap-3 px-4 py-3.5 bg-gray-50/50 rounded-[14px] border border-gray-200 focus-within:bg-white focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 transition-all duration-200 shadow-[0_2px_4px_rgba(0,0,0,0.02)] ${errors.basePrice ? 'border-red-500 bg-red-50' : ''}`}>
-                          <span className="text-xl font-black text-primary">{formData.pricing.currency}</span>
-                          <input
-                            type="number"
-                            min="1"
-                            value={formData.pricing.basePrice || ''}
-                            onChange={(e) => {
-                              const newPrice = parseFloat(e.target.value) || 0;
-                              const newTicketTypes = formData.ticketTypes?.map((t: any) => 
-                                (t.name_en === 'Standard' || t.name === 'Standard')
-                                  ? { ...t, price: newPrice }
-                                  : t
-                              ) || [];
-                              setFormData(prev => ({ 
-                                ...prev, 
-                                pricing: { ...prev.pricing, basePrice: newPrice },
-                                ticketTypes: newTicketTypes
-                              }));
-                            }}
-                            className="flex-1 text-xl font-bold bg-transparent border-0 outline-none text-primary placeholder-gray-300"
-                            placeholder="0"
-                          />
-                          <span className="text-sm text-gray-400">/ticket</span>
+                        <div className="space-y-2">
+                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Price per Ticket *</label>
+                          <div className={`flex items-center gap-3 px-4 py-3.5 bg-gray-50/50 rounded-[14px] border border-gray-200 focus-within:bg-white focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 transition-all ${errors.basePrice ? 'border-red-500 bg-red-50' : ''}`}>
+                            <span className="text-xs font-black text-primary">ETB</span>
+                            <input
+                              type="number"
+                              min="1"
+                              value={formData.pricing.basePrice || ''}
+                              onChange={(e) => {
+                                const newPrice = parseFloat(e.target.value) || 0;
+                                const newTicketTypes = formData.ticketTypes?.map((t: any) => 
+                                  (t.name_en === 'Standard' || t.name === 'Standard')
+                                    ? { ...t, price: newPrice }
+                                    : t
+                                ) || [];
+                                setFormData(prev => ({ 
+                                  ...prev, 
+                                  pricing: { ...prev.pricing, basePrice: newPrice },
+                                  ticketTypes: newTicketTypes
+                                }));
+                              }}
+                              className="flex-1 text-xl font-bold bg-transparent border-0 outline-none text-primary placeholder-gray-300"
+                              placeholder="0"
+                            />
+                            <span className="text-sm text-gray-400">/ticket</span>
+                          </div>
+                          {errors.basePrice && (
+                            <p className="text-xs text-red-500 ml-1 mt-1">{errors.basePrice}</p>
+                          )}
                         </div>
-                        {errors.basePrice && (
-                          <p className="text-[10px] text-red-500 ml-1 mt-2">{errors.basePrice}</p>
-                        )}
                       </div>
                     </div>
 
@@ -2164,8 +2383,8 @@ export const FestivalCreationWizard: React.FC<{
                         
                         {/* VIP Ticket Quantity */}
                         <div className="mb-6 space-y-2">
-                          <label className="text-[10px] font-bold text-amber-800 uppercase tracking-widest ml-1">VIP Ticket Quantity</label>
-                          <div className="flex items-center gap-3 px-4 py-3.5 bg-amber-50/30 rounded-[14px] border border-amber-100">
+                          <label className="text-xs font-semibold text-amber-800 uppercase tracking-wider ml-1">VIP Ticket Quantity *</label>
+                          <div className="flex items-center gap-3 px-4 py-3.5 bg-amber-50/30 rounded-[14px] border border-amber-100 focus-within:bg-white focus-within:border-amber-300 focus-within:ring-4 focus-within:ring-amber-100 transition-all">
                             <Ticket className="w-5 h-5 text-amber-700" />
                             <input
                               type="number"
@@ -2180,10 +2399,8 @@ export const FestivalCreationWizard: React.FC<{
                                 const total = formData.core.totalCapacity || 0;
                                 const stdQty = formData.ticketTypes?.find((t: any) => t.name_en === 'Standard' || t.name === 'Standard')?.quantity || 0;
                                 
-                                // Cap to remaining capacity
                                 const cappedQty = Math.min(newQty, total - stdQty);
 
-                                // Update VIP ticket quantity in ticketTypes
                                 let found = false;
                                 const newTicketTypes = formData.ticketTypes?.map((t: any) => {
                                   if (t.name_en === 'VIP' || t.name === 'VIP') {
@@ -2204,7 +2421,6 @@ export const FestivalCreationWizard: React.FC<{
                                   });
                                 }
                                 
-                                // Auto-update VIP room availability (1 VIP ticket = 1 room)
                                 const newHotels = formData.hotels.map((hotel: any) => ({
                                   ...hotel,
                                   rooms: (hotel.rooms || []).map((room: any) => 
@@ -2214,7 +2430,6 @@ export const FestivalCreationWizard: React.FC<{
                                   )
                                 }));
                                 
-                                // Auto-update VIP transport capacity
                                 const newTransport = formData.transportation.map((t: any) => 
                                   t.vipIncluded 
                                     ? { ...t, capacity: cappedQty }
@@ -2233,42 +2448,45 @@ export const FestivalCreationWizard: React.FC<{
                             />
                             <span className="text-xs font-bold text-amber-600/60">/ {formData.core.totalCapacity || 0} total</span>
                           </div>
-                          <p className="text-[10px] text-amber-600/60 ml-1">1 VIP ticket = 1 room + transport included</p>
+                          <p className="text-xs text-amber-600/60 ml-1">1 VIP ticket = 1 room + transport included</p>
                         </div>
 
                         {/* VIP Price (All-Inclusive) */}
-                         <div className={`flex items-center gap-3 px-4 py-3.5 bg-amber-50/30 rounded-[14px] border border-amber-100`}>
-                          <span className="text-xl font-black text-amber-700">{formData.pricing.currency}</span>
-                          <input
-                            type="number"
-                            min="0"
-                            value={formData.pricing.vipPrice || ''}
-                            onChange={(e) => {
-                              const newPrice = parseFloat(e.target.value) || 0;
-                              const newTicketTypes = formData.ticketTypes?.map((t: any) => 
-                                (t.name_en === 'VIP' || t.name === 'VIP')
-                                  ? { ...t, price: newPrice }
-                                  : t
-                              ) || [];
-                              setFormData(prev => ({ 
-                                ...prev, 
-                                pricing: { ...prev.pricing, vipPrice: newPrice },
-                                ticketTypes: newTicketTypes
-                              }));
-                            }}
-                            className="flex-1 text-xl font-bold bg-transparent border-0 outline-none text-amber-700 placeholder-amber-200"
-                            placeholder="0"
-                          />
-                          <span className="text-sm text-amber-600 font-medium">all-inclusive</span>
+                         <div className="space-y-2">
+                           <label className="text-xs font-semibold text-amber-800 uppercase tracking-wider ml-1">VIP Price (All-Inclusive) *</label>
+                           <div className={`flex items-center gap-3 px-4 py-3.5 bg-amber-50/30 rounded-[14px] border border-amber-100 focus-within:bg-white focus-within:border-amber-300 focus-within:ring-4 focus-within:ring-amber-100 transition-all`}>
+                            <span className="text-xs font-black text-amber-700">ETB</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={formData.pricing.vipPrice || ''}
+                              onChange={(e) => {
+                                const newPrice = parseFloat(e.target.value) || 0;
+                                const newTicketTypes = formData.ticketTypes?.map((t: any) => 
+                                  (t.name_en === 'VIP' || t.name === 'VIP')
+                                    ? { ...t, price: newPrice }
+                                    : t
+                                ) || [];
+                                setFormData(prev => ({ 
+                                  ...prev, 
+                                  pricing: { ...prev.pricing, vipPrice: newPrice },
+                                  ticketTypes: newTicketTypes
+                                }));
+                              }}
+                              className="flex-1 text-xl font-bold bg-transparent border-0 outline-none text-amber-700 placeholder-amber-200"
+                              placeholder="0"
+                            />
+                            <span className="text-sm text-amber-600 font-medium">all-inclusive</span>
+                          </div>
+                          {errors.vipPrice && (
+                            <p className="text-xs text-red-500 ml-1 mt-1">{errors.vipPrice}</p>
+                          )}
                         </div>
-                        {errors.vipPrice && (
-                          <p className="text-[10px] text-red-500 ml-1 mt-2">{errors.vipPrice}</p>
-                        )}
                         
                         {/* VIP Package Configuration */}
                         <div className="mt-8 space-y-6 pt-6 border-t border-amber-100">
                           <div className="space-y-3">
-                            <label className="text-[10px] font-bold text-amber-800 uppercase tracking-widest ml-1">Included VIP Hotels (User Chooses 1)</label>
+                            <label className="text-xs font-semibold text-amber-800 uppercase tracking-wider ml-1">Included VIP Hotels (User Chooses 1)</label>
                             <div className="flex flex-wrap gap-2">
                               {formData.hotels.map((hotel: any, idx: number) => {
                                 const hotelId = hotel.id || `hotel-${idx}`;
@@ -2294,11 +2512,11 @@ export const FestivalCreationWizard: React.FC<{
                                 );
                               })}
                             </div>
-                            <p className="text-[10px] text-amber-600/60 font-medium ml-1">VIP ticket holders will choose one from these hotels.</p>
+                            <p className="text-xs text-amber-600/60 font-medium ml-1">VIP ticket holders will choose one from these hotels.</p>
                           </div>
                           
                           <div className="space-y-3">
-                            <label className="text-[10px] font-bold text-amber-800 uppercase tracking-widest ml-1">Included VIP Transport (User Chooses 1)</label>
+                            <label className="text-xs font-semibold text-amber-800 uppercase tracking-wider ml-1">Included VIP Transport (User Chooses 1)</label>
                             <div className="flex flex-wrap gap-2">
                               {formData.transportation.map((transport: any, idx: number) => {
                                 const transportId = transport.id || `transport-${idx}`;
@@ -2340,63 +2558,200 @@ export const FestivalCreationWizard: React.FC<{
                     <p className="text-gray-500">Please review your festival details before submitting for verification.</p>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-5xl mx-auto">
-                    {/* Summary Card */}
-                    <div className="bg-gray-50/50 p-8 rounded-[40px] border border-gray-100 space-y-8">
-                      <div>
-                        <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Core Details</h4>
-                        <div className="space-y-4">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-500">Name</span>
-                            <span className="text-sm font-bold text-primary">{formData.core.name_en || formData.core.name_am}</span>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Main Summary */}
+                    <div className="lg:col-span-2 space-y-8">
+                      {/* Core Details Card */}
+                      <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-xl">
+                        <div className="flex items-center gap-4 mb-8">
+                          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+                            <FileText className="w-6 h-6" />
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-500">Date</span>
-                            <span className="text-sm font-bold text-primary">{formData.core.startDate} - {formData.core.endDate}</span>
+                          <h4 className="text-xl font-bold text-gray-800">Core Festival Details</h4>
+                        </div>
+                        
+                        <div className="space-y-6">
+                          <div className="grid grid-cols-2 gap-8">
+                            <div>
+                              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Festival Name</p>
+                              <p className="text-lg font-bold text-gray-800">{formData.core.name_en || formData.core.name_am}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Capacity</p>
+                              <p className="text-lg font-bold text-gray-800">{formData.core.totalCapacity} Persons</p>
+                            </div>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-500">Location</span>
-                            <span className="text-sm font-bold text-primary">{formData.core.locationName_en || formData.core.locationName_am}</span>
+                          
+                          <div className="grid grid-cols-2 gap-8">
+                            <div>
+                              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Date</p>
+                              <p className="text-sm font-bold text-gray-800">{formData.core.startDate} - {formData.core.endDate}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Location</p>
+                              <p className="text-sm font-bold text-gray-800">{formData.core.locationName_en || formData.core.locationName_am}</p>
+                            </div>
+                          </div>
+
+                          <div>
+                            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Specific Location (Map)</p>
+                            <p className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                              <MapPin className="w-4 h-4 text-emerald-500" />
+                              {formData.core.coordinates 
+                                ? `Lat: ${formData.core.coordinates.lat.toFixed(6)}, Lng: ${formData.core.coordinates.lng.toFixed(6)}`
+                                : 'No location selected'}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Description</p>
+                            <p className="text-sm text-gray-500 italic leading-relaxed">
+                              "{formData.core.shortDescription_en || formData.core.shortDescription_am}"
+                            </p>
                           </div>
                         </div>
                       </div>
 
-                      <div className="pt-8 border-t border-gray-100">
-                        <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Pricing Summary</h4>
-                        <div className="space-y-4">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-500">Base Price</span>
-                            <span className="text-sm font-bold text-primary">{formData.pricing.currency} {formData.pricing.basePrice}</span>
+                      {/* Schedule Summary */}
+                      <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-xl">
+                        <div className="flex items-center gap-4 mb-8">
+                          <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center">
+                            <Calendar className="w-6 h-6" />
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-500">VIP Price</span>
-                            <span className="text-sm font-bold text-amber-600">{formData.pricing.currency} {formData.pricing.vipPrice}</span>
-                          </div>
+                          <h4 className="text-xl font-bold text-gray-800">Event Schedule</h4>
                         </div>
+                        <div className="space-y-4">
+                          {formData.schedule.map((day, i) => (
+                            <div key={i} className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl">
+                              <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-bold text-amber-600 shadow-sm">
+                                  D{i+1}
+                                </div>
+                                <div>
+                                  <p className="font-bold text-gray-800">{day.title_en || day.title_am}</p>
+                                  <p className="text-xs text-gray-400">{day.performers.length} Performers</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Logistics Summary */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                         <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-xl">
+                           <h5 className="font-bold text-gray-800 mb-6 flex items-center gap-2">
+                             <Hotel className="w-5 h-5 text-indigo-500" /> Accommodation
+                           </h5>
+                           <div className="space-y-3">
+                             {formData.hotels.map((h, i) => (
+                               <div key={i} className="text-xs p-3 bg-gray-50 rounded-xl">
+                                 <p className="font-bold text-gray-800">{h.name_en || h.name_am}</p>
+                                 <p className="text-gray-400">{h.rooms?.length || 0} Room Types</p>
+                               </div>
+                             ))}
+                           </div>
+                         </div>
+                         <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-xl">
+                           <h5 className="font-bold text-gray-800 mb-6 flex items-center gap-2">
+                             <Car className="w-5 h-5 text-blue-500" /> Transportation
+                           </h5>
+                           <div className="space-y-3">
+                             {formData.transportation.map((t, i) => (
+                               <div key={i} className="text-xs p-3 bg-gray-50 rounded-xl">
+                                 <p className="font-bold text-gray-800">{t.type_en || t.type_am}</p>
+                                 <p className="text-gray-400">{t.vipIncluded ? 'VIP Package' : `ETB ${t.price}`}</p>
+                               </div>
+                             ))}
+                           </div>
+                         </div>
                       </div>
                     </div>
 
-                    {/* Final Actions */}
-                    <div className="flex flex-col justify-center space-y-6">
-                      <div className="p-8 bg-amber-50 rounded-[32px] border border-amber-100">
-                        <div className="flex items-start gap-4">
-                          <div className="p-2 bg-amber-100 rounded-lg">
-                            <AlertCircle className="w-5 h-5 text-amber-600" />
+                    {/* Sidebar Summary */}
+                    <div className="space-y-8">
+                      {/* Pricing Summary Card */}
+                      <div className="bg-[#1a1c23] p-8 rounded-[40px] text-white shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full -mr-16 -mt-16 blur-3xl" />
+                        <h4 className="text-lg font-bold mb-8 flex items-center gap-2">
+                          <span className="text-primary font-black text-xs">ETB</span> Pricing Summary
+                        </h4>
+                        
+                        <div className="space-y-6">
+                          {formData.pricing.earlyBirdPrice > 0 && (
+                            <div className="flex justify-between items-center pb-4 border-b border-white/10">
+                              <div>
+                                <p className="text-[10px] font-black uppercase text-emerald-400 tracking-widest">Early Bird</p>
+                                <p className="text-2xl font-black">ETB {formData.pricing.earlyBirdPrice}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-[10px] text-gray-500">Deadline</p>
+                                <p className="text-xs font-bold">{formData.pricing.earlyBirdDeadline}</p>
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center pb-4 border-b border-white/10">
+                            <div>
+                              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Regular</p>
+                              <p className="text-2xl font-black">ETB {formData.pricing.basePrice}</p>
+                            </div>
                           </div>
-                          <div>
-                            <h5 className="text-sm font-bold text-amber-800 mb-1">Verification Required</h5>
-                            <p className="text-xs text-amber-700/70 leading-relaxed">Your festival will be reviewed by our team before it becomes visible to tourists. This usually takes 24-48 hours.</p>
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-[10px] font-black uppercase text-amber-400 tracking-widest">VIP (All-In)</p>
+                              <p className="text-2xl font-black text-amber-500">ETB {formData.pricing.vipPrice}</p>
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      <Button 
-                        size="lg" 
-                        className="w-full py-6 text-lg rounded-[24px] shadow-xl shadow-primary/20"
-                        onClick={handlePublish}
-                      >
-                        Submit for Verification
-                      </Button>
+                      {/* Services Summary */}
+                      <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-xl">
+                         <h4 className="font-bold text-gray-800 mb-6 flex items-center gap-2">
+                           <LayoutGrid className="w-5 h-5 text-primary" /> Services Included
+                         </h4>
+                         <div className="space-y-4">
+                           <div>
+                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Cultural</p>
+                             <div className="flex flex-wrap gap-2">
+                               {(formData.services.culturalServices_en || []).map((s, i) => (
+                                 <span key={i} className="px-2 py-1 bg-gray-50 text-xs font-bold rounded-lg">{s}</span>
+                               ))}
+                             </div>
+                           </div>
+                           <div>
+                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Special Assistance</p>
+                             <div className="flex flex-wrap gap-2">
+                               {(formData.services.specialAssistance_en || []).map((s, i) => (
+                                 <span key={i} className="px-2 py-1 bg-gray-50 text-xs font-bold rounded-lg">{s}</span>
+                               ))}
+                             </div>
+                           </div>
+                         </div>
+                      </div>
+
+                      {/* Final Actions */}
+                      <div className="flex flex-col justify-center space-y-6">
+                        <div className="p-8 bg-amber-50 rounded-[32px] border border-amber-100">
+                          <div className="flex items-start gap-4">
+                            <div className="p-2 bg-amber-100 rounded-lg">
+                              <AlertCircle className="w-5 h-5 text-amber-600" />
+                            </div>
+                            <div>
+                              <h5 className="text-sm font-bold text-amber-800 mb-1">Verification Required</h5>
+                              <p className="text-xs text-amber-700/70 leading-relaxed">Your festival will be reviewed by our team before it becomes visible to tourists. This usually takes 24-48 hours.</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <Button 
+                          size="lg" 
+                          className="w-full h-16 rounded-[24px] text-lg font-black shadow-xl shadow-primary/20"
+                          onClick={handlePublish}
+                        >
+                          Submit for Verification
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2438,5 +2793,7 @@ export const FestivalCreationWizard: React.FC<{
     </div>
   );
 };
-                    
-                    
+
+
+
+
