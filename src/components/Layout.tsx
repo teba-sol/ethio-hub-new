@@ -341,6 +341,7 @@ const UserMenu: React.FC = () => {
       organizer: "/dashboard/organizer/overview",
       artisan: "/dashboard/artisan/overview",
       admin: "/dashboard/admin/overview",
+      delivery: "/dashboard/delivery",
     };
     return dashboardHomeByRole[role] || "/dashboard";
   };

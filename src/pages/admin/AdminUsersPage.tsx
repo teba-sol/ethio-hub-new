@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, Filter, MoreVertical, CheckCircle2, XCircle, 
   AlertTriangle, Trash2, Shield, Eye, Ban, UserCheck,
   Calendar, DollarSign, Activity, Mail, Phone, MapPin,
-  FileText, Clock, ArrowUpRight
+  FileText, Clock, ArrowUpRight, Truck
 } from 'lucide-react';
 import { Button, Badge, Input } from '../../components/UI';
 
 type VerificationStatus = 'Not Submitted' | 'Pending' | 'Under Review' | 'Approved' | 'Rejected' | 'Modification Requested';
 type UserStatus = 'Active' | 'Suspended' | 'Deleted' | 'Banned';
-type UserRole = 'admin' | 'tourist' | 'organizer' | 'artisan';
+type UserRole = 'admin' | 'tourist' | 'organizer' | 'artisan' | 'delivery';
 
 interface UserData {
   _id: string;
@@ -39,6 +39,7 @@ interface Stats {
   organizer: number;
   artisan: number;
   tourist: number;
+  delivery: number;
   active: number;
   suspended: number;
   banned: number;
@@ -51,6 +52,7 @@ function getVerificationStatus(user: UserData): VerificationStatus {
 }
 
 function getRoleDisplay(role: UserRole): string {
+  if (role === 'delivery') return 'Delivery Guy';
   return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
@@ -89,6 +91,47 @@ export const AdminUsersPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
+  const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [notification, setNotification] = useState<{ 
+    message: string; 
+    type: 'success' | 'error' | 'warning';
+    password?: string;
+    email?: string;
+  } | null>(null);
+
+  const showNotification = (
+    message: string, 
+    type: 'success' | 'error' | 'warning' = 'success',
+    password?: string,
+    email?: string
+  ) => {
+    // Clear any existing auto-hide timeout
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
+      notificationTimeoutRef.current = null;
+    }
+
+    // If we are showing a regular notification and a password card is already visible,
+    // don't overwrite the password card unless the new notification is also a password/error.
+    if (notification?.password && !password && type === 'success') {
+      if (message === 'Password copied to clipboard') {
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+      }
+      return;
+    }
+
+    setNotification({ message, type, password, email });
+    
+    // Only auto-hide if there's no password (user wants manual close for passwords)
+    if (!password) {
+      notificationTimeoutRef.current = setTimeout(() => {
+        setNotification(null);
+        notificationTimeoutRef.current = null;
+      }, 4000);
+    }
+  };
 
   useEffect(() => {
     fetchUsers();
@@ -132,7 +175,7 @@ export const AdminUsersPage: React.FC = () => {
     }
   };
 
-  const handleAddUser = async (formData: { name: string; email: string; role: string }) => {
+  const handleAddUser = async (formData: { name: string; email: string; role: string; deliveryProfile?: any }) => {
     try {
       const response = await fetch('/api/admin/users', {
         method: 'POST',
@@ -141,16 +184,17 @@ export const AdminUsersPage: React.FC = () => {
       });
       const data = await response.json();
       if (response.ok) {
-        alert(data.message);
-        setIsAddUserModalOpen(false);
-        fetchUsers();
+        // fetchUsers(); // Don't close immediately, show password
         fetchStats();
+        return data; // Return data including tempPassword
       } else {
-        alert(data.message || 'Failed to add user');
+        showNotification(data.message || 'Failed to add user', 'error');
+        return null;
       }
     } catch (error) {
       console.error('Error adding user:', error);
-      alert('An error occurred while adding the user');
+      showNotification('An error occurred while adding the user', 'error');
+      return null;
     }
   };
 
@@ -181,11 +225,11 @@ export const AdminUsersPage: React.FC = () => {
         setIsSuspensionModalOpen(false);
         setSuspendingUserId(null);
       } else {
-        alert(data.message || 'Failed to suspend user');
+        showNotification(data.message || 'Failed to suspend user', 'error');
       }
     } catch (error) {
       console.error('Error suspending user:', error);
-      alert('An error occurred while suspending the user');
+      showNotification('An error occurred while suspending the user', 'error');
     } finally {
       setActionLoading(null);
     }
@@ -199,12 +243,13 @@ export const AdminUsersPage: React.FC = () => {
       if (response.ok) {
         setUsers(prev => prev.map(u => u._id === userId ? { ...u, status: 'Active' as UserStatus } : u));
         fetchStats();
+        showNotification('User account activated successfully');
       } else {
-        alert(data.message || 'Failed to activate user');
+        showNotification(data.message || 'Failed to activate user', 'error');
       }
     } catch (error) {
       console.error('Error activating user:', error);
-      alert('An error occurred while activating the user');
+      showNotification('An error occurred while activating the user', 'error');
     } finally {
       setActionLoading(null);
     }
@@ -219,12 +264,13 @@ export const AdminUsersPage: React.FC = () => {
       if (response.ok) {
         setUsers(prev => prev.filter(u => u._id !== userId));
         fetchStats();
+        showNotification('User deleted successfully');
       } else {
-        alert(data.message || 'Failed to delete user');
+        showNotification(data.message || 'Failed to delete user', 'error');
       }
     } catch (error) {
       console.error('Error deleting user:', error);
-      alert('An error occurred while deleting the user');
+      showNotification('An error occurred while deleting the user', 'error');
     } finally {
       setActionLoading(null);
     }
@@ -269,6 +315,7 @@ export const AdminUsersPage: React.FC = () => {
     Organizer: stats?.organizer || 0,
     Artisan: stats?.artisan || 0,
     Tourist: stats?.tourist || 0,
+    'Delivery Guy': stats?.delivery || 0,
     Total: stats?.total || 0,
   };
 
@@ -276,20 +323,94 @@ export const AdminUsersPage: React.FC = () => {
     const [formData, setFormData] = useState({
       name: '',
       email: '',
-      role: 'Tourist' as string
+      role: 'tourist' as string,
+      deliveryProfile: {
+        phone: '',
+        vehicleType: '',
+        licensePlate: '',
+      }
     });
     const [submitting, setSubmitting] = useState(false);
+    const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
+    const validateForm = () => {
+      const newErrors: Record<string, string> = {};
+      
+      // Full Name Validation
+      const nameParts = formData.name.trim().split(/\s+/);
+      if (!formData.name.trim()) {
+        newErrors.name = 'Full name is required';
+      } else if (nameParts.length < 2) {
+        newErrors.name = 'Last name is required (Enter both first and last name)';
+      }
+
+      // Email Validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!formData.email.trim()) {
+        newErrors.email = 'Email address is required';
+      } else if (!emailRegex.test(formData.email)) {
+        newErrors.email = 'Please enter a valid email address';
+      }
+
+      // Phone Validation for Delivery Guy
+      if (formData.role === 'delivery') {
+        const phone = formData.deliveryProfile.phone.trim();
+        if (!phone) {
+          newErrors.phone = 'Phone number is required';
+        } else if (phone.startsWith('09')) {
+          if (phone.length !== 10) {
+            newErrors.phone = 'Phone number starting with 09 must be 10 digits';
+          }
+        } else if (phone.startsWith('+251')) {
+          if (phone.length !== 13) {
+            newErrors.phone = 'Phone number starting with +251 must be 13 digits';
+          }
+        } else {
+          newErrors.phone = 'Phone must start with 09 or +251';
+        }
+
+        if (!formData.deliveryProfile.vehicleType) {
+          newErrors.vehicleType = 'Please select a vehicle type';
+        }
+      }
+
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
+      if (!validateForm()) return;
+      
       setSubmitting(true);
-      await handleAddUser(formData);
+      const submitData = {
+        ...formData,
+        role: formData.role.toLowerCase()
+      };
+      const result = await handleAddUser(submitData);
+      if (result && result.tempPassword) {
+        // Close modal immediately and show the special password notification
+        onClose();
+        showNotification(
+          'User Created Successfully!', 
+          'success', 
+          result.tempPassword,
+          formData.email
+        );
+        fetchUsers();
+      }
       setSubmitting(false);
+    };
+
+    const getModalWidth = () => {
+      if (formData.role === 'delivery') return 'max-w-lg';
+      return 'max-w-md';
     };
 
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-        <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
+        <div className={`bg-white rounded-2xl w-full ${getModalWidth()} shadow-2xl p-6 transition-all duration-300`}>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-800">Add New User</h2>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -299,24 +420,34 @@ export const AdminUsersPage: React.FC = () => {
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
               <Input 
-                placeholder="Enter full name" 
+                label="Full Name"
+                placeholder="Enter first and last name" 
                 value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                onChange={(e) => {
+                  setFormData({...formData, name: e.target.value});
+                  if (errors.name) setErrors({...errors, name: ''});
+                }}
+                error={!!errors.name}
                 required
               />
+              {errors.name && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1 uppercase tracking-widest">{errors.name}</p>}
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
               <Input 
+                label="Email Address"
                 type="email" 
                 placeholder="Enter email address" 
                 value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                onChange={(e) => {
+                  setFormData({...formData, email: e.target.value});
+                  if (errors.email) setErrors({...errors, email: ''});
+                }}
+                error={!!errors.email}
                 required
               />
+              {errors.email && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1 uppercase tracking-widest">{errors.email}</p>}
             </div>
             
             <div>
@@ -326,11 +457,72 @@ export const AdminUsersPage: React.FC = () => {
                 value={formData.role}
                 onChange={(e) => setFormData({...formData, role: e.target.value})}
               >
-                <option value="Tourist">Tourist</option>
-                <option value="Artisan">Artisan</option>
-                <option value="Organizer">Organizer</option>
+                <option value="tourist">Tourist</option>
+                <option value="artisan">Artisan</option>
+                <option value="organizer">Organizer</option>
+                <option value="delivery">Delivery Guy</option>
               </select>
             </div>
+
+            {formData.role === 'delivery' && (
+              <div className="space-y-4 p-4 bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl border border-blue-100">
+                <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
+                  <Truck className="w-4 h-4 text-blue-600" />
+                  <p className="text-sm font-bold text-gray-800">Delivery Guy Details</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Input 
+                      label="Phone"
+                      placeholder="09... or +251..." 
+                      value={formData.deliveryProfile.phone}
+                      onChange={(e) => {
+                        setFormData({
+                          ...formData, 
+                          deliveryProfile: { ...formData.deliveryProfile, phone: e.target.value }
+                        });
+                        if (errors.phone) setErrors({...errors, phone: ''});
+                      }}
+                      error={!!errors.phone}
+                      required
+                    />
+                    {errors.phone && <p className="text-[9px] text-red-500 font-bold mt-1 uppercase tracking-widest">{errors.phone}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Vehicle Type <span className="text-red-500">*</span></label>
+                    <select 
+                      className={`w-full px-4 py-2 bg-white border rounded-xl focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm ${errors.vehicleType ? 'border-red-500' : 'border-gray-200'}`}
+                      value={formData.deliveryProfile.vehicleType}
+                      onChange={(e) => {
+                        setFormData({
+                          ...formData, 
+                          deliveryProfile: { ...formData.deliveryProfile, vehicleType: e.target.value }
+                        });
+                        if (errors.vehicleType) setErrors({...errors, vehicleType: ''});
+                      }}
+                      required
+                    >
+                      <option value="">Select Vehicle</option>
+                      <option value="Motorcycle">Motorcycle</option>
+                      <option value="Bicycle">Bicycle</option>
+                      <option value="Car">Car</option>
+                    </select>
+                    {errors.vehicleType && <p className="text-[9px] text-red-500 font-bold mt-1 uppercase tracking-widest">{errors.vehicleType}</p>}
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Input 
+                      label="License Plate (Optional)"
+                      placeholder="AA-XXXX-XX" 
+                      value={formData.deliveryProfile.licensePlate}
+                      onChange={(e) => setFormData({
+                        ...formData, 
+                        deliveryProfile: { ...formData.deliveryProfile, licensePlate: e.target.value }
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             <p className="text-xs text-gray-400">A default password will be set and shared with the user.</p>
 
@@ -632,12 +824,12 @@ export const AdminUsersPage: React.FC = () => {
         )}
         
         <div className="flex gap-2 overflow-x-auto pb-2">
-          {['All', 'Organizer', 'Artisan', 'Tourist', 'Admin'].map(role => (
+          {['All', 'Organizer', 'Artisan', 'Tourist', 'Delivery Guy', 'Admin'].map(role => (
             <button
               key={role}
-              onClick={() => { setFilterRole(role); setCurrentPage(1); }}
+              onClick={() => { setFilterRole(role === 'Delivery Guy' ? 'delivery' : role); setCurrentPage(1); }}
               className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                filterRole === role ? 'bg-primary text-white shadow-md' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                (filterRole === role || (filterRole === 'delivery' && role === 'Delivery Guy')) ? 'bg-primary text-white shadow-md' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
               }`}
             >
               {role} ({counts[role as keyof typeof counts] || 0})
@@ -812,6 +1004,79 @@ export const AdminUsersPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Notification Overlay */}
+      {notification && (
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] animate-in zoom-in-95 duration-300">
+          {notification.password ? (
+            <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 text-center border border-emerald-100 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div>
+              <button 
+                onClick={() => setNotification(null)} 
+                className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors group"
+              >
+                <XCircle className="w-5 h-5 text-gray-400 group-hover:text-red-500" />
+              </button>
+              
+              <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+              </div>
+              
+              <h2 className="text-2xl font-serif font-bold text-gray-800 mb-2">{notification.message}</h2>
+              <p className="text-sm text-gray-500 mb-8">
+                The account has been created for <strong>{notification.email}</strong>.<br/>
+                A welcome email with these credentials has been sent.
+              </p>
+              
+              <div className="bg-gradient-to-br from-gray-50 to-emerald-50 p-6 rounded-2xl border border-emerald-100 mb-8 shadow-inner relative">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Copy Temporary Password</p>
+                <div className="relative group">
+                  <div className="text-3xl font-mono font-bold text-primary tracking-wider bg-white py-4 rounded-xl border border-gray-100 shadow-sm select-all">
+                    {notification.password}
+                  </div>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(notification.password!);
+                      showNotification('Password copied to clipboard');
+                    }}
+                    className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-all ${
+                      copySuccess ? 'text-emerald-500 bg-emerald-50' : 'text-gray-400 hover:text-primary hover:bg-gray-50'
+                    }`}
+                    title="Copy to clipboard"
+                  >
+                    {copySuccess ? <CheckCircle2 className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                  </button>
+                </div>
+                {copySuccess && (
+                  <p className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-emerald-600 font-bold uppercase tracking-widest animate-in fade-in slide-in-from-bottom-1">
+                    Copied to clipboard!
+                  </p>
+                )}
+                <p className="text-[10px] text-gray-400 font-bold mt-4 uppercase tracking-widest flex items-center justify-center gap-2">
+                  Please save this password securely
+                </p>
+              </div>
+
+              <p className="text-xs text-gray-400 italic">Click the X in the top right to close this card</p>
+            </div>
+          ) : (
+            <div className={`px-8 py-4 rounded-2xl shadow-2xl border flex items-center gap-4 ${
+              notification.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' :
+              notification.type === 'error' ? 'bg-red-50 border-red-100 text-red-800' :
+              'bg-amber-50 border-amber-100 text-amber-800'
+            }`}>
+              {notification.type === 'success' ? (
+                <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+              ) : notification.type === 'error' ? (
+                <XCircle className="w-6 h-6 text-red-500" />
+              ) : (
+                <AlertTriangle className="w-6 h-6 text-amber-500" />
+              )}
+              <p className="font-bold text-sm">{notification.message}</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

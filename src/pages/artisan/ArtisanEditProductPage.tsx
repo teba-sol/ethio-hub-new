@@ -143,7 +143,9 @@ export const ArtisanEditProductPage: React.FC<{ params: Promise<{ id: string }> 
         weight: formData.weight || undefined,
         deliveryTime: formData.deliveryTime,
         shippingFee: formData.shippingFee === 'Free Shipping' ? 'Free Shipping' : formData.shippingFee,
-        status: status === 'Publish' ? 'Published' : 'Draft'
+        status: status === 'Publish' 
+          ? (parseInt(formData.stock) === 0 ? 'Out of Stock' : 'Pending') 
+          : 'Draft'
       };
 
       const response = await fetch(`/api/artisan/products/${productId}`, {
@@ -160,7 +162,15 @@ export const ArtisanEditProductPage: React.FC<{ params: Promise<{ id: string }> 
         throw new Error(result.message || 'Failed to update product');
       }
 
-      alert(`Artifact ${status === 'Publish' ? 'submitted for admin verification' : 'Saved as Draft'} Successfully!`);
+      let successMsg = '';
+      if (status === 'Draft') {
+        successMsg = 'Artifact saved as Draft successfully!';
+      } else if (parseInt(formData.stock) === 0) {
+        successMsg = 'Artifact marked as Out of Stock!';
+      } else {
+        successMsg = 'Artifact submitted for admin verification!';
+      }
+      alert(successMsg);
       router.push('/dashboard/artisan/products');
     } catch (error: any) {
       console.error('Error updating product:', error);
@@ -192,7 +202,7 @@ export const ArtisanEditProductPage: React.FC<{ params: Promise<{ id: string }> 
         </div>
         <div className="flex gap-3">
           <Button variant="outline" leftIcon={Save} onClick={() => handleSubmit('Draft')} isLoading={saving}>Save Draft</Button>
-          <Button leftIcon={CheckCircle2} onClick={() => handleSubmit('Publish')} isLoading={saving}>Publish Artifact</Button>
+          <Button leftIcon={CheckCircle2} onClick={() => handleSubmit('Publish')} isLoading={saving}>Save Change</Button>
         </div>
       </header>
 

@@ -2,11 +2,13 @@ export enum UserRole {
   TOURIST = 'tourist',
   ARTISAN = 'artisan',
   ORGANIZER = 'organizer',
-  ADMIN = 'admin'
+  ADMIN = 'admin',
+  DELIVERY = 'delivery'
 }
 
 export type ArtisanStatus = 'Not Submitted' | 'Pending' | 'Under Review' | 'Approved' | 'Rejected' | 'Modification Requested';
 export type OrganizerStatus = 'Not Submitted' | 'Pending' | 'Under Review' | 'Approved' | 'Rejected' | 'Modification Requested';
+export type DeliveryStatus = 'Not Submitted' | 'Pending' | 'Under Review' | 'Approved' | 'Rejected' | 'Modification Requested';
 
 export interface User {
   id: string;
@@ -20,6 +22,7 @@ export interface User {
   profileImage: string;
   artisanStatus?: ArtisanStatus;
   organizerStatus?: OrganizerStatus;
+  deliveryStatus?: DeliveryStatus;
   organizerProfile?: {
     companyName?: string;
     phone?: string;
@@ -72,6 +75,20 @@ export interface User {
     avatar?: string;
     specialties?: string[];
     yearsOfExperience?: number;
+  };
+  deliveryProfile?: {
+    phone?: string;
+    vehicleType?: string;
+    licensePlate?: string;
+    bankName?: string;
+    accountNumber?: string;
+    telebirrNumber?: string;
+    profileImage?: string;
+    idDocument?: string;
+    availabilityStatus?: string;
+    totalDeliveries?: number;
+    rating?: number;
+    totalEarnings?: number;
   };
 }
 

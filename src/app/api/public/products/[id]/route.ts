@@ -18,10 +18,12 @@ export async function GET(
       return NextResponse.json({ message: 'Invalid product ID' }, { status: 400 });
     }
 
-    let product: any = await Product.findById(id).populate('artisanId', 'name email status profilePicture');
+    const product = await Product.findOne({ _id: id, status: 'Published' })
+      .populate('artisanId', 'name email profilePicture status')
+      .lean();
 
     if (!product) {
-      return NextResponse.json({ message: 'Product not found' }, { status: 404 });
+      return NextResponse.json({ message: 'Product not found or not published' }, { status: 404 });
     }
 
     // Self-healing: Recalculate rating if it's 0 but there are reviews
@@ -47,16 +49,16 @@ export async function GET(
       }
     }
 
-    if (product.artisanId && product.artisanId.status === 'Suspended') {
+    if (product.artisanId && (product.artisanId as any).status === 'Suspended') {
       return NextResponse.json({ message: 'Product not found' }, { status: 404 });
     }
 
     const formattedProduct = {
-      ...product.toObject(),
+      ...product,
       _id: product._id.toString(),
       artisanId: product.artisanId ? {
-        ...product.artisanId.toObject(),
-        _id: product.artisanId._id.toString()
+        ...(product.artisanId as any),
+        _id: (product.artisanId as any)._id?.toString()
       } : null
     };
 

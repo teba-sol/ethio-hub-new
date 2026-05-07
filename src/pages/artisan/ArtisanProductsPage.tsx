@@ -6,7 +6,6 @@ export const ArtisanProductsPage: React.FC = () => {
   return (
     <div className="space-y-8">
       <ArtisanProductManager />
-      <WalletPanel userType="artisan" title="My Wallet" showWithdraw={true} />
     </div>
   );
 };

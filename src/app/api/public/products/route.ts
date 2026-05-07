@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     const region = searchParams.get('region');
     const limit = parseInt(searchParams.get('limit') || '50');
 
-    const query: any = {};
+    const query: any = { status: 'Published' };
 
     if (region) {
       query.region = region;
@@ -52,14 +52,14 @@ export async function GET(req: Request) {
     const products = await Product.find(query)
       .populate('artisanId', 'name email profilePicture')
       .sort({ createdAt: -1 })
-      .limit(limit);
+      .lean();
 
     const formattedProducts = products.map((p: any) => ({
-      ...p.toObject(),
+      ...p,
       _id: p._id.toString(),
       artisanId: p.artisanId ? {
-        ...p.artisanId.toObject(),
-        _id: p.artisanId._id.toString()
+        ...p.artisanId,
+        _id: p.artisanId._id?.toString()
       } : null
     }));
 

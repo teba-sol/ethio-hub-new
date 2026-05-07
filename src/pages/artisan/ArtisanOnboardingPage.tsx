@@ -4,6 +4,7 @@ import { Camera, Upload, MapPin, Briefcase, User as UserIcon, CheckCircle, Alert
 import { Button, Input } from '../../components/UI';
 import { useAuth } from '../../context/AuthContext';
 import { ArtisanStatus } from '../../types';
+import { LocationPicker } from '../../components/checkout/LocationPicker';
 
 // Chapa Bank IDs - Replace these placeholder UUIDs with actual IDs from GET /api/chapa.co/v1/banks
 const BANK_ID_MAP: Record<string, string> = {
@@ -20,6 +21,13 @@ export const ArtisanOnboardingPage: React.FC = () => {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+  const showNotify = (message: string, type: 'success' | 'error' = 'error') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 5000);
+  };
 
   const [formData, setFormData] = useState({
     phone: '',
@@ -32,6 +40,8 @@ export const ArtisanOnboardingPage: React.FC = () => {
     region: '',
     city: '',
     address: '',
+    latitude: 9.032,
+    longitude: 38.746,
     bankName: '',
     accountName: '',
     accountNumber: '',
@@ -45,7 +55,108 @@ export const ArtisanOnboardingPage: React.FC = () => {
   const [phoneError, setPhoneError] = useState('');
   const [experienceError, setExperienceError] = useState('');
   const [uploadError, setUploadError] = useState('');
-  const [uploading, setUploading] = useState({ profile: false, id: false, workshop: false, craft: false, product: false });
+  // const [uploading, setUploading] = useState({ profile: false, id: false, workshop: false, craft: false, product: false });
+
+  const uploadToCloudinary = async (file: File, folder: string = 'artisans') => {
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', file);
+    formDataUpload.append('folder', folder);
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formDataUpload,
+      });
+      const data = await response.json();
+      if (data.success) {
+        return data.url;
+      } else {
+        showNotify(data.message || 'Failed to upload image');
+        return null;
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      showNotify('An error occurred during upload');
+      return null;
+    }
+  };
+
+  const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        showNotify('Image must be less than 5MB');
+        return;
+      }
+      setUploading('profile');
+      const url = await uploadToCloudinary(file, 'profile_images');
+      if (url) setProfileImage(url);
+      setUploading(null);
+    }
+  };
+
+  const handleIdDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        showNotify('File must be less than 5MB');
+        return;
+      }
+      setUploading('id');
+      const url = await uploadToCloudinary(file, 'documents');
+      if (url) setIdDocument(url);
+      setUploading(null);
+    }
+  };
+
+  const handleWorkshopPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        showNotify('Image must be less than 5MB');
+        return;
+      }
+      setUploading('workshop');
+      const url = await uploadToCloudinary(file, 'workshop_photos');
+      if (url) setWorkshopPhoto(url);
+      setUploading(null);
+    }
+  };
+
+  const handleCraftProcessPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        showNotify('Image must be less than 5MB');
+        return;
+      }
+      setUploading('craft');
+      const url = await uploadToCloudinary(file, 'craft_process_photos');
+      if (url) setCraftProcessPhoto(url);
+      setUploading(null);
+    }
+  };
+
+  const handleProductSampleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      if (files.length + productSamplePhotos.length > 5) {
+        showNotify('Maximum 5 images allowed');
+        return;
+      }
+      
+      setUploading('samples');
+      for (const file of files) {
+        if (file.size > 5 * 1024 * 1024) {
+          showNotify(`File ${file.name} is too large. Max 5MB.`);
+          continue;
+        }
+        const url = await uploadToCloudinary(file, 'product_samples');
+        if (url) setProductSamplePhotos(prev => [...prev, url]);
+      }
+      setUploading(null);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -54,12 +165,25 @@ export const ArtisanOnboardingPage: React.FC = () => {
       const cleaned = value.replace(/\D/g, '');
       const startsWith09 = value.startsWith('09');
       const startsWithPlus = value.startsWith('+251');
-      if (value === '' || (startsWith09 && cleaned.length <= 10) || (startsWithPlus && cleaned.length <= 13)) {
+      
+      if (value === '') {
         setPhoneError('');
-      } else if (startsWith09 && cleaned.length !== 10) {
-        setPhoneError('Phone must be 10 digits starting with 09');
-      } else if (startsWithPlus && cleaned.length !== 13) {
-        setPhoneError('Phone must be +251 followed by 9 digits');
+      } else if (startsWith09) {
+        if (cleaned.length > 10) {
+          setPhoneError('Phone must be 10 digits starting with 09');
+        } else if (cleaned.length === 10) {
+          setPhoneError('');
+        } else {
+          setPhoneError('Phone must be 10 digits starting with 09');
+        }
+      } else if (startsWithPlus) {
+        if (cleaned.length > 12) {
+          setPhoneError('Phone must be +251 followed by 9 digits');
+        } else if (cleaned.length === 12) {
+          setPhoneError('');
+        } else {
+          setPhoneError('Phone must be +251 followed by 9 digits');
+        }
       } else {
         setPhoneError('Phone must start with +251 or 09');
       }
@@ -74,196 +198,6 @@ export const ArtisanOnboardingPage: React.FC = () => {
     }
   };
 
-  const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError('Image must be less than 5MB');
-      return;
-    }
-    
-    setUploading(prev => ({ ...prev, profile: true }));
-    setUploadError('');
-    
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'avatars');
-      
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setProfileImage(data.url);
-      } else {
-        setUploadError(data.message || 'Failed to upload profile image');
-      }
-    } catch (error) {
-      setUploadError('Failed to upload profile image');
-    } finally {
-      setUploading(prev => ({ ...prev, profile: false }));
-    }
-  };
-
-  const handleIdDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError('File must be less than 5MB');
-      return;
-    }
-    
-    setUploading(prev => ({ ...prev, id: true }));
-    setUploadError('');
-    
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'artisan-docs');
-      
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setIdDocument(data.url);
-      } else {
-        setUploadError(data.message || 'Failed to upload ID document');
-      }
-    } catch (error) {
-      setUploadError('Failed to upload ID document');
-    } finally {
-      setUploading(prev => ({ ...prev, id: false }));
-    }
-  };
-
-  const handleWorkshopPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError('Image must be less than 5MB');
-      return;
-    }
-    
-    setUploading(prev => ({ ...prev, workshop: true }));
-    setUploadError('');
-    
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'artisan-docs');
-      
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setWorkshopPhoto(data.url);
-      } else {
-        setUploadError(data.message || 'Failed to upload workshop photo');
-      }
-    } catch (error) {
-      setUploadError('Failed to upload workshop photo');
-    } finally {
-      setUploading(prev => ({ ...prev, workshop: false }));
-    }
-  };
-
-  const handleCraftProcessPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError('Image must be less than 5MB');
-      return;
-    }
-    
-    setUploading(prev => ({ ...prev, craft: true }));
-    setUploadError('');
-    
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'artisan-docs');
-      
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setCraftProcessPhoto(data.url);
-      } else {
-        setUploadError(data.message || 'Failed to upload craft process photo');
-      }
-    } catch (error) {
-      setUploadError('Failed to upload craft process photo');
-    } finally {
-      setUploading(prev => ({ ...prev, craft: false }));
-    }
-  };
-
-  const handleProductSampleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    
-    const newFiles = Array.from(files);
-    if (newFiles.length + productSamplePhotos.length > 5) {
-      setUploadError('Maximum 5 images allowed');
-      return;
-    }
-    
-    setUploading(prev => ({ ...prev, product: true }));
-    setUploadError('');
-    
-    try {
-      const uploadPromises = newFiles.map(async (file) => {
-        if (file.size > 5 * 1024 * 1024) {
-          throw new Error('Each image must be less than 5MB');
-        }
-        
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('folder', 'artisan-docs');
-        
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          return data.url;
-        } else {
-          throw new Error(data.message || 'Failed to upload product sample');
-        }
-      });
-      
-      const urls = await Promise.all(uploadPromises);
-      setProductSamplePhotos(prev => [...prev, ...urls]);
-    } catch (error: any) {
-      setUploadError(error.message || 'Failed to upload product samples');
-    } finally {
-      setUploading(prev => ({ ...prev, product: false }));
-    }
-  };
-
   const removeProductSample = (index: number) => {
     setProductSamplePhotos(prev => prev.filter((_, i) => i !== index));
   };
@@ -272,17 +206,35 @@ export const ArtisanOnboardingPage: React.FC = () => {
     e.preventDefault();
     if (step < 4) {
       if (step === 1) {
+        // Mandatory fields check for Step 1
+        if (!formData.phone || !formData.gender || !formData.region || !formData.city || !formData.address) {
+          showNotify('All personal information fields are mandatory');
+          return;
+        }
+
         const phone = formData.phone.trim();
         const cleaned = phone.replace(/\D/g, '');
         const startsWith09 = phone.startsWith('09') && cleaned.length === 10;
-        const startsWithPlus = phone.startsWith('+251') && cleaned.length === 13;
+        const startsWithPlus = phone.startsWith('+251') && cleaned.length === 12;
+        
         if (!startsWith09 && !startsWithPlus) {
-          setPhoneError('Phone must start with +251 (13 digits) or 09 (10 digits)');
+          setPhoneError('Phone must start with +251 (12 digits total) or 09 (10 digits)');
           return;
         }
         setPhoneError('');
+        
+        if (!profileImage) {
+          showNotify('Profile image is mandatory');
+          return;
+        }
       }
       if (step === 2) {
+        // Step 2 validation
+        if (!formData.businessName || !formData.category || !formData.experience || !formData.bio) {
+          showNotify('All business information fields are mandatory');
+          return;
+        }
+
         const exp = parseInt(formData.experience);
         if (isNaN(exp) || exp < 0) {
           setExperienceError('Experience cannot be negative');
@@ -290,14 +242,40 @@ export const ArtisanOnboardingPage: React.FC = () => {
         }
         setExperienceError('');
       }
+      if (step === 3) {
+        // Step 3 validation (Identity & Shop Verification)
+        if (!idDocument) {
+          showNotify('National ID / Passport document is mandatory');
+          return;
+        }
+        if (!workshopPhoto) {
+          showNotify('Workshop photo is mandatory');
+          return;
+        }
+        if (!craftProcessPhoto) {
+          showNotify('Craft process photo is mandatory');
+          return;
+        }
+        if (productSamplePhotos.length < 3) {
+          showNotify('Please upload at least 3 product sample images');
+          return;
+        }
+      }
       setStep(step + 1);
     } else {
+      // Step 4 validation (Payment Information)
+      if (!formData.bankName || !formData.accountName || !formData.accountNumber) {
+        showNotify('All payment information fields are mandatory');
+        return;
+      }
+
       const phone = formData.phone.trim();
       const cleaned = phone.replace(/\D/g, '');
       const startsWith09 = phone.startsWith('09') && cleaned.length === 10;
-      const startsWithPlus = phone.startsWith('+251') && cleaned.length === 13;
+      const startsWithPlus = phone.startsWith('+251') && cleaned.length === 12;
+      
       if (!startsWith09 && !startsWithPlus) {
-        setPhoneError('Phone must start with +251 (13 digits) or 09 (10 digits)');
+        setPhoneError('Phone must start with +251 (12 digits total) or 09 (10 digits)');
         return;
       }
       const exp = parseInt(formData.experience);
@@ -324,14 +302,14 @@ export const ArtisanOnboardingPage: React.FC = () => {
 
         if (response.ok) {
           updateUser({ artisanStatus: 'Pending' as ArtisanStatus });
-          alert('Application submitted successfully!');
-          router.push('/artisan/waiting');
+          showNotify('Application submitted successfully!', 'success');
+          setTimeout(() => router.push('/artisan/waiting'), 2000);
         } else {
-          alert(data.message || 'Failed to submit application');
+          showNotify(data.message || 'Failed to submit application');
         }
       } catch (error: any) {
         console.error('Error submitting application:', error);
-        alert('An error occurred while submitting your application');
+        showNotify('An error occurred while submitting your application');
       } finally {
         setSubmitting(false);
       }
@@ -407,13 +385,15 @@ export const ArtisanOnboardingPage: React.FC = () => {
                     <div className="w-24 h-24 bg-gray-100 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden">
                       {profileImage ? (
                         <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+                      ) : uploading === 'profile' ? (
+                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
                       ) : (
                         <Camera className="w-8 h-8 text-gray-400" />
                       )}
                     </div>
-                    <label className="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full shadow-lg hover:bg-primary-dark transition-colors cursor-pointer">
+                    <label className={`absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full shadow-lg hover:bg-primary-dark transition-colors cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
                       <Upload className="w-4 h-4" />
-                      <input type="file" accept="image/*" className="hidden" onChange={handleProfileImageUpload} />
+                      <input type="file" accept="image/*" className="hidden" onChange={handleProfileImageUpload} disabled={!!uploading} />
                     </label>
                   </div>
                 </div>
@@ -439,8 +419,17 @@ export const ArtisanOnboardingPage: React.FC = () => {
                   <Input label="Country" name="country" value={formData.country} onChange={handleChange} readOnly />
                   <Input label="Region" name="region" value={formData.region} onChange={handleChange} placeholder="Amhara, Oromia, Addis Ababa..." required />
                   <Input label="City" name="city" value={formData.city} onChange={handleChange} placeholder="Gondar, Lalibela..." required />
-                  <Input label="Exact Address" name="address" value={formData.address} onChange={handleChange} placeholder="Street, Kebele, House No." required />
                 </div>
+                
+                <div className="space-y-2 mt-4">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Location on Map (Click to mark accurately)</label>
+                  <LocationPicker 
+                    value={{ latitude: formData.latitude, longitude: formData.longitude }} 
+                    onChange={(loc) => setFormData({ ...formData, latitude: loc.latitude, longitude: loc.longitude })}
+                    height="300px"
+                  />
+                </div>
+                <Input label="Exact Address / Building / House No." name="address" value={formData.address} onChange={handleChange} placeholder="E.g. Bole, Kebele 03, House 123" required />
               </div>
             )}
 
@@ -489,24 +478,27 @@ export const ArtisanOnboardingPage: React.FC = () => {
                   <h3 className="text-xl font-bold text-gray-800 border-b pb-2 mb-4">Identity Verification</h3>
                   <p className="text-sm text-gray-500 mb-4">To avoid fake sellers, please upload a valid ID.</p>
                   
-                   <label className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50 block">
-                     {uploading.id ? (
-                       <Loader2 className="w-8 h-8 text-gray-400 mx-auto mb-2 animate-spin" />
-                     ) : idDocument ? (
-                       <div>
-                         <img src={idDocument} alt="ID Document" className="w-32 h-32 object-cover rounded-xl mx-auto mb-2" />
-                         <p className="font-bold text-green-600">ID Uploaded ✓</p>
-                         <p className="text-xs text-gray-500 mt-1">Click to change</p>
-                       </div>
-                     ) : (
-                       <>
-                         <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                         <p className="font-bold text-gray-700">Upload National ID / Passport</p>
-                         <p className="text-xs text-gray-500 mt-1">JPG, PNG or PDF (Max 5MB)</p>
-                       </>
-                     )}
-                     <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleIdDocumentUpload} />
-                   </label>
+                  <label className={`border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50 block ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    {idDocument ? (
+                      <div>
+                        <img src={idDocument} alt="ID Document" className="w-32 h-32 object-cover rounded-xl mx-auto mb-2" />
+                        <p className="font-bold text-green-600">ID Uploaded ✓</p>
+                        <p className="text-xs text-gray-500 mt-1">Click to change</p>
+                      </div>
+                    ) : uploading === 'id' ? (
+                      <div className="py-4">
+                        <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto mb-2" />
+                        <p className="text-sm font-bold text-primary">Uploading...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="font-bold text-gray-700">Upload National ID / Passport</p>
+                        <p className="text-xs text-gray-500 mt-1">JPG, PNG or PDF (Max 5MB)</p>
+                      </>
+                    )}
+                    <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleIdDocumentUpload} disabled={!!uploading} />
+                  </label>
                 </div>
 
                 <div>
@@ -514,64 +506,62 @@ export const ArtisanOnboardingPage: React.FC = () => {
                   <p className="text-sm text-gray-500 mb-4">Proof that you actually produce items. This increases authenticity.</p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     <label className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50 block">
-                       {uploading.workshop ? (
-                         <Loader2 className="w-6 h-6 text-gray-400 mx-auto mb-2 animate-spin" />
-                       ) : workshopPhoto ? (
-                         <>
-                           <img src={workshopPhoto} alt="Workshop" className="w-20 h-20 object-cover rounded-xl mx-auto mb-2" />
-                           <p className="text-xs font-bold text-green-600">Uploaded ✓</p>
-                         </>
-                       ) : (
-                         <>
-                           <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                           <p className="text-sm font-bold text-gray-700">Workshop Photo</p>
-                         </>
-                       )}
-                       <input type="file" accept="image/*" className="hidden" onChange={handleWorkshopPhotoUpload} />
-                     </label>
-                     <label className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50 block">
-                       {uploading.craft ? (
-                         <Loader2 className="w-6 h-6 text-gray-400 mx-auto mb-2 animate-spin" />
-                       ) : craftProcessPhoto ? (
-                         <>
-                           <img src={craftProcessPhoto} alt="Craft Process" className="w-20 h-20 object-cover rounded-xl mx-auto mb-2" />
-                           <p className="text-xs font-bold text-green-600">Uploaded ✓</p>
-                         </>
-                       ) : (
-                         <>
-                           <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                           <p className="text-sm font-bold text-gray-700">Craft Process</p>
-                         </>
-                       )}
-                       <input type="file" accept="image/*" className="hidden" onChange={handleCraftProcessPhotoUpload} />
-                     </label>
-                     <div>
-                       <div className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center bg-gray-50">
-                         <p className="text-sm font-bold text-gray-700 mb-2">Product Samples</p>
-                         <p className="text-[10px] text-gray-500 mb-2">(3-5 images)</p>
-                         {uploading.product && (
-                           <div className="flex justify-center mb-2">
-                             <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
-                             <span className="text-xs text-gray-500 ml-2">Uploading...</span>
-                           </div>
-                         )}
-                         <div className="flex flex-wrap gap-2 justify-center">
-                           {productSamplePhotos.map((img, idx) => (
-                             <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden">
-                               <img src={img} alt={`Sample ${idx + 1}`} className="w-full h-full object-cover" />
-                               <button type="button" onClick={() => removeProductSample(idx)} className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs">&times;</button>
-                             </div>
-                           ))}
-                           {productSamplePhotos.length < 5 && !uploading.product && (
-                             <label className="w-16 h-16 rounded-lg border border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary">
-                               <Upload className="w-4 h-4 text-gray-400" />
-                               <input type="file" accept="image/*" multiple className="hidden" onChange={handleProductSampleUpload} />
-                             </label>
-                           )}
-                         </div>
-                       </div>
-                     </div>
+                    <label className={`border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50 block ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      {workshopPhoto ? (
+                        <>
+                          <img src={workshopPhoto} alt="Workshop" className="w-20 h-20 object-cover rounded-xl mx-auto mb-2" />
+                          <p className="text-xs font-bold text-green-600">Uploaded ✓</p>
+                        </>
+                      ) : uploading === 'workshop' ? (
+                        <Loader2 className="w-6 h-6 text-primary animate-spin mx-auto mb-2" />
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm font-bold text-gray-700">Workshop Photo</p>
+                        </>
+                      )}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleWorkshopPhotoUpload} disabled={!!uploading} />
+                    </label>
+                    <label className={`border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50 block ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      {craftProcessPhoto ? (
+                        <>
+                          <img src={craftProcessPhoto} alt="Craft Process" className="w-20 h-20 object-cover rounded-xl mx-auto mb-2" />
+                          <p className="text-xs font-bold text-green-600">Uploaded ✓</p>
+                        </>
+                      ) : uploading === 'craft' ? (
+                        <Loader2 className="w-6 h-6 text-primary animate-spin mx-auto mb-2" />
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm font-bold text-gray-700">Craft Process</p>
+                        </>
+                      )}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleCraftProcessPhotoUpload} disabled={!!uploading} />
+                    </label>
+                    <div>
+                      <div className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center bg-gray-50">
+                        <p className="text-sm font-bold text-gray-700 mb-2">Product Samples</p>
+                        <p className="text-[10px] text-gray-500 mb-2">(3-5 images)</p>
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          {productSamplePhotos.map((img, idx) => (
+                            <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden">
+                              <img src={img} alt={`Sample ${idx + 1}`} className="w-full h-full object-cover" />
+                              <button type="button" onClick={() => removeProductSample(idx)} className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs" disabled={!!uploading}>&times;</button>
+                            </div>
+                          ))}
+                          {productSamplePhotos.length < 5 && (
+                            <label className={`w-16 h-16 rounded-lg border border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                              {uploading === 'samples' ? (
+                                <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                              ) : (
+                                <Upload className="w-4 h-4 text-gray-400" />
+                              )}
+                              <input type="file" accept="image/*" multiple className="hidden" onChange={handleProductSampleUpload} disabled={!!uploading} />
+                            </label>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -621,6 +611,34 @@ export const ArtisanOnboardingPage: React.FC = () => {
           </form>
         </div>
       </div>
+      
+      {/* Centered Notification UI */}
+      {notification && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 pointer-events-none">
+          <div className={`bg-white border-2 p-8 rounded-[32px] shadow-2xl max-w-sm w-full text-center pointer-events-auto animate-in zoom-in-95 duration-200 ${
+            notification.type === 'error' ? 'border-red-100' : 'border-green-100'
+          }`}>
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+              notification.type === 'error' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'
+            }`}>
+              {notification.type === 'error' ? <AlertCircle className="w-8 h-8" /> : <CheckCircle className="w-8 h-8" />}
+            </div>
+            <h4 className="text-xl font-bold text-gray-800 mb-2">
+              {notification.type === 'error' ? 'Attention' : 'Success'}
+            </h4>
+            <p className="text-gray-600 font-medium leading-relaxed">
+              {notification.message}
+            </p>
+            <button 
+              type="button"
+              className="mt-6 w-full py-3 bg-gray-900 text-white rounded-2xl font-bold hover:bg-gray-800 transition-colors"
+              onClick={() => setNotification(null)}
+            >
+              Okay
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -45,6 +45,7 @@ export async function POST(
     }
 
     product.verificationStatus = 'Approved';
+    product.status = 'Published';
     product.rejectionReason = undefined;
     await product.save();
 

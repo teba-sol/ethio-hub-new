@@ -27,7 +27,7 @@ export const ArtisanLayout: React.FC<{ children?: React.ReactNode }> = ({ childr
     { path: '/dashboard/artisan/overview', nameKey: 'dashboard.overview', icon: BarChart3 },
     { path: '/dashboard/artisan/products', nameKey: 'dashboard.products', icon: Package },
     { path: '/dashboard/artisan/orders', nameKey: 'dashboard.orders', icon: ShoppingCart },
-    { path: '/dashboard/artisan/wallet', nameKey: 'dashboard.wallet', icon: DollarSign },
+    { path: '/dashboard/artisan/wallet', label: 'Wallet', icon: DollarSign },
     { path: '/dashboard/artisan/revenue', nameKey: 'dashboard.revenue', icon: TrendingUp },
     { path: '/dashboard/artisan/reviews', nameKey: 'dashboard.reviews', icon: MessageSquare },
     { path: '/dashboard/artisan/analytics', nameKey: 'dashboard.analytics', icon: PieChart },
@@ -73,7 +73,8 @@ export const ArtisanLayout: React.FC<{ children?: React.ReactNode }> = ({ childr
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all font-semibold text-sm ${pathname === item.path ? 'bg-primary text-white' : 'text-gray-500 hover:bg-ethio-bg'}`}
               >
-                <item.icon className="w-4 h-4" /><span>{t(item.nameKey)}</span>
+                <item.icon className="w-4 h-4" />
+                <span>{item.label || (item.nameKey ? t(item.nameKey) : '')}</span>
               </Link>
             ))}
           </div>

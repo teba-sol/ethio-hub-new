@@ -11,13 +11,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const db = await connectDB();
-    if (!db) {
-      return new NextResponse(
-        JSON.stringify({ success: false, message: 'Database not connected' }),
-        { status: 503, headers: { 'content-type': 'application/json' } }
-      );
-    }
+    await connectDB();
 
     const token = request.cookies.get('sessionToken')?.value;
     if (!token) {
@@ -55,12 +49,16 @@ export async function POST(
 
     let updateField: string;
     let successMessage: string;
-    let recordRole: 'artisan' | 'organizer';
+    let recordRole: 'artisan' | 'organizer' | 'delivery';
 
     if (userRole === 'organizer') {
       updateField = 'organizerStatus';
       successMessage = 'Organizer rejected successfully';
       recordRole = 'organizer';
+    } else if (userRole === 'delivery' || userRole === 'Delivery Guy') {
+      updateField = 'deliveryStatus';
+      successMessage = 'Delivery guy rejected successfully';
+      recordRole = 'delivery';
     } else {
       updateField = 'artisanStatus';
       successMessage = 'Artisan rejected successfully';
@@ -70,7 +68,7 @@ export async function POST(
     const updatedUser = await User.findByIdAndUpdate(
       id,
       { [updateField]: 'Rejected', rejectionReason: trimmedReason },
-      { new: true, select: 'name email role artisanStatus organizerStatus rejectionReason' }
+      { new: true, select: 'name email role artisanStatus organizerStatus deliveryStatus rejectionReason' }
     );
 
     if (!updatedUser) {
@@ -100,6 +98,7 @@ export async function POST(
           role: updatedUser.role,
           artisanStatus: updatedUser.artisanStatus,
           organizerStatus: updatedUser.organizerStatus,
+          deliveryStatus: updatedUser.deliveryStatus,
           rejectionReason: trimmedReason,
         },
       }),

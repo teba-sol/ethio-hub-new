@@ -81,6 +81,7 @@ export async function GET(request: NextRequest) {
     const orders = await Order.find(query)
       .populate('product', 'name price images discountPrice')
       .populate('artisan', 'name email')
+      .populate('assignedDeliveryGuy', 'name phone deliveryProfile')
       .sort({ createdAt: -1 });
 
     return new NextResponse(

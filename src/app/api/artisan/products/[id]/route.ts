@@ -158,8 +158,13 @@ export async function PUT(
     if (deliveryTime !== undefined) product.deliveryTime = deliveryTime;
     if (shippingFee !== undefined) product.shippingFee = shippingFee;
     if (status !== undefined) {
-      product.status = status === 'Publish' ? 'Published' : status;
-      if (product.status === 'Published' && product.verificationStatus === 'Rejected') {
+      if (status === 'Publish' || status === 'Published') {
+        product.status = Number(product.stock) === 0 ? 'Out of Stock' : 'Pending';
+      } else {
+        product.status = status;
+      }
+      
+      if (['Published', 'Pending', 'Out of Stock'].includes(product.status) && product.verificationStatus === 'Rejected') {
         product.verificationStatus = 'Pending';
         product.rejectionReason = undefined;
       }
