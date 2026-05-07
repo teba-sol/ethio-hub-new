@@ -12,7 +12,7 @@ export interface IOrder extends Document {
   artisanEarnings: number;
   commissionRate: number;
   currency: string;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  status: 'Awaiting Payment' | 'Pending' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned';
   paymentStatus: 'pending' | 'paid' | 'refunded';
   paymentRef?: string;
   paymentReference?: string;
@@ -31,6 +31,11 @@ export interface IOrder extends Document {
     country: string;
     zipCode: string;
   };
+  timeline: {
+    status: string;
+    date: Date;
+    note?: string;
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,7 +49,7 @@ const OrderSchema: Schema = new Schema(
     },
     product: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Product',
+      ref: 'ArtisanProduct',
       required: true,
     },
     artisan: {
@@ -85,8 +90,8 @@ const OrderSchema: Schema = new Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'confirmed', 'cancelled', 'completed'],
-      default: 'pending',
+      enum: ['Awaiting Payment', 'Pending', 'Shipped', 'Delivered', 'Cancelled', 'Returned'],
+      default: 'Awaiting Payment',
     },
     paymentStatus: {
       type: String,
@@ -122,6 +127,13 @@ const OrderSchema: Schema = new Schema(
       country: { type: String },
       zipCode: { type: String },
     },
+    timeline: [
+      {
+        status: { type: String, required: true },
+        date: { type: Date, default: Date.now },
+        note: { type: String },
+      },
+    ],
   },
   {
     timestamps: true,

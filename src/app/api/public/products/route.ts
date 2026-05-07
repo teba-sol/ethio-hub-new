@@ -38,14 +38,15 @@ export async function GET(req: Request) {
 
     const products = await Product.find(query)
       .populate('artisanId', 'name email profilePicture')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     const formattedProducts = products.map((p: any) => ({
-      ...p.toObject(),
+      ...p,
       _id: p._id.toString(),
       artisanId: p.artisanId ? {
-        ...p.artisanId.toObject(),
-        _id: p.artisanId._id.toString()
+        ...p.artisanId,
+        _id: p.artisanId._id?.toString()
       } : null
     }));
 

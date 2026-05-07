@@ -212,7 +212,16 @@ export const ArtisanProductManager: React.FC = () => {
       return;
     }
 
-    if (window.confirm(`Are you sure you want to delete "${product.name}"? This action cannot be undone.`)) {
+    if (product.status === 'Dropped by Admin') {
+      alert(`Cannot delete "${product.name}" because it was dropped by admin.`);
+      return;
+    }
+
+    const confirmMsg = product.status === 'Pending' 
+      ? `Are you sure you want to delete "${product.name}"? This will also remove it from admin verification.`
+      : `Are you sure you want to delete "${product.name}"? This action cannot be undone.`;
+
+    if (window.confirm(confirmMsg)) {
       try {
         const response = await fetch(`/api/artisan/products/${id}`, {
           method: 'DELETE',
@@ -232,23 +241,47 @@ export const ArtisanProductManager: React.FC = () => {
     }
   };
 
+  const handleUnarchive = async (id: string) => {
+    try {
+      const response = await fetch(`/api/artisan/products/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Pending' }),
+      });
+      if (response.ok) {
+        setProducts(prev => prev.map(p => p._id === id ? { ...p, status: 'Pending' as const } : p));
+        alert("Product unarchived and submitted for verification!");
+      } else {
+        const data = await response.json();
+        alert(data.message || 'Failed to unarchive product');
+      }
+    } catch (error) {
+      console.error('Error unarchiving product:', error);
+      alert('Failed to unarchive product');
+    }
+  };
+
   const handleInlineSave = async () => {
     if (!editData) return;
     setSaving(true);
     try {
+      const product = products.find(p => p._id === manageId);
+      const isPublished = product?.status === 'Published';
+      
+      const payload = isPublished 
+        ? { price: editData.price, discountPrice: editData.discountPrice, status: 'Published' as const }
+        : { ...editData, status: 'Pending' as const };
+
       const response = await fetch(`/api/artisan/products/${manageId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...editData,
-          status: 'Pending' // Always set to Pending for admin verification upon save
-        }),
+        body: JSON.stringify(payload),
       });
       if (response.ok) {
         const data = await response.json();
         setProducts(prev => prev.map(p => p._id === manageId ? data.product : p));
         setIsEditing(false);
-        alert("Changes saved and submitted for verification!");
+        alert(isPublished ? "Changes saved successfully!" : "Changes saved and submitted for verification!");
       } else {
         const data = await response.json();
         alert(data.message || 'Failed to save changes');
@@ -262,6 +295,12 @@ export const ArtisanProductManager: React.FC = () => {
   };
 
   const handleArchive = async (id: string) => {
+    const product = products.find(p => p._id === id);
+    if (product?.status === 'Dropped by Admin') {
+      alert("Cannot archive products dropped by admin.");
+      return;
+    }
+
     try {
       const response = await fetch(`/api/artisan/products/${id}`, {
         method: 'PUT',
@@ -282,15 +321,29 @@ export const ArtisanProductManager: React.FC = () => {
   };
 
   const handlePublish = async (id: string) => {
+    const product = products.find(p => p._id === id) || editData;
+    if (!product) return;
+
+    // Validate mandatory fields
+    const mandatoryFields = ['name', 'description', 'price', 'category', 'images', 'deliveryTime'];
+    const missingFields = mandatoryFields.filter(field => !product[field] || (Array.isArray(product[field]) && product[field].length === 0));
+
+    if (missingFields.length > 0) {
+      alert(`Please fill all mandatory fields before publishing: ${missingFields.join(', ')}`);
+      return;
+    }
+
     try {
       const response = await fetch(`/api/artisan/products/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'Published' }),
+        body: JSON.stringify({ status: 'Pending' }),
       });
       if (response.ok) {
-        setProducts(prev => prev.map(p => p._id === id ? { ...p, status: 'Published' as const } : p));
-        alert("Product published successfully.");
+        setProducts(prev => prev.map(p => p._id === id ? { ...p, status: 'Pending' as const } : p));
+        setManageId(null);
+        setIsEditing(false);
+        alert("Product submitted for admin verification.");
       } else {
         const data = await response.json();
         alert(data.message || 'Failed to publish product');
@@ -409,7 +462,6 @@ export const ArtisanProductManager: React.FC = () => {
       case 'Dropped by Admin': return <Badge variant="error">Dropped by Admin</Badge>;
       case 'Archived': return <Badge variant="outline">Archived</Badge>;
       default: 
-        // Fallback to existing logic if status is something else
         if (product.stock === 0) return <Badge variant="error">Out of Stock</Badge>;
         if (product.verificationStatus === 'Pending') return <Badge variant="warning">Pending Verification</Badge>;
         if (product.verificationStatus === 'Rejected') return <Badge variant="error">Rejected</Badge>;
@@ -422,6 +474,7 @@ export const ArtisanProductManager: React.FC = () => {
     if (!product) return <div>Product not found</div>;
 
     const currentData = isEditing ? editData : product;
+    const isPublished = product.status === 'Published';
 
     return (
       <div className="space-y-8 animate-in fade-in duration-300 pb-20">
@@ -434,9 +487,10 @@ export const ArtisanProductManager: React.FC = () => {
               {isEditing ? (
                 <input 
                   type="text"
-                  className="text-3xl font-serif font-bold text-primary bg-white border border-gray-200 rounded-xl px-4 py-1 focus:ring-2 focus:ring-primary/10"
+                  className="text-3xl font-serif font-bold text-primary bg-white border border-gray-200 rounded-xl px-4 py-1 focus:ring-2 focus:ring-primary/10 disabled:bg-gray-50 disabled:cursor-not-allowed"
                   value={editData.name}
                   onChange={e => setEditData({...editData, name: e.target.value})}
+                  disabled={isPublished}
                 />
               ) : (
                 <h1 className="text-3xl font-serif font-bold text-primary flex items-center gap-3">
@@ -454,7 +508,14 @@ export const ArtisanProductManager: React.FC = () => {
                 <Button leftIcon={Save} onClick={handleInlineSave} isLoading={saving}>Save Change</Button>
               </>
             ) : (
-              <Button leftIcon={Edit3} onClick={() => { setIsEditing(true); setEditData(product); }}>Edit</Button>
+              <>
+                {product.status === 'Draft' && (
+                  <Button variant="primary" onClick={() => handlePublish(product._id)}>Publish Artifact</Button>
+                )}
+                {product.status !== 'Dropped by Admin' && (
+                  <Button leftIcon={Edit3} onClick={() => { setIsEditing(true); setEditData(product); }}>Edit</Button>
+                )}
+              </>
             )}
           </div>
         </header>
@@ -473,20 +534,22 @@ export const ArtisanProductManager: React.FC = () => {
                           {editData.images?.[0] ? (
                             <div className="relative w-32 h-32 rounded-2xl overflow-hidden border border-gray-100 group">
                               <img src={editData.images[0]} alt="Cover" className="w-full h-full object-cover" />
-                              <button 
-                                onClick={() => {
-                                  const newImages = [...editData.images];
-                                  newImages.splice(0, 1);
-                                  setEditData({ ...editData, images: newImages });
-                                }}
-                                className="absolute top-1 right-1 p-1.5 bg-white/80 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
+                              {!isPublished && (
+                                <button 
+                                  onClick={() => {
+                                    const newImages = [...editData.images];
+                                    newImages.splice(0, 1);
+                                    setEditData({ ...editData, images: newImages });
+                                  }}
+                                  className="absolute top-1 right-1 p-1.5 bg-white/80 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
                             </div>
                           ) : (
-                            <label className={`w-32 h-32 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all group ${
-                              uploadingImage ? 'bg-gray-50 border-gray-200 cursor-not-allowed' : 'border-gray-200 hover:border-primary/30 hover:bg-primary/5'
+                            <label className={`w-32 h-32 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-all group ${
+                              uploadingImage || isPublished ? 'bg-gray-50 border-gray-200 cursor-not-allowed' : 'border-gray-200 hover:border-primary/30 hover:bg-primary/5 cursor-pointer'
                             }`}>
                               {uploadingImage ? (
                                 <Loader2 className="w-6 h-6 text-primary animate-spin" />
@@ -494,21 +557,23 @@ export const ArtisanProductManager: React.FC = () => {
                                 <>
                                   <Upload className="w-5 h-5 text-gray-300 group-hover:text-primary mb-1" />
                                   <span className="text-[10px] font-bold text-gray-400 group-hover:text-primary">Cover</span>
-                                  <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
-                                    if (e.target.files?.[0]) {
-                                      setUploadingImage(true);
-                                      try {
-                                        const formData = new FormData();
-                                        formData.append('file', e.target.files[0]);
-                                        formData.append('folder', 'products');
-                                        const res = await fetch('/api/upload', { method: 'POST', body: formData });
-                                        const result = await res.json();
-                                        if (result.success) {
-                                          setEditData({ ...editData, images: [result.url, ...(editData.images || [])] });
-                                        }
-                                      } finally { setUploadingImage(false); }
-                                    }
-                                  }} />
+                                  {!isPublished && (
+                                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                                      if (e.target.files?.[0]) {
+                                        setUploadingImage(true);
+                                        try {
+                                          const formData = new FormData();
+                                          formData.append('file', e.target.files[0]);
+                                          formData.append('folder', 'products');
+                                          const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                                          const result = await res.json();
+                                          if (result.success) {
+                                            setEditData({ ...editData, images: [result.url, ...(editData.images || [])] });
+                                          }
+                                        } finally { setUploadingImage(false); }
+                                      }
+                                    }} />
+                                  )}
                                 </>
                               )}
                             </label>
@@ -526,7 +591,7 @@ export const ArtisanProductManager: React.FC = () => {
                       {(isEditing ? editData.images?.slice(1) : product.images.slice(1))?.map((img: string, i: number) => (
                         <div key={i} className="relative group">
                           <img src={img} className="w-32 h-32 rounded-2xl object-cover border border-gray-100 shadow-sm" alt="" />
-                          {isEditing && (
+                          {isEditing && !isPublished && (
                             <button 
                               onClick={() => removeImage(i + 1)}
                               className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100"
@@ -537,8 +602,8 @@ export const ArtisanProductManager: React.FC = () => {
                         </div>
                       ))}
                       {isEditing && (editData.images?.length || 0) < 6 && (
-                        <label className={`w-32 h-32 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all ${
-                          uploadingImage ? 'bg-gray-50 border-gray-200' : 'border-gray-200 hover:border-primary/30 hover:bg-primary/5 group'
+                        <label className={`w-32 h-32 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-all ${
+                          uploadingImage || isPublished ? 'bg-gray-50 border-gray-200 cursor-not-allowed' : 'border-gray-200 hover:border-primary/30 hover:bg-primary/5 group cursor-pointer'
                         }`}>
                           {uploadingImage ? (
                             <Loader2 className="w-6 h-6 text-primary animate-spin" />
@@ -546,7 +611,7 @@ export const ArtisanProductManager: React.FC = () => {
                             <>
                               <Upload className="w-5 h-5 text-gray-300 group-hover:text-primary mb-1" />
                               <span className="text-[10px] font-bold text-gray-400 group-hover:text-primary">Detail</span>
-                              <input type="file" className="hidden" accept="image/*" multiple onChange={handleImageEditUpload} />
+                              {!isPublished && <input type="file" className="hidden" accept="image/*" multiple onChange={handleImageEditUpload} />}
                             </>
                           )}
                         </label>
@@ -561,9 +626,10 @@ export const ArtisanProductManager: React.FC = () => {
                     {isEditing ? (
                       <input 
                         type="text"
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
                         value={editData.name}
                         onChange={e => setEditData({...editData, name: e.target.value})}
+                        disabled={isPublished}
                       />
                     ) : (
                       <p className="text-lg font-bold text-primary">{product.name}</p>
@@ -573,9 +639,10 @@ export const ArtisanProductManager: React.FC = () => {
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Category</label>
                     {isEditing ? (
                       <select 
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all appearance-none"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all appearance-none disabled:bg-gray-50 disabled:cursor-not-allowed"
                         value={editData.category}
                         onChange={e => setEditData({...editData, category: e.target.value})}
+                        disabled={isPublished}
                       >
                         <option value="Pottery">Pottery</option>
                         <option value="Clothing">Clothing</option>
@@ -597,20 +664,22 @@ export const ArtisanProductManager: React.FC = () => {
                       <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Subcategory (Optional)</label>
                       <input 
                         type="text"
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
                         value={editData.subcategory || ''}
                         onChange={e => setEditData({...editData, subcategory: e.target.value})}
                         placeholder="e.g. Scarves"
+                        disabled={isPublished}
                       />
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Tags (Optional)</label>
                       <input 
                         type="text"
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
                         value={Array.isArray(editData.tags) ? editData.tags.join(', ') : (editData.tags || '')}
                         onChange={e => setEditData({...editData, tags: e.target.value})}
                         placeholder="e.g. Handmade, Cotton"
+                        disabled={isPublished}
                       />
                     </div>
                   </div>
@@ -620,10 +689,11 @@ export const ArtisanProductManager: React.FC = () => {
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Description</label>
                   {isEditing ? (
                     <textarea 
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm text-gray-600 focus:ring-2 focus:ring-primary/10 min-h-[150px] transition-all"
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm text-gray-600 focus:ring-2 focus:ring-primary/10 min-h-[150px] transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
                       value={editData.description}
                       onChange={e => setEditData({...editData, description: e.target.value})}
                       placeholder="Write a detailed description of your artifact..."
+                      disabled={isPublished}
                     />
                   ) : (
                     <p className="text-gray-600 text-sm leading-relaxed bg-gray-50/50 p-4 rounded-2xl border border-gray-50">{product.description}</p>
@@ -636,10 +706,11 @@ export const ArtisanProductManager: React.FC = () => {
                     {isEditing ? (
                       <input 
                         type="text"
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 disabled:bg-gray-50 disabled:cursor-not-allowed"
                         value={editData.material || ''}
                         onChange={e => setEditData({...editData, material: e.target.value})}
                         placeholder="e.g. 100% Cotton"
+                        disabled={isPublished}
                       />
                     ) : (
                       <p className="text-sm text-gray-600">{product.material || 'N/A'}</p>
@@ -650,10 +721,11 @@ export const ArtisanProductManager: React.FC = () => {
                     {isEditing ? (
                       <input 
                         type="text"
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 disabled:bg-gray-50 disabled:cursor-not-allowed"
                         value={editData.handmadeBy || ''}
                         onChange={e => setEditData({...editData, handmadeBy: e.target.value})}
                         placeholder="e.g. Dorze Weavers"
+                        disabled={isPublished}
                       />
                     ) : (
                       <p className="text-sm text-gray-600">{product.handmadeBy || 'N/A'}</p>
@@ -664,10 +736,11 @@ export const ArtisanProductManager: React.FC = () => {
                     {isEditing ? (
                       <input 
                         type="text"
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 disabled:bg-gray-50 disabled:cursor-not-allowed"
                         value={editData.region || ''}
                         onChange={e => setEditData({...editData, region: e.target.value})}
                         placeholder="e.g. Southern Ethiopia"
+                        disabled={isPublished}
                       />
                     ) : (
                       <p className="text-sm text-gray-600">{product.region || 'N/A'}</p>
@@ -678,10 +751,11 @@ export const ArtisanProductManager: React.FC = () => {
                     {isEditing ? (
                       <input 
                         type="text"
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 disabled:bg-gray-50 disabled:cursor-not-allowed"
                         value={editData.careInstructions || ''}
                         onChange={e => setEditData({...editData, careInstructions: e.target.value})}
                         placeholder="e.g. Hand wash only"
+                        disabled={isPublished}
                       />
                     ) : (
                       <p className="text-sm text-gray-600">{product.careInstructions || 'N/A'}</p>
@@ -738,9 +812,10 @@ export const ArtisanProductManager: React.FC = () => {
                       <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
                       <input 
                         type="number"
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 disabled:bg-gray-50 disabled:cursor-not-allowed"
                         value={editData.stock}
                         onChange={e => setEditData({...editData, stock: parseInt(e.target.value)})}
+                        disabled={isPublished}
                       />
                     </div>
                   ) : (
@@ -758,10 +833,11 @@ export const ArtisanProductManager: React.FC = () => {
                       <Info className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
                       <input 
                         type="text"
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 disabled:bg-gray-50 disabled:cursor-not-allowed"
                         value={editData.sku || ''}
                         onChange={e => setEditData({...editData, sku: e.target.value})}
                         placeholder="Optional SKU"
+                        disabled={isPublished}
                       />
                     </div>
                   ) : (
@@ -782,17 +858,16 @@ export const ArtisanProductManager: React.FC = () => {
                     <div className="relative">
                       <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
                       <select 
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-4 py-4 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 appearance-none"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-4 py-4 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 appearance-none disabled:bg-gray-50 disabled:cursor-not-allowed"
                         value={editData.deliveryTime}
                         onChange={e => setEditData({...editData, deliveryTime: e.target.value})}
+                        disabled={isPublished}
                       >
                         <option value="">Select Delivery Time</option>
-                        <option value="1-2 Business Days">1-2 Business Days</option>
-                        <option value="3-5 Business Days">3-5 Business Days</option>
-                        <option value="5-7 Business Days">5-7 Business Days</option>
-                        <option value="1-2 Weeks">1-2 Weeks</option>
-                        <option value="2-4 Weeks">2-4 Weeks</option>
-                        <option value="Custom">Custom</option>
+                        <option value="1-3 days">1-3 days</option>
+                        <option value="3-5 days">3-5 days</option>
+                        <option value="5-7 days">5-7 days</option>
+                        <option value="1-2 weeks">1-2 weeks</option>
                       </select>
                     </div>
                   ) : (
@@ -809,10 +884,11 @@ export const ArtisanProductManager: React.FC = () => {
                       <Layers className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
                       <input 
                         type="text"
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-4 py-4 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-4 py-4 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/10 disabled:bg-gray-50 disabled:cursor-not-allowed"
                         value={editData.weight || ''}
                         onChange={e => setEditData({...editData, weight: e.target.value})}
                         placeholder="e.g. 0.5kg (Optional)"
+                        disabled={isPublished}
                       />
                     </div>
                   ) : (
@@ -942,16 +1018,28 @@ export const ArtisanProductManager: React.FC = () => {
                   </button>
                   {activeMenuId === product._id && (
                     <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-20 animate-in fade-in zoom-in-95 duration-200">
-                      {['Draft', 'Archived', 'Out of Stock'].includes(product.status) && (
+                      {/* Edit Option */}
+                      {['Draft', 'Out of Stock'].includes(product.status) && (
                         <button 
-                          onClick={() => navigate(`/dashboard/artisan/products/edit/${product._id}`)}
+                          onClick={() => { setManageId(product._id); setIsEditing(true); setEditData(product); }}
                           className="w-full text-left px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50 rounded-lg flex items-center gap-2"
                         >
                           <Edit3 className="w-3 h-3" /> Edit
                         </button>
                       )}
+
+                      {/* Unarchive Option */}
+                      {product.status === 'Archived' && (
+                        <button 
+                          onClick={() => handleUnarchive(product._id)}
+                          className="w-full text-left px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50 rounded-lg flex items-center gap-2"
+                        >
+                          <CheckSquare className="w-3 h-3" /> Unarchive
+                        </button>
+                      )}
                       
-                      {['Pending', 'Published'].includes(product.status) && (
+                      {/* Archive Option */}
+                      {['Published', 'Out of Stock'].includes(product.status) && (
                         <button 
                           onClick={() => handleArchive(product._id)}
                           className="w-full text-left px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50 rounded-lg flex items-center gap-2"
@@ -960,7 +1048,8 @@ export const ArtisanProductManager: React.FC = () => {
                         </button>
                       )}
 
-                      {product.status === 'Pending' && (
+                      {/* Delete Option */}
+                      {['Draft', 'Pending', 'Out of Stock', 'Archived'].includes(product.status) && (
                         <>
                           <div className="h-px bg-gray-100 my-1"></div>
                           <button 
@@ -1047,10 +1136,13 @@ export const ArtisanProductManager: React.FC = () => {
                   <td className="px-6 py-4">{getStatusBadge(product)}</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      {['Draft', 'Archived', 'Out of Stock'].includes(product.status) && (
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => navigate(`/dashboard/artisan/products/edit/${product._id}`)}><Edit3 className="w-4 h-4" /></Button>
+                      {['Draft', 'Out of Stock'].includes(product.status) && (
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => { setManageId(product._id); setIsEditing(true); setEditData(product); }}><Edit3 className="w-4 h-4" /></Button>
                       )}
-                      {product.status === 'Pending' && (
+                      {product.status === 'Archived' && (
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleUnarchive(product._id)}><CheckSquare className="w-4 h-4" /></Button>
+                      )}
+                      {['Draft', 'Pending', 'Out of Stock', 'Archived'].includes(product.status) && (
                         <Button 
                           size="sm" 
                           variant="ghost" 

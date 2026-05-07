@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
         artisanEarnings,
         commissionRate,
         currency: 'ETB',
-        status: 'pending',
+        status: 'Awaiting Payment',
         paymentStatus: 'pending',
         paymentRef: txRef,
         paymentMethod: 'chapa',
@@ -210,6 +210,13 @@ export async function POST(request: NextRequest) {
           country: 'Ethiopia',
           zipCode: '',
         },
+        timeline: [
+          {
+            status: 'Awaiting Payment',
+            date: new Date(),
+            note: 'Order placed, awaiting payment confirmation.'
+          }
+        ]
       });
 
       try {

@@ -345,8 +345,14 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
 
       // 3. Update Order Status
       order.paymentStatus = 'paid';
-      order.status = 'confirmed';
+      order.status = 'Pending';
       order.paymentDate = new Date();
+      if (!order.timeline) order.timeline = [];
+      order.timeline.push({
+        status: 'Paid',
+        date: new Date(),
+        note: 'Payment confirmed via Chapa.'
+      });
       order.adminCommission = adminCommission;
       order.artisanEarnings = artisanEarnings;
       await order.save();

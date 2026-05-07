@@ -16,18 +16,20 @@ export async function GET(
       return NextResponse.json({ message: 'Invalid product ID' }, { status: 400 });
     }
 
-    const product = await Product.findOne({ _id: id, status: 'Published' }).populate('artisanId', 'name email profilePicture');
+    const product = await Product.findOne({ _id: id, status: 'Published' })
+      .populate('artisanId', 'name email profilePicture')
+      .lean();
 
     if (!product) {
       return NextResponse.json({ message: 'Product not found or not published' }, { status: 404 });
     }
 
     const formattedProduct = {
-      ...product.toObject(),
+      ...product,
       _id: product._id.toString(),
       artisanId: product.artisanId ? {
-        ...product.artisanId.toObject(),
-        _id: product.artisanId._id.toString()
+        ...(product.artisanId as any),
+        _id: (product.artisanId as any)._id?.toString()
       } : null
     };
 
