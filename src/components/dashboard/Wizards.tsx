@@ -4,7 +4,7 @@ import {
   MapPin, Search, RefreshCw, Plus, Ticket, Star, Hotel, Car,
   Box, DollarSign, CheckCircle2, Trash2, Calendar, Clock,
   Users, Shield, Info, Eye, Save, Globe, Map as MapIcon,
-  Utensils, Music, Heart, AlertCircle
+  Utensils, Music, Heart, AlertCircle, AlertTriangle
 } from 'lucide-react';
 import { Button, Badge, Input, VerifiedBadge } from '../UI';
 import { HotelAccommodation, TransportOption, RoomType } from '../../types';
@@ -288,6 +288,20 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
 
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadingFile, setUploadingFile] = useState<boolean>(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const triggerSuccess = (msg: string) => {
+    setSuccessMessage(msg);
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 3000);
+  };
+
+  const triggerError = (msg: string) => {
+    setErrorMessage(msg);
+    setTimeout(() => setErrorMessage(null), 5000);
+  };
 
   const handleFileUpload = async (file: File, isCover?: boolean, retryCount = 0): Promise<string> => {
     if (!file) return '';
@@ -351,8 +365,24 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
     }
   };
 
+  const handleScheduleImageUpload = async (file: File, idx: number) => {
+    if (!file) return;
+    const imageUrl = await handleFileUpload(file);
+    if (imageUrl) {
+      const newSchedule = [...formData.schedule];
+      newSchedule[idx].image = imageUrl;
+      setFormData({ ...formData, schedule: newSchedule });
+    }
+  };
+
   const handleSaveDraft = async () => {
     try {
+      // Clean data before saving draft
+      const cleanedHotels = formData.hotels.map((hotel: any) => ({
+        ...hotel,
+        hotelServices: (hotel.hotelServices || []).filter((s: any) => s.name?.trim())
+      }));
+
       const response = await apiClient.post('/api/organizer/festivals', {
         ...formData.core,
         name_en: formData.core.name_en,
@@ -368,7 +398,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
           coordinates: formData.core.coordinates,
         },
         schedule: formData.schedule,
-        hotels: formData.hotels,
+        hotels: cleanedHotels,
         transportation: formData.transportation,
         services: formData.services,
         policies: formData.policies,
@@ -378,14 +408,14 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
       });
 
       if (response.success) {
-        alert('Festival saved as draft successfully!');
-        router.push('/dashboard/organizer/festivals');
+        triggerSuccess('Festival saved as draft successfully!');
+        setTimeout(() => router.push('/dashboard/organizer/festivals'), 1500);
       } else {
-        alert(`Failed to save draft: ${response.message}`);
+        triggerError(`Failed to save draft: ${response.message}`);
       }
     } catch (error) {
       console.error('Error saving draft:', error);
-      alert('An error occurred while saving the draft.');
+      triggerError('An error occurred while saving the draft.');
     }
   };
 
@@ -407,9 +437,15 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
     }
 
     if (allMissing.length > 0) {
-      alert(`Please fill out all required fields:\n- ${allMissing.join('\n- ')}`);
+      triggerError(`Please fill out all required fields: ${allMissing[0]} ${allMissing.length > 1 ? `and ${allMissing.length - 1} more` : ''}`);
       return;
     }
+
+    // Clean data before publishing
+    const cleanedHotels = formData.hotels.map((hotel: any) => ({
+      ...hotel,
+      hotelServices: (hotel.hotelServices || []).filter((s: any) => s.name?.trim())
+    }));
 
     try {
       const response = await apiClient.post('/api/organizer/festivals', {
@@ -427,7 +463,7 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
           coordinates: formData.core.coordinates,
         },
         schedule: formData.schedule,
-        hotels: formData.hotels,
+        hotels: cleanedHotels,
         transportation: formData.transportation,
         services: formData.services,
         policies: formData.policies,
@@ -438,14 +474,14 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
       });
 
       if (response.success) {
-        alert('Festival submitted for verification successfully!');
-        router.push('/dashboard/organizer/festivals');
+        triggerSuccess('Festival submitted for verification successfully!');
+        setTimeout(() => router.push('/dashboard/organizer/festivals'), 1500);
       } else {
-        alert(`Failed to publish festival: ${response.message}`);
+        triggerError(`Failed to publish festival: ${response.message}`);
       }
     } catch (error) {
       console.error('Error publishing festival:', error);
-      alert('An error occurred while publishing the festival.');
+      triggerError('An error occurred while publishing the festival.');
     }
   };
 
@@ -499,6 +535,32 @@ export const FestivalCreationWizard: React.FC<{ onCancel: () => void }> = ({ onC
 
     return (
     <div className="max-w-[1400px] mx-auto pb-20">
+      {/* Success Notification */}
+      {showSuccess && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top duration-300">
+          <div className="bg-emerald-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-emerald-500/20">
+            <div className="bg-white/20 p-2 rounded-xl">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <span className="font-bold text-base tracking-wide">{successMessage}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error Notification */}
+      {errorMessage && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top duration-300">
+          <div className="bg-rose-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-rose-500/20">
+            <div className="bg-white/20 p-2 rounded-xl">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <span className="font-bold text-base tracking-wide">{errorMessage}</span>
+            <button onClick={() => setErrorMessage(null)} className="ml-4 p-1 hover:bg-white/20 rounded-full transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
       <MapPickerModal 
         isOpen={isMapModalOpen}
         onClose={() => setIsMapModalOpen(false)}

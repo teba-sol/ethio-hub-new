@@ -129,6 +129,14 @@ const normalizeHotels = (hotels: any[] = [], isDraft: boolean) => {
         fullDescription_en: hotel?.fullDescription_en || hotel?.fullDescription || '',
         fullDescription_am: hotel?.fullDescription_am || hotel?.fullDescription || '',
         rooms,
+        hotelServices: (Array.isArray(hotel?.hotelServices) ? hotel.hotelServices : [])
+          .filter((service: any) => service?.name?.trim())
+          .map((service: any) => ({
+            ...service,
+            name: service.name.trim(),
+            description: service.description?.trim() || '',
+            price: Number(service.price) || 0
+          }))
       };
     })
     .filter(Boolean);

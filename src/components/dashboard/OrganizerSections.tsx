@@ -2474,7 +2474,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
               <h3 className="text-2xl font-serif font-bold text-primary">Customer Feedback</h3>
               <div className="flex items-center gap-4">
                 <div className="flex text-secondary">
-                  {[...Array(5)].map((_, i) => <Star  className="w-5 h-5 fill-current" />)}
+                  {[...Array(5)].map((_, i) => <Star key={i} className="w-5 h-5 fill-current" />)}
                 </div>
                 <span className="text-xl font-bold text-primary">4.9 / 5.0</span>
               </div>
@@ -2900,7 +2900,7 @@ export const OrganizerOverview: React.FC<{
                 { title: 'Early Bird Pricing', desc: 'Offer discounts for bookings made 30 days in advance.' },
                 { title: 'Engage with Reviews', desc: 'Responding to reviews builds trust with potential attendees.' }
               ].map((tip, i) => (
-                <div  className="flex gap-4 p-4 bg-ethio-bg/50 rounded-2xl">
+                <div key={i} className="flex gap-4 p-4 bg-ethio-bg/50 rounded-2xl">
                   <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-secondary font-bold text-lg">{i+1}</div>
                   <div>
                     <h4 className="font-bold text-primary">{tip.title}</h4>
@@ -3936,12 +3936,8 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
   const filteredFestivals = festivals.filter(f => {
     // Status Filter logic
     if (activeTab === 'All') {
-      // In "All", only show Pending, Published, and Completed
-      const isPending = f.verificationStatus === 'Pending Approval' || f.verificationStatus === 'Pending Review';
-      const isPublished = f.verificationStatus === 'Approved';
-      const isCompleted = f.verificationStatus === 'Approved' && new Date(f.endDate) < new Date();
-      
-      if (!isPending && !isPublished && !isCompleted) return false;
+      // Show all festivals in the "All" tab
+      return true;
     } else {
       if (activeTab === 'Pending') {
         if (f.verificationStatus !== 'Pending Approval' && f.verificationStatus !== 'Pending Review') return false;

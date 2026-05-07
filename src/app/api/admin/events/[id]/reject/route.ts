@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Festival from '@/models/festival.model';
+import User from '@/models/User';
 import { jwtVerify } from 'jose';
+import { sendApprovalDecisionEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,7 +51,7 @@ export async function POST(
       );
     }
 
-    const festival = await Festival.findById(id);
+    const festival = await Festival.findById(id).populate('organizer');
     if (!festival) {
       return new NextResponse(
         JSON.stringify({ success: false, message: 'Event not found' }),
@@ -67,6 +69,24 @@ export async function POST(
         rejectionReason: reason.trim()
       } } as any
     );
+
+    // Send email to organizer
+    const organizer = festival.organizer as any;
+    if (organizer && organizer.email) {
+      try {
+        await sendApprovalDecisionEmail({
+          to: organizer.email,
+          name: organizer.name || 'Organizer',
+          approved: false,
+          targetType: 'event',
+          targetLabel: (festival.name as any)?.en || festival.name || 'your event',
+          reason: reason.trim()
+        });
+      } catch (emailError) {
+        console.error('Failed to send rejection email:', emailError);
+        // We still return success since the database update was successful
+      }
+    }
 
     const updatedFestival = await Festival.findById(id);
 
