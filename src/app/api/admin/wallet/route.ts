@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Wallet from '@/models/wallet.model';
+import Product from '@/models/product.model';
 import User from '@/models/User';
 import '@/models/artisan/product.model';
 import '@/models/order.model';
 import Transaction from '@/models/transaction.model';
 import mongoose from 'mongoose';
+
+Product; // Ensure Product model is registered
 
 export async function GET(request: NextRequest) {
   try {
@@ -108,9 +111,9 @@ export async function GET(request: NextRequest) {
         })
         .populate({
           path: 'productId',
-          select: 'name sku category artisanId',
+          select: 'name sku category artisan',
           populate: {
-            path: 'artisanId',
+            path: 'artisan',
             select: 'name email phone',
           },
         })
