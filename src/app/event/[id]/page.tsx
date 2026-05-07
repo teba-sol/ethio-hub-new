@@ -12,7 +12,7 @@ import {
   Banknote, Users, Building2
 } from 'lucide-react';
 import apiClient from '@/lib/apiClient';
-import { Festival } from '@/types';
+import { Festival, FoodPackage } from '@/types';
 import { useBooking } from '@/context/BookingContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
@@ -512,7 +512,7 @@ export default function EventPage() {
                           {language === 'am' ? 'የምግብና መጠጥ ፓኬጆች' : 'Culinary Packages'}
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {(festival.services?.foodPackages || festival.foodPackages || []).map((pkg: any, idx: number) => (
+                          {(festival.services?.foodPackages || festival.foodPackages || []).map((pkg: FoodPackage, idx: number) => (
                             <div key={idx} className="group relative bg-gradient-to-br from-white to-amber-50/30 rounded-3xl p-6 border border-amber-100/50 shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden">
                               <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:scale-150 transition-transform duration-700">
                                 <Utensils className="w-24 h-24 text-amber-900" />
@@ -723,7 +723,9 @@ export default function EventPage() {
                       </div>
                       <div>
                         <p className="text-gray-900 font-semibold text-sm">
-                          {festival.organizerId?.name || 'Verified Organizer'}
+                          {typeof festival.organizerId === 'object' 
+                            ? (festival.organizerId?.name || 'Verified Organizer')
+                            : (festival.organizer?.name || 'Verified Organizer')}
                         </p>
                         <p className="text-gray-500 text-xs">
                           {language === 'am' ? 'የተረጋገጠ አዘጋጅ' : 'Verified Organizer'}

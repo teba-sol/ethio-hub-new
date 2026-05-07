@@ -20,12 +20,9 @@ export const normalizeSchedule = (schedule: any[] = [], isDraft: boolean) => {
 
       const fallbackTitle = `Draft day ${index + 1}`;
       return {
-        ...item,
         day: Number(item?.day) || index + 1,
-        title: titleEn || titleAm || fallbackTitle,
         title_en: titleEn || titleAm || fallbackTitle,
         title_am: titleAm || titleEn || fallbackTitle,
-        activities: activitiesEn || activitiesAm || '',
         activities_en: activitiesEn || activitiesAm || '',
         activities_am: activitiesAm || activitiesEn || '',
         performers: Array.isArray(item?.performers) ? item.performers : [],
@@ -37,10 +34,10 @@ export const normalizeSchedule = (schedule: any[] = [], isDraft: boolean) => {
 
   return isDraft ? [{
     day: 1,
-    title: 'Draft day 1',
     title_en: 'Draft day 1',
     title_am: 'Draft day 1',
-    activities: '',
+    activities_en: '',
+    activities_am: '',
     performers: [],
   }] : [];
 };
@@ -68,29 +65,30 @@ export const normalizeHotels = (hotels: any[] = [], isDraft: boolean) => {
           
           return {
             ...room,
-            name: roomNameEn || roomNameAm || fallbackRoomName,
             name_en: roomNameEn || roomNameAm || fallbackRoomName,
             name_am: roomNameAm || roomNameEn || fallbackRoomName,
-            description: textValue(room?.description, room?.description_en, room?.description_am),
             description_en: room?.description_en || room?.description || '',
             description_am: room?.description_am || room?.description || '',
             availability: availability,
-            available: availability, // Ensure available is set to total availability initially
+            available: availability,
           };
         })
         .filter(Boolean);
 
       return {
         ...hotel,
-        name: nameEn || nameAm || fallbackName,
         name_en: nameEn || nameAm || fallbackName,
         name_am: nameAm || nameEn || fallbackName,
-        description: textValue(hotel?.description, hotel?.description_en, hotel?.description_am),
         description_en: hotel?.description_en || hotel?.description || '',
         description_am: hotel?.description_am || hotel?.description || '',
-        fullDescription: textValue(hotel?.fullDescription, hotel?.fullDescription_en, hotel?.fullDescription_am),
         fullDescription_en: hotel?.fullDescription_en || hotel?.fullDescription || '',
         fullDescription_am: hotel?.fullDescription_am || hotel?.fullDescription || '',
+        facilities: Array.isArray(hotel?.facilities) ? hotel.facilities : [],
+        foodAndDrink: Array.isArray(hotel?.foodAndDrink) ? hotel.foodAndDrink : [],
+        hotelRules: Array.isArray(hotel?.hotelRules) ? hotel.hotelRules : [],
+        propertyType: hotel?.propertyType || 'Hotel',
+        checkInTime: hotel?.checkInTime || '14:00',
+        checkOutTime: hotel?.checkOutTime || '12:00',
         rooms,
       };
     })
@@ -112,14 +110,12 @@ export const normalizeTransportation = (transportation: any[] = [], isDraft: boo
 
       return {
         ...transport,
-        type: typeEn || typeAm || fallbackType,
         type_en: typeEn || typeAm || fallbackType,
         type_am: typeAm || typeEn || fallbackType,
-        description: textValue(transport?.description, transport?.description_en, transport?.description_am),
         description_en: transport?.description_en || transport?.description || '',
         description_am: transport?.description_am || transport?.description || '',
         availability: availability,
-        available: availability, // Ensure available is set to total availability initially
+        available: availability,
       };
     })
     .filter(Boolean);
@@ -128,9 +124,6 @@ export const normalizeTransportation = (transportation: any[] = [], isDraft: boo
 export const normalizeServices = (services: any = {}, isDraft: boolean) => {
   const foodPackages = Array.isArray(services?.foodPackages) ? services.foodPackages : [];
 
-  // Map culturalServices_en and culturalServices_am to a single array if needed, 
-  // or just ensure we're picking the right ones.
-  // The frontend sends services.culturalServices_en and services.culturalServices_am.
   const culturalEn = Array.isArray(services?.culturalServices_en) ? services.culturalServices_en : [];
   const culturalAm = Array.isArray(services?.culturalServices_am) ? services.culturalServices_am : [];
   const assistanceEn = Array.isArray(services?.specialAssistance_en) ? services.specialAssistance_en : [];
@@ -152,10 +145,8 @@ export const normalizeServices = (services: any = {}, isDraft: boolean) => {
         const fallbackName = `Food package ${index + 1}`;
         return {
           ...pkg,
-          name: nameEn || nameAm || fallbackName,
           name_en: nameEn || nameAm || fallbackName,
           name_am: nameAm || nameEn || fallbackName,
-          description: descriptionEn || descriptionAm || '',
           description_en: descriptionEn || descriptionAm || '',
           description_am: descriptionAm || descriptionEn || '',
           pricePerPerson: Number(pkg?.pricePerPerson) || 0,
@@ -163,13 +154,10 @@ export const normalizeServices = (services: any = {}, isDraft: boolean) => {
         };
       })
       .filter(Boolean),
-    culturalServices: culturalEn.length > 0 ? culturalEn : culturalAm,
     culturalServices_en: culturalEn,
     culturalServices_am: culturalAm,
-    specialAssistance: assistanceEn.length > 0 ? assistanceEn : assistanceAm,
     specialAssistance_en: assistanceEn,
     specialAssistance_am: assistanceAm,
-    extras: extrasEn.length > 0 ? extrasEn : extrasAm,
     extras_en: extrasEn,
     extras_am: extrasAm,
   };
@@ -184,13 +172,10 @@ export const normalizePolicies = (policies: any = {}) => {
   const safetyAm = textValue(policies?.safety_am, policies?.safety);
 
   return {
-    cancellation: cancellationEn || cancellationAm || '',
     cancellation_en: cancellationEn || cancellationAm || '',
     cancellation_am: cancellationAm || cancellationEn || '',
-    terms: termsEn || termsAm || '',
     terms_en: termsEn || termsAm || '',
     terms_am: termsAm || termsEn || '',
-    safety: safetyEn || safetyAm || '',
     safety_en: safetyEn || safetyAm || '',
     safety_am: safetyAm || safetyEn || '',
     ageRestriction: policies?.ageRestriction || '',
@@ -202,10 +187,9 @@ export const normalizeTicketTypes = (ticketTypes: any[] = [], isDraft: boolean) 
 
   return items
     .map((ticket: any) => {
-      const name = textValue(ticket?.name);
       const nameEn = textValue(ticket?.name_en, ticket?.name);
       const nameAm = textValue(ticket?.name_am, ticket?.name);
-      const hasTicketDetails = name || nameEn || nameAm || ticket?.price || ticket?.quantity;
+      const hasTicketDetails = nameEn || nameAm || ticket?.price || ticket?.quantity;
 
       if (isDraft && !hasTicketDetails) return null;
 
@@ -214,9 +198,8 @@ export const normalizeTicketTypes = (ticketTypes: any[] = [], isDraft: boolean) 
 
       return {
         ...ticket,
-        name: name || nameEn || nameAm || 'General Admission',
-        name_en: nameEn || name || 'General Admission',
-        name_am: nameAm || name || 'አ general ፡',
+        name_en: nameEn || nameAm || 'General Admission',
+        name_am: nameAm || nameEn || 'ጠቅላላ መግቢያ',
         price: price,
         quantity: quantity,
         available: Number(ticket?.available) || quantity,

@@ -201,7 +201,7 @@ export const EventStatusBadge: React.FC<EventStatusBadgeProps> = ({
   );
 };
 
-export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label?: string; hideLabel?: boolean; icon?: LucideIcon }> = ({ label, hideLabel, icon: Icon, ...props }) => (
+export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label?: string; hideLabel?: boolean; icon?: any }> = ({ label, hideLabel, icon: Icon, ...props }) => (
   <div className="flex flex-col w-full group">
     {label && !hideLabel && (
       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 mb-2 transition-colors group-focus-within:text-primary" htmlFor={props.id}>
@@ -211,7 +211,7 @@ export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { lab
     <div className="relative">
       {Icon && (
         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors z-10">
-          <Icon className="w-4 h-4" />
+          {typeof Icon === 'function' ? <Icon className="w-4 h-4" /> : Icon}
         </div>
       )}
       <input 

@@ -204,6 +204,9 @@ export interface Festival {
     title_en?: string;
     title_am?: string;
     activities: string;
+    activities_en?: string;
+    activities_am?: string;
+    time?: string;
     performers?: string[];
   }>;
   mainActivities: string;
@@ -264,7 +267,7 @@ export interface Festival {
     address?: string;
     coordinates?: { lat?: number; lng?: number };
   };
-  organizerId: string;
+  organizerId: string | { name: string; email?: string; _id?: string };
   organizer?: {
     _id: string;
     name: string;

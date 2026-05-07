@@ -56,7 +56,7 @@ export const EventDetailPanel: React.FC<{ eventId: string; onBack: () => void }>
   const [editData, setEditData] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const [uploadingImage, setUploadingImage] = useState(false);
 const [imageUploadType, setImageUploadType] = useState<'cover' | 'gallery'>('cover');
@@ -89,37 +89,45 @@ const getImageUrl = (path: string | undefined | null) => {
   };
   
   // Add this function inside your component
-const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: number) => {
-  setUploadingImage(true);
+  const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: number) => {
+    setUploadingImage(true);
 
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
 
-    const response = await fetch('/api/upload', { method: 'POST', body: formData });
-    const data = await response.json();
+      const response = await fetch('/api/upload', { method: 'POST', body: formDataUpload });
+      const data = await response.json();
 
-    if (data.success) {
-      const imageUrl = data.url;
+      if (data.success) {
+        const imageUrl = data.url;
 
-      if (type === 'cover') {
-        handleInputChange('coverImage', imageUrl);
-      } else if (type === 'gallery' && index !== undefined) {
-        const newGallery = [...(editData.gallery || [])];
-        newGallery[index] = imageUrl;
-        handleInputChange('gallery', newGallery);
-      } else if (type === 'gallery' && index === undefined) {
-        const newGallery = [...(editData.gallery || []), imageUrl];
-        handleInputChange('gallery', newGallery);
+        if (type === 'cover') {
+          handleInputChange('coverImage', imageUrl);
+        } else if (type === 'gallery' && index !== undefined) {
+          setEditData((prev: any) => {
+            const newGallery = [...(prev.gallery || [])];
+            newGallery[index] = imageUrl;
+            // Deduplicate gallery
+            const uniqueGallery = newGallery.filter((val, idx, self) => self.indexOf(val) === idx);
+            return { ...prev, gallery: uniqueGallery };
+          });
+        } else if (type === 'gallery' && index === undefined) {
+          setEditData((prev: any) => {
+            const newGallery = [...(prev.gallery || []), imageUrl];
+            // Deduplicate gallery
+            const uniqueGallery = newGallery.filter((val, idx, self) => self.indexOf(val) === idx);
+            return { ...prev, gallery: uniqueGallery };
+          });
+        }
       }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      alert('Failed to upload image');
+    } finally {
+      setUploadingImage(false);
     }
-  } catch (error) {
-    console.error('Upload failed:', error);
-    alert('Failed to upload image');
-  } finally {
-    setUploadingImage(false);
-  }
-};
+  };
 
   useEffect(() => {
   const fetchFestival = async () => {
@@ -166,19 +174,20 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
        };
 
        // If this is an approved event being edited, mark it for reverification
-       if (festival.verificationStatus === 'Approved') {
-         dataToSave.isEditedAfterApproval = true;
-         dataToSave.verificationStatus = 'Pending Approval';
-         dataToSave.status = 'Draft';
-         dataToSave.isVerified = false;
-       }
+      //  if (festival.verificationStatus === 'Approved') {
+      //    dataToSave.isEditedAfterApproval = true;
+      //    dataToSave.verificationStatus = 'Pending Approval';
+      //    dataToSave.status = 'Draft';
+      //    dataToSave.isVerified = false;
+      //  }
 
        console.log('Saving festival data:', JSON.stringify(dataToSave, null, 2));
        const response = await apiClient.put(`/api/organizer/festivals/${eventId}`, dataToSave);
        console.log('Save response:', response);
        if (response.success) {
-         setFestival(response.festival || dataToSave);
-         setEditData(response.festival || dataToSave);
+         const updatedFestival = response.festival || dataToSave;
+         setFestival(updatedFestival);
+         setEditData(JSON.parse(JSON.stringify(updatedFestival)));
          setIsEditing(false);
          alert('Event updated successfully!');
        } else {
@@ -362,7 +371,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                  <ChevronLeft className="w-5 h-5" />
                </button>
                <Badge variant="secondary" className="bg-secondary/10 text-secondary border-none">
-                 {currentData.status === 'Completed' || new Date(currentData.endDate) < new Date() ? 'Completed' : 
+                 {currentData.status === 'Completed' || (currentData.endDate && new Date(currentData.endDate) < new Date()) ? 'Completed' : 
                   currentData.status === 'Published' ? 'Published' : 'Draft'}
                </Badge>
                {currentData.isVerified && <VerifiedBadge />}
@@ -404,14 +413,26 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
              )}
             
             {isEditing ? (
-              <input
-                type="text"
-                value={currentData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                className="text-4xl lg:text-5xl font-serif font-bold text-primary bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 w-full"
-              />
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={currentData.name_en || ''}
+                  onChange={(e) => handleInputChange('name_en', e.target.value)}
+                  className="text-2xl lg:text-3xl font-serif font-bold text-primary bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 w-full"
+                  placeholder="English Name"
+                />
+                <input
+                  type="text"
+                  value={currentData.name_am || ''}
+                  onChange={(e) => handleInputChange('name_am', e.target.value)}
+                  className="text-2xl lg:text-3xl font-serif font-bold text-primary bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 w-full"
+                  placeholder="Amharic Name"
+                />
+              </div>
             ) : (
-              <h1 className="text-4xl lg:text-5xl font-serif font-bold text-primary">{currentData.name}</h1>
+              <h1 className="text-4xl lg:text-5xl font-serif font-bold text-primary">
+                {getLocalizedText(currentData, 'name', language)}
+              </h1>
             )}
             
             <div className="flex flex-wrap items-center gap-6 text-gray-400 text-sm font-bold uppercase tracking-widest">
@@ -419,34 +440,43 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                 <>
                   <input
                     type="date"
-                    value={new Date(currentData.startDate).toISOString().split('T')[0]}
+                    value={currentData.startDate ? new Date(currentData.startDate).toISOString().split('T')[0] : ''}
                     onChange={(e) => handleInputChange('startDate', e.target.value)}
                     className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1 text-sm"
                   />
                   <span>—</span>
                   <input
                     type="date"
-                    value={new Date(currentData.endDate).toISOString().split('T')[0]}
+                    value={currentData.endDate ? new Date(currentData.endDate).toISOString().split('T')[0] : ''}
                     onChange={(e) => handleInputChange('endDate', e.target.value)}
                     className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1 text-sm"
                   />
-                  <input
-                    type="text"
-                    value={currentData.location?.name || ''}
-                    onChange={(e) => handleNestedChange('location', 'name', e.target.value)}
-                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1 text-sm"
-                    placeholder="Location name"
-                  />
+                  <div className="flex flex-col gap-1">
+                    <input
+                      type="text"
+                      value={currentData.location?.name_en || ''}
+                      onChange={(e) => handleNestedChange('location', 'name_en', e.target.value)}
+                      className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1 text-sm"
+                      placeholder="Location name (EN)"
+                    />
+                    <input
+                      type="text"
+                      value={currentData.location?.name_am || ''}
+                      onChange={(e) => handleNestedChange('location', 'name_am', e.target.value)}
+                      className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1 text-sm"
+                      placeholder="Location name (AM)"
+                    />
+                  </div>
                 </>
               ) : (
                 <>
                   <span className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-secondary" /> 
-                    {new Date(currentData.startDate).toLocaleDateString()} — {new Date(currentData.endDate).toLocaleDateString()}
+                    {currentData.startDate ? new Date(currentData.startDate).toLocaleDateString() : 'N/A'} — {currentData.endDate ? new Date(currentData.endDate).toLocaleDateString() : 'N/A'}
                   </span>
                   <span className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-secondary" /> 
-                    {currentData.location?.name}
+                    {getLocalizedText(currentData.location, 'name', language)}
                   </span>
                 </>
               )}
@@ -567,7 +597,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   <div className="space-y-1">
                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1 ml-1">Festival Name</p>
                     <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                      <p className="text-sm font-bold text-primary">{currentData.name}</p>
+                      <p className="text-sm font-bold text-primary">{getLocalizedText(currentData, 'name', language)}</p>
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -582,14 +612,14 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1 ml-1">Start Date</p>
                     <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-secondary" />
-                      <p className="text-sm font-bold text-primary">{new Date(currentData.startDate).toDateString()}</p>
+                      <p className="text-sm font-bold text-primary">{currentData.startDate ? new Date(currentData.startDate).toDateString() : 'N/A'}</p>
                     </div>
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1 ml-1">End Date</p>
                     <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-secondary" />
-                      <p className="text-sm font-bold text-primary">{new Date(currentData.endDate).toDateString()}</p>
+                      <p className="text-sm font-bold text-primary">{currentData.endDate ? new Date(currentData.endDate).toDateString() : 'N/A'}</p>
                     </div>
                   </div>
                 </div>
@@ -603,14 +633,24 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   <div>
                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Location Name</p>
                     {isEditing ? (
-                      <input
-                        type="text"
-                        value={currentData.location?.name || ''}
-                        onChange={(e) => handleNestedChange('location', 'name', e.target.value)}
-                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                      />
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={currentData.location?.name_en || ''}
+                          onChange={(e) => handleNestedChange('location', 'name_en', e.target.value)}
+                          className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                          placeholder="English Name"
+                        />
+                        <input
+                          type="text"
+                          value={currentData.location?.name_am || ''}
+                          onChange={(e) => handleNestedChange('location', 'name_am', e.target.value)}
+                          className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                          placeholder="Amharic Name"
+                        />
+                      </div>
                     ) : (
-                      <p className="text-sm font-bold text-primary">{currentData.location?.name}</p>
+                      <p className="text-sm font-bold text-primary">{getLocalizedText(currentData.location, 'name', language)}</p>
                     )}
                   </div>
                   <div>
@@ -784,15 +824,24 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   <div className="flex-1 space-y-6">
                     <div>
                       {isEditing ? (
-                        <Input
-                          placeholder="Day Title (e.g. Grand Opening Ceremony) *"
-                          hideLabel
-                          value={day.title}
-                          onChange={(e) => handleArrayChange('schedule', idx, 'title', e.target.value)}
-                          className="text-xl font-bold"
-                        />
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="Day Title (EN) *"
+                            hideLabel
+                            value={day.title_en || ''}
+                            onChange={(e) => handleArrayChange('schedule', idx, 'title_en', e.target.value)}
+                            className="text-xl font-bold"
+                          />
+                          <Input
+                            placeholder="Day Title (AM) *"
+                            hideLabel
+                            value={day.title_am || ''}
+                            onChange={(e) => handleArrayChange('schedule', idx, 'title_am', e.target.value)}
+                            className="text-xl font-bold"
+                          />
+                        </div>
                       ) : (
-                        <h4 className="text-2xl font-serif font-bold text-primary">{day.title || 'Special Celebration Day'}</h4>
+                        <h4 className="text-2xl font-serif font-bold text-primary">{getLocalizedText(day, 'title', language) || 'Special Celebration Day'}</h4>
                       )}
                     </div>
 
@@ -800,16 +849,25 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                       <div className="space-y-2">
                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Activities</label>
                         {isEditing ? (
-                          <Textarea
-                            hideLabel
-                            value={day.activities}
-                            onChange={(e) => handleArrayChange('schedule', idx, 'activities', e.target.value)}
-                            rows={3}
-                            placeholder="Describe the main activities for this day..."
-                          />
+                          <div className="space-y-2">
+                            <Textarea
+                              hideLabel
+                              value={day.activities_en || ''}
+                              onChange={(e) => handleArrayChange('schedule', idx, 'activities_en', e.target.value)}
+                              rows={3}
+                              placeholder="Describe activities (EN)..."
+                            />
+                            <Textarea
+                              hideLabel
+                              value={day.activities_am || ''}
+                              onChange={(e) => handleArrayChange('schedule', idx, 'activities_am', e.target.value)}
+                              rows={3}
+                              placeholder="Describe activities (AM)..."
+                            />
+                          </div>
                         ) : (
                           <p className="text-sm text-gray-600 leading-relaxed bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                            {day.activities || 'Traditional ceremonies and community gathering.'}
+                            {getLocalizedText(day, 'activities', language) || 'Traditional ceremonies and community gathering.'}
                           </p>
                         )}
                       </div>
@@ -882,7 +940,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
 
     {/* Hotels Grid */}
     <div className="space-y-16">
-      {(currentData.hotels || []).map((hotel: any, idx: number) => (
+      {(currentData.hotels || []).map((hotel: HotelAccommodation, idx: number) => (
         <div 
           key={idx} 
           className="group relative bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500"
@@ -973,13 +1031,20 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
             <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
               <div className="space-y-2 flex-1">
                 {isEditing ? (
-                  <>
+                  <div className="space-y-2">
                     <input
                       type="text"
-                      value={hotel.name}
-                      onChange={(e) => handleArrayChange('hotels', idx, 'name', e.target.value)}
-                      className="text-3xl lg:text-4xl font-serif font-bold text-primary w-full bg-gray-50 border border-gray-200 rounded-xl p-3 mb-2 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                      placeholder="Hotel name"
+                      value={hotel.name_en || ''}
+                      onChange={(e) => handleArrayChange('hotels', idx, 'name_en', e.target.value)}
+                      className="text-2xl lg:text-3xl font-serif font-bold text-primary w-full bg-gray-50 border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                      placeholder="Hotel name (EN)"
+                    />
+                    <input
+                      type="text"
+                      value={hotel.name_am || ''}
+                      onChange={(e) => handleArrayChange('hotels', idx, 'name_am', e.target.value)}
+                      className="text-2xl lg:text-3xl font-serif font-bold text-primary w-full bg-gray-50 border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                      placeholder="Hotel name (AM)"
                     />
                     <input
                       type="number"
@@ -989,10 +1054,10 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                       min={1}
                       max={5}
                     />
-                  </>
+                  </div>
                 ) : (
                   <>
-                    <h4 className="text-3xl lg:text-4xl font-serif font-bold text-primary">{hotel.name}</h4>
+                    <h4 className="text-3xl lg:text-4xl font-serif font-bold text-primary">{getLocalizedText(hotel, 'name', language)}</h4>
                     <div className="flex items-center gap-3">
                       <div className="flex text-secondary">
                         {[...Array(hotel.starRating || 5)].map((_, i) => (
@@ -1011,28 +1076,42 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
 
             {/* Description */}
             {isEditing ? (
-              <>
+              <div className="space-y-2">
                 <textarea
-                  value={hotel.description || ''}
-                  onChange={(e) => handleArrayChange('hotels', idx, 'description', e.target.value)}
+                  value={hotel.description_en || ''}
+                  onChange={(e) => handleArrayChange('hotels', idx, 'description_en', e.target.value)}
                   className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   rows={2}
-                  placeholder="Short description"
+                  placeholder="Short description (EN)"
                 />
                 <textarea
-                  value={hotel.fullDescription || ''}
-                  onChange={(e) => handleArrayChange('hotels', idx, 'fullDescription', e.target.value)}
+                  value={hotel.description_am || ''}
+                  onChange={(e) => handleArrayChange('hotels', idx, 'description_am', e.target.value)}
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  rows={2}
+                  placeholder="Short description (AM)"
+                />
+                <textarea
+                  value={hotel.fullDescription_en || ''}
+                  onChange={(e) => handleArrayChange('hotels', idx, 'fullDescription_en', e.target.value)}
                   className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   rows={4}
-                  placeholder="Full description (detailed info about the hotel)"
+                  placeholder="Full description (EN)"
                 />
-              </>
+                <textarea
+                  value={hotel.fullDescription_am || ''}
+                  onChange={(e) => handleArrayChange('hotels', idx, 'fullDescription_am', e.target.value)}
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  rows={4}
+                  placeholder="Full description (AM)"
+                />
+              </div>
             ) : (
-              <p className="text-gray-600 leading-relaxed">{hotel.description || 'Premium accommodation with traditional Ethiopian hospitality and modern amenities.'}</p>
+              <p className="text-gray-600 leading-relaxed">{getLocalizedText(hotel, 'description', language) || 'Premium accommodation with traditional Ethiopian hospitality and modern amenities.'}</p>
             )}
 
-            {!isEditing && hotel.fullDescription && (
-              <p className="text-gray-500 text-sm leading-relaxed">{hotel.fullDescription}</p>
+            {!isEditing && getLocalizedText(hotel, 'fullDescription', language) && (
+              <p className="text-gray-500 text-sm leading-relaxed">{getLocalizedText(hotel, 'fullDescription', language)}</p>
             )}
 
             {/* Facilities */}
@@ -1301,7 +1380,34 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                     {/* Room Info */}
                     <div className="p-8 space-y-6">
                       <div className="space-y-1">
-                        <h6 className="text-2xl font-serif font-bold text-primary leading-tight">{room.name}</h6>
+                        {isEditing ? (
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              value={room.name_en || ''}
+                              onChange={(e) => {
+                                const newRooms = [...hotel.rooms];
+                                newRooms[rIdx] = { ...newRooms[rIdx], name_en: e.target.value };
+                                handleArrayChange('hotels', idx, 'rooms', newRooms);
+                              }}
+                              className="text-lg font-serif font-bold text-primary bg-gray-50 border border-gray-200 rounded-lg p-2 w-full"
+                              placeholder="Room name (EN)"
+                            />
+                            <input
+                              type="text"
+                              value={room.name_am || ''}
+                              onChange={(e) => {
+                                const newRooms = [...hotel.rooms];
+                                newRooms[rIdx] = { ...newRooms[rIdx], name_am: e.target.value };
+                                handleArrayChange('hotels', idx, 'rooms', newRooms);
+                              }}
+                              className="text-lg font-serif font-bold text-primary bg-gray-50 border border-gray-200 rounded-lg p-2 w-full"
+                              placeholder="Room name (AM)"
+                            />
+                          </div>
+                        ) : (
+                          <h6 className="text-2xl font-serif font-bold text-primary leading-tight">{getLocalizedText(room, 'name', language)}</h6>
+                        )}
                         <p className="text-xs text-gray-400 font-medium uppercase tracking-widest flex items-center gap-2">
                           <Hotel className="w-3 h-3" />
                           {room.bedType || 'King Size Bed'}
@@ -1313,7 +1419,20 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                           <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Capacity</p>
                           <div className="flex items-center gap-2 text-primary">
                             <Users className="w-4 h-4" />
-                            <span className="font-bold">{room.capacity} Persons</span>
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                value={room.capacity}
+                                onChange={(e) => {
+                                  const newRooms = [...hotel.rooms];
+                                  newRooms[rIdx] = { ...newRooms[rIdx], capacity: parseNumberInput(e.target.value) };
+                                  handleArrayChange('hotels', idx, 'rooms', newRooms);
+                                }}
+                                className="w-16 p-1 bg-gray-50 border border-gray-200 rounded text-sm"
+                              />
+                            ) : (
+                              <span className="font-bold">{room.capacity} Persons</span>
+                            )}
                           </div>
                         </div>
                         <div className="space-y-1">
@@ -1322,8 +1441,21 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                           </p>
                           {room.tier !== 'vip' ? (
                             <div className="flex items-center gap-1 text-secondary">
-                              <span className="text-lg font-black">{currentData.pricing?.currency || '$'}</span>
-                              <span className="text-2xl font-black">{room.pricePerNight?.toLocaleString() || '0'}</span>
+                              <span className="text-lg font-black">{currentData.pricing?.currency || 'ETB'}</span>
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  value={room.pricePerNight}
+                                  onChange={(e) => {
+                                    const newRooms = [...hotel.rooms];
+                                    newRooms[rIdx] = { ...newRooms[rIdx], pricePerNight: parseNumberInput(e.target.value) };
+                                    handleArrayChange('hotels', idx, 'rooms', newRooms);
+                                  }}
+                                  className="w-20 p-1 bg-gray-50 border border-gray-200 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-2xl font-black">{room.pricePerNight?.toLocaleString() || '0'}</span>
+                              )}
                             </div>
                           ) : (
                             <div className="flex items-center gap-1 text-amber-600">
@@ -1351,10 +1483,37 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                         </div>
                       </div>
 
-                      {room.description && (
-                        <p className="text-sm text-gray-500 leading-relaxed line-clamp-2 italic">
-                          "{room.description}"
-                        </p>
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <textarea
+                            value={room.description_en || ''}
+                            onChange={(e) => {
+                              const newRooms = [...hotel.rooms];
+                              newRooms[rIdx] = { ...newRooms[rIdx], description_en: e.target.value };
+                              handleArrayChange('hotels', idx, 'rooms', newRooms);
+                            }}
+                            className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs"
+                            rows={2}
+                            placeholder="Description (EN)"
+                          />
+                          <textarea
+                            value={room.description_am || ''}
+                            onChange={(e) => {
+                              const newRooms = [...hotel.rooms];
+                              newRooms[rIdx] = { ...newRooms[rIdx], description_am: e.target.value };
+                              handleArrayChange('hotels', idx, 'rooms', newRooms);
+                            }}
+                            className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs"
+                            rows={2}
+                            placeholder="Description (AM)"
+                          />
+                        </div>
+                      ) : (
+                        getLocalizedText(room, 'description', language) && (
+                          <p className="text-sm text-gray-500 leading-relaxed line-clamp-2 italic">
+                            "{getLocalizedText(room, 'description', language)}"
+                          </p>
+                        )
                       )}
                     </div>
                   </div>
@@ -1462,15 +1621,24 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
             <div className="flex justify-between items-start">
               <div>
                 {isEditing ? (
-                  <input
-                    type="text"
-                    value={transport.type}
-                    onChange={(e) => handleArrayChange('transportation', idx, 'type', e.target.value)}
-                    className="text-xl font-serif font-bold text-primary bg-gray-50 border border-gray-200 rounded-lg p-2 w-full"
-                    placeholder="Transport type"
-                  />
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={transport.type_en || ''}
+                      onChange={(e) => handleArrayChange('transportation', idx, 'type_en', e.target.value)}
+                      className="text-xl font-serif font-bold text-primary bg-gray-50 border border-gray-200 rounded-lg p-2 w-full"
+                      placeholder="Transport type (EN)"
+                    />
+                    <input
+                      type="text"
+                      value={transport.type_am || ''}
+                      onChange={(e) => handleArrayChange('transportation', idx, 'type_am', e.target.value)}
+                      className="text-xl font-serif font-bold text-primary bg-gray-50 border border-gray-200 rounded-lg p-2 w-full"
+                      placeholder="Transport type (AM)"
+                    />
+                  </div>
                 ) : (
-                  <h4 className="text-xl font-serif font-bold text-primary">{transport.type}</h4>
+                  <h4 className="text-xl font-serif font-bold text-primary">{getLocalizedText(transport, 'type', language)}</h4>
                 )}
                 {transport.vipIncluded && (
                   <Badge className="mt-2 bg-amber-100 text-amber-700 border-amber-200">VIP Included</Badge>
@@ -1493,15 +1661,24 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
             </div>
             
             {isEditing ? (
-              <textarea
-                value={transport.description || ''}
-                onChange={(e) => handleArrayChange('transportation', idx, 'description', e.target.value)}
-                className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                rows={2}
-                placeholder="Description"
-              />
+              <div className="space-y-2">
+                <textarea
+                  value={transport.description_en || ''}
+                  onChange={(e) => handleArrayChange('transportation', idx, 'description_en', e.target.value)}
+                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                  rows={2}
+                  placeholder="Description (EN)"
+                />
+                <textarea
+                  value={transport.description_am || ''}
+                  onChange={(e) => handleArrayChange('transportation', idx, 'description_am', e.target.value)}
+                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                  rows={2}
+                  placeholder="Description (AM)"
+                />
+              </div>
             ) : (
-              <p className="text-sm text-gray-500">{transport.description}</p>
+              <p className="text-sm text-gray-500">{getLocalizedText(transport, 'description', language)}</p>
             )}
             
             <div className="grid grid-cols-2 gap-6 py-6 border-y border-gray-50">
@@ -1609,48 +1786,35 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
               </h3>
               <div className="space-y-4">
                 {(currentData.services?.foodPackages || []).map((item: any, i: number) => {
-                  const pkgName = typeof item === 'string' ? item : (item.name || item.description || 'Package');
-                  const pkgId = typeof item === 'object' ? item.id : i;
+                  const pkgName = getLocalizedText(item, 'name', language) || 'Package';
+                  const pkgId = item.id || i;
                   return (
                   <div key={pkgId} className="bg-white p-4 rounded-2xl shadow-sm relative space-y-2">
                     <div className="flex items-center gap-3">
                       <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                       {isEditing ? (
-                        <select
-                          value={typeof item === 'object' ? item.name : ''}
-                          onChange={(e) => {
-                            const newPackages = [...(currentData.services?.foodPackages || [])];
-                            const name = e.target.value;
-                            const presets: Record<string, {desc: string, items: string[], price: number}> = {
-                              'Breakfast Only': { desc: 'Continental breakfast with coffee and tea', items: ['Breakfast', 'Coffee', 'Tea'], price: 20 },
-                              'Half Board': { desc: 'Breakfast and dinner included', items: ['Breakfast', 'Dinner'], price: 40 },
-                              'Full Board': { desc: 'All meals included - breakfast, lunch, and dinner', items: ['Breakfast', 'Lunch', 'Dinner'], price: 60 },
-                              'All Inclusive': { desc: 'Unlimited meals, snacks, and drinks', items: ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Drinks'], price: 80 },
-                              'Ethiopian Feast': { desc: 'Traditional Ethiopian cuisine experience', items: ['Injera', 'Wat', 'Bread', 'Coffee Ceremony'], price: 50 },
-                            };
-                            if (typeof newPackages[i] === 'object') {
-                              newPackages[i] = { 
-                                ...newPackages[i], 
-                                name: name,
-                                description: presets[name]?.desc || newPackages[i].description,
-                                items: presets[name]?.items || newPackages[i].items,
-                                pricePerPerson: presets[name]?.price || newPackages[i].pricePerPerson || 0
-                              };
-                            } else {
-                              newPackages[i] = { id: Date.now(), name, description: presets[name]?.desc || '', items: presets[name]?.items || [], pricePerPerson: presets[name]?.price || 0 };
-                            }
-                            handleNestedChange('services', 'foodPackages', newPackages);
-                          }}
-                          className="flex-1 text-sm font-bold text-primary bg-transparent border-b border-gray-200 focus:outline-none"
-                        >
-                          <option value="">Select package...</option>
-                          <option value="Breakfast Only">Breakfast Only</option>
-                          <option value="Half Board">Half Board</option>
-                          <option value="Full Board">Full Board</option>
-                          <option value="All Inclusive">All Inclusive</option>
-                          <option value="Ethiopian Feast">Ethiopian Feast</option>
-                          <option value="Other">Other (Custom)</option>
-                        </select>
+                        <div className="flex-1 space-y-2">
+                          <Input
+                            placeholder="Package Name (EN)"
+                            hideLabel
+                            value={item.name_en || ''}
+                            onChange={(e) => {
+                              const newPackages = [...(currentData.services?.foodPackages || [])];
+                              newPackages[i] = { ...newPackages[i], name_en: e.target.value };
+                              handleNestedChange('services', 'foodPackages', newPackages);
+                            }}
+                          />
+                          <Input
+                            placeholder="Package Name (AM)"
+                            hideLabel
+                            value={item.name_am || ''}
+                            onChange={(e) => {
+                              const newPackages = [...(currentData.services?.foodPackages || [])];
+                              newPackages[i] = { ...newPackages[i], name_am: e.target.value };
+                              handleNestedChange('services', 'foodPackages', newPackages);
+                            }}
+                          />
+                        </div>
                       ) : (
                         <span className="text-sm font-bold text-primary">{pkgName}</span>
                       )}
@@ -1717,148 +1881,95 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
 
             <section className="bg-ethio-bg/30 p-10 rounded-[40px] space-y-6">
               <h3 className="text-xl font-serif font-bold text-primary flex items-center gap-2">
-                <Heart className="w-5 h-5 text-secondary" /> Cultural Services
+                <Heart className="w-5 h-5 text-secondary" /> Cultural & Special Services
               </h3>
-              <div className="space-y-4">
-                 {(currentData.services?.culturalServices || []).map((item: string, i: number) => (
-                   <div key={i} className="flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm relative">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={item}
-                        onChange={(e) => {
-                          const newServices = [...(currentData.services?.culturalServices || [])];
-                          newServices[i] = e.target.value;
-                          handleNestedChange('services', 'culturalServices', newServices);
-                        }}
-                        className="flex-1 text-sm font-bold text-primary bg-transparent border-b border-gray-200 focus:outline-none"
+              <div className="space-y-6">
+                {/* Cultural Services */}
+                <div>
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3">Cultural Experiences</p>
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        hideLabel
+                        value={(currentData.services?.culturalServices_en || []).join(', ')}
+                        onChange={(e) => handleNestedChange('services', 'culturalServices_en', e.target.value.split(',').map(v => v.trim()).filter(Boolean))}
+                        rows={2}
+                        placeholder="Cultural services (EN, comma separated)"
                       />
-                    ) : (
-                      <span className="text-sm font-bold text-primary">{item}</span>
-                    )}
-                    {isEditing && (
-                      <button
-                        onClick={() => {
-                          const newServices = (currentData.services?.culturalServices || []).filter((_: string, idx: number) => idx !== i);
-                          handleNestedChange('services', 'culturalServices', newServices);
-                        }}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                {isEditing && (
-                  <button
-                    onClick={() => {
-                      const newServices = [...(currentData.services?.culturalServices || []), ''];
-                      handleNestedChange('services', 'culturalServices', newServices);
-                    }}
-                    className="text-sm text-primary font-bold mt-2"
-                  >
-                    + Add Cultural Service
-                  </button>
-                )}
-              </div>
-            </section>
+                      <Textarea
+                        hideLabel
+                        value={(currentData.services?.culturalServices_am || []).join(', ')}
+                        onChange={(e) => handleNestedChange('services', 'culturalServices_am', e.target.value.split(',').map(v => v.trim()).filter(Boolean))}
+                        rows={2}
+                        placeholder="Cultural services (AM, comma separated)"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {(currentData.services?.culturalServices_en || currentData.services?.culturalServices || []).map((s: string, si: number) => (
+                        <Badge key={si} variant="outline" className="bg-white">{s}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-            <section className="bg-ethio-bg/30 p-10 rounded-[40px] space-y-6">
-              <h3 className="text-xl font-serif font-bold text-primary flex items-center gap-2">
-                <Users className="w-5 h-5 text-secondary" /> Special Assistance
-              </h3>
-              <div className="space-y-4">
-                {(currentData.services?.specialAssistance || []).map((item: string, i: number) => (
-                  <div key={i} className="flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm relative">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={item}
-                        onChange={(e) => {
-                          const newAssistance = [...(currentData.services?.specialAssistance || [])];
-                          newAssistance[i] = e.target.value;
-                          handleNestedChange('services', 'specialAssistance', newAssistance);
-                        }}
-                        className="flex-1 text-sm font-bold text-primary bg-transparent border-b border-gray-200 focus:outline-none"
+                {/* Special Assistance */}
+                <div>
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3">Special Assistance</p>
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        hideLabel
+                        value={(currentData.services?.specialAssistance_en || []).join(', ')}
+                        onChange={(e) => handleNestedChange('services', 'specialAssistance_en', e.target.value.split(',').map(v => v.trim()).filter(Boolean))}
+                        rows={2}
+                        placeholder="Special assistance (EN, comma separated)"
                       />
-                    ) : (
-                      <span className="text-sm font-bold text-primary">{item}</span>
-                    )}
-                    {isEditing && (
-                      <button
-                        onClick={() => {
-                          const newAssistance = (currentData.services?.specialAssistance || []).filter((_: string, idx: number) => idx !== i);
-                          handleNestedChange('services', 'specialAssistance', newAssistance);
-                        }}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                {isEditing && (
-                  <button
-                    onClick={() => {
-                      const newAssistance = [...(currentData.services?.specialAssistance || []), ''];
-                      handleNestedChange('services', 'specialAssistance', newAssistance);
-                    }}
-                    className="text-sm text-primary font-bold mt-2"
-                  >
-                    + Add Special Assistance
-                  </button>
-                )}
-              </div>
-            </section>
+                      <Textarea
+                        hideLabel
+                        value={(currentData.services?.specialAssistance_am || []).join(', ')}
+                        onChange={(e) => handleNestedChange('services', 'specialAssistance_am', e.target.value.split(',').map(v => v.trim()).filter(Boolean))}
+                        rows={2}
+                        placeholder="Special assistance (AM, comma separated)"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {(currentData.services?.specialAssistance_en || currentData.services?.specialAssistance || []).map((s: string, si: number) => (
+                        <Badge key={si} variant="outline" className="bg-white">{s}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-            <section className="bg-ethio-bg/30 p-10 rounded-[40px] space-y-6">
-              <h3 className="text-xl font-serif font-bold text-primary flex items-center gap-2">
-                <Star className="w-5 h-5 text-secondary" /> Extra Services
-              </h3>
-              <div className="space-y-4">
-                {(currentData.services?.extras || []).map((item: string, i: number) => (
-                  <div key={i} className="flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm relative">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={item}
-                        onChange={(e) => {
-                          const newExtras = [...(currentData.services?.extras || [])];
-                          newExtras[i] = e.target.value;
-                          handleNestedChange('services', 'extras', newExtras);
-                        }}
-                        className="flex-1 text-sm font-bold text-primary bg-transparent border-b border-gray-200 focus:outline-none"
+                {/* Extras */}
+                <div>
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3">Extra Services</p>
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        hideLabel
+                        value={(currentData.services?.extras_en || []).join(', ')}
+                        onChange={(e) => handleNestedChange('services', 'extras_en', e.target.value.split(',').map(v => v.trim()).filter(Boolean))}
+                        rows={2}
+                        placeholder="Extra services (EN, comma separated)"
                       />
-                    ) : (
-                      <span className="text-sm font-bold text-primary">{item}</span>
-                    )}
-                    {isEditing && (
-                      <button
-                        onClick={() => {
-                          const newExtras = (currentData.services?.extras || []).filter((_: string, idx: number) => idx !== i);
-                          handleNestedChange('services', 'extras', newExtras);
-                        }}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                {isEditing && (
-                  <button
-                    onClick={() => {
-                      const newExtras = [...(currentData.services?.extras || []), ''];
-                      handleNestedChange('services', 'extras', newExtras);
-                    }}
-                    className="text-sm text-primary font-bold mt-2"
-                  >
-                    + Add Extra Service
-                  </button>
-                )}
+                      <Textarea
+                        hideLabel
+                        value={(currentData.services?.extras_am || []).join(', ')}
+                        onChange={(e) => handleNestedChange('services', 'extras_am', e.target.value.split(',').map(v => v.trim()).filter(Boolean))}
+                        rows={2}
+                        placeholder="Extra services (AM, comma separated)"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {(currentData.services?.extras_en || currentData.services?.extras || []).map((s: string, si: number) => (
+                        <Badge key={si} variant="outline" className="bg-white">{s}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
           </div>
@@ -1874,17 +1985,27 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   <AlertCircle className="w-4 h-4 text-secondary" /> Cancellation Policy
                 </h4>
                 {isEditing ? (
-                  <textarea
-                    value={currentData.policies?.cancellation || ''}
-                    onChange={(e) => handleNestedChange('policies', 'cancellation', e.target.value)}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
-                    rows={4}
-                  />
+                  <div className="space-y-2">
+                    <Textarea
+                      value={currentData.policies?.cancellation_en || ''}
+                      onChange={(e) => handleNestedChange('policies', 'cancellation_en', e.target.value)}
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+                      rows={3}
+                      placeholder="Cancellation policy (EN)"
+                    />
+                    <Textarea
+                      value={currentData.policies?.cancellation_am || ''}
+                      onChange={(e) => handleNestedChange('policies', 'cancellation_am', e.target.value)}
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+                      rows={3}
+                      placeholder="Cancellation policy (AM)"
+                    />
+                  </div>
                 ) : (
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    {currentData.policies?.cancellation || 'No cancellation policy specified.'}
-                  </p>
-                )}
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {getLocalizedText(currentData.policies, 'cancellation', language) || 'No cancellation policy specified.'}
+                    </p>
+                  )}
               </div>
 
               <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-4">
@@ -1892,17 +2013,27 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   <ShieldCheck className="w-4 h-4 text-secondary" /> Safety Rules
                 </h4>
                 {isEditing ? (
-                  <textarea
-                    value={currentData.policies?.safety || ''}
-                    onChange={(e) => handleNestedChange('policies', 'safety', e.target.value)}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
-                    rows={4}
-                  />
+                  <div className="space-y-2">
+                    <Textarea
+                      value={currentData.policies?.safety_en || ''}
+                      onChange={(e) => handleNestedChange('policies', 'safety_en', e.target.value)}
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+                      rows={3}
+                      placeholder="Safety rules (EN)"
+                    />
+                    <Textarea
+                      value={currentData.policies?.safety_am || ''}
+                      onChange={(e) => handleNestedChange('policies', 'safety_am', e.target.value)}
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+                      rows={3}
+                      placeholder="Safety rules (AM)"
+                    />
+                  </div>
                 ) : (
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    {currentData.policies?.safety || 'No safety rules specified.'}
-                  </p>
-                )}
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {getLocalizedText(currentData.policies, 'safety', language) || 'No safety rules specified.'}
+                    </p>
+                  )}
               </div>
 
               <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-4">
@@ -1910,11 +2041,11 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   <Users className="w-4 h-4 text-secondary" /> Age Restrictions
                 </h4>
                 {isEditing ? (
-                  <textarea
+                  <Input
                     value={currentData.policies?.ageRestriction || ''}
                     onChange={(e) => handleNestedChange('policies', 'ageRestriction', e.target.value)}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
-                    rows={4}
+                    className="w-full"
+                    placeholder="e.g. All ages, 18+"
                   />
                 ) : (
                   <p className="text-sm text-gray-600 leading-relaxed">
@@ -1928,17 +2059,27 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   <Info className="w-4 h-4 text-secondary" /> Terms & Conditions
                 </h4>
                 {isEditing ? (
-                  <textarea
-                    value={currentData.policies?.terms || ''}
-                    onChange={(e) => handleNestedChange('policies', 'terms', e.target.value)}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
-                    rows={4}
-                  />
+                  <div className="space-y-2">
+                    <Textarea
+                      value={currentData.policies?.terms_en || ''}
+                      onChange={(e) => handleNestedChange('policies', 'terms_en', e.target.value)}
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+                      rows={3}
+                      placeholder="Terms (EN)"
+                    />
+                    <Textarea
+                      value={currentData.policies?.terms_am || ''}
+                      onChange={(e) => handleNestedChange('policies', 'terms_am', e.target.value)}
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+                      rows={3}
+                      placeholder="Terms (AM)"
+                    />
+                  </div>
                 ) : (
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    {currentData.policies?.terms || 'No terms and conditions specified.'}
-                  </p>
-                )}
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {getLocalizedText(currentData.policies, 'terms', language) || 'No terms and conditions specified.'}
+                    </p>
+                  )}
               </div>
             </div>
           </div>
