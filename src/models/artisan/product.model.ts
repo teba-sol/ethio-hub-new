@@ -137,9 +137,7 @@ const ProductSchema = new Schema<IProduct>(
       default: 0,
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 ProductSchema.index({ artisanId: 1, status: 1 });

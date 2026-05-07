@@ -8,6 +8,7 @@ export interface IScheduleItem extends Document {
   title_am: string;
   activities: string;
   performers: string[];
+  image?: string;
 }
 
 export interface ITicketType {

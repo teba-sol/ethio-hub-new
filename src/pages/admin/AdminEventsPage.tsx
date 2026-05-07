@@ -48,6 +48,633 @@ const getStringValue = (value: any): string => {
 type VerificationStatus = 'Not Submitted' | 'Pending Approval' | 'Under Review' | 'Approved' | 'Rejected';
 type AccountStatus = 'Active' | 'Suspended' | 'Deleted';
 
+const calculateEstimatedCommission = (event: Event) => {
+  const totalPotentialRevenue = (event.ticketTypes || []).reduce((acc, ticket) => acc + (ticket.price * ticket.quantity), 0);
+  return (totalPotentialRevenue * event.commissionRate) / 100;
+};
+
+// --- Modals (Defined Outside to prevent re-mounting) ---
+
+const ResubmitModal = ({ event, onClose, onResubmit, t, getString }: { 
+  event: Event; 
+  onClose: () => void; 
+  onResubmit: (id: string, note: string) => void;
+  t: any; 
+  getString: any 
+}) => {
+  const [resubmissionNote, setResubmissionNote] = useState('');
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <AlertCircle className="w-6 h-6 text-amber-500" /> {t("admin.requestResubmission")}
+          </h2>
+          <button onClick={onClose}><XCircle className="w-6 h-6 text-gray-400 hover:text-gray-600" /></button>
+        </div>
+        
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            {t("admin.resubmit.youAreAsking")} <span className="font-bold text-gray-800">{getString(event.organizer.name)}</span> {t("admin.resubmit.toResubmit")} <span className="font-bold text-gray-800">{getString(event.title)}</span>.
+          </p>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">{t("admin.itemsToCorrect")} <span className="text-red-500">*</span></label>
+            <textarea 
+              className="w-full p-4 bg-white border-2 border-gray-200 rounded-2xl focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none min-h-[150px] text-sm text-gray-700 transition-all resize-y"
+              placeholder={t("admin.itemsToCorrectPlaceholder")}
+              value={resubmissionNote}
+              onChange={(e) => setResubmissionNote(e.target.value)}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
+            <Button className="bg-amber-500 hover:bg-amber-600 border-amber-500 text-white" onClick={() => {
+              onResubmit(event.id, resubmissionNote);
+            }}>
+              {t("admin.sendRequest")}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const OrganizerProfileModal = ({ organizer, onClose, t, getString }: { organizer: OrganizerProfile; onClose: () => void; t: any; getString: any }) => (
+  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
+      <div className="flex justify-between items-start mb-6">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xl">
+            {getString(organizer.name).charAt(0)}
+          </div>
+          <div>
+            <h3 className="font-bold text-gray-800 text-lg">{getString(organizer.name)}</h3>
+            <div className="flex items-center gap-2">
+              {organizer.isVerified ? 
+                <span className="text-xs font-bold text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Verified</span> :
+                <span className="text-xs font-bold text-gray-500">Unverified</span>
+              }
+              <span className={`text-xs px-2 py-0.5 rounded-full ${organizer.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                {getString(organizer.status)}
+              </span>
+            </div>
+          </div>
+        </div>
+        <button onClick={onClose}><XCircle className="w-6 h-6 text-gray-400 hover:text-gray-600" /></button>
+      </div>
+      
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-3 bg-gray-50 rounded-xl">
+            <p className="text-xs text-gray-500 uppercase font-bold">Past Events</p>
+            <p className="text-xl font-bold text-gray-800">{getString(organizer.pastEvents)}</p>
+          </div>
+          <div className="p-3 bg-gray-50 rounded-xl">
+            <p className="text-xs text-gray-500 uppercase font-bold">Total Revenue</p>
+            <p className="text-xl font-bold text-gray-800">ETB {(organizer.totalRevenue / 1000).toFixed(1)}k</p>
+          </div>
+          <div className="p-3 bg-gray-50 rounded-xl">
+            <p className="text-xs text-gray-500 uppercase font-bold">Cancel Rate</p>
+            <p className={`text-xl font-bold ${parseInt(organizer.cancellationRate) > 10 ? 'text-red-600' : 'text-emerald-600'}`}>
+              {getString(organizer.cancellationRate)}
+            </p>
+          </div>
+          <div className="p-3 bg-gray-50 rounded-xl">
+            <p className="text-xs text-gray-500 uppercase font-bold">Reports</p>
+            <p className={`text-xl font-bold ${organizer.reportHistory > 0 ? 'text-red-600' : 'text-gray-800'}`}>
+              {getString(organizer.reportHistory)}
+            </p>
+          </div>
+        </div>
+        
+        {organizer.reportHistory > 0 && (
+          <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-red-700">Risk Warning</p>
+              <p className="text-xs text-red-600">This organizer has a history of reports. Review carefully.</p>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
+        <Button variant="outline" size="sm" onClick={onClose}>{t("common.close")}</Button>
+      </div>
+    </div>
+  </div>
+);
+
+const RejectionModal = ({ event, onClose, onReject, t, getString }: { 
+  event: Event; 
+  onClose: () => void; 
+  onReject: (id: string, reason: string, type: string) => void; 
+  t: any; 
+  getString: any 
+}) => {
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectionType, setRejectionType] = useState('Incomplete information');
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <XCircle className="w-6 h-6 text-red-500" /> {t("admin.rejectEvent")}
+          </h2>
+          <button onClick={onClose}><XCircle className="w-6 h-6 text-gray-400 hover:text-gray-600" /></button>
+        </div>
+        
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            {t("admin.youAreRejecting")} <span className="font-bold text-gray-800">{getString(event.title)}</span>. {t("admin.willNotifyOrganizer")}
+          </p>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">{t("admin.reasonForRejection")} <span className="text-red-500">*</span></label>
+            <select 
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500/20 outline-none"
+              value={rejectionType}
+              onChange={(e) => setRejectionType(e.target.value)}
+            >
+              <option value="Incomplete information">{t("admin.reasons.incompleteInfo")}</option>
+              <option value="Invalid location">{t("admin.reasons.invalidLocation")}</option>
+              <option value="Suspicious activity">{t("admin.reasons.suspiciousActivity")}</option>
+              <option value="Policy violation">{t("admin.reasons.policyViolation")}</option>
+              <option value="Duplicate event">{t("admin.reasons.duplicateEvent")}</option>
+              <option value="Other">{t("admin.reasons.other")}</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">{t("admin.customMessage")}</label>
+            <textarea 
+              className="w-full p-4 bg-white border-2 border-gray-200 rounded-2xl focus:border-red-500 focus:ring-4 focus:ring-red-500/10 outline-none min-h-[180px] text-sm text-gray-700 transition-all resize-y"
+              placeholder={t("admin.customMessagePlaceholder")}
+              rows={6}
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
+            <Button className="bg-red-500 hover:bg-red-600 border-red-500 text-white" onClick={() => {
+              if (rejectionReason.trim()) {
+                onReject(event.id, rejectionReason, rejectionType);
+              } else {
+                alert(t('messages.saving') || 'Please provide a rejection reason');
+              }
+            }}>
+              {t("admin.confirmRejection")}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ApprovalModal = ({ event, onClose, onApprove, t, getString }: { 
+  event: Event; 
+  onClose: () => void; 
+  onApprove: (id: string, note: string) => void; 
+  t: any; 
+  getString: any 
+}) => {
+  const [approvalNote, setApprovalNote] = useState('');
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <CheckCircle2 className="w-6 h-6 text-emerald-500" /> {t("admin.approveEvent")}
+          </h2>
+          <button onClick={onClose}><XCircle className="w-6 h-6 text-gray-400 hover:text-gray-600" /></button>
+        </div>
+        
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            {t("admin.approveConfirmationEvent").replace('{event}', getString(event.title))}
+          </p>
+
+          <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-emerald-800 font-medium">{t("admin.commissionRate")}:</span>
+              <span className="font-bold text-emerald-900">{getString(event.commissionRate)}%</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-emerald-800 font-medium">{t("admin.estimatedCommission")}:</span>
+              <span className="font-bold text-emerald-900">ETB {calculateEstimatedCommission(event).toLocaleString()}</span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">{t("admin.optionalNote")}</label>
+            <textarea 
+              className="w-full p-4 bg-white border-2 border-gray-200 rounded-2xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none min-h-[100px] text-sm text-gray-700 transition-all resize-y"
+              placeholder={t("admin.optionalNotePlaceholder")}
+              value={approvalNote}
+              onChange={(e) => setApprovalNote(e.target.value)}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
+            <Button className="bg-emerald-500 hover:bg-emerald-600 border-emerald-500 text-white" onClick={() => {
+              onApprove(event.id, approvalNote);
+            }}>
+              {t("admin.confirmApproval")}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const EventDetailsModal = ({ event, onClose, onResubmit, onReject, onApprove, onViewOrganizer, t, getString }: { 
+  event: Event; 
+  onClose: () => void; 
+  onResubmit: (event: Event) => void;
+  onReject: (event: Event) => void;
+  onApprove: (event: Event) => void;
+  onViewOrganizer: (organizer: OrganizerProfile) => void;
+  t: any; 
+  getString: any;
+}) => {
+  const statusSteps = ['pendingApproval', 'underReview', 'published'];
+  const normalizedStatus = ((event as any).verificationStatus || event.status) as string;
+  const stepStatusMap: Record<string, string> = {
+    pending_approval: 'pendingApproval',
+    'Pending Approval': 'pendingApproval',
+    under_review: 'underReview',
+    'Under Review': 'underReview',
+    approved: 'published',
+    Approved: 'published',
+    rejected: 'underReview',
+    Rejected: 'underReview',
+  };
+  const currentStepIndex = Math.max(0, statusSteps.indexOf(stepStatusMap[normalizedStatus] || 'pendingApproval'));
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-[32px] w-full max-w-6xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
+        {/* Modal Header */}
+        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white z-10">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">{t("events.eventDetails")}</h2>
+            <p className="text-sm text-gray-500">ID: {getString(event.id)} • Submitted: {getString(event.submittedAt)}</p>
+          </div>
+          <div className="flex gap-2">
+      {['pending_approval', 'under_review', 'Pending Approval', 'Under Review'].includes((event as any).verificationStatus || event.status) && (
+        <>
+          <Button variant="outline" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => onResubmit(event)}>{t("admin.requestResubmission")}</Button>
+          <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => onReject(event)}>{t("admin.reject")}</Button>
+          <Button className="bg-emerald-500 hover:bg-emerald-600 border-emerald-500" onClick={() => onApprove(event)}>{t("admin.approve")}</Button>
+        </>
+      )}
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full ml-2">
+              <XCircle className="w-6 h-6 text-gray-400" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+          {/* Rejection Reason Banner */}
+          {(event as any).rejectionReason && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-bold text-red-700">{t("admin.rejectionReason")}</p>
+                  <p className="text-xs text-red-600 mt-1">{getString((event as any).rejectionReason)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Re-verification Banner */}
+          {(event as any).isEditedAfterApproval && ['Pending Approval', 'pending_approval'].includes((event as any).verificationStatus) && (
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-bold text-amber-700">{t("status.pendingReVerification")}</p>
+                  <p className="text-xs text-amber-600 mt-1">{t("admin.organizerChanges")}</p>
+                  {(event as any).lastEditedAt && (
+                    <p className="text-[10px] text-amber-500 mt-1">{t("admin.lastEdited")} {new Date((event as any).lastEditedAt).toLocaleString()}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Progress Indicator */}
+          <div className="mb-10">
+            <div className="flex items-center justify-between max-w-2xl mx-auto relative">
+              <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-100 -translate-y-1/2 z-0"></div>
+              <div 
+                className="absolute top-1/2 left-0 h-0.5 bg-emerald-500 -translate-y-1/2 z-0 transition-all duration-500" 
+                style={{ width: `${(currentStepIndex / (statusSteps.length - 1)) * 100}%` }}
+              ></div>
+              
+              {statusSteps.map((step, idx) => (
+                <div key={step} className="relative z-10 flex flex-col items-center">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center border-4 transition-all duration-300 ${
+                    idx <= currentStepIndex 
+                      ? 'bg-emerald-500 border-emerald-100 text-white' 
+                      : 'bg-white border-gray-100 text-gray-300'
+                  }`}>
+                    {idx < currentStepIndex ? <Check className="w-5 h-5" /> : <span className="text-xs font-bold">{idx + 1}</span>}
+                  </div>
+                   <span className={`text-[10px] font-bold mt-2 uppercase tracking-widest ${idx <= currentStepIndex ? 'text-emerald-600' : 'text-gray-400'}`}>
+                     {t(`status.${step}`)}
+                   </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Left Column: Event Media & Core Info (8 cols) */}
+            <div className="lg:col-span-8 space-y-8">
+               {/* Media Gallery */}
+               <div className="space-y-4">
+                 <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
+                   <LayoutGrid className="w-5 h-5 text-primary" /> {t("events.sections.media")}
+                 </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-3">
+                    <img src={event.bannerImage} className="w-full h-80 object-cover rounded-2xl shadow-sm" alt="Banner" />
+                  </div>
+                  {(event.images || []).map((img, idx) => (
+                    <div key={idx} className="h-40 rounded-xl overflow-hidden border border-gray-100 shadow-sm">
+                      <img src={img} className="w-full h-full object-cover hover:scale-110 transition-transform duration-500" alt={`Gallery ${idx}`} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Core Information */}
+              <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <FileText className="w-4 h-4" /> {t("events.sections.coreInfo")}
+                </h3>
+                <h1 className="text-3xl font-serif font-bold text-gray-900 mb-4">{getString(event.title)}</h1>
+                <p className="text-gray-600 leading-relaxed mb-6">{getString(event.description)}</p>
+                 
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t("events.date")}</p>
+                    <p className="text-sm font-bold text-gray-800 flex items-center gap-1">
+                       <Calendar className="w-3.5 h-3.5 text-primary" /> {getString(event.date)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t("events.time")}</p>
+                    <p className="text-sm font-bold text-gray-800 flex items-center gap-1">
+                       <Clock className="w-3.5 h-3.5 text-primary" /> {getString(event.time)}
+                    </p>
+                  </div>
+                   <div>
+                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t("events.location")}</p>
+                     <p className="text-sm font-bold text-gray-800 flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5 text-primary" /> {getString(event.location.city)}
+                     </p>
+                   </div>
+                   <div>
+                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t("events.capacity")}</p>
+                     <p className="text-sm font-bold text-gray-800 flex items-center gap-1">
+                       <Shield className="w-3.5 h-3.5 text-primary" /> {getString(event.capacity)}
+                     </p>
+                   </div>
+                </div>
+              </div>
+
+              {/* Schedule & Logistics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                 <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                   <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                     <Clock className="w-4 h-4" /> {t("events.sections.schedule")}
+                   </h3>
+                  <div className="space-y-4">
+                    {(event.schedule || []).map((item, i) => (
+                      <div key={i} className="flex justify-between items-center p-3 hover:bg-gray-50 rounded-xl transition-colors border border-transparent hover:border-gray-100">
+                        <span className="text-xs font-bold text-primary">{getString(item.time)}</span>
+                        <span className="text-xs text-gray-700 font-medium">{getString(item.activity || item.title || item.title_en)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                   <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                     <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                       <MapPin className="w-4 h-4" /> {t("events.sections.hotels")}
+                     </h3>
+                    <div className="space-y-4">
+                     {Array.isArray(event.hotels) ? event.hotels.map((h, i) => (
+                           <div key={i} className="text-xs flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                             <div>
+                               <p className="font-bold text-gray-800">{getString(h.name)}</p>
+                               <p className="text-[10px] text-gray-500">{getString(h.distance || h.address)}</p>
+                             </div>
+                             <span className="font-bold text-primary">{getString(h.price || h.pricing || '')}</span>
+                           </div>
+                         )) : []}
+                    </div>
+                  </div>
+
+                   <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                     <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                       <Flag className="w-4 h-4" /> {t("events.sections.transportation")}
+                     </h3>
+                    <div className="space-y-3">
+                       {Array.isArray(event.transportation) ? event.transportation.map((t, i) => (
+                         <div key={i} className="p-3 bg-gray-50 rounded-xl">
+                           <p className="text-[10px] font-bold text-primary uppercase mb-1">{getString(t.type || t.type_en)} • {getString(t.provider)}</p>
+                           <p className="text-[10px] text-gray-600 leading-tight">{getString(t.details || t.description || t.description_en)}</p>
+                         </div>
+                       )) : []}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Documents Section */}
+              <div className="space-y-4">
+                <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" /> {t("events.submittedDocuments")}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(event.documents || []).map((doc) => (
+                    <div key={doc.id} className="p-4 bg-white border border-gray-100 rounded-2xl flex items-center gap-4 hover:shadow-md transition-all group">
+                      <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                        <img src={doc.thumbnail} className="w-full h-full object-cover" alt="" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-800 text-sm truncate">{getString(doc.name)}</p>
+                        <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{getString(doc.type)}</p>
+                        {doc.expiryDate && (
+                          <p className="text-[10px] text-amber-600 font-bold mt-1 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" /> Expires: {getString(doc.expiryDate)}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <button className="p-2 bg-gray-50 text-gray-500 hover:bg-primary hover:text-white rounded-lg transition-all" title={t("documents.preview")}>
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button className="p-2 bg-gray-50 text-gray-500 hover:bg-primary hover:text-white rounded-lg transition-all" title={t("documents.download")}>
+                          <Download className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Organizer, Pricing, Policies (4 cols) */}
+            <div className="lg:col-span-4 space-y-6">
+              {/* Pricing Card */}
+              <div className="bg-[#1a1c23] p-6 rounded-[24px] text-white shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4" /> Pricing Structure
+                </h3>
+                <div className="space-y-6">
+                  {(event.ticketTypes || []).map((ticket, i) => (
+                    <div key={i} className="flex justify-between items-end border-b border-white/10 pb-4">
+                      <div>
+                        <p className="text-xs text-gray-400 font-bold uppercase">{getString(ticket.name)} Ticket</p>
+                        <p className="text-2xl font-bold">ETB {ticket.price.toLocaleString()}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-gray-500">Allocation</p>
+                        <p className="text-sm font-bold">{getString(ticket.quantity)}</p>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-2">
+                    <div className="flex justify-between text-sm text-emerald-400 font-bold">
+                      <span>Platform Commission ({getString(event.commissionRate)}%)</span>
+                      <span>ETB {calculateEstimatedCommission(event).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Services & Policies */}
+              <div className="space-y-4">
+                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <Shield className="w-4 h-4" /> Services & Policies
+                  </h3>
+                  <div className="space-y-6">
+                     <div>
+                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Included Services</p>
+                       <div className="flex flex-wrap gap-2">
+{Array.isArray((event as any).services?.foodPackages) ? ((event as any).services.foodPackages || []).map((s: any, i: number) => (
+                            <span key={`food-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                              {s.name || s}
+                            </span>
+                          )) : []}
+                     {(((event as any).services?.culturalServices as any[]) || []).map((s: any, i: number) => (
+                            <span key={`cultural-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                              {s}
+                            </span>
+                          ))}
+                         {(((event as any).services?.specialAssistance as any[]) || []).map((s: any, i: number) => (
+                            <span key={`special-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                              {s}
+                            </span>
+                          ))}
+                         {(((event as any).services?.extras as any[]) || []).map((s: any, i: number) => (
+                            <span key={`extra-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                              {s}
+                            </span>
+                          ))}
+                       </div>
+                     </div>
+                     <div>
+                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">{t("events.eventPolicies")}</p>
+                      <ul className="space-y-3">
+                        {(event.policies || []).map((p, i) => (
+                          <li key={i} className="text-xs text-gray-600 flex items-start gap-3">
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0"></div>
+                            {getString(p)}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Organizer Card */}
+              <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-bold text-gray-800">{t("events.sections.organizerInfo")}</h3>
+                  <Button size="sm" variant="ghost" onClick={() => onViewOrganizer(event.organizer)}>{t("admin.viewProfile")}</Button>
+                </div>
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xl">
+                    {getString(event.organizer.name).charAt(0)}
+                  </div>
+                  <div>
+                     <p className="font-bold text-gray-900">{getString(event.organizer.name)}</p>
+                    <p className="text-xs text-gray-500">{getString(event.organizer.email)}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-50 p-3 rounded-xl text-center">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">{t("events.pastEvents")}</p>
+                    <p className="text-lg font-bold text-gray-800">{getString(event.organizer.pastEvents)}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-xl text-center">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">{t("events.verified")}</p>
+                    <p className={`text-lg font-bold ${event.organizer.isVerified ? 'text-emerald-600' : 'text-gray-400'}`}>
+                      {event.organizer.isVerified ? t("common.yes") : t("common.no")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Risk Indicators */}
+              <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  <Shield className="w-4 h-4" /> {t("events.sections.risk")}
+                </h3>
+                <div className="space-y-3">
+                  {event.riskBadges && event.riskBadges.length > 0 ? (
+                    event.riskBadges.map((badge, idx) => (
+                      <div key={idx} className="flex items-center gap-3 p-3 bg-amber-50 text-amber-700 rounded-xl text-xs font-bold border border-amber-100">
+                        <AlertTriangle className="w-4 h-4 shrink-0" /> {getString(badge)}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex items-center gap-3 p-3 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold border border-emerald-100">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" /> {t("events.lowRisk")}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 interface VerificationDocument {
   id: string;
   name: string;
@@ -219,6 +846,11 @@ export const AdminEventsPage: React.FC = () => {
   const [resubmitEvent, setResubmitEvent] = useState<any | null>(null);
   const [viewOrganizer, setViewOrganizer] = useState<any | null>(null);
 
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempDateRange, setTempDateRange] = useState({ start: '', end: '' });
+  const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
+
   const fetchEvents = async () => {
     setLoading(true);
     try {
@@ -244,7 +876,7 @@ export const AdminEventsPage: React.FC = () => {
     fetchEvents();
   }, [filterStatus]);
 
-  const handleApprove = async (id: string) => {
+  const handleApprove = async (id: string, note?: string) => {
     const previousEvents = [...events];
     setEvents(prev => prev.map(ev => 
       ev.id === id ? { ...ev, verificationStatus: 'approved' } : ev
@@ -252,7 +884,11 @@ export const AdminEventsPage: React.FC = () => {
     
     setActionLoading(id);
     try {
-      const res = await fetch(`/api/admin/events/${id}/approve`, { method: 'POST' });
+      const res = await fetch(`/api/admin/events/${id}/approve`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note }),
+      });
       const data = await res.json();
       if (data.success) {
         setApproveEvent(null);
@@ -302,12 +938,12 @@ export const AdminEventsPage: React.FC = () => {
     }
   };
 
-  const handleReject = async (id: string) => {
-    if (!rejectionReason.trim()) return;
+  const handleReject = async (id: string, reason: string, type: string) => {
+    const fullReason = type === 'Other' ? reason : `${type}: ${reason}`;
     
     const previousEvents = [...events];
     setEvents(prev => prev.map(ev => 
-      ev.id === id ? { ...ev, verificationStatus: 'rejected', rejectionReason: rejectionReason } : ev
+      ev.id === id ? { ...ev, verificationStatus: 'rejected', rejectionReason: fullReason } : ev
     ));
     
     setActionLoading(id);
@@ -315,12 +951,11 @@ export const AdminEventsPage: React.FC = () => {
       const res = await fetch(`/api/admin/events/${id}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: rejectionReason }),
+        body: JSON.stringify({ reason: fullReason }),
       });
       const data = await res.json();
       if (data.success) {
         setRejectEvent(null);
-        setRejectionReason('');
         fetchEvents();
       } else {
         setEvents(previousEvents);
@@ -333,6 +968,13 @@ export const AdminEventsPage: React.FC = () => {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const handleResubmit = async (id: string, note: string) => {
+    // API implementation for resubmission request
+    console.log('Requesting resubmission:', id, note);
+    setResubmitEvent(null);
+    // Add API call here if needed
   };
 
   const filteredEvents = events.filter((event: any) => {
@@ -356,22 +998,6 @@ export const AdminEventsPage: React.FC = () => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
-
-  // Rejection State
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [rejectionType, setRejectionType] = useState('Incomplete information');
-
-  // Resubmission State
-  const [resubmissionNote, setResubmissionNote] = useState('');
-
-  // Approval State
-  const [approvalNote, setApprovalNote] = useState('');
-
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [tempDateRange, setTempDateRange] = useState({ start: '', end: '' });
-
-  const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
 
   // Toggle action menu
   const toggleActionMenu = (id: string) => {
@@ -405,602 +1031,56 @@ export const AdminEventsPage: React.FC = () => {
     setSelectedEventIds([]);
   };
 
-  const calculateEstimatedCommission = (event: Event) => {
-    const totalPotentialRevenue = event.ticketTypes.reduce((acc, ticket) => acc + (ticket.price * ticket.quantity), 0);
-    return (totalPotentialRevenue * event.commissionRate) / 100;
-  };
-
-   const ResubmitModal = ({ event, onClose }: { event: Event; onClose: () => void }) => (
-     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-       <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6">
-         <div className="flex justify-between items-center mb-6">
-           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-             <AlertCircle className="w-6 h-6 text-amber-500" /> {t("admin.requestResubmission")}
-           </h2>
-           <button onClick={onClose}><XCircle className="w-6 h-6 text-gray-400 hover:text-gray-600" /></button>
-         </div>
-         
-         <div className="space-y-4">
-           <p className="text-sm text-gray-600">
-             {t("admin.resubmit.youAreAsking")} <span className="font-bold text-gray-800">{getString(event.organizer.name)}</span> {t("admin.resubmit.toResubmit")} <span className="font-bold text-gray-800">{getString(event.title)}</span>.
-           </p>
-
-           <div>
-             <label className="block text-sm font-bold text-gray-700 mb-1">{t("admin.itemsToCorrect")} <span className="text-red-500">*</span></label>
-             <textarea 
-               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 outline-none min-h-[120px]"
-               placeholder={t("admin.itemsToCorrectPlaceholder")}
-               value={resubmissionNote}
-               onChange={(e) => setResubmissionNote(e.target.value)}
-             />
-           </div>
-
-           <div className="flex justify-end gap-3 pt-4">
-             <Button variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
-             <Button className="bg-amber-500 hover:bg-amber-600 border-amber-500 text-white" onClick={() => {
-               console.log('Resubmission Requested:', event.id, resubmissionNote);
-               onClose();
-             }}>
-               {t("admin.sendRequest")}
-             </Button>
-           </div>
-         </div>
-       </div>
-     </div>
-   );
-
-  // --- Modals ---
-
-   const OrganizerProfileModal = ({ organizer, onClose }: { organizer: OrganizerProfile; onClose: () => void }) => (
-     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
-       <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
-         <div className="flex justify-between items-start mb-6">
-           <div className="flex items-center gap-4">
-             <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xl">
-               {getString(organizer.name).charAt(0)}
-             </div>
-             <div>
-               <h3 className="font-bold text-gray-800 text-lg">{getString(organizer.name)}</h3>
-              <div className="flex items-center gap-2">
-                {organizer.isVerified ? 
-                  <span className="text-xs font-bold text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Verified</span> :
-                  <span className="text-xs font-bold text-gray-500">Unverified</span>
-                }
-                <span className={`text-xs px-2 py-0.5 rounded-full ${organizer.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                  {getString(organizer.status)}
-                </span>
-              </div>
-            </div>
-          </div>
-          <button onClick={onClose}><XCircle className="w-6 h-6 text-gray-400 hover:text-gray-600" /></button>
-        </div>
-        
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-3 bg-gray-50 rounded-xl">
-              <p className="text-xs text-gray-500 uppercase font-bold">Past Events</p>
-              <p className="text-xl font-bold text-gray-800">{getString(organizer.pastEvents)}</p>
-            </div>
-            <div className="p-3 bg-gray-50 rounded-xl">
-              <p className="text-xs text-gray-500 uppercase font-bold">Total Revenue</p>
-              <p className="text-xl font-bold text-gray-800">ETB {(organizer.totalRevenue / 1000).toFixed(1)}k</p>
-            </div>
-            <div className="p-3 bg-gray-50 rounded-xl">
-              <p className="text-xs text-gray-500 uppercase font-bold">Cancel Rate</p>
-              <p className={`text-xl font-bold ${parseInt(organizer.cancellationRate) > 10 ? 'text-red-600' : 'text-emerald-600'}`}>
-                {getString(organizer.cancellationRate)}
-              </p>
-            </div>
-            <div className="p-3 bg-gray-50 rounded-xl">
-              <p className="text-xs text-gray-500 uppercase font-bold">Reports</p>
-              <p className={`text-xl font-bold ${organizer.reportHistory > 0 ? 'text-red-600' : 'text-gray-800'}`}>
-                {getString(organizer.reportHistory)}
-              </p>
-            </div>
-          </div>
-          
-          {organizer.reportHistory > 0 && (
-            <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-bold text-red-700">Risk Warning</p>
-                <p className="text-xs text-red-600">This organizer has a history of reports. Review carefully.</p>
-              </div>
-            </div>
-          )}
-        </div>
-        
-        <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
-          <Button variant="outline" size="sm" onClick={onClose}>Close Profile</Button>
-        </div>
-      </div>
-    </div>
-  );
-
-   const RejectionModal = ({ event, onClose }: { event: Event; onClose: () => void }) => (
-     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-       <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6">
-         <div className="flex justify-between items-center mb-6">
-           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-             <XCircle className="w-6 h-6 text-red-500" /> {t("admin.rejectEvent")}
-           </h2>
-           <button onClick={onClose}><XCircle className="w-6 h-6 text-gray-400 hover:text-gray-600" /></button>
-         </div>
-         
-         <div className="space-y-4">
-           <p className="text-sm text-gray-600">
-             {t("admin.youAreRejecting")} <span className="font-bold text-gray-800">{getString(event.title)}</span>. {t("admin.willNotifyOrganizer")}
-           </p>
-
-           <div>
-             <label className="block text-sm font-bold text-gray-700 mb-1">{t("admin.reasonForRejection")} <span className="text-red-500">*</span></label>
-             <select 
-               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500/20 outline-none"
-               value={rejectionType}
-               onChange={(e) => setRejectionType(e.target.value)}
-             >
-               <option value="Incomplete information">{t("admin.reasons.incompleteInfo")}</option>
-               <option value="Invalid location">{t("admin.reasons.invalidLocation")}</option>
-               <option value="Suspicious activity">{t("admin.reasons.suspiciousActivity")}</option>
-               <option value="Policy violation">{t("admin.reasons.policyViolation")}</option>
-               <option value="Duplicate event">{t("admin.reasons.duplicateEvent")}</option>
-               <option value="Other">{t("admin.reasons.other")}</option>
-             </select>
-           </div>
-
-           <div>
-             <label className="block text-sm font-bold text-gray-700 mb-1">{t("admin.customMessage")}</label>
-             <textarea 
-               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500/20 outline-none min-h-[100px]"
-               placeholder={t("admin.customMessagePlaceholder")}
-               value={rejectionReason}
-               onChange={(e) => setRejectionReason(e.target.value)}
-             />
-           </div>
-
-           <div className="flex justify-end gap-3 pt-4">
-             <Button variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
-             <Button className="bg-red-500 hover:bg-red-600 border-red-500 text-white" onClick={() => {
-               if (rejectionReason.trim()) {
-                 handleReject(event.id);
-                 onClose();
-               } else {
-                 alert(t('messages.saving') || 'Please provide a rejection reason');
-               }
-             }}>
-               {t("admin.confirmRejection")}
-             </Button>
-           </div>
-         </div>
-       </div>
-     </div>
-   );
-
-   const ApprovalModal = ({ event, onClose }: { event: Event; onClose: () => void }) => (
-     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-       <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6">
-         <div className="flex justify-between items-center mb-6">
-           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-             <CheckCircle2 className="w-6 h-6 text-emerald-500" /> {t("admin.approveEvent")}
-           </h2>
-           <button onClick={onClose}><XCircle className="w-6 h-6 text-gray-400 hover:text-gray-600" /></button>
-         </div>
-         
-         <div className="space-y-4">
-           <p className="text-sm text-gray-600">
-             {t("admin.approveConfirmation").replace('{event}', getString(event.title))}
-           </p>
-
-           <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-             <div className="flex justify-between text-sm mb-1">
-               <span className="text-emerald-800 font-medium">{t("admin.commissionRate")}:</span>
-               <span className="font-bold text-emerald-900">{getString(event.commissionRate)}%</span>
-             </div>
-             <div className="flex justify-between text-sm">
-               <span className="text-emerald-800 font-medium">{t("admin.estimatedCommission")}:</span>
-               <span className="font-bold text-emerald-900">ETB {calculateEstimatedCommission(event).toLocaleString()}</span>
-             </div>
-           </div>
-
-           <div>
-             <label className="block text-sm font-bold text-gray-700 mb-1">{t("admin.optionalNote")}</label>
-             <textarea 
-               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 outline-none min-h-[80px]"
-               placeholder={t("admin.optionalNotePlaceholder")}
-               value={approvalNote}
-               onChange={(e) => setApprovalNote(e.target.value)}
-             />
-           </div>
-
-           <div className="flex justify-end gap-3 pt-4">
-             <Button variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
-             <Button className="bg-emerald-500 hover:bg-emerald-600 border-emerald-500 text-white" onClick={() => {
-               handleApprove(event.id);
-               onClose();
-             }}>
-               {t("admin.confirmApproval")}
-             </Button>
-           </div>
-         </div>
-       </div>
-     </div>
-   );
-
-  const EventDetailsModal = ({ event, onClose }: { event: Event; onClose: () => void }) => {
-    const statusSteps = ['pendingApproval', 'underReview', 'published'];
-    const normalizedStatus = ((event as any).verificationStatus || event.status) as string;
-    const stepStatusMap: Record<string, string> = {
-      pending_approval: 'pendingApproval',
-      'Pending Approval': 'pendingApproval',
-      under_review: 'underReview',
-      'Under Review': 'underReview',
-      approved: 'published',
-      Approved: 'published',
-      rejected: 'underReview',
-      Rejected: 'underReview',
-    };
-    const currentStepIndex = Math.max(0, statusSteps.indexOf(stepStatusMap[normalizedStatus] || 'pendingApproval'));
-
-    return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-        <div className="bg-white rounded-[32px] w-full max-w-6xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
-          {/* Modal Header */}
-          <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white z-10">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">{t("events.eventDetails")}</h2>
-              <p className="text-sm text-gray-500">ID: {getString(event.id)} • Submitted: {getString(event.submittedAt)}</p>
-            </div>
-            <div className="flex gap-2">
-        {['pending_approval', 'under_review'].includes((event as any).verificationStatus || event.status) && (
-          <>
-            <Button variant="outline" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => setResubmitEvent(event)}>{t("admin.requestResubmission")}</Button>
-            <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => setRejectEvent(event)}>{t("admin.reject")}</Button>
-            <Button className="bg-emerald-500 hover:bg-emerald-600 border-emerald-500" onClick={() => setApproveEvent(event)}>{t("admin.approve")}</Button>
-          </>
-        )}
-              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full ml-2">
-                <XCircle className="w-6 h-6 text-gray-400" />
-              </button>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-            {/* Rejection Reason Banner */}
-            {(event as any).rejectionReason && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-bold text-red-700">{t("admin.rejectionReason")}</p>
-                    <p className="text-xs text-red-600 mt-1">{getString((event as any).rejectionReason)}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Re-verification Banner */}
-            {(event as any).isEditedAfterApproval && ['Pending Approval', 'pending_approval'].includes((event as any).verificationStatus) && (
-              <div className="mb-6 p-4 bg-amber-50 border border-amber-100 rounded-2xl">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-bold text-amber-700">{t("status.pendingReVerification")}</p>
-                    <p className="text-xs text-amber-600 mt-1">{t("admin.organizerChanges")}</p>
-                    {(event as any).lastEditedAt && (
-                      <p className="text-[10px] text-amber-500 mt-1">{t("admin.lastEdited")} {new Date((event as any).lastEditedAt).toLocaleString()}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Progress Indicator */}
-            <div className="mb-10">
-              <div className="flex items-center justify-between max-w-2xl mx-auto relative">
-                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-100 -translate-y-1/2 z-0"></div>
-                <div 
-                  className="absolute top-1/2 left-0 h-0.5 bg-emerald-500 -translate-y-1/2 z-0 transition-all duration-500" 
-                  style={{ width: `${(currentStepIndex / (statusSteps.length - 1)) * 100}%` }}
-                ></div>
-                
-                {statusSteps.map((step, idx) => (
-                  <div key={step} className="relative z-10 flex flex-col items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center border-4 transition-all duration-300 ${
-                      idx <= currentStepIndex 
-                        ? 'bg-emerald-500 border-emerald-100 text-white' 
-                        : 'bg-white border-gray-100 text-gray-300'
-                    }`}>
-                      {idx < currentStepIndex ? <Check className="w-5 h-5" /> : <span className="text-xs font-bold">{idx + 1}</span>}
-                    </div>
-                     <span className={`text-[10px] font-bold mt-2 uppercase tracking-widest ${idx <= currentStepIndex ? 'text-emerald-600' : 'text-gray-400'}`}>
-                       {t(`status.${step}`)}
-                     </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              {/* Left Column: Event Media & Core Info (8 cols) */}
-              <div className="lg:col-span-8 space-y-8">
-                 {/* Media Gallery */}
-                 <div className="space-y-4">
-                   <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
-                     <LayoutGrid className="w-5 h-5 text-primary" /> {t("events.sections.media")}
-                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="md:col-span-3">
-                      <img src={event.bannerImage} className="w-full h-80 object-cover rounded-2xl shadow-sm" alt="Banner" />
-                    </div>
-                    {event.images.map((img, idx) => (
-                      <div key={idx} className="h-40 rounded-xl overflow-hidden border border-gray-100 shadow-sm">
-                        <img src={img} className="w-full h-full object-cover hover:scale-110 transition-transform duration-500" alt={`Gallery ${idx}`} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Core Information */}
-                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
-                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <FileText className="w-4 h-4" /> {t("events.sections.coreInfo")}
-                  </h3>
-                  <h1 className="text-3xl font-serif font-bold text-gray-900 mb-4">{getString(event.title)}</h1>
-                  <p className="text-gray-600 leading-relaxed mb-6">{getString(event.description)}</p>
-                   
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t("events.date")}</p>
-                      <p className="text-sm font-bold text-gray-800 flex items-center gap-1">
-                         <Calendar className="w-3.5 h-3.5 text-primary" /> {getString(event.date)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t("events.time")}</p>
-                      <p className="text-sm font-bold text-gray-800 flex items-center gap-1">
-                         <Clock className="w-3.5 h-3.5 text-primary" /> {getString(event.time)}
-                      </p>
-                    </div>
-                     <div>
-                       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t("events.location")}</p>
-                       <p className="text-sm font-bold text-gray-800 flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-primary" /> {getString(event.location.city)}
-                       </p>
-                     </div>
-                     <div>
-                       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t("events.capacity")}</p>
-                       <p className="text-sm font-bold text-gray-800 flex items-center gap-1">
-                         <Shield className="w-3.5 h-3.5 text-primary" /> {getString(event.capacity)}
-                       </p>
-                     </div>
-                  </div>
-                </div>
-
-                {/* Schedule & Logistics */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                   <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                     <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                       <Clock className="w-4 h-4" /> {t("events.sections.schedule")}
-                     </h3>
-                    <div className="space-y-4">
-                      {event.schedule.map((item, i) => (
-                        <div key={i} className="flex justify-between items-center p-3 hover:bg-gray-50 rounded-xl transition-colors border border-transparent hover:border-gray-100">
-                          <span className="text-xs font-bold text-primary">{getString(item.time)}</span>
-                          <span className="text-xs text-gray-700 font-medium">{getString(item.activity || item.title || item.title_en)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                     <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                       <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                         <MapPin className="w-4 h-4" /> {t("events.sections.hotels")}
-                       </h3>
-                      <div className="space-y-4">
-                       {Array.isArray(event.hotels) ? event.hotels.map((h, i) => (
-                             <div key={i} className="text-xs flex justify-between items-center p-2 bg-gray-50 rounded-lg">
-                               <div>
-                                 <p className="font-bold text-gray-800">{getString(h.name)}</p>
-                                 <p className="text-[10px] text-gray-500">{getString(h.distance || h.address)}</p>
-                               </div>
-                               <span className="font-bold text-primary">{getString(h.price || h.pricing || '')}</span>
-                             </div>
-                           )) : []}
-                      </div>
-                    </div>
-
-                     <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                       <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                         <Flag className="w-4 h-4" /> {t("events.sections.transportation")}
-                       </h3>
-                      <div className="space-y-3">
-                         {Array.isArray(event.transportation) ? event.transportation.map((t, i) => (
-                           <div key={i} className="p-3 bg-gray-50 rounded-xl">
-                             <p className="text-[10px] font-bold text-primary uppercase mb-1">{getString(t.type || t.type_en)} • {getString(t.provider)}</p>
-                             <p className="text-[10px] text-gray-600 leading-tight">{getString(t.details || t.description || t.description_en)}</p>
-                           </div>
-                         )) : []}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Documents Section */}
-                <div className="space-y-4">
-                  <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-primary" /> {t("events.submittedDocuments")}
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {event.documents.map((doc) => (
-                      <div key={doc.id} className="p-4 bg-white border border-gray-100 rounded-2xl flex items-center gap-4 hover:shadow-md transition-all group">
-                        <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 shrink-0">
-                          <img src={doc.thumbnail} className="w-full h-full object-cover" alt="" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-gray-800 text-sm truncate">{getString(doc.name)}</p>
-                          <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{getString(doc.type)}</p>
-                          {doc.expiryDate && (
-                            <p className="text-[10px] text-amber-600 font-bold mt-1 flex items-center gap-1">
-                              <AlertCircle className="w-3 h-3" /> Expires: {getString(doc.expiryDate)}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <button className="p-2 bg-gray-50 text-gray-500 hover:bg-primary hover:text-white rounded-lg transition-all" title={t("documents.preview")}>
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button className="p-2 bg-gray-50 text-gray-500 hover:bg-primary hover:text-white rounded-lg transition-all" title={t("documents.download")}>
-                            <Download className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column: Organizer, Pricing, Policies (4 cols) */}
-              <div className="lg:col-span-4 space-y-6">
-                {/* Pricing Card */}
-                <div className="bg-[#1a1c23] p-6 rounded-[24px] text-white shadow-xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                    <CreditCard className="w-4 h-4" /> Pricing Structure
-                  </h3>
-                  <div className="space-y-6">
-                    {event.ticketTypes.map((ticket, i) => (
-                      <div key={i} className="flex justify-between items-end border-b border-white/10 pb-4">
-                        <div>
-                          <p className="text-xs text-gray-400 font-bold uppercase">{getString(ticket.name)} Ticket</p>
-                          <p className="text-2xl font-bold">ETB {ticket.price.toLocaleString()}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[10px] text-gray-500">Allocation</p>
-                          <p className="text-sm font-bold">{getString(ticket.quantity)}</p>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="pt-2">
-                      <div className="flex justify-between text-sm text-emerald-400 font-bold">
-                        <span>Platform Commission ({getString(event.commissionRate)}%)</span>
-                        <span>ETB {calculateEstimatedCommission(event).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Services & Policies */}
-                <div className="space-y-4">
-                  <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                      <Shield className="w-4 h-4" /> Services & Policies
-                    </h3>
-                    <div className="space-y-6">
-                       <div>
-                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Included Services</p>
-                         <div className="flex flex-wrap gap-2">
-{Array.isArray((event as any).services?.foodPackages) ? ((event as any).services.foodPackages || []).map((s: any, i: number) => (
-                              <span key={`food-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
-                                {s.name || s}
-                              </span>
-                            )) : []}
-                       {(((event as any).services?.culturalServices as any[]) || []).map((s: any, i: number) => (
-                              <span key={`cultural-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
-                                {s}
-                              </span>
-                            ))}
-                           {(((event as any).services?.specialAssistance as any[]) || []).map((s: any, i: number) => (
-                              <span key={`special-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
-                                {s}
-                              </span>
-                            ))}
-                           {(((event as any).services?.extras as any[]) || []).map((s: any, i: number) => (
-                              <span key={`extra-${i}`} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
-                                {s}
-                              </span>
-                            ))}
-                         </div>
-                       </div>
-                       <div>
-                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">{t("events.eventPolicies")}</p>
-                        <ul className="space-y-3">
-                          {(event.policies || []).map((p, i) => (
-                            <li key={i} className="text-xs text-gray-600 flex items-start gap-3">
-                              <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0"></div>
-                              {getString(p)}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Organizer Card */}
-                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-gray-800">{t("events.sections.organizerInfo")}</h3>
-                    <Button size="sm" variant="ghost" onClick={() => setViewOrganizer(event.organizer)}>{t("admin.viewProfile")}</Button>
-                  </div>
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xl">
-                      {getString(event.organizer.name).charAt(0)}
-                    </div>
-                    <div>
-                       <p className="font-bold text-gray-900">{getString(event.organizer.name)}</p>
-                      <p className="text-xs text-gray-500">{getString(event.organizer.email)}</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-gray-50 p-3 rounded-xl text-center">
-                      <p className="text-[10px] text-gray-400 font-bold uppercase">{t("events.pastEvents")}</p>
-                      <p className="text-lg font-bold text-gray-800">{getString(event.organizer.pastEvents)}</p>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-xl text-center">
-                      <p className="text-[10px] text-gray-400 font-bold uppercase">{t("events.verified")}</p>
-                      <p className={`text-lg font-bold ${event.organizer.isVerified ? 'text-emerald-600' : 'text-gray-400'}`}>
-                        {event.organizer.isVerified ? t("common.yes") : t("common.no")}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Risk Indicators */}
-                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                  <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <Shield className="w-4 h-4" /> {t("events.sections.risk")}
-                  </h3>
-                  <div className="space-y-3">
-                    {event.riskBadges.length > 0 ? (
-                      event.riskBadges.map((badge, idx) => (
-                        <div key={idx} className="flex items-center gap-3 p-3 bg-amber-50 text-amber-700 rounded-xl text-xs font-bold border border-amber-100">
-                          <AlertTriangle className="w-4 h-4 shrink-0" /> {getString(badge)}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="flex items-center gap-3 p-3 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold border border-emerald-100">
-                        <CheckCircle2 className="w-4 h-4 shrink-0" /> {t("events.lowRisk")}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       {/* Modals */}
-      {viewEvent && <EventDetailsModal event={viewEvent} onClose={() => setViewEvent(null)} />}
-      {rejectEvent && <RejectionModal event={rejectEvent} onClose={() => setRejectEvent(null)} />}
-      {approveEvent && <ApprovalModal event={approveEvent} onClose={() => setApproveEvent(null)} />}
-      {resubmitEvent && <ResubmitModal event={resubmitEvent} onClose={() => setResubmitEvent(null)} />}
-      {viewOrganizer && <OrganizerProfileModal organizer={viewOrganizer} onClose={() => setViewOrganizer(null)} />}
+      {viewEvent && (
+        <EventDetailsModal 
+          event={viewEvent} 
+          onClose={() => setViewEvent(null)}
+          onApprove={(ev) => setApproveEvent(ev)}
+          onReject={(ev) => setRejectEvent(ev)}
+          onResubmit={(ev) => setResubmitEvent(ev)}
+          onViewOrganizer={(org) => setViewOrganizer(org)}
+          t={t}
+          getString={getString}
+        />
+      )}
+      {rejectEvent && (
+        <RejectionModal 
+          event={rejectEvent} 
+          onClose={() => setRejectEvent(null)} 
+          onReject={handleReject}
+          t={t}
+          getString={getString}
+        />
+      )}
+      {approveEvent && (
+        <ApprovalModal 
+          event={approveEvent} 
+          onClose={() => setApproveEvent(null)} 
+          onApprove={handleApprove}
+          t={t}
+          getString={getString}
+        />
+      )}
+      {resubmitEvent && (
+        <ResubmitModal 
+          event={resubmitEvent} 
+          onClose={() => setResubmitEvent(null)} 
+          onResubmit={handleResubmit}
+          t={t}
+          getString={getString}
+        />
+      )}
+      {viewOrganizer && (
+        <OrganizerProfileModal 
+          organizer={viewOrganizer} 
+          onClose={() => setViewOrganizer(null)}
+          t={t}
+          getString={getString}
+        />
+      )}
 
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1163,7 +1243,7 @@ export const AdminEventsPage: React.FC = () => {
                   </th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">{t("admin.organizer")}</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">{t("events.title")}</th>
-                <th className="px-6 py4 text-xs font-bold text-gray-500 uppercase tracking-widest">{t("admin.submittedOn")}</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">{t("admin.submittedOn")}</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">{t("admin.documents")}</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">{t("admin.status")}</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest text-right">{t("admin.actions")}</th>

@@ -87,7 +87,25 @@ export const translations: Record<Language, TranslationDictionary> = {
       terms: "Terms",
       international: "International"
     },
-    // Common UI (Original English)
+    reviews: {
+      verifiedPurchase: "Verified Purchase",
+      reviewedOn: "Reviewed on",
+      helpful: "Helpful",
+      thankFeedback: "Thank you for your feedback",
+      report: "Report",
+      reported: "Reported",
+      reportTitle: "Report this review",
+      optionalReason: "Optional: Why are you reporting this?",
+      reasons: {
+        offTopic: { label: "Off topic", desc: "Not about the product" },
+        inappropriate: { label: "Inappropriate", desc: "Disrespectful, hateful, obscene" },
+        fake: { label: "Fake", desc: "Paid for, inauthentic" },
+        other: { label: "Other", desc: "Something else" }
+      },
+      guidelineNote: "We'll check if this review meets our community guidelines. If it doesn't, we'll remove it.",
+      cancel: "Cancel",
+      submit: "Submit"
+    },
     common: {
       search: "Search",
       filter: "Filter",
@@ -137,6 +155,9 @@ export const translations: Record<Language, TranslationDictionary> = {
        // Login page
        loginTitle: "Welcome Back",
        loginSubtitle: "Sign in to your cultural hub account",
+      suspendedTitle: "Your account is suspended",
+      suspendedReasonLabel: "Reason:",
+      suspendedReasonFallback: "No reason was provided. Please contact support.",
        loginAs: "Log in as",
        tourist: "Tourist",
        artisan: "Artisan",
@@ -214,11 +235,15 @@ export const translations: Record<Language, TranslationDictionary> = {
       myEvents: "My Events",
       products: "Products",
       orders: "Orders",
+      wallet: "Wallet",
       revenue: "Revenue",
       reviews: "Reviews",
       analytics: "Analytics",
       helpCenter: "Help Center",
-      approved: "Approved"
+      approved: "Approved",
+      suspended: "Suspended",
+      accountSuspended: "Account Suspended - Your content is hidden from other users",
+      createDisabledForSuspended: "Create actions are disabled while your account is suspended.",
     },
 
     // Tourist Settings (Original English)
@@ -294,6 +319,28 @@ export const translations: Record<Language, TranslationDictionary> = {
       confirmRejection: "Confirm Rejection",
       approveEvent: "Approve Event",
       approveConfirmationEvent: "Are you sure you want to approve {event}? This will make the event live on the platform immediately.",
+      resubmit: {
+        youAreAsking: "You are asking",
+        toResubmit: "to resubmit"
+      },
+      requestResubmission: "Request Resubmission",
+      itemsToCorrect: "Items to Correct",
+      itemsToCorrectPlaceholder: "List the specific details that need modification...",
+      sendRequest: "Send Request",
+      organizer: "Organizer",
+      lastEdited: "Last Edited",
+      rejectEvent: "Reject Event",
+      youAreRejecting: "You are rejecting",
+      willNotifyOrganizer: "This will notify the organizer via email.",
+      reasonForRejection: "Reason for Rejection",
+      reasons: {
+        incompleteInfo: "Incomplete information",
+        invalidLocation: "Invalid location",
+        suspiciousActivity: "Suspicious activity",
+        policyViolation: "Policy violation",
+        duplicateEvent: "Duplicate event",
+        other: "Other"
+      },
       commissionRate: "Commission Rate",
       estimatedCommission: "Est. Total Commission",
       optionalNote: "Optional Note to Organizer",
@@ -470,6 +517,105 @@ export const translations: Record<Language, TranslationDictionary> = {
       addImage: "Add Image",
       addFile: "Add File"
     },
+    // Organizer Create Festival (Original English)
+    organizer: {
+      createFestival: {
+        // Step titles
+        coreInfo: "Core Information",
+        schedule: "Schedule",
+        hotels: "Hotels",
+        hotel: "Hotel",
+        room: "Room",
+        transportation: "Transportation",
+        transport: "Transport",
+        transportationOptions: "Transportation Options",
+        services: "Services",
+        policies: "Policies & Terms",
+        pricing: "Pricing",
+         reviewPublish: "Review & Publish",
+         reviewPublishDesc: "Review your festival details before publishing.",
+         createNewFestival: "Create New Festival",
+         shareHeritage: "Share Ethiopia's vibrant heritage with the world.",
+         saveDraft: "Save Draft",
+         clickToCreateFestival: "Click 'Create New Festival' to get started.",
+         // Core fields
+        festivalName: "Festival Name",
+        slug: "Slug",
+        festivalType: "Festival Type",
+        startDate: "Start Date",
+        endDate: "End Date",
+        locationName: "Location Name",
+        address: "Address",
+        shortDescription: "Short Description",
+        fullDescription: "Full Description",
+        // Schedule
+         day: "Day",
+         days: "Days",
+         dayTitle: "Day Title",
+        activities: "Activities",
+        performers: "Performers",
+        addDay: "Add Day",
+       dailySchedule: "Daily Schedule",
+       // Hotels
+        addHotel: "Add Hotel",
+        hotelName: "Hotel Name",
+        shortDesc: "Short Description",
+        fullDesc: "Full Description",
+        coverImage: "Cover Image URL",
+        addRoom: "Add Room",
+        roomName: "Room Name",
+        capacity: "Capacity (guests)",
+        description: "Description",
+        pricePerNight: "Price per Night",
+        availableRooms: "Available Rooms",
+        roomTypes: "Room Types",
+        // Transportation
+        addTransport: "Add Transport",
+        transportType: "Transport Type",
+        pricePerUnit: "Price per Unit",
+        availableUnits: "Available Units",
+        passengerCapacity: "Passenger Capacity",
+        imageUrl: "Image URL",
+        // Services
+        addPackage: "Add Package",
+        packageName: "Package Name",
+        pricePerPerson: "Price per Person",
+        foodDrinkPackages: "Food & Drink Packages",
+        package: "Package",
+        includedItems: "Included Items (comma-separated)",
+        culturalServices: "Cultural Services",
+        specialAssistance: "Special Assistance",
+        extraServices: "Extra Services",
+        // Policies
+        cancellationPolicy: "Cancellation Policy",
+        bookingTerms: "Booking Terms",
+        safetyRules: "Safety Rules",
+        ageRestriction: "Age Restriction",
+         // Pricing
+         baseTicketPrice: "Base Ticket Price (ETB)",
+         vipTicketPrice: "VIP Ticket Price (ETB)",
+         earlyBirdDiscount: "Early Bird Discount (%)",
+         groupDiscount: "Group Discount (%)",
+         currency: "Currency",
+        // Actions
+        save: "Save",
+        cancel: "Cancel",
+        next: "Next",
+        previous: "Previous",
+        publish: "Publish Festival",
+        addAnother: "Add Another",
+        requiredField: "Required",
+        languagePreference: "Language Preference",
+        chooseLanguages: "Choose which languages to include in your festival:",
+        bothLanguages: "Both English and Amharic",
+        showBothFields: "Show fields for both languages",
+        englishOnly: "English Only (Foreign Audience)",
+        amharicOnly: "Amharic Only (Native Audience)",
+        typeReligious: "Religious",
+        typeCulturalTraditional: "Cultural / Traditional",
+        typeNationalPublicHolidays: "National / Public Holidays"
+      }
+    },
     // Documents (Original English)
     documents: {
       files: "Files",
@@ -617,7 +763,7 @@ export const translations: Record<Language, TranslationDictionary> = {
        showing: "Showing ",
        results: " results",
        resultsShowing: "Showing {count} results"
-     },
+      },
       festival: {
         hero: {
           badge: "Official Holiday Directory",
@@ -628,11 +774,11 @@ export const translations: Record<Language, TranslationDictionary> = {
         searchPlaceholder: "Search festivals or locations...",
         types: {
           religious: "Religious",
+          culturaltraditional: "Cultural / Traditional",
+          nationalpublicholidays: "National / Public Holidays",
           historical: "Historical",
           harvest: "Harvest",
-          newyear: "New Year",
-          culturaltraditional: "Cultural / Traditional",
-          nationalpublicholidays: "National / Public Holidays"
+          newyear: "New Year"
         },
       featured: {
         heading: "Featured Celebration",
@@ -668,7 +814,6 @@ export const translations: Record<Language, TranslationDictionary> = {
        fitnessCenter: "Fitness Center",
        freeParking: "Free Parking",
        spaWellness: "Spa & Wellness",
-      hotelFound: "hotel found",
       hotelsFound: "hotels found",
       recommended: "Recommended",
       roomsAvailable: "rooms available",
@@ -814,28 +959,6 @@ export const translations: Record<Language, TranslationDictionary> = {
       availableUnitsCount: "Available: {count} units",
       days: "days"
     },
-
-   
-    
-    reviews: {
-      verifiedPurchase: "Verified Purchase",
-      reviewedOn: "Reviewed on",
-      helpful: "Helpful",
-      thankFeedback: "Thank you for your feedback",
-      report: "Report",
-      reported: "Reported",
-      reportTitle: "Report this review",
-      optionalReason: "Optional: Why are you reporting this?",
-      reasons: {
-        offTopic: { label: "Off topic", desc: "Not about the product" },
-        inappropriate: { label: "Inappropriate", desc: "Disrespectful, hateful, obscene" },
-        fake: { label: "Fake", desc: "Paid for, inauthentic" },
-        other: { label: "Other", desc: "Something else" }
-      },
-      guidelineNote: "We'll check if this review meets our community guidelines. If it doesn't, we'll remove it.",
-      cancel: "Cancel",
-      submit: "Submit"
-     }
    },
 
    am: {
@@ -925,8 +1048,26 @@ export const translations: Record<Language, TranslationDictionary> = {
     international: "አለም አቀፍ"
   },
 
-  // የጋራ በይነገጽ (Common UI)
-   common: {
+    reviews: {
+      verifiedPurchase: "የተረጋገጠ ግዢ",
+      reviewedOn: "ግምገማ የተሰጠው በ",
+      helpful: "ጠቃሚ ነው",
+      thankFeedback: "ለአስተያየትዎ እናመሰግናለን",
+      report: "ሪፖርት አድርግ",
+      reported: "ሪፖርት ተደርጓል",
+      reportTitle: "ይህን ግምገማ ሪፖርት ያድርጉ",
+      optionalReason: "አማራጭ፡ ለምን ሪፖርት ያደርጋሉ?",
+      reasons: {
+        offTopic: { label: "ከጉዳዩ ውጭ", desc: "ስለ ምርቱ አይደለም" },
+        inappropriate: { label: "ተገቢ ያልሆነ", desc: "አጸያፊ ወይም ጎጂ ይዘት" },
+        fake: { label: "ሐሰተኛ", desc: "አጠራጣሪ ወይም የማስተዋወቂያ ይዘት" },
+        other: { label: "ሌላ", desc: "ሌላ ነገር" }
+      },
+      guidelineNote: "ቡድናችን ይህን ሪፖርት በ24 ሰዓት ውስጥ ይመለከታል።",
+      cancel: "ሰርዝ",
+      submit: "ላክ"
+    },
+    common: {
      search: "ፈልግ",
      filter: "አጣራ",
      sort: "ደርድር",
@@ -944,8 +1085,8 @@ export const translations: Record<Language, TranslationDictionary> = {
     submit: "አስገባ",
     back: "ተመለስ",
      next: "ቀጣይ",
-     previous: "ቀዳሚ",
-     close: "ዝጋ",
+      previous: "ቀዳሚ",
+      close: "ዝጋ",
     loading: "በመጫን ላይ...",
     error: "ስህተት",
     success: "ተሳክቷል",
@@ -1048,6 +1189,9 @@ export const translations: Record<Language, TranslationDictionary> = {
     register: "ተመዝገብ",
     loginTitle: "እንኳን ደህና ተመለሱ",
     loginSubtitle: "ወደ የባህል ማዕከርዎ መለያዎን ይግቡ",
+    suspendedTitle: "መለያዎ ታግዷል",
+    suspendedReasonLabel: "ምክንያት:",
+    suspendedReasonFallback: "ምክንያት አልተጠቀሰም። እባክዎን ድጋፍን ያግኙ።",
     loginAs: "እንደሚከተሉት ይግቡ",
     tourist: "ቱሪስት",
     artisan: "የጥበብ ባለሙያ",
@@ -1119,12 +1263,16 @@ export const translations: Record<Language, TranslationDictionary> = {
     myEvents: "ዝግጅቶቼ",
     products: "ምርቶች",
     orders: "ትዕዛዞች",
+    wallet: "ቦርሳ",
     revenue: "ገቢ",
     reviews: "ግምገማዎች",
     analytics: "ትንታኔዎች",
-    helpCenter: "የእርዳታ ማዕከል",
-    approved: "ጸድቋል"
-  },
+helpCenter: "የእርዳታ ማዕከል",
+      approved: "ጸድቋል",
+      suspended: "ተበልቷል",
+      accountSuspended: "አካውንት ተበልቷል - ይህ ምርት ለሌላዎች ተደብቷል",
+      createDisabledForSuspended: "መለያዎ ታግዶ ስለሆነ አዲስ መፍጠር ተግባር ተሰናክሏል።",
+    },
 
   // አስተዳዳሪ (Admin)
   admin: {
@@ -1145,7 +1293,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     totalRevenue: "ጠቅላላ ገቢ",
     allRoles: "ሁሉም ሚናዎች",
     allStatus: "ሁሉም ሁኔታዎች",
-    approve: "ጽድቅ",
+    approve: "አጽድቅ",
     reject: "አትቀበል",
     review: "ገምግም",
     status: "ሁኔታ",
@@ -1170,6 +1318,28 @@ export const translations: Record<Language, TranslationDictionary> = {
     confirmRejection: "አለመቀበል አረጋግጥ",
     approveEvent: "ዝግጅት አጽድቅ",
     approveConfirmationEvent: "{event} ማጽደቅ እንደሚፈልጉ እርግጠኛ ነዎት? ይህ ዝግጅቱ ወዲያውኑ በመድረኩ ላይ እንዲቀርብ ያደርገዋል።",
+    resubmit: {
+      youAreAsking: "እየጠየቁት ያለው",
+      toResubmit: "እንደገና እንዲያቀርብ"
+    },
+    requestResubmission: "እንደገና ማቅረብ ጠይቅ",
+    itemsToCorrect: "ሊታረሙ የሚገባቸው ነገሮች",
+    itemsToCorrectPlaceholder: "መስተካከል ያለባቸውን ዝርዝሮች ይጥቀሱ...",
+    sendRequest: "ጥያቄ ላክ",
+    organizer: "አዘጋጅ",
+    lastEdited: "መጨረሻ የተስተካከለው",
+    rejectEvent: "ዝግጅት አትቀበል",
+    youAreRejecting: "እየሰረዙት ያለው",
+    willNotifyOrganizer: "ይህ ለአዘጋጁ በኢሜል ያሳውቃል።",
+    reasonForRejection: "የመሰረዝ ምክንያት",
+    reasons: {
+      incompleteInfo: "ያልተሟላ መረጃ",
+      invalidLocation: "ልክ ያልሆነ ቦታ",
+      suspiciousActivity: "አጠራጣሪ እንቅስቃሴ",
+      policyViolation: "የፖሊሲ ጥሰት",
+      duplicateEvent: "የተደገመ ዝግጅት",
+      other: "ሌላ"
+    },
     commissionRate: "ኮሚሽን መጠን",
     estimatedCommission: "ግምታዊ ጠቅላላ ኮሚሽን",
     optionalNote: "ለአዘጋጁ አማራጭ ማስታወሻ",
@@ -1350,6 +1520,102 @@ export const translations: Record<Language, TranslationDictionary> = {
     addImage: "ምስል ጨምር",
     addFile: "ፋይል ጨምር"
   },
+  // አዘጋጅ የ�estival ፍጠር (Organizer Create Festival)
+  organizer: {
+    createFestival: {
+      // Step titles
+      coreInfo: "ዋና መረጃ",
+      schedule: "የጊዜ ሰሌዳ",
+        hotels: "ሆተሎች",
+        hotel: "ሆቴል",
+        room: "ክፍል",
+        transportation: "ትራንስፖርት",
+        transport: "ትራንስፖርት",
+        transportationOptions: "የትራንስፖርት አማራጭዎች",
+        services: "አገልግሎቶች",
+      policies: "ፖሊሲዎች እና ውሎች",
+       pricing: "የዋጋ አወቃጣ",
+        reviewPublish: "ግምትና አትስፋፅ",
+        reviewPublishDesc: "የበጎች ዝርዝር ዝርዝር በትስፋም በፊዜ።",
+       // Core fields
+      festivalName: "የበጎች ስም",
+      slug: "Slug",
+      festivalType: "የበጎች አይነት",
+      startDate: "የጀመርበት ቀን",
+      endDate: "የማብርበት ቀን",
+      locationName: "ስፍራ ስም",
+      address: "አድራሽ",
+      shortDescription: "በጋላ መግለጫ",
+      fullDescription: "ሙሉ መግለጫ",
+      // Schedule
+       day: "ቀን",
+       days: "ቀናት",
+       dayTitle: "የቀን ርዕስ",
+      activities: "እንቅስቃሴዎች",
+      performers: "ታየዎች",
+      addDay: "ቀን ጨምር",
+      dailySchedule: "ዕለታዊ የጊዜ ሰሌዳ",
+      // Hotels
+      addHotel: "ሆተል ጨምር",
+      hotelName: "የሆተል ስም",
+      shortDesc: "በጋላ መግለጫ",
+      fullDesc: "ሙሉ መግለጫ",
+      coverImage: "የሽፋን ምስል URL",
+      addRoom: "ክፍል ጨምር",
+      roomName: "የክፍል ስም",
+      capacity: "የማስተናነያ ቁጥር",
+      description: "መግለጫ",
+      pricePerNight: "ዋጋታ በሌሊት",
+        availableRooms: "የሚገኙ ክፍሎች",
+        roomTypes: "የክፍል አይነቶች",
+        // Transportation
+      addTransport: "ትራንስፖርት ጨምር",
+      transportType: "የትራንስፖርት አይነት",
+      pricePerUnit: "ዋጋታ በአንድ",
+      availableUnits: "የሚገኙ ክፍሎች",
+      passengerCapacity: "የተሳፋሪ ቁጥር",
+      imageUrl: "ምስል URL",
+      // Services
+      addPackage: "ጣጅጨምር",
+      packageName: "የጣጅ ስም",
+      pricePerPerson: "ዋጋታ በአንድ ሰው",
+      foodDrinkPackages: "የምግብ እና መጠጥ ጣጎች",
+      package: "ጣጅ",
+      includedItems: "የተካተቱ እቃዎች (በኮማ የተለዩ)",
+      culturalServices: "ባህላዊ አገልግሎቶች",
+      specialAssistance: "ልዩ እገዳ",
+      extraServices: "ተጨማሪ አገልግሎቶች",
+      // Policies
+      cancellationPolicy: "የመሰረዝ ፖሊሲ",
+      bookingTerms: "የቦተን ቃላት",
+      safetyRules: "የደህንነት ህጎች",
+      ageRestriction: "የአስር ገደብ",
+      // Pricing
+      baseTicketPrice: "የመሠረታዊ ትኬት ዋጋታ (ኤቲቢ)",
+      vipTicketPrice: "ቪአይ ትኬት ዋጋታ (ኤቲቢ)",
+      earlyBirdDiscount: "ቀደም ብሎ ቅናሽ (%)",
+       groupDiscount: "ቡድድ ቅናሽ (%)",
+       currency: "ምንዛሬ",
+       // Actions
+      save: "አስቀምጥ",
+      saveDraft: "ረቂቅ አስቀምጡ",
+      cancel: "ይቁም",
+      next: "ቀጥል",
+      previous: "በፊት",
+      publish: "ፓብልሽ ፌስቲል",
+      addAnother: "ሌላ ጨምር",
+      requiredField: "አስፈላጊ",
+      languagePreference: "ቋንቋ ምርጫ",
+      chooseLanguages: "ለበጎችዎ የቋንቋ ምርጫ ይምረጡ:",
+      bothLanguages: "እንግሊዝና አምሐርክ",
+      showBothFields: "ለሁለቱም ቋንቋዎች መስኮች አሳይ",
+      englishOnly: "እንግሊዝ alone (ውጭ ታዳሚዎች)",
+      amharicOnly: "አምሐርክ alone (አገር ቤት ታዳሚዎች)",
+      typeReligious: "ሃይማኖናዊ",
+      typeCulturalTraditional: "ባህላዊ / ባህራዊ",
+      typeNationalPublicHolidays: "ሀገርናዊ / የህዝብ አስታራቂት"
+    }
+  },
 
   // ሰነዶች (Documents)
   documents: {
@@ -1496,8 +1762,8 @@ export const translations: Record<Language, TranslationDictionary> = {
     sortBy: "ደርድር:",
     showing: "",
     results: " የሚታዩ ውጤቶች",
-    resultsShowing: "የሚታዩ ውጤቶች {count}"
-  },
+     resultsShowing: "የሚታዩ ውጤቶች {count}"
+    },
 
   // በዓላት (Festivals)
  festival: {
@@ -1509,12 +1775,12 @@ export const translations: Record<Language, TranslationDictionary> = {
   },
   searchPlaceholder: "በዓላትን ወይም አካባቢዎችን ይፈልጉ...",
   types: {
-    religious: "ሃይማኖታዊ",
-    historical: "ታሪካዊ",
-    harvest: "መከር",
-    newyear: "አዲስ ዓመት",
-    culturaltraditional: "ባህላዊ / ባህላዊ",
-    nationalpublicholidays: "ብሔራዊ / የሕዝብ በዓላት"
+    religious: "ሃይስኖ",
+    culturaltraditional: "ባህላ / ባህላዊ",
+    nationalpublicholidays: "ብሔራ / የህዝብ ቀን",
+    historical: "ታሪካ",
+    harvest: "ምርት",
+    newyear: "አዲ ስም"
   },
   featured: {
     heading: "የተመረጠ በዓላት",
@@ -1618,38 +1884,6 @@ export const translations: Record<Language, TranslationDictionary> = {
       verifiedOrganizer: "የተረጋገጠ አዘጋጅ",
       organizerInfoSoon: "የአዘጋጅ መረጃ በቀጥታ ይመልከቱ"
     },
-
-    reviews: {
-  verifiedPurchase: "የተረጋገጠ ግዢ",
-  reviewedOn: "ግምገማ የተሰጠበት ቀን",
-  helpful: "ጠቃሚ",
-  thankFeedback: "አስተያየትዎ እናመሰግናለን",
-  report: "ሪፖርት አድርግ",
-  reported: "ሪፖርት ተደርጓል",
-  reportTitle: "ይህን ግምገማ ሪፖርት አድርግ",
-  optionalReason: "አማራጭ: ለምን ሪፖርት እያደረጉ ነው?",
-  reasons: {
-    offTopic: { 
-      label: "ከርዕስ ውጪ", 
-      desc: "ስለ ምርቱ አይደለም" 
-    },
-    inappropriate: { 
-      label: "ተገቢ ያልሆነ", 
-      desc: "አክብሮት የጎደለው፣ አስጸያፊ፣ ጸያፍ" 
-    },
-    fake: { 
-      label: "ውሸት", 
-      desc: "በዋጋ የተገዛ፣ ትክክለኛ ያልሆነ" 
-    },
-    other: { 
-      label: "ሌላ", 
-      desc: "ሌላ ነገር" 
-    }
-  },
-  guidelineNote: "ይህ ግምገማ የማህበረሰባችንን መመሪያ የሚያሟላ መሆኑን እንፈትሻለን። የማያሟላ ከሆነ፣ እናስወግደዋለን።",
-    cancel: "ይቅር",
-    submit: "አስገባ"
-  },
 
   // Tourist Settings
   settings: {

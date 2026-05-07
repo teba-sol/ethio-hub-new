@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { Language, TranslationDictionary } from '@/locales/translations';
+import { Language, TranslationDictionary, translations } from '../locales/translations';
 
 interface LanguageContextType {
   language: Language;
@@ -29,6 +29,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
    // Translation function
    const t = (key: string, params?: Record<string, any>): string => {
+     if (!key) return '';
      const keys = key.split('.');
      let current: TranslationDictionary | string = translations[language];
 
@@ -78,6 +79,3 @@ export function useLanguage() {
   }
   return context;
 }
-
-// Export translations for static typing
-import translations from '@/locales/translations';

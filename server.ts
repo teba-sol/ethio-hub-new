@@ -144,6 +144,20 @@ async function startServer() {
     res.json({ message: "Settings updated" });
   });
 
+// --- Support Ticket Routes ---
+  app.get("/api/support/tickets", (req, res) => {
+    res.json({ tickets: [] });
+  });
+  app.post("/api/support/tickets", (req, res) => {
+    res.json({ success: true, message: "Support ticket created", ticket: { id: Date.now(), ...req.body } });
+  });
+  app.put("/api/admin/support-tickets/:id", (req, res) => {
+    res.json({ success: true, message: "Support ticket updated" });
+  });
+  app.delete("/api/admin/support-tickets/:id", (req, res) => {
+    res.json({ success: true, message: "Support ticket deleted" });
+  });
+
   // --- Admin Routes ---
   app.get("/api/admin/overview", (req, res) => {
     res.json({ stats: {} });

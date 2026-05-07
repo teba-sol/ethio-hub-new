@@ -8,9 +8,11 @@ import {
   EyeOff,
   Calendar as CalIcon,
   ShieldAlert,
+  X,
 } from "lucide-react";
-import { Button, Input } from "../components/UI";
+import { Button, Input, Modal, SuspensionModal } from "../components/UI";
 import { useAuth } from "../context/AuthContext";
+
 import { UserRole } from "../types";
 import { useLanguage } from "../context/LanguageContext";
 import { useGoogleLogin } from "@react-oauth/google";
@@ -32,8 +34,9 @@ export const LoginPage: React.FC = () => {
   const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>(UserRole.TOURIST);
   const [showPassword, setShowPassword] = useState(false);
+  const [showSuspensionModal, setShowSuspensionModal] = useState(false);
+  const [pendingUser, setPendingUser] = useState<any>(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [pendingGoogleUser, setPendingGoogleUser] = useState<{ email: string; name: string } | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -143,46 +146,26 @@ export const LoginPage: React.FC = () => {
     }
   };
 
+  const handleSuspensionModalClose = () => {
+    setShowSuspensionModal(false);
+    if (pendingUser) {
+      handleSuccessfulLogin(pendingUser);
+      setPendingUser(null);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const res = await login({ email, password });
 
       if (res.success) {
-        const userRole = res.user.role?.toLowerCase();
-        const organizerStatus = res.user.organizerStatus;
-        const artisanStatus = res.user.artisanStatus;
-
-        if (userRole === "organizer") {
-          if (organizerStatus === "Not Submitted") {
-            router.push("/dashboard/organizer/onboarding");
-          } else if (
-            organizerStatus === "Pending" ||
-            organizerStatus === "Under Review"
-          ) {
-            router.push("/organizer/waiting");
-          } else if (
-            organizerStatus === "Rejected" ||
-            organizerStatus === "Modification Requested"
-          ) {
-            router.push("/dashboard/organizer/onboarding");
-          } else if (organizerStatus === "Approved") {
-            router.push("/dashboard/organizer/overview");
-          }
-        } else if (userRole === "artisan") {
-          if (artisanStatus === "Not Submitted") {
-            router.push("/dashboard/artisan/onboarding");
-          } else if (
-            artisanStatus === "Pending" ||
-            artisanStatus === "Under Review"
-          ) {
-            router.push("/artisan/waiting");
-          } else if (artisanStatus === "Approved") {
-            router.push("/dashboard/artisan/overview");
-          }
-        } else {
-          router.push(userRole === "admin" ? "/dashboard/admin/overview" : "/");
+        if (res.showSuspensionModal) {
+          setPendingUser(res.user);
+          setShowSuspensionModal(true);
+          return;
         }
+        handleSuccessfulLogin(res.user);
       } else {
         alert(res.message || t("auth.loginFailed"));
       }
@@ -203,30 +186,13 @@ export const LoginPage: React.FC = () => {
             <p className="text-gray-500">{t("auth.loginSubtitle")}</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">
-                {t("auth.loginAs")}
-              </label>
-              <div className="grid grid-cols-2 gap-2 p-1 bg-ethio-light rounded-xl">
-                {(Object.values(UserRole) as UserRole[]).map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setRole(r)}
-                    className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center ${
-                      role === r
-                        ? "bg-primary text-white shadow-md"
-                        : "text-gray-500 hover:bg-gray-200"
-                    }`}
-                  >
-                    {r === UserRole.ADMIN && <ShieldAlert className="w-3 h-3 mr-1" />}
-                    {t(`auth.roles.${r.toLowerCase()}`)}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <SuspensionModal
+            isOpen={showSuspensionModal}
+            onClose={handleSuspensionModalClose}
+            reason={pendingUser?.suspensionReason}
+          />
 
+          <form onSubmit={handleLogin} className="space-y-6">
             <Input
               label={t("auth.email")}
               type="email"

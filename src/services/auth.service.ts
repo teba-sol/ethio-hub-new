@@ -71,6 +71,8 @@ export const login = async (credentials: { email: string; password: string }) =>
   // Refresh user from DB to get latest data
   const freshUser = await User.findById(user._id);
 
+  const showSuspensionModal = freshUser.status === 'Suspended';
+
   return { 
     token, 
     user: { 
@@ -78,12 +80,16 @@ export const login = async (credentials: { email: string; password: string }) =>
       email: freshUser.email, 
       role: freshUser.role, 
       name: freshUser.name,
+      status: freshUser.status,
+      suspensionReason: freshUser.suspensionReason || null,
+      suspendedAt: freshUser.suspendedAt ? freshUser.suspendedAt.toISOString() : null,
       isVerified: !!freshUser.isVerified,
       artisanStatus: freshUser.artisanStatus || 'Not Submitted',
       organizerStatus: freshUser.organizerStatus || 'Not Submitted',
       organizerProfile: freshUser.organizerProfile || null,
       touristProfile: freshUser.touristProfile || null,
-    } 
+    },
+    showSuspensionModal
   };
 };
 

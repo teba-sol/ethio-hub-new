@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '../../../../lib/mongodb';
-import Review from '../../../../models/review.model';
+import MarketplaceReview from '../../../../models/review.model';
 import * as jose from 'jose';
 
 export async function GET(request: NextRequest) {
@@ -30,13 +30,16 @@ export async function GET(request: NextRequest) {
     const isApproved = searchParams.get('isApproved');
     const festivalId = searchParams.get('festivalId');
 
-    const query: any = { organizer: organizerId };
+    const query: any = { targetType: 'Festival' };
+    if (festivalId) {
+      query.targetId = festivalId;
+    }
+    
     if (isApproved !== null) query.isApproved = isApproved === 'true';
-    if (festivalId) query.festival = festivalId;
 
-    const reviews = await Review.find(query)
-      .populate('tourist', 'name email')
-      .populate('festival', 'name')
+    const reviews = await MarketplaceReview.find(query)
+      .populate('user', 'name email')
+      .populate('targetId', 'name')
       .sort({ createdAt: -1 });
 
     const totalReviews = reviews.length;
@@ -104,19 +107,19 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const review = await Review.findOne({ _id: reviewId, organizer: organizerId });
+    const review = await MarketplaceReview.findOne({ _id: reviewId });
     if (!review) {
       return new NextResponse(
-        JSON.stringify({ success: false, message: 'Review not found or you do not have permission' }),
+        JSON.stringify({ success: false, message: 'Review not found' }),
         { status: 404, headers: { 'content-type': 'application/json' } }
       );
     }
 
-    const updatedReview = await Review.findByIdAndUpdate(
+    const updatedReview = await MarketplaceReview.findByIdAndUpdate(
       reviewId,
-      { $set: { isApproved } },
+      { isApproved },
       { new: true }
-    ).populate('tourist', 'name email').populate('festival', 'name');
+    );
 
     return new NextResponse(
       JSON.stringify({ success: true, review: updatedReview }),

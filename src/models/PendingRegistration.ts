@@ -50,8 +50,6 @@ const PendingRegistrationSchema = new mongoose.Schema(
   }
 );
 
-PendingRegistrationSchema.index({ email: 1 }, { unique: true });
-
 const PendingRegistration =
   mongoose.models.PendingRegistration ||
   mongoose.model("PendingRegistration", PendingRegistrationSchema);

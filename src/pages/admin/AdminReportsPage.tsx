@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Search, Filter, Flag, AlertTriangle, XCircle, CheckCircle2,
+  Search, Filter, Flag, AlertTriangle, XCircle, CheckCircle2, X,
   MessageSquare, UserX, ShieldAlert, Eye, FileText, Download,
   Clock, Image as ImageIcon, Link as LinkIcon,
   Trash2, Ban, TrendingUp, Calendar, MapPin, Users, Package, Ticket, Upload
@@ -8,6 +8,7 @@ import {
 import { Button, Badge } from '../../components/UI';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 // Types
 interface Report {
@@ -47,13 +48,13 @@ interface Report {
 // Helper to get target display name
 const getTargetName = (report: Report): string => {
   if (report.targetType === 'Event') {
-    return report.targetDetails?.name || report.targetDetails?.name_en || 'Unknown Event';
+    return report.targetDetails?.name || report.targetDetails?.name_en || report.targetDetails?.name_am || 'Unknown Event';
   }
   if (report.targetType === 'Product') {
-    return report.targetDetails?.name || report.targetDetails?.name_en || report.targetDetails?.artisanName || 'Unknown Product';
+    return report.targetDetails?.name || report.targetDetails?.name_en || report.targetDetails?.name_am || report.targetDetails?.artisanName || 'Unknown Product';
   }
   if (report.targetType === 'User') {
-    return report.targetDetails?.name || report.targetDetails?.profile?.name || 'Unknown User';
+    return report.targetDetails?.name || report.targetDetails?.profile?.name || report.targetDetails?.email || 'Unknown User';
   }
   return 'Unknown Entity';
 };
@@ -64,14 +65,19 @@ const ReportDetailModal = ({
   onClose,
   onAction,
   onViewProfile,
+  onSuccess,
+  onError,
   adminId
 }: {
   report: Report;
   onClose: () => void;
   onAction: (id: string, action: string, note?: string) => void;
   onViewProfile: (id: string) => void;
+  onSuccess: (msg: string) => void;
+  onError: (msg: string) => void;
   adminId: string;
 }) => {
+  const router = useRouter();
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [adminNote, setAdminNote] = useState('');
@@ -113,11 +119,11 @@ const ReportDetailModal = ({
 
       const data = await res.json();
       if (data.success) {
-        alert('✅ Evidence added successfully');
+        onSuccess('Evidence added successfully');
         setEvidenceFiles([]);
       }
     } catch (error) {
-      alert('Failed to upload evidence');
+      onError('Failed to upload evidence');
     } finally {
       setUploading(false);
     }
@@ -199,11 +205,11 @@ const ReportDetailModal = ({
                     variant="outline"
                     onClick={() => {
                       if (report.targetType === 'Event') {
-                        window.location.href = `/dashboard/admin/management?view=event&id=${report.targetId}`;
+                        router.push(`/dashboard/admin/management?view=event&id=${report.targetId}`);
                       } else if (report.targetType === 'Product') {
-                        window.location.href = `/dashboard/admin/management?view=product&id=${report.targetId}`;
+                        router.push(`/dashboard/admin/management?view=product&id=${report.targetId}`);
                       } else {
-                        window.location.href = `/dashboard/admin/management?view=user&id=${report.targetId}`;
+                        router.push(`/dashboard/admin/users?id=${report.targetId}`);
                       }
                     }}
                     className="shrink-0"
@@ -456,13 +462,26 @@ export const AdminReportsPage: React.FC = () => {
   const [viewReport, setViewReport] = useState<Report | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [filterTiming, setFilterTiming] = useState<'All' | 'Pre-Event' | 'During-Event' | 'Post-Event'>('All');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  
   const { user } = useAuth();
+
+  const triggerSuccess = (msg: string) => {
+    setSuccessMessage(msg);
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 3000);
+  };
+  const router = useRouter();
   const adminId = user?._id?.toString() || user?.id?.toString() || '';
 
   useEffect(() => {
     if (user && user.role !== 'ADMIN' && user.role !== 'admin') {
-      alert('Access denied: Admin only');
-      window.location.href = '/';
+      setErrorMessage('Access denied: Admin only');
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 2000);
     }
   }, [user]);
 
@@ -478,6 +497,16 @@ export const AdminReportsPage: React.FC = () => {
       if (filterType !== 'All') params.set('targetType', filterType);
 
       const res = await fetch(`/api/reports?${params.toString()}`);
+      
+      if (!res.ok) {
+        throw new Error(`Server responded with ${res.status}`);
+      }
+
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new TypeError("Oops, we haven't got JSON!");
+      }
+
       const data = await res.json();
 
       if (data.success) {
@@ -497,34 +526,44 @@ export const AdminReportsPage: React.FC = () => {
   };
 
   const handleViewProfile = (targetId: string) => {
-    window.location.href = `/admin/entity/${targetId}`;
+    router.push(`/admin/entity/${targetId}`);
   };
 
   const handleExportReports = () => {
     setIsExporting(true);
     setTimeout(() => {
       setIsExporting(false);
-      alert('Reports exported successfully as CSV.');
+      triggerSuccess('Reports exported successfully as CSV.');
     }, 1500);
   };
 
   const openReportDetail = async (reportId: string) => {
     try {
       const res = await fetch(`/api/admin/reports/${reportId}`);
+      
+      if (!res.ok) {
+        throw new Error(`Server responded with ${res.status}`);
+      }
+
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new TypeError("Oops, we haven't got JSON!");
+      }
+
       const data = await res.json();
       if (data.success) {
         setViewReport(data.report);
       } else {
-        alert('Failed to fetch report details: ' + (data.message || 'Unknown error'));
+        setErrorMessage('Failed to fetch report details: ' + (data.message || 'Unknown error'));
       }
     } catch (error) {
-      alert('Failed to fetch report details');
+      setErrorMessage('Failed to fetch report details');
     }
   };
 
   const handleReportAction = async (reportId: string, action: string, note?: string) => {
     if (!adminId) {
-      alert('Admin ID not found. Please check authentication.');
+      setErrorMessage('Admin ID not found. Please check authentication.');
       return;
     }
 
@@ -538,15 +577,15 @@ export const AdminReportsPage: React.FC = () => {
       const data = await res.json();
 
       if (data.success) {
-        alert(`✅ Report ${action} action completed successfully`);
+        triggerSuccess(`Report ${action} action completed successfully`);
         fetchReports();
         setViewReport(null);
       } else {
-        alert(data.message || 'Action failed');
+        setErrorMessage(data.message || 'Action failed');
       }
     } catch (error) {
       console.error('Action error:', error);
-      alert('Failed to perform action');
+      setErrorMessage('Failed to perform action');
     }
   };
 
@@ -580,7 +619,8 @@ export const AdminReportsPage: React.FC = () => {
     return 'During-Event';
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string, timing?: string) => {
+    if (timing === 'During-Event' && status !== 'Resolved' && status !== 'Dismissed') return 'bg-rose-600 shadow-[0_0_12px_rgba(225,29,72,0.4)]';
     switch (status) {
       case 'Pending': return 'bg-yellow-500';
       case 'Investigating': return 'bg-blue-500';
@@ -612,6 +652,33 @@ export const AdminReportsPage: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* Success Notification Pop-out */}
+      {showSuccess && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top duration-300">
+          <div className="bg-emerald-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-emerald-500/20">
+            <div className="bg-white/20 p-2 rounded-xl">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <span className="font-bold text-base tracking-wide">{successMessage}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error Notification Bar */}
+      {errorMessage && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top duration-300">
+          <div className="bg-red-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-red-500/20">
+            <div className="bg-white/20 p-2 rounded-xl">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <span className="font-bold text-base tracking-wide">{errorMessage}</span>
+            <button onClick={() => setErrorMessage('')} className="ml-4 p-1 hover:bg-white/20 rounded-full transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Modal */}
       {viewReport && (
         <ReportDetailModal
@@ -619,6 +686,8 @@ export const AdminReportsPage: React.FC = () => {
           onClose={() => setViewReport(null)}
           onAction={handleReportAction}
           onViewProfile={handleViewProfile}
+          onSuccess={triggerSuccess}
+          onError={setErrorMessage}
           adminId={adminId}
         />
       )}
@@ -695,44 +764,69 @@ export const AdminReportsPage: React.FC = () => {
           </div>
 
           {/* Filters */}
-          <div className="flex flex-wrap items-center gap-2 mt-6">
-            <span className="text-sm font-medium text-gray-600">Status:</span>
-            {['All', 'Pending', 'Resolved'].map(status => (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(status)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  filterStatus === status 
-                    ? 'bg-gray-900 text-white' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+          <div className="flex flex-wrap items-center gap-4 mt-6">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Status</label>
+              <div className="relative">
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="appearance-none bg-gray-100 border-none rounded-xl py-2 pl-4 pr-10 text-sm font-bold text-gray-700 cursor-pointer focus:ring-2 focus:ring-primary/10 hover:bg-gray-200 transition-all min-w-[140px]"
+                >
+                  <option value="All">All Status</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Investigating">Investigating</option>
+                  <option value="Resolved">Resolved</option>
+                  <option value="Dismissed">Dismissed</option>
+                </select>
+                <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Timing</label>
+              <div className="relative">
+                <select
+                  value={filterTiming}
+                  onChange={(e) => setFilterTiming(e.target.value as any)}
+                  className="appearance-none bg-gray-100 border-none rounded-xl py-2 pl-4 pr-10 text-sm font-bold text-gray-700 cursor-pointer focus:ring-2 focus:ring-primary/10 hover:bg-gray-200 transition-all min-w-[140px]"
+                >
+                  <option value="All">All Timing</option>
+                  <option value="Pre-Event">Pre-Event</option>
+                  <option value="During-Event">During-Event</option>
+                  <option value="Post-Event">Post-Event</option>
+                </select>
+                <Clock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Type</label>
+              <div className="relative">
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="appearance-none bg-gray-100 border-none rounded-xl py-2 pl-4 pr-10 text-sm font-bold text-gray-700 cursor-pointer focus:ring-2 focus:ring-primary/10 hover:bg-gray-200 transition-all min-w-[140px]"
+                >
+                  <option value="All">All Types</option>
+                  <option value="Event">Events</option>
+                  <option value="Product">Products</option>
+                  <option value="User">Users</option>
+                  <option value="Review">Reviews</option>
+                </select>
+                <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {(filterStatus !== 'All' || filterTiming !== 'All' || filterType !== 'All') && (
+              <button 
+                onClick={() => { setFilterStatus('All'); setFilterTiming('All'); setFilterType('All'); }}
+                className="mt-5 text-xs font-bold text-red-500 hover:text-red-600 transition-colors uppercase tracking-widest flex items-center gap-1"
               >
-                {status}
-                {status !== 'All' && reports.filter(r => r.status === status).length > 0 && (
-                  <span className="ml-1.5 px-1.5 py-0.5 bg-white/20 rounded-full text-xs">
-                    {reports.filter(r => r.status === status).length}
-                  </span>
-                )}
+                <XCircle className="w-3 h-3" />
+                Clear Filters
               </button>
-            ))}
-
-<span className="mx-2 text-gray-300">|</span>
-
-            <span className="text-sm font-medium text-gray-600">Timing:</span>
-            {['All', 'Pre-Event', 'During-Event', 'Post-Event'].map(timing => (
-              <button
-                key={timing}
-                onClick={() => setFilterTiming(timing as any)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  filterTiming === timing 
-                    ? 'bg-gray-900 text-white' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {timing}
-              </button>
-            ))}
-
+            )}
           </div>
         </div>
 
@@ -752,10 +846,24 @@ export const AdminReportsPage: React.FC = () => {
                   if (filterTiming === 'All') return true;
                   return getReportTiming(report) === filterTiming;
                 })
+                .sort((a, b) => {
+                  const timingA = getReportTiming(a);
+                  const timingB = getReportTiming(b);
+                  const isUrgentA = timingA === 'During-Event' && a.status !== 'Resolved' && a.status !== 'Dismissed';
+                  const isUrgentB = timingB === 'During-Event' && b.status !== 'Resolved' && b.status !== 'Dismissed';
+                  
+                  // Prioritize "Urgent" reports
+                  if (isUrgentA && !isUrgentB) return -1;
+                  if (!isUrgentA && isUrgentB) return 1;
+                  
+                  // Then by date
+                  return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                })
                 .map((report) => {
                   const TargetIcon = getTargetIcon(report.targetType);
                   const displayName = getTargetName(report);
                   const reportTiming = getReportTiming(report);
+                  const isUrgent = reportTiming === 'During-Event' && report.status !== 'Resolved' && report.status !== 'Dismissed';
 
                   return (
                     <div 
@@ -763,11 +871,13 @@ export const AdminReportsPage: React.FC = () => {
                       className={`group relative bg-white rounded-lg border transition-all duration-200 hover:shadow-md ${
                         selectedReports.includes(report.id)
                           ? 'border-gray-900 ring-1 ring-gray-900/10'
-                          : 'border-gray-200 hover:border-gray-300'
+                          : isUrgent 
+                            ? 'border-rose-200 bg-rose-50/30' 
+                            : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       {/* Left accent bar */}
-                      <div className={`absolute left-0 top-0 bottom-0 w-1 ${getStatusColor(report.status)}`}></div>
+                      <div className={`absolute left-0 top-0 bottom-0 w-1 ${getStatusColor(report.status, reportTiming)}`}></div>
 
                   <div className="p-4 pl-6">
                     <div className="flex flex-col lg:flex-row items-start gap-4">
@@ -780,15 +890,21 @@ export const AdminReportsPage: React.FC = () => {
                           onChange={() => toggleSelectReport(report.id)}
                           className="mt-1 w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer"
                         />
-                        <div className="p-2 bg-gray-100 rounded-lg">
-                          <TargetIcon className="w-5 h-5 text-gray-600" />
+                        <div className={`p-2 rounded-lg ${isUrgent ? 'bg-rose-100' : 'bg-gray-100'}`}>
+                          <TargetIcon className={`w-5 h-5 ${isUrgent ? 'text-rose-600' : 'text-gray-600'}`} />
                         </div>
                       </div>
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <h3 className="text-base font-semibold text-gray-900 truncate">{displayName}</h3>
+                          {isUrgent && (
+                            <span className="flex items-center gap-1 px-2 py-0.5 bg-rose-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded animate-pulse shadow-sm">
+                              <AlertTriangle className="w-3 h-3" />
+                              Urgent
+                            </span>
+                          )}
+                          <h3 className={`text-base font-semibold truncate ${isUrgent ? 'text-rose-900' : 'text-gray-900'}`}>{displayName}</h3>
                           <Badge 
                             variant={report.status === 'Resolved' ? 'success' : report.status === 'Pending' ? 'warning' : 'info'}
                             size="sm"
@@ -798,17 +914,17 @@ export const AdminReportsPage: React.FC = () => {
                           <Badge variant="secondary" size="sm">
                             {report.targetType}
                           </Badge>
-                          <Badge variant={reportTiming === 'Pre-Event' ? 'secondary' : reportTiming === 'During-Event' ? 'info' : 'success'} size="sm">
+                          <Badge variant={reportTiming === 'Pre-Event' ? 'secondary' : reportTiming === 'During-Event' ? 'error' : 'success'} size="sm">
                             {reportTiming}
                           </Badge>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                          <p className="text-gray-600 truncate">
-                            <span className="font-medium text-gray-700">Reason:</span> {report.reason}
+                          <p className={`${isUrgent ? 'text-rose-700/80' : 'text-gray-600'} truncate`}>
+                            <span className="font-medium">Reason:</span> {report.reason}
                           </p>
-                          <p className="text-gray-600 truncate">
-                            <span className="font-medium text-gray-700">Reported by:</span> {report.reporterId?.name || 'Anonymous'}
+                          <p className={`${isUrgent ? 'text-rose-700/80' : 'text-gray-600'} truncate`}>
+                            <span className="font-medium">Reported by:</span> {report.reporterId?.name || 'Anonymous'}
                           </p>
                         </div>
 

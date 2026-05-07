@@ -56,8 +56,9 @@ export const EventDetailPanel: React.FC<{ eventId: string; onBack: () => void }>
   const [editData, setEditData] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  // Add these with your other useState declarations
-const [uploadingImage, setUploadingImage] = useState(false);
+  const { t } = useLanguage();
+
+  const [uploadingImage, setUploadingImage] = useState(false);
 const [imageUploadType, setImageUploadType] = useState<'cover' | 'gallery'>('cover');
 const [imageIndex, setImageIndex] = useState<number | null>(null);
 
@@ -740,7 +741,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
         {activeTab === 'schedule' && (
           <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex justify-between items-center">
-              <h3 className="text-2xl font-serif font-bold text-primary">Experience & Daily Schedule</h3>
+              <h3 className="text-2xl font-serif font-bold text-primary">Experience & {t('organizer.createFestival.dailySchedule')}</h3>
               {isEditing && (
                 <Button 
                   variant="outline" 
@@ -2337,7 +2338,15 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
     </div>
   );
 };
-export const OrganizerOverview: React.FC<{ onManageEvent?: (id: string) => void; onCreate?: () => void }> = ({ onManageEvent: propOnManageEvent, onCreate: propOnCreate }) => {
+export const OrganizerOverview: React.FC<{ 
+  onManageEvent?: (id: string) => void; 
+  onCreate?: () => void;
+  disableCreate?: boolean;
+}> = ({ 
+  onManageEvent: propOnManageEvent, 
+  onCreate: propOnCreate,
+  disableCreate = false
+}) => {
   const [view, setView] = useState('overview'); // 'overview', 'eventDetail', 'createEvent'
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const router = useRouter();
@@ -2494,7 +2503,7 @@ export const OrganizerOverview: React.FC<{ onManageEvent?: (id: string) => void;
            <p className="text-gray-500 text-sm">Manage your cultural celebrations.</p>
          </div>
          <div className="flex items-center gap-4">
-            <Button onClick={onCreate} leftIcon={Plus}>Create Festival</Button>
+            <Button onClick={onCreate} leftIcon={Plus} disabled={disableCreate}>Create Festival</Button>
          </div>
        </header>
 
@@ -2682,7 +2691,7 @@ export const OrganizerOverview: React.FC<{ onManageEvent?: (id: string) => void;
              </div>
 
              {/* Existing Mission Control */}
-             <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8"><h3 className="text-xl font-serif font-bold text-primary">Mission Control</h3><div className="space-y-3">{[{ id: 'create', label: 'Launch New Listing', icon: Plus, action: onCreate }].map(action => (<button key={action.id} onClick={action.action} className="w-full flex items-center justify-between p-4 bg-ethio-bg rounded-2xl transition-all group"><div className="flex items-center gap-4"><div className="p-2 bg-white rounded-xl group-hover:bg-primary group-hover:text-white"><action.icon className="w-4 h-4" /></div><span className="text-[11px] font-bold text-primary uppercase">{action.label}</span></div><ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-primary" /></button>))}</div></div>
+             <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8"><h3 className="text-xl font-serif font-bold text-primary">Mission Control</h3><div className="space-y-3">{[{ id: 'create', label: 'Launch New Listing', icon: Plus, action: onCreate }].map(action => (<button key={action.id} onClick={action.action} disabled={disableCreate} className="w-full flex items-center justify-between p-4 bg-ethio-bg rounded-2xl transition-all group disabled:cursor-not-allowed disabled:opacity-60"><div className="flex items-center gap-4"><div className="p-2 bg-white rounded-xl group-hover:bg-primary group-hover:text-white"><action.icon className="w-4 h-4" /></div><span className="text-[11px] font-bold text-primary uppercase">{action.label}</span></div><ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-primary" /></button>))}</div></div>
 
              {/* Community / Support */}
              <div className="bg-gradient-to-br from-primary to-ethio-black p-8 rounded-[40px] text-white shadow-lg relative overflow-hidden">
@@ -2709,28 +2718,18 @@ export const OrganizerOverview: React.FC<{ onManageEvent?: (id: string) => void;
           </aside>
        </div>
 
-       {/* Support Modal */}
-       {showSupport && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowSupport(false)}>
-          <div className="bg-white w-full max-w-md rounded-3xl p-8 space-y-6 animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center">
-              <h3 className="text-2xl font-serif font-bold text-primary">Contact Support</h3>
-              <button onClick={() => setShowSupport(false)} className="p-2 hover:bg-gray-100 rounded-full"><X className="w-5 h-5 text-gray-500" /></button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Subject</label>
-                <Input placeholder="How can we help?" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Message</label>
-                <textarea className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary h-32 text-sm" placeholder="Describe your issue..."></textarea>
-              </div>
-              <Button className="w-full">Send Message</Button>
-            </div>
-          </div>
-        </div>
-       )}
+{/* Support Modal */}
+        {showSupport && (
+         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowSupport(false)}>
+           <div className="bg-white w-full max-w-md rounded-3xl p-8 space-y-6 animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
+             <div className="flex justify-between items-center">
+               <h3 className="text-2xl font-serif font-bold text-primary">Contact Support</h3>
+               <button onClick={() => setShowSupport(false)} className="p-2 hover:bg-gray-100 rounded-full"><X className="w-5 h-5 text-gray-500" /></button>
+             </div>
+             <SupportForm onSuccess={() => setShowSupport(false)} />
+           </div>
+         </div>
+        )}
 
        {/* Tips Modal */}
        {showTips && (
@@ -2761,6 +2760,91 @@ export const OrganizerOverview: React.FC<{ onManageEvent?: (id: string) => void;
         </div>
        )}
     </div>
+  );
+};
+
+const SupportForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const { user } = useAuth();
+
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subject.trim() || !message.trim()) return;
+    
+    setSending(true);
+    try {
+      const response = await fetch('/api/organizer/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject,
+          message,
+          userId: user?.id || 'anonymous',
+          userName: user?.name || 'Anonymous User',
+          userEmail: user?.email || ''
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSubmitted(true);
+        setSubject('');
+        setMessage('');
+        setTimeout(() => {
+          onSuccess();
+          setSubmitted(false);
+        }, 2000);
+      } else {
+        alert(data.message || 'Failed to submit support ticket');
+      }
+    } catch (error: any) {
+      console.error('Support ticket error:', error);
+      alert(`Error: ${error.message || 'An error occurred while submitting your ticket'}`);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="py-12 text-center space-y-4 animate-in fade-in zoom-in duration-500">
+        <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle2 className="w-10 h-10" />
+        </div>
+        <h4 className="text-2xl font-serif font-bold text-primary">Message Sent!</h4>
+        <p className="text-gray-500">Our support team will get back to you via email shortly.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Subject</label>
+        <Input 
+          placeholder="How can we help?" 
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Message</label>
+        <textarea 
+          className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary h-32 text-sm" 
+          placeholder="Describe your issue..."
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          required
+        ></textarea>
+      </div>
+      <Button className="w-full" type="submit" disabled={sending}>
+        {sending ? 'Sending...' : 'Send Message'}
+      </Button>
+    </form>
   );
 };
 
@@ -3607,11 +3691,11 @@ export const OrganizerBookingsView: React.FC<{ onViewBooking: (id: string) => vo
     </div>
   );
 };
-export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => void; onCreate: () => void }> = ({ onManageEvent, onCreate }) => {
+export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => void; onCreate: () => void; disableCreate?: boolean }> = ({ onManageEvent, onCreate, disableCreate = false }) => {
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
 
   useEffect(() => {
     const fetchFestivals = async () => {
@@ -3698,12 +3782,8 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
   const filteredFestivals = festivals.filter(f => {
     // Status Filter logic
     if (activeTab === 'All') {
-      // In "All", only show Pending, Published, and Completed
-      const isPending = f.verificationStatus === 'Pending Approval' || f.verificationStatus === 'Pending Review';
-      const isPublished = f.verificationStatus === 'Approved';
-      const isCompleted = f.verificationStatus === 'Approved' && new Date(f.endDate) < new Date();
-      
-      if (!isPending && !isPublished && !isCompleted) return false;
+      // Show all festivals in the "All" tab
+      return true;
     } else {
       if (activeTab === 'Pending') {
         if (f.verificationStatus !== 'Pending Approval' && f.verificationStatus !== 'Pending Review') return false;
@@ -3776,10 +3856,11 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
           size="lg"
           leftIcon={Plus}
           onClick={onCreate}
+          disabled={disableCreate}
           className="w-full md:w-auto"
         >
-          Create New Festival
-        </Button>
+           {t("organizer.createFestival.createNewFestival")}
+         </Button>
       </header>
 
       {/* Festivals List */}
@@ -3896,7 +3977,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
           <div className="text-center py-20 border-2 border-dashed border-gray-200 rounded-3xl">
             <Layers className="w-12 h-12 mx-auto text-gray-300" />
             <h4 className="mt-6 text-xl font-serif font-bold text-primary">No Festivals Yet</h4>
-            <p className="text-gray-400 mt-2">Click 'Create New Festival' to get started.</p>
+             <p className="text-gray-400 mt-2">{t("organizer.createFestival.clickToCreateFestival")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -3924,7 +4005,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
                   </div>
                   <div className="text-xs text-gray-400 font-bold uppercase tracking-wider space-y-2">
                     <p className="flex items-center gap-2"><Calendar className="w-3 h-3 text-secondary" /> {new Date(festival.startDate).toLocaleDateString()} - {new Date(festival.endDate).toLocaleDateString()}</p>
-                    <p className="flex items-center gap-2"><MapPin className="w-3 h-3 text-secondary" /> {festival.locationName}</p>
+                    <p className="flex items-center gap-2"><MapPin className="w-3 h-3 text-secondary" /> {getLocalizedText(festival, 'locationName', language)}</p>
                   </div>
                   <div className="pt-4 border-t border-gray-100 flex flex-col gap-2">
                     <div className="flex gap-2">
@@ -4085,6 +4166,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
 export const OrganizerDashboard: React.FC = () => {
   const router = useRouter();
   const { user } = useAuth();
+  const { language } = useLanguage();
   const navigate = (to: string) => router.push(to);
 
   const [analytics, setAnalytics] = useState<any>(null);

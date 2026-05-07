@@ -1,19 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  User, Shield, CreditCard, Bell, Sliders, Link as LinkIcon,
+  User, Shield, Bell, Sliders, Link as LinkIcon,
   Camera, CheckCircle2, AlertCircle, Smartphone, Monitor,
-  LogOut, Download, Plus, Mail, MessageSquare, Globe,
-  Calendar, Video, Key, Loader2, Save, X, Eye, EyeOff
+  LogOut, Download, Plus, MessageSquare, Globe,
+  Calendar, Video, Key, Loader2, Save, Eye, EyeOff
 } from 'lucide-react';
 import { Button, Badge } from '../../components/UI';
 
 const TABS = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'security', label: 'Security', icon: Shield },
-  { id: 'payments', label: 'Payments', icon: CreditCard },
   { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'preferences', label: 'Preferences', icon: Sliders },
-  { id: 'integrations', label: 'Integrations', icon: LinkIcon },
 ];
 
 interface OrganizerProfile {
@@ -23,10 +20,6 @@ interface OrganizerProfile {
   address?: string;
   bio?: string;
   avatar?: string;
-  payoutMethod?: string;
-  bankName?: string;
-  accountHolderName?: string;
-  accountNumber?: string;
   isVerified?: boolean;
   notifications?: {
     newBooking?: boolean;
@@ -61,10 +54,14 @@ export const OrganizerSettingsPage: React.FC = () => {
     companyName: '',
     phone: '',
     website: '',
+    country: '',
+    region: '',
+    city: '',
     address: '',
     bio: '',
     avatar: '',
     isVerified: false,
+    organizerStatus: 'Not Submitted',
   });
 
   const [passwords, setPasswords] = useState({
@@ -77,23 +74,6 @@ export const OrganizerSettingsPage: React.FC = () => {
     current: false,
     new: false,
     confirm: false,
-  });
-
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotPasswordSending, setForgotPasswordSending] = useState(false);
-  const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
-  const [forgotMode, setForgotMode] = useState<'email' | 'direct'>('email');
-  const [showForgotPasswords, setShowForgotPasswords] = useState({
-    new: false,
-    confirm: false,
-  });
-
-  const [payments, setPayments] = useState({
-    payoutMethod: '',
-    bankName: '',
-    accountHolderName: '',
-    accountNumber: '',
   });
 
   const [notifications, setNotifications] = useState({
@@ -136,17 +116,14 @@ export const OrganizerSettingsPage: React.FC = () => {
           companyName: orgProfile.companyName || '',
           phone: orgProfile.phone || '',
           website: orgProfile.website || '',
+          country: orgProfile.country || '',
+          region: orgProfile.region || '',
+          city: orgProfile.city || '',
           address: orgProfile.address || '',
           bio: orgProfile.bio || '',
           avatar: orgProfile.avatar || '',
           isVerified: orgProfile.isVerified || false,
-        });
-
-        setPayments({
-          payoutMethod: orgProfile.payoutMethod || '',
-          bankName: orgProfile.bankName || '',
-          accountHolderName: orgProfile.accountHolderName || '',
-          accountNumber: orgProfile.accountNumber || '',
+          organizerStatus: settings.organizerStatus || 'Not Submitted',
         });
 
         setNotifications({
@@ -205,6 +182,13 @@ export const OrganizerSettingsPage: React.FC = () => {
   };
 
   const saveProfile = async () => {
+    // Phone number validation: must be exactly 10 digits
+    const phoneDigits = profile.phone.replace(/\D/g, '');
+    if (phoneDigits && phoneDigits.length !== 10) {
+      setMessage({ type: 'error', text: 'Contact Phone must be exactly 10 digits.' });
+      return;
+    }
+
     setSaving(true);
     setMessage(null);
     try {
@@ -250,6 +234,10 @@ export const OrganizerSettingsPage: React.FC = () => {
       setMessage({ type: 'error', text: 'Please enter your current password' });
       return;
     }
+    if (passwords.currentPassword === passwords.newPassword) {
+      setMessage({ type: 'error', text: 'New password must be different from the current one' });
+      return;
+    }
     
     setSaving(true);
     setMessage(null);
@@ -271,138 +259,6 @@ export const OrganizerSettingsPage: React.FC = () => {
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Network error. Please try again.' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const sendForgotPasswordEmail = async () => {
-    if (!forgotEmail) {
-      setMessage({ type: 'error', text: 'Please enter your email address' });
-      return;
-    }
-    
-    setForgotPasswordSending(true);
-    setMessage(null);
-    try {
-      const res = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: forgotEmail }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setForgotPasswordSent(true);
-        setMessage({ type: 'success', text: 'Password reset link sent to your email!' });
-      } else {
-        setMessage({ type: 'error', text: data.message || 'Failed to send reset email' });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Network error. Please try again.' });
-    } finally {
-      setForgotPasswordSending(false);
-    }
-  };
-
-  const handleDirectPasswordReset = async () => {
-    if (!forgotEmail) {
-      setMessage({ type: 'error', text: 'Please enter your email address' });
-      return;
-    }
-    if (passwords.newPassword !== passwords.confirmPassword) {
-      setMessage({ type: 'error', text: 'Passwords do not match' });
-      return;
-    }
-    if (passwords.newPassword.length < 6) {
-      setMessage({ type: 'error', text: 'Password must be at least 6 characters' });
-      return;
-    }
-
-    setForgotPasswordSending(true);
-    setMessage(null);
-    try {
-      const res = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: forgotEmail,
-          newPassword: passwords.newPassword,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setForgotPasswordSent(true);
-        setMessage({ type: 'success', text: 'Password reset successfully!' });
-        setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      } else {
-        setMessage({ type: 'error', text: data.message || 'Failed to reset password' });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Network error. Please try again.' });
-    } finally {
-      setForgotPasswordSending(false);
-    }
-  };
-
-  const resetPassword = async () => {
-    if (passwords.newPassword !== passwords.confirmPassword) {
-      setMessage({ type: 'error', text: 'New passwords do not match' });
-      return;
-    }
-    if (passwords.newPassword.length < 6) {
-      setMessage({ type: 'error', text: 'Password must be at least 6 characters' });
-      return;
-    }
-    
-    setSaving(true);
-    setMessage(null);
-    try {
-      const res = await fetch('/api/organizer/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          resetPassword: true,
-          newPassword: passwords.newPassword,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setMessage({ type: 'success', text: 'Password has been reset successfully!' });
-        setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      } else {
-        setMessage({ type: 'error', text: data.message || 'Failed to reset password' });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Network error. Please try again.' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const savePayments = async () => {
-    setSaving(true);
-    setMessage(null);
-    try {
-      const res = await fetch('/api/organizer/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          organizerProfile: {
-            payoutMethod: payments.payoutMethod,
-            bankName: payments.bankName,
-            accountHolderName: payments.accountHolderName,
-            accountNumber: payments.accountNumber,
-          },
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setMessage({ type: 'success', text: 'Payment details updated successfully!' });
-      } else {
-        setMessage({ type: 'error', text: data.message });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to update payment details' });
     } finally {
       setSaving(false);
     }
@@ -591,9 +447,15 @@ export const OrganizerSettingsPage: React.FC = () => {
                 <input 
                   type="tel" 
                   value={profile.phone} 
-                  onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                  maxLength={10}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setProfile({ ...profile, phone: value });
+                  }}
+                  placeholder="e.g. 0912345678"
                   className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10" 
                 />
+                <p className="text-[10px] text-gray-400">Must be exactly 10 digits (e.g., 0912345678)</p>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Website (Optional)</label>
@@ -604,7 +466,7 @@ export const OrganizerSettingsPage: React.FC = () => {
                   className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10" 
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Business Address</label>
                 <input 
                   type="text" 
@@ -612,6 +474,35 @@ export const OrganizerSettingsPage: React.FC = () => {
                   onChange={(e) => setProfile({ ...profile, address: e.target.value })}
                   className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10" 
                 />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Country</label>
+                  <input 
+                    type="text" 
+                    readOnly
+                    value={profile.country} 
+                    className="w-full bg-gray-100 border-none rounded-xl py-2 px-3 text-xs cursor-not-allowed" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Region</label>
+                  <input 
+                    type="text" 
+                    readOnly
+                    value={profile.region} 
+                    className="w-full bg-gray-100 border-none rounded-xl py-2 px-3 text-xs cursor-not-allowed" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">City</label>
+                  <input 
+                    type="text" 
+                    readOnly
+                    value={profile.city} 
+                    className="w-full bg-gray-100 border-none rounded-xl py-2 px-3 text-xs cursor-not-allowed" 
+                  />
+                </div>
               </div>
               <div className="space-y-2 md:col-span-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Bio / About Organizer</label>
@@ -703,205 +594,8 @@ export const OrganizerSettingsPage: React.FC = () => {
                   {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Key className="w-4 h-4 mr-2" />}
                   Update Password
                 </Button>
-                <Button variant="outline" onClick={() => { setShowForgotPassword(true); setForgotEmail(profile.email || ''); }}>
-                  Forgot Password?
-                </Button>
               </div>
               <p className="text-xs text-gray-400 mt-2">Use your current password to update to a new one.</p>
-            </div>
-
-            {/* Forgot Password Modal */}
-            {showForgotPassword && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                <div className="bg-white rounded-[32px] p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-300">
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-serif font-bold text-primary">Reset Password</h3>
-                    <button onClick={() => { setShowForgotPassword(false); setForgotPasswordSent(false); setForgotMode('email'); }} className="text-gray-400 hover:text-gray-600">
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-                  
-                  {!forgotPasswordSent ? (
-                    <>
-                      <p className="text-sm text-gray-500 mb-4">
-                        {forgotMode === 'email' 
-                          ? 'Enter your email address and we\'ll send you a link to reset your password.'
-                          : 'Enter your email and a new password to reset your password directly.'}
-                      </p>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Email Address</label>
-                          <input 
-                            type="email" 
-                            value={forgotEmail}
-                            onChange={(e) => setForgotEmail(e.target.value)}
-                            placeholder="your@email.com" 
-                            className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10" 
-                          />
-                        </div>
-                        {forgotMode === 'direct' && (
-                          <>
-                            <div className="space-y-2">
-                              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">New Password</label>
-                              <div className="relative">
-                                <input 
-                                  type={showForgotPasswords.new ? 'text' : 'password'} 
-                                  value={passwords.newPassword}
-                                  onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
-                                  placeholder="••••••••" 
-                                  className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 pr-12 text-sm focus:ring-2 focus:ring-primary/10" 
-                                />
-                                <button 
-                                  type="button"
-                                  onClick={() => setShowForgotPasswords({ ...showForgotPasswords, new: !showForgotPasswords.new })}
-                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                >
-                                  {showForgotPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                </button>
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Confirm Password</label>
-                              <div className="relative">
-                                <input 
-                                  type={showForgotPasswords.confirm ? 'text' : 'password'} 
-                                  value={passwords.confirmPassword}
-                                  onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
-                                  placeholder="••••••••" 
-                                  className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 pr-12 text-sm focus:ring-2 focus:ring-primary/10" 
-                                />
-                                <button 
-                                  type="button"
-                                  onClick={() => setShowForgotPasswords({ ...showForgotPasswords, confirm: !showForgotPasswords.confirm })}
-                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                >
-                                  {showForgotPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                </button>
-                              </div>
-                            </div>
-                          </>
-                        )}
-                        <div className="flex gap-2">
-                          {forgotMode === 'direct' ? (
-                            <>
-                              <Button 
-                                variant="outline" 
-                                className="flex-1" 
-                                onClick={() => {
-                                  setForgotMode('email');
-                                  setPasswords({ ...passwords, newPassword: '', confirmPassword: '' });
-                                }}
-                              >
-                                Back
-                              </Button>
-                              <Button 
-                                variant="primary" 
-                                className="flex-1" 
-                                onClick={handleDirectPasswordReset} 
-                                disabled={forgotPasswordSending || !passwords.newPassword || !passwords.confirmPassword || passwords.newPassword !== passwords.confirmPassword}
-                              >
-                                {forgotPasswordSending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Key className="w-4 h-4 mr-2" />}
-                                Reset Password
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button 
-                                variant="primary" 
-                                className="flex-1" 
-                                onClick={sendForgotPasswordEmail} 
-                                disabled={forgotPasswordSending}
-                              >
-                                {forgotPasswordSending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
-                                Send Reset Link
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                className="flex-1" 
-                                onClick={() => setForgotMode('direct')}
-                              >
-                                Direct Reset
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                        {forgotMode === 'direct' && passwords.newPassword && passwords.confirmPassword && passwords.newPassword !== passwords.confirmPassword && (
-                          <p className="text-xs text-red-500">Passwords do not match</p>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center py-4">
-                      <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-                      </div>
-                      <h4 className="text-lg font-bold text-primary mb-2">Password Reset!</h4>
-                      <p className="text-sm text-gray-500 mb-4">Your password has been reset successfully.</p>
-                      <Button variant="outline" className="mt-4" onClick={() => { setShowForgotPassword(false); setForgotPasswordSent(false); setForgotMode('email'); }}>
-                        Close
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="pt-8 border-t border-gray-100">
-              <h3 className="text-xl font-serif font-bold text-primary mb-6">Security Preferences</h3>
-              <div className="space-y-6">
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-                  <div>
-                    <h4 className="font-bold text-primary text-sm">Two-Factor Authentication (2FA)</h4>
-                    <p className="text-xs text-gray-500 mt-1">Add an extra layer of security to your account.</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer" 
-                      checked={twoFactorEnabled}
-                      onChange={(e) => setTwoFactorEnabled(e.target.checked)} 
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-                  </label>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-                  <div>
-                    <h4 className="font-bold text-primary text-sm">Login Alerts</h4>
-                    <p className="text-xs text-gray-500 mt-1">Get notified when someone logs into your account from a new device.</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer" 
-                      checked={loginAlerts}
-                      onChange={(e) => setLoginAlerts(e.target.checked)} 
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-                  </label>
-                </div>
-              </div>
-              <div className="mt-6 flex justify-end">
-                <Button onClick={saveSecurity} disabled={saving}>
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                  Save Security Preferences
-                </Button>
-              </div>
-            </div>
-
-            <div className="pt-8 border-t border-gray-100">
-              <h3 className="text-xl font-serif font-bold text-primary mb-6">Active Sessions</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border border-emerald-100 bg-emerald-50/30 rounded-2xl">
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 bg-white rounded-xl text-emerald-600 shadow-sm"><Monitor className="w-5 h-5" /></div>
-                    <div>
-                      <h4 className="font-bold text-primary text-sm">Current Device</h4>
-                      <p className="text-xs text-gray-500 mt-0.5">Active Now</p>
-                    </div>
-                  </div>
-                  <Badge className="bg-emerald-100 text-emerald-700 border-none">Current Session</Badge>
-                </div>
-              </div>
             </div>
 
             <div className="pt-8 border-t border-gray-100">
@@ -911,77 +605,6 @@ export const OrganizerSettingsPage: React.FC = () => {
                   <p className="text-xs text-red-600/80 mt-1">Once you deactivate your account, your events will be unpublished.</p>
                 </div>
                 <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-100">Deactivate Account</Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* PAYMENTS TAB */}
-        {activeTab === 'payments' && (
-          <div className="space-y-10 animate-in fade-in duration-300">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-6 bg-ethio-dark text-white rounded-3xl shadow-xl">
-              <div>
-                <p className="text-[10px] font-black uppercase text-white/60 tracking-widest mb-1">Payout Status</p>
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <h3 className="text-xl font-serif font-bold">{payments.payoutMethod ? 'Active & Verified' : 'Not Configured'}</h3>
-                </div>
-              </div>
-              <div className="text-left md:text-right">
-                <p className="text-[10px] font-black uppercase text-white/60 tracking-widest mb-1">Next Scheduled Payout</p>
-                <p className="text-lg font-bold">1st of each month</p>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-xl font-serif font-bold text-primary mb-6">Payout Method</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Payout Method</label>
-                  <select 
-                    value={payments.payoutMethod} 
-                    onChange={(e) => setPayments({ ...payments, payoutMethod: e.target.value })}
-                    className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10 font-medium"
-                  >
-                    <option value="">Select method</option>
-                    <option value="bank">Bank Transfer</option>
-                    <option value="telebirr">Telebirr</option>
-                    <option value="chapa">Chapa</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Bank Name</label>
-                  <input 
-                    type="text" 
-                    value={payments.bankName} 
-                    onChange={(e) => setPayments({ ...payments, bankName: e.target.value })}
-                    className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Account Holder Name</label>
-                  <input 
-                    type="text" 
-                    value={payments.accountHolderName} 
-                    onChange={(e) => setPayments({ ...payments, accountHolderName: e.target.value })}
-                    className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Account Number</label>
-                  <input 
-                    type="text" 
-                    value={payments.accountNumber} 
-                    onChange={(e) => setPayments({ ...payments, accountNumber: e.target.value })}
-                    className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10" 
-                  />
-                </div>
-              </div>
-              <div className="mt-6">
-                <Button onClick={savePayments} disabled={saving}>
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                  Update Payout Details
-                </Button>
               </div>
             </div>
           </div>
@@ -1056,213 +679,11 @@ export const OrganizerSettingsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="pt-8 border-t border-gray-100">
-              <h3 className="text-xl font-serif font-bold text-primary mb-6">Delivery Methods</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Email Frequency</label>
-                  <select 
-                    value={notifications.emailFrequency}
-                    onChange={(e) => setNotifications({ ...notifications, emailFrequency: e.target.value })}
-                    className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10 font-medium"
-                  >
-                    <option value="instant">Instant (As they happen)</option>
-                    <option value="daily">Daily Digest</option>
-                    <option value="weekly">Weekly Summary</option>
-                  </select>
-                </div>
-                <div className="space-y-4">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Other Channels</label>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-primary flex items-center gap-2"><Smartphone className="w-4 h-4 text-gray-400" /> SMS Notifications</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        className="sr-only peer" 
-                        checked={notifications.smsNotifications}
-                        onChange={(e) => setNotifications({ ...notifications, smsNotifications: e.target.checked })} 
-                      />
-                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-primary flex items-center gap-2"><Bell className="w-4 h-4 text-gray-400" /> Push Notifications</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        className="sr-only peer" 
-                        checked={notifications.pushNotifications}
-                        onChange={(e) => setNotifications({ ...notifications, pushNotifications: e.target.checked })} 
-                      />
-                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
             <div className="pt-6 border-t border-gray-100 flex justify-end">
               <Button onClick={saveNotifications} disabled={saving}>
                 {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                 Save Preferences
               </Button>
-            </div>
-          </div>
-        )}
-
-        {/* PREFERENCES TAB */}
-        {activeTab === 'preferences' && (
-          <div className="space-y-10 animate-in fade-in duration-300">
-            <h3 className="text-xl font-serif font-bold text-primary mb-6">Dashboard Preferences</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Dashboard Language</label>
-                <select 
-                  value={preferences.language}
-                  onChange={(e) => setPreferences({ ...preferences, language: e.target.value })}
-                  className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10 font-medium"
-                >
-                  <option>English</option>
-                  <option>Amharic</option>
-                  <option>Oromiffa</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Currency Preference</label>
-                <select 
-                  value={preferences.currency}
-                  onChange={(e) => setPreferences({ ...preferences, currency: e.target.value })}
-                  className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10 font-medium"
-                >
-                  <option>ETB (Ethiopian Birr)</option>
-                  <option>USD (US Dollar)</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Timezone</label>
-                <select 
-                  value={preferences.timezone}
-                  onChange={(e) => setPreferences({ ...preferences, timezone: e.target.value })}
-                  className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10 font-medium"
-                >
-                  <option>Africa/Addis_Ababa (EAT)</option>
-                  <option>UTC</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Date Format</label>
-                <select 
-                  value={preferences.dateFormat}
-                  onChange={(e) => setPreferences({ ...preferences, dateFormat: e.target.value })}
-                  className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10 font-medium"
-                >
-                  <option>DD/MM/YYYY</option>
-                  <option>MM/DD/YYYY</option>
-                  <option>YYYY-MM-DD</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Default Landing Page</label>
-                <select 
-                  value={preferences.defaultLandingPage}
-                  onChange={(e) => setPreferences({ ...preferences, defaultLandingPage: e.target.value })}
-                  className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10 font-medium"
-                >
-                  <option>Overview</option>
-                  <option>My Events</option>
-                  <option>Analytics</option>
-                  <option>Revenue</option>
-                </select>
-              </div>
-              <div className="space-y-2 flex flex-col justify-center">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Appearance</label>
-                <div className="flex items-center justify-between p-4 border border-gray-100 rounded-xl bg-gray-50">
-                  <span className="text-sm font-medium text-primary">Dark Mode</span>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer" 
-                      checked={preferences.darkMode}
-                      onChange={(e) => setPreferences({ ...preferences, darkMode: e.target.checked })} 
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
-                </div>
-              </div>
-            </div>
-            <div className="pt-6 border-t border-gray-100 flex justify-end">
-              <Button onClick={savePreferences} disabled={saving}>
-                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                Save Preferences
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* INTEGRATIONS TAB */}
-        {activeTab === 'integrations' && (
-          <div className="space-y-10 animate-in fade-in duration-300">
-            <div>
-              <h3 className="text-xl font-serif font-bold text-primary mb-2">Connected Apps</h3>
-              <p className="text-sm text-gray-500 mb-6">Connect external tools to streamline your workflow.</p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-5 border border-gray-100 rounded-2xl flex items-start gap-4 hover:border-primary/20 transition-colors">
-                  <div className="p-3 bg-blue-50 text-blue-600 rounded-xl shrink-0"><Calendar className="w-6 h-6" /></div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-primary text-sm">Google Calendar</h4>
-                    <p className="text-xs text-gray-500 mt-1 mb-3">Sync your events directly to your calendar.</p>
-                    <Button variant="outline" size="sm" className="text-xs py-1.5 h-auto">Connect</Button>
-                  </div>
-                </div>
-                <div className="p-5 border border-gray-100 rounded-2xl flex items-start gap-4 hover:border-primary/20 transition-colors">
-                  <div className="p-3 bg-blue-50 text-blue-600 rounded-xl shrink-0"><Video className="w-6 h-6" /></div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-primary text-sm">Zoom</h4>
-                    <p className="text-xs text-gray-500 mt-1 mb-3">Automatically create meetings for virtual events.</p>
-                    <Button variant="outline" size="sm" className="text-xs py-1.5 h-auto">Connect</Button>
-                  </div>
-                </div>
-                <div className="p-5 border border-gray-100 rounded-2xl flex items-start gap-4 hover:border-primary/20 transition-colors">
-                  <div className="p-3 bg-green-50 text-green-600 rounded-xl shrink-0"><MessageSquare className="w-6 h-6" /></div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-primary text-sm">WhatsApp Business</h4>
-                    <p className="text-xs text-gray-500 mt-1 mb-3">Send tickets and updates via WhatsApp.</p>
-                    <Button variant="outline" size="sm" className="text-xs py-1.5 h-auto">Connect</Button>
-                  </div>
-                </div>
-                <div className="p-5 border border-gray-100 rounded-2xl flex items-start gap-4 hover:border-primary/20 transition-colors">
-                  <div className="p-3 bg-amber-50 text-amber-600 rounded-xl shrink-0"><Mail className="w-6 h-6" /></div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-primary text-sm">Mailchimp</h4>
-                    <p className="text-xs text-gray-500 mt-1 mb-3">Sync attendees to your marketing lists.</p>
-                    <Button variant="outline" size="sm" className="text-xs py-1.5 h-auto">Connect</Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-8 border-t border-gray-100">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h3 className="text-xl font-serif font-bold text-primary">API & Webhooks</h3>
-                  <p className="text-sm text-gray-500 mt-1">For advanced integrations and custom development.</p>
-                </div>
-                <Button variant="outline" size="sm" leftIcon={Plus}>Generate Key</Button>
-              </div>
-              
-              <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Key className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <h4 className="font-bold text-primary text-sm">Production API Key</h4>
-                    <p className="text-xs font-mono text-gray-500 mt-0.5">sk_live_••••••••••••••••••••••••8f92</p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="text-xs py-1.5 h-auto">Reveal</Button>
-                  <Button variant="outline" size="sm" className="text-xs py-1.5 h-auto text-red-600 border-red-200 hover:bg-red-50">Revoke</Button>
-                </div>
-              </div>
             </div>
           </div>
         )}

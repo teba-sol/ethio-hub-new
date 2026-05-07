@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Store, Building2, CreditCard, Truck, Bell, Shield, UserCog, FileText,
   Save, Upload, Eye, CheckCircle2, AlertCircle, Smartphone, Globe, Mail,
-  LogOut, Trash2, Download, RefreshCw, ChevronRight, Lock, MapPin,
-  Facebook, Instagram, Twitter
+  LogOut, Trash2, Download, RefreshCw, ChevronRight, Lock, MapPin, Camera,
+  EyeOff, Key, Loader2
 } from 'lucide-react';
 import { Button, Badge, Input } from '../UI';
 
@@ -33,17 +33,210 @@ const SectionHeader: React.FC<{ title: string; description: string }> = ({ title
 
 export const ArtisanSettingsManager: React.FC = () => {
   const [activeTab, setActiveTab] = useState('profile');
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   
-  // Mock State for forms
+  // Real State for forms
   const [shopProfile, setShopProfile] = useState({
-    name: "Ethio-Craft Treasures",
-    description: "Authentic handmade Ethiopian artifacts crafted with care and tradition.",
-    city: "Addis Ababa",
-    region: "Addis Ababa",
-    country: "Ethiopia",
-    experience: "5",
-    email: "contact@ethiocraft.com"
+    name: "",
+    description: "",
+    city: "",
+    region: "",
+    country: "",
+    experience: "",
+    email: "",
+    profileImage: ""
   });
+
+  const [passwords, setPasswords] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+
+  const [businessInfo, setBusinessInfo] = useState({
+    businessName: "",
+    category: "",
+    phone: "",
+    address: "",
+    idDocument: "",
+    workshopPhoto: "",
+    craftProcessPhoto: "",
+  });
+
+  const [paymentInfo, setPaymentInfo] = useState({
+    bankName: "",
+    accountName: "",
+    accountNumber: "",
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('/api/artisan/settings');
+        const data = await res.json();
+        if (data.success) {
+          const profile = data.profile;
+          const user = data.user;
+          
+          if (profile) {
+            setShopProfile({
+              name: profile.businessName || user.name,
+              description: profile.bio || "",
+              city: profile.city || "",
+              region: profile.region || "",
+              country: profile.country || "Ethiopia",
+              experience: String(profile.experience || ""),
+              email: user.email || "",
+              profileImage: profile.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.businessName || user.name)}&background=random`
+            });
+
+            setBusinessInfo({
+              businessName: profile.businessName || "",
+              category: profile.category || "",
+              phone: profile.phone || "",
+              address: profile.address || "",
+              idDocument: profile.idDocument || "",
+              workshopPhoto: profile.workshopPhoto || "",
+              craftProcessPhoto: profile.craftProcessPhoto || "",
+            });
+
+            setPaymentInfo({
+              bankName: profile.bankName || "",
+              accountName: profile.accountName || "",
+              accountNumber: profile.accountNumber || "",
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching artisan settings:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', 'ethio_hub_presets');
+
+    try {
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      
+      if (data.secure_url) {
+        // Update local state
+        setShopProfile(prev => ({ ...prev, profileImage: data.secure_url }));
+        
+        // Update backend
+        await fetch('/api/artisan/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profileImage: data.secure_url }),
+        });
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/artisan/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: shopProfile.name,
+          bio: shopProfile.description,
+          city: shopProfile.city,
+          region: shopProfile.region,
+          country: shopProfile.country,
+          experience: shopProfile.experience
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage({ type: 'success', text: 'Profile updated successfully!' });
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Failed to update profile' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'An error occurred. Please try again.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (passwords.newPassword !== passwords.confirmPassword) {
+      setMessage({ type: 'error', text: 'New passwords do not match' });
+      return;
+    }
+    if (passwords.newPassword.length < 6) {
+      setMessage({ type: 'error', text: 'Password must be at least 6 characters' });
+      return;
+    }
+    if (passwords.currentPassword === passwords.newPassword) {
+      setMessage({ type: 'error', text: 'New password must be different from the current one' });
+      return;
+    }
+
+    setSaving(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/artisan/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword: passwords.currentPassword,
+          newPassword: passwords.newPassword
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage({ type: 'success', text: 'Password updated successfully!' });
+        setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Failed to update password' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'An error occurred. Please try again.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const StatusMessage = () => {
+    if (!message) return null;
+    return (
+      <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 ${
+        message.type === 'success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'
+      }`}>
+        {message.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+        <p className="text-sm font-medium">{message.text}</p>
+        <button onClick={() => setMessage(null)} className="ml-auto hover:opacity-70">
+          <RefreshCw className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  };
 
   const [notifications, setNotifications] = useState({
     newOrder: true,
@@ -54,14 +247,18 @@ export const ArtisanSettingsManager: React.FC = () => {
     sms: true
   });
 
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
+
   const tabs = [
     { id: 'profile', label: 'Shop Profile', icon: Store },
     { id: 'business', label: 'Business Info', icon: Building2 },
     { id: 'payment', label: 'Payment & Payout', icon: CreditCard },
-    { id: 'shipping', label: 'Shipping', icon: Truck },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'security', label: 'Security', icon: Shield },
-    { id: 'account', label: 'Account', icon: UserCog },
     { id: 'policies', label: 'Policies', icon: FileText },
   ];
 
@@ -72,48 +269,59 @@ export const ArtisanSettingsManager: React.FC = () => {
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <SectionHeader title="Shop Profile" description="Manage how your shop appears to tourists and customers." />
             
-            {/* Banner & Logo */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="relative h-32 bg-gray-100">
-                <img src="https://picsum.photos/seed/banner/1200/400" className="w-full h-full object-cover" alt="Banner" />
-                <div className="absolute inset-0 bg-black/10 hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 hover:opacity-100 cursor-pointer">
-                  <Button variant="outline" size="sm" className="text-white border-white bg-black/20" leftIcon={Upload}>Change Banner</Button>
-                </div>
-              </div>
-              <div className="px-6 pb-6">
-                <div className="relative -mt-12 mb-4">
-                  <div className="w-24 h-24 rounded-xl border-4 border-white bg-white shadow-md overflow-hidden relative group/logo">
-                    <img src="https://ui-avatars.com/api/?name=Ethio+Craft&background=random" className="w-full h-full object-cover" alt="Logo" />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/logo:opacity-100 cursor-pointer transition-opacity">
+            <StatusMessage />
+
+            {/* Logo Section */}
+            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="flex items-center gap-6">
+                <div 
+                  className="w-24 h-24 rounded-xl border border-gray-100 bg-white shadow-sm overflow-hidden relative group/logo cursor-pointer"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <img src={shopProfile.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(shopProfile.name)}&background=random`} className="w-full h-full object-cover" alt="Logo" />
+                  <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${uploading ? 'opacity-100' : 'opacity-0 group-hover/logo:opacity-100'}`}>
+                    {uploading ? (
+                      <RefreshCw className="w-6 h-6 text-white animate-spin" />
+                    ) : (
                       <Upload className="w-5 h-5 text-white" />
-                    </div>
+                    )}
                   </div>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleImageUpload} 
+                    className="hidden" 
+                    accept="image/*" 
+                  />
                 </div>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900">{shopProfile.name}</h3>
-                    <p className="text-sm text-gray-500">{shopProfile.city}, {shopProfile.country}</p>
-                  </div>
-                  <Button variant="outline" size="sm" leftIcon={Eye}>View Public Shop</Button>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">{shopProfile.name}</h3>
+                  <p className="text-sm text-gray-500">{shopProfile.city}, {shopProfile.country}</p>
                 </div>
               </div>
             </div>
 
-            {/* Basic Info Form */}
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">Shop Name</label>
-                  <Input value={shopProfile.name} onChange={(e) => setShopProfile({...shopProfile, name: e.target.value})} />
+                  <Input 
+                    value={shopProfile.name} 
+                    onChange={(e) => setShopProfile({...shopProfile, name: e.target.value})} 
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Contact Email (Public)</label>
-                  <Input value={shopProfile.email} onChange={(e) => setShopProfile({...shopProfile, email: e.target.value})} />
+                  <label className="text-sm font-medium text-gray-700">Contact Email</label>
+                  <Input 
+                    value={shopProfile.email} 
+                    readOnly 
+                    className="bg-gray-50 cursor-not-allowed" 
+                  />
                 </div>
-                <div className="col-span-full space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Shop Description</label>
+                <div className="md:col-span-2 space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">Shop Description / Bio</label>
                   <textarea 
-                    className="w-full p-3 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/10 min-h-[100px] outline-none transition-all"
+                    className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/10 outline-none min-h-[120px]"
                     value={shopProfile.description}
                     onChange={(e) => setShopProfile({...shopProfile, description: e.target.value})}
                   />
@@ -125,9 +333,9 @@ export const ArtisanSettingsManager: React.FC = () => {
               </div>
             </div>
 
-            {/* Location & Socials */}
+            {/* Location */}
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-6">
-              <h3 className="text-base font-bold text-gray-900">Location & Social Media</h3>
+              <h3 className="text-base font-bold text-gray-900">Location</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">City</label>
@@ -142,24 +350,12 @@ export const ArtisanSettingsManager: React.FC = () => {
                   <Input value={shopProfile.country} onChange={(e) => setShopProfile({...shopProfile, country: e.target.value})} />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-100">
-                <div className="flex items-center gap-2">
-                  <Facebook className="w-4 h-4 text-blue-600" />
-                  <Input placeholder="Facebook URL" className="flex-1" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Instagram className="w-4 h-4 text-pink-600" />
-                  <Input placeholder="Instagram URL" className="flex-1" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Twitter className="w-4 h-4 text-sky-500" />
-                  <Input placeholder="Twitter URL" className="flex-1" />
-                </div>
-              </div>
             </div>
-            
+
             <div className="flex justify-end pt-4">
-              <Button leftIcon={Save}>Save Changes</Button>
+              <Button onClick={handleSaveProfile} disabled={saving} leftIcon={saving ? Loader2 : Save}>
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
             </div>
           </div>
         );
@@ -184,43 +380,72 @@ export const ArtisanSettingsManager: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">Legal Name</label>
-                  <Input defaultValue="Abebe Kebede" />
+                  <Input value={businessInfo.businessName} readOnly />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Business Type</label>
-                  <select className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/10 outline-none">
-                    <option>Individual / Sole Proprietor</option>
-                    <option>Company / PLC</option>
-                  </select>
+                  <label className="text-sm font-medium text-gray-700">Category</label>
+                  <Input value={businessInfo.category} readOnly />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">Phone Number</label>
-                  <Input defaultValue="+251 911 234 567" />
+                  <Input value={businessInfo.phone} readOnly />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Tax ID (TIN)</label>
-                  <Input defaultValue="0012345678" />
+                  <label className="text-sm font-medium text-gray-700">Business Address</label>
+                  <Input value={businessInfo.address} readOnly />
                 </div>
               </div>
 
               <div className="pt-6 border-t border-gray-100">
-                <label className="text-sm font-medium text-gray-700 mb-3 block">Business Documents</label>
+                <label className="text-sm font-medium text-gray-700 mb-3 block">Business Documents (Read Only)</label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-6 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors cursor-pointer">
-                    <Upload className="w-6 h-6 text-gray-400 mb-2" />
-                    <p className="text-sm font-bold text-gray-600">Upload Business License</p>
-                    <p className="text-xs text-gray-400">PDF or JPG up to 5MB</p>
-                  </div>
-                  <div className="p-4 border border-gray-200 rounded-xl flex items-center justify-between bg-gray-50">
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-primary" />
-                      <div>
-                        <p className="text-sm font-bold text-gray-700">license_2024.pdf</p>
-                        <p className="text-xs text-gray-400">Uploaded on Jan 15, 2024</p>
+                  {businessInfo.idDocument && (
+                    <div className="p-4 border border-gray-200 rounded-xl flex items-center justify-between bg-gray-50">
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-5 h-5 text-primary" />
+                        <div>
+                          <p className="text-sm font-bold text-gray-700">ID Document</p>
+                          <p className="text-xs text-gray-400">Verified Identity</p>
+                        </div>
                       </div>
+                      <Button size="sm" variant="ghost" className="text-primary" onClick={() => window.open(businessInfo.idDocument, '_blank')}>
+                        <Eye className="w-4 h-4 mr-2" /> View
+                      </Button>
                     </div>
-                    <Button size="sm" variant="ghost" className="text-red-500"><Trash2 className="w-4 h-4" /></Button>
-                  </div>
+                  )}
+                  {businessInfo.workshopPhoto && (
+                    <div className="p-4 border border-gray-200 rounded-xl flex items-center justify-between bg-gray-50">
+                      <div className="flex items-center gap-3">
+                        <Camera className="w-5 h-5 text-primary" />
+                        <div>
+                          <p className="text-sm font-bold text-gray-700">Workshop Photo</p>
+                          <p className="text-xs text-gray-400">Production Space</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="ghost" className="text-primary" onClick={() => window.open(businessInfo.workshopPhoto, '_blank')}>
+                        <Eye className="w-4 h-4 mr-2" /> View
+                      </Button>
+                    </div>
+                  )}
+                  {businessInfo.craftProcessPhoto && (
+                    <div className="p-4 border border-gray-200 rounded-xl flex items-center justify-between bg-gray-50">
+                      <div className="flex items-center gap-3">
+                        <Truck className="w-5 h-5 text-primary" />
+                        <div>
+                          <p className="text-sm font-bold text-gray-700">Craft Process</p>
+                          <p className="text-xs text-gray-400">Handmade Verification</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="ghost" className="text-primary" onClick={() => window.open(businessInfo.craftProcessPhoto, '_blank')}>
+                        <Eye className="w-4 h-4 mr-2" /> View
+                      </Button>
+                    </div>
+                  )}
+                  {!businessInfo.idDocument && !businessInfo.workshopPhoto && !businessInfo.craftProcessPhoto && (
+                    <div className="col-span-full p-6 border-2 border-dashed border-gray-100 rounded-xl text-center text-gray-400 text-sm">
+                      No documents found.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -268,19 +493,15 @@ export const ArtisanSettingsManager: React.FC = () => {
                 <div className="space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium text-gray-700">Bank Name</label>
-                    <select className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm">
-                      <option>Commercial Bank of Ethiopia</option>
-                      <option>Dashen Bank</option>
-                      <option>Awash Bank</option>
-                    </select>
+                    <Input value={paymentInfo.bankName} readOnly />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium text-gray-700">Account Number</label>
-                    <Input defaultValue="1000123456789" />
+                    <Input value={paymentInfo.accountNumber} readOnly />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium text-gray-700">Account Holder Name</label>
-                    <Input defaultValue="Abebe Kebede" />
+                    <Input value={paymentInfo.accountName} readOnly />
                   </div>
                 </div>
               </div>
@@ -332,72 +553,6 @@ export const ArtisanSettingsManager: React.FC = () => {
           </div>
         );
 
-      case 'shipping':
-        return (
-          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            <SectionHeader title="Shipping & Delivery" description="Configure your shipping preferences and policies." />
-            
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Processing Time</label>
-                  <select className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none">
-                    <option>1-2 Business Days</option>
-                    <option>3-5 Business Days</option>
-                    <option>1 Week</option>
-                  </select>
-                  <p className="text-[10px] text-gray-400">How long it takes you to prepare an order.</p>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Default Return Window</label>
-                  <select className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none">
-                    <option>No Returns</option>
-                    <option>7 Days</option>
-                    <option>14 Days</option>
-                    <option>30 Days</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-gray-100 space-y-2">
-                <Toggle 
-                  label="Offer Free Shipping" 
-                  description="Apply free shipping to all products by default." 
-                  checked={false} 
-                  onChange={() => {}} 
-                />
-                <Toggle 
-                  label="International Shipping" 
-                  description="Enable shipping to countries outside Ethiopia." 
-                  checked={true} 
-                  onChange={() => {}} 
-                />
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-6">
-              <h3 className="text-base font-bold text-gray-900">Standard Shipping Rates</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Local (Addis Ababa)</label>
-                  <Input defaultValue="150" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Regional</label>
-                  <Input defaultValue="300" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">International</label>
-                  <Input defaultValue="2500" />
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end pt-4">
-              <Button leftIcon={Save}>Save Settings</Button>
-            </div>
-          </div>
-        );
-
       case 'notifications':
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -411,12 +566,6 @@ export const ArtisanSettingsManager: React.FC = () => {
                 onChange={(c) => setNotifications({...notifications, newOrder: c})} 
               />
               <Toggle 
-                label="Low Stock Warning" 
-                description="Alert when product stock falls below 5 units." 
-                checked={notifications.lowStock} 
-                onChange={(c) => setNotifications({...notifications, lowStock: c})} 
-              />
-              <Toggle 
                 label="New Reviews" 
                 description="Get notified when a customer leaves a review." 
                 checked={notifications.newReview} 
@@ -428,20 +577,6 @@ export const ArtisanSettingsManager: React.FC = () => {
                 checked={notifications.payout} 
                 onChange={(c) => setNotifications({...notifications, payout: c})} 
               />
-              <Toggle 
-                label="Promotional Updates" 
-                description="News about platform features and tips." 
-                checked={notifications.promos} 
-                onChange={(c) => setNotifications({...notifications, promos: c})} 
-              />
-              <div className="pt-4">
-                <Toggle 
-                  label="SMS Notifications" 
-                  description="Receive critical alerts via SMS to your registered phone." 
-                  checked={notifications.sms} 
-                  onChange={(c) => setNotifications({...notifications, sms: c})} 
-                />
-              </div>
             </div>
             <div className="flex justify-end pt-4">
               <Button leftIcon={Save}>Save Preferences</Button>
@@ -451,98 +586,126 @@ export const ArtisanSettingsManager: React.FC = () => {
 
       case 'security':
         return (
-          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            <SectionHeader title="Security" description="Protect your account and data." />
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="flex flex-col gap-2">
+              <SectionHeader title="Security & Authentication" description="Manage your account security, password and protection settings." />
+            </div>
+
+            <StatusMessage />
             
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-6">
-              <h3 className="text-base font-bold text-gray-900">Change Password</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Current Password</label>
-                  <Input type="password" />
+            <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm space-y-8">
+              <div className="flex items-center gap-4 p-4 bg-primary/5 rounded-xl border border-primary/10">
+                <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm">
+                  <Shield className="w-6 h-6 text-primary" />
                 </div>
-                <div className="col-span-1"></div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">New Password</label>
-                  <Input type="password" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Confirm New Password</label>
-                  <Input type="password" />
+                <div>
+                  <h4 className="text-sm font-bold text-gray-900">Update Your Password</h4>
+                  <p className="text-xs text-gray-500">Ensure your account is using a long, random password to stay secure.</p>
                 </div>
               </div>
-              <div className="flex justify-end">
-                <Button>Update Password</Button>
+
+              <div className="grid grid-cols-1 gap-8">
+                <div className="max-w-md space-y-6">
+                  {/* Current Password */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Current Password</label>
+                    <div className="relative group">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors">
+                        <Lock className="w-4 h-4" />
+                      </div>
+                      <input 
+                        type={showPasswords.current ? 'text' : 'password'} 
+                        placeholder="Enter current password"
+                        value={passwords.currentPassword}
+                        onChange={(e) => setPasswords({ ...passwords, currentPassword: e.target.value })}
+                        className="w-full bg-gray-50 border-2 border-transparent focus:border-primary/20 focus:bg-white rounded-xl py-3.5 pl-11 pr-12 text-sm outline-none transition-all placeholder:text-gray-300"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-primary p-2 transition-colors"
+                      >
+                        {showPasswords.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                    {/* New Password */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">New Password</label>
+                      <div className="relative group">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors">
+                          <Key className="w-4 h-4" />
+                        </div>
+                        <input 
+                          type={showPasswords.new ? 'text' : 'password'} 
+                          placeholder="••••••••"
+                          value={passwords.newPassword}
+                          onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
+                          className="w-full bg-gray-50 border-2 border-transparent focus:border-primary/20 focus:bg-white rounded-xl py-3.5 pl-11 pr-12 text-sm outline-none transition-all placeholder:text-gray-300"
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-primary p-2 transition-colors"
+                        >
+                          {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Confirm Password</label>
+                      <div className="relative group">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors">
+                          <CheckCircle2 className="w-4 h-4" />
+                        </div>
+                        <input 
+                          type={showPasswords.confirm ? 'text' : 'password'} 
+                          placeholder="••••••••"
+                          value={passwords.confirmPassword}
+                          onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
+                          className="w-full bg-gray-50 border-2 border-transparent focus:border-primary/20 focus:bg-white rounded-xl py-3.5 pl-11 pr-12 text-sm outline-none transition-all placeholder:text-gray-300"
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-primary p-2 transition-colors"
+                        >
+                          {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4 border-t border-gray-50">
+                <Button 
+                  onClick={handleUpdatePassword}
+                  disabled={saving || !passwords.currentPassword || !passwords.newPassword}
+                  className="rounded-xl px-8 py-6 h-auto font-bold shadow-lg shadow-primary/20"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                  Update Password
+                </Button>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
-              <Toggle 
-                label="Two-Factor Authentication (2FA)" 
-                description="Add an extra layer of security to your account." 
-                checked={true} 
-                onChange={() => {}} 
-              />
-              <div className="pt-4 border-t border-gray-100">
-                <h3 className="text-sm font-bold text-gray-900 mb-4">Login Activity</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-3">
-                      <Smartphone className="w-4 h-4 text-gray-400" />
-                      <div>
-                        <p className="font-bold text-gray-700">iPhone 13 Pro</p>
-                        <p className="text-xs text-gray-400">Addis Ababa • Active now</p>
-                      </div>
-                    </div>
-                    <span className="text-xs text-emerald-500 font-bold">Current Device</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-3">
-                      <Globe className="w-4 h-4 text-gray-400" />
-                      <div>
-                        <p className="font-bold text-gray-700">Chrome on Windows</p>
-                        <p className="text-xs text-gray-400">Addis Ababa • 2 days ago</p>
-                      </div>
-                    </div>
-                    <button className="text-xs text-red-500 hover:underline">Log out</button>
-                  </div>
-                </div>
-                <div className="mt-6">
-                  <Button variant="outline" className="w-full text-red-500 border-red-200 hover:bg-red-50">Log Out of All Devices</Button>
-                </div>
+            {/* Account Deletion */}
+            <div className="bg-red-50/50 p-8 rounded-2xl border border-red-100 space-y-6">
+              <div className="flex items-center gap-3 text-red-600">
+                <AlertCircle className="w-5 h-5" />
+                <h3 className="text-base font-black uppercase tracking-wider">Danger Zone</h3>
               </div>
-            </div>
-          </div>
-        );
-
-      case 'account':
-        return (
-          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            <SectionHeader title="Account Management" description="Manage your account status and data." />
-            
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm divide-y divide-gray-100">
-              <div className="flex items-center justify-between py-4">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900">Export Data</h3>
-                  <p className="text-xs text-gray-500">Download a copy of your products, orders, and customer data.</p>
+                  <h4 className="text-sm font-bold text-gray-900">Delete Artisan Account</h4>
+                  <p className="text-xs text-gray-500 mt-1 max-w-md">Once you delete your account, all of your products, orders, and data will be permanently removed. This action cannot be undone.</p>
                 </div>
-                <Button variant="outline" size="sm" leftIcon={Download}>Export CSV</Button>
-              </div>
-
-              <div className="flex items-center justify-between py-4">
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900">Deactivate Shop</h3>
-                  <p className="text-xs text-gray-500">Temporarily hide your shop and products from the marketplace.</p>
-                </div>
-                <Button variant="outline" size="sm" className="text-amber-600 border-amber-200 hover:bg-amber-50">Deactivate</Button>
-              </div>
-
-              <div className="flex items-center justify-between py-4">
-                <div>
-                  <h3 className="text-sm font-bold text-red-600">Delete Account</h3>
-                  <p className="text-xs text-gray-500">Permanently delete your account and all associated data.</p>
-                </div>
-                <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" leftIcon={Trash2}>Delete Account</Button>
+                <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-600 hover:text-white rounded-xl h-auto py-3 px-6 font-bold transition-all" leftIcon={Trash2}>Delete Account</Button>
               </div>
             </div>
           </div>

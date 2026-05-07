@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, Filter, Eye, DollarSign, Package, 
   Users, TrendingUp, ArrowUpRight, ArrowDownRight, 
@@ -108,12 +108,72 @@ const MOCK_PRODUCTS: ProductManagementData[] = Array.from({ length: 10 }).map((_
   };
 });
 
-export const AdminProductManagementPage: React.FC = () => {
+export const AdminProductManagementPage: React.FC<{ initialId?: string }> = ({ initialId }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<ProductManagementData | null>(null);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDateRange, setTempDateRange] = useState({ start: '', end: '' });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (initialId) {
+      const mockProduct = MOCK_PRODUCTS.find(p => p.id === initialId);
+      if (mockProduct) {
+        setSelectedProduct(mockProduct);
+      } else {
+        fetchRealProduct(initialId);
+      }
+    }
+  }, [initialId]);
+
+  const fetchRealProduct = async (id: string) => {
+     setLoading(true);
+     try {
+       const res = await fetch(`/api/public/products/${id}`);
+       
+       if (!res.ok) {
+         throw new Error(`Server responded with ${res.status}`);
+       }
+
+       const contentType = res.headers.get("content-type");
+       if (!contentType || !contentType.includes("application/json")) {
+         throw new TypeError("Oops, we haven't got JSON!");
+       }
+
+       const data = await res.json();
+      if (data.success && data.product) {
+        const product = data.product;
+        setSelectedProduct({
+          id: product._id,
+          name: product.name || product.name_en || 'Untitled Product',
+          description: product.description || '',
+          images: product.images || [],
+          artisan: product.artisanId?.name || 'Unknown Artisan',
+          artisanEmail: product.artisanId?.email || '',
+          category: product.category || 'Pottery',
+          status: product.status as ProductStatus,
+          price: product.price || 0,
+          totalStock: product.stock || 0,
+          sold: 0,
+          revenue: 0,
+          commissionRate: 15,
+          refundAmount: 0,
+          paymentStatus: 'Pending Payout',
+          materials: product.material ? [product.material] : [],
+          dimensions: product.dimensions || '',
+          weight: product.weight || '',
+          shippingInfo: product.shippingInfo || '',
+          orders: [],
+          stockHistory: []
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch real product:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredProducts = MOCK_PRODUCTS.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -190,7 +250,7 @@ export const AdminProductManagementPage: React.FC = () => {
                       <div>
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Materials</p>
                         <div className="flex flex-wrap gap-1">
-                          {product.materials.map((m, i) => (
+                          {(product.materials || []).map((m, i) => (
                             <span key={i} className="px-2 py-0.5 bg-white border border-gray-200 rounded text-[10px] text-gray-600 font-medium">{m}</span>
                           ))}
                         </div>
@@ -280,7 +340,7 @@ export const AdminProductManagementPage: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
-                        {product.orders.map((order) => (
+                        {(product.orders || []).map((order) => (
                           <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
@@ -293,7 +353,7 @@ export const AdminProductManagementPage: React.FC = () => {
                             </td>
                             <td className="px-6 py-4 text-[10px] text-gray-600">{order.date}</td>
                             <td className="px-6 py-4 font-bold text-gray-800 text-xs">{order.quantity}</td>
-                            <td className="px-6 py-4 font-bold text-gray-800 text-xs">ETB {order.totalPaid.toLocaleString()}</td>
+                            <td className="px-6 py-4 font-bold text-gray-800 text-xs">ETB {(order.totalPaid || 0).toLocaleString()}</td>
                             <td className="px-6 py-4">
                               <Badge variant={order.paymentStatus === 'Paid' ? 'success' : 'error'} size="sm">
                                 {order.paymentStatus}
@@ -312,7 +372,7 @@ export const AdminProductManagementPage: React.FC = () => {
                     <History className="w-4 h-4" /> Audit Trail
                   </h3>
                   <div className="space-y-3">
-                    {product.stockHistory.map((log, idx) => (
+                    {(product.stockHistory || []).map((log, idx) => (
                       <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
@@ -343,6 +403,11 @@ export const AdminProductManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+      {loading && (
+        <div className="fixed inset-0 bg-white/50 backdrop-blur-sm z-[60] flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      )}
       {selectedProduct && <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />}
 
       <div className="flex flex-col md:flex-row justify-end items-center gap-4">

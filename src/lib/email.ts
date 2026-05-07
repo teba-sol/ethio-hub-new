@@ -116,6 +116,7 @@ const getTransporter = () => {
     host: smtp.host,
     port: smtp.port,
     secure: smtp.port === 465,
+    requireTLS: smtp.port !== 465,
     auth: {
       user: smtp.user,
       pass: smtp.pass,
@@ -193,7 +194,7 @@ const buildDecisionHtml = ({
   </div>
 `;
 
-const sendMail = async (to: string, subject: string, html: string) => {
+export const sendMail = async (to: string, subject: string, html: string) => {
   try {
     const transporter = getTransporter();
     const { fromEmail, fromName } = getRequiredSenderConfig();
@@ -205,16 +206,17 @@ const sendMail = async (to: string, subject: string, html: string) => {
       html,
     });
   } catch (error: any) {
+    console.error('SMTP Full Error:', error);
     const message = String(error?.message || "");
     const code = String(error?.code || "").toUpperCase();
     const responseCode = Number(error?.responseCode || 0);
     const lowerMessage = message.toLowerCase();
 
-    if (lowerMessage.includes("auth")) {
+    if (code === "EAUTH" || lowerMessage.includes("auth") || responseCode === 535) {
       throw new EmailProviderError(
         "EMAIL_PROVIDER_AUTH",
         "SMTP authentication failed. Check SMTP_USER and SMTP_PASS (app password).",
-        502
+        503
       );
     }
 
@@ -228,7 +230,7 @@ const sendMail = async (to: string, subject: string, html: string) => {
       throw new EmailProviderError(
         "EMAIL_PROVIDER_ERROR",
         "We could not reach the email server. Please try again in a moment.",
-        502
+        503
       );
     }
 
@@ -246,10 +248,24 @@ const sendMail = async (to: string, subject: string, html: string) => {
       );
     }
 
+    if (
+      lowerMessage.includes("timed out") ||
+      lowerMessage.includes("timeout") ||
+      lowerMessage.includes("greeting") ||
+      lowerMessage.includes("helo") ||
+      lowerMessage.includes("tls")
+    ) {
+      throw new EmailProviderError(
+        "EMAIL_PROVIDER_ERROR",
+        "Connection to email server timed out or TLS error. Check SMTP_HOST/PORT and network.",
+        503
+      );
+    }
+
     throw new EmailProviderError(
       "EMAIL_PROVIDER_ERROR",
       "Unable to send verification email right now. Please try again shortly.",
-      502
+      503
     );
   }
 };
@@ -259,7 +275,7 @@ const parseSmtpCode = (line: string) => {
   return match ? Number(match[1]) : null;
 };
 
-const readSmtpResponse = (socket: net.Socket, timeoutMs: number) =>
+const readSmtpResponse = (socket: net.Socket, timeoutMs: number = 3000) =>
   new Promise<string>((resolve, reject) => {
     let buffer = "";
     const timer = setTimeout(() => {
@@ -304,7 +320,7 @@ const readSmtpResponse = (socket: net.Socket, timeoutMs: number) =>
     socket.on("close", onClose);
   });
 
-const sendSmtpCommand = async (socket: net.Socket, command: string, timeoutMs = 5000) => {
+const sendSmtpCommand = async (socket: net.Socket, command: string, timeoutMs = 3000) => {
   socket.write(`${command}\r\n`);
   const response = await readSmtpResponse(socket, timeoutMs);
   const firstLine = response.split(/\r?\n/)[0] || "";
@@ -318,6 +334,11 @@ export const probeGmailRecipient = async (email: string): Promise<RecipientProbe
     return { status: "invalid" };
   }
 
+  // Skip probe if configured
+  if (process.env.SKIP_EMAIL_PROBE === 'true') {
+    return { status: "valid" };
+  }
+
   let socket: net.Socket | null = null;
   try {
     socket = await new Promise<net.Socket>((resolve, reject) => {
@@ -325,7 +346,7 @@ export const probeGmailRecipient = async (email: string): Promise<RecipientProbe
       const timer = setTimeout(() => {
         client.destroy();
         reject(new Error("SMTP probe connect timeout"));
-      }, 5000);
+      }, 3000);
       client.once("connect", () => {
         clearTimeout(timer);
         resolve(client);
@@ -336,7 +357,7 @@ export const probeGmailRecipient = async (email: string): Promise<RecipientProbe
       });
     });
 
-    const banner = await readSmtpResponse(socket, 5000);
+    const banner = await readSmtpResponse(socket, 3000);
     const bannerCode = parseSmtpCode(banner.split(/\r?\n/)[0] || "");
     if (bannerCode !== 220) return { status: "unknown" };
 

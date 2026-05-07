@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '../../../../lib/mongodb';
 import User from '../../../../models/User';
+import OrganizerProfile from '../../../../models/organizer/organizerProfile.model';
 import * as jose from 'jose';
 import bcrypt from 'bcryptjs';
 
@@ -35,6 +36,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const organizerProfile = await OrganizerProfile.findOne({ userId: organizerId });
+
     const settings = {
       id: user._id,
       name: user.name,
@@ -43,7 +46,13 @@ export async function GET(request: NextRequest) {
       organizerStatus: user.organizerStatus,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      organizerProfile: user.organizerProfile || {},
+      // Merge User's organizerProfile with the detailed OrganizerProfile model
+      organizerProfile: {
+        ...(user.organizerProfile || {}),
+        ...(organizerProfile ? organizerProfile.toObject() : {}),
+        // Map logo to avatar if avatar is missing
+        avatar: organizerProfile?.logo || user.organizerProfile?.avatar,
+      },
     };
 
     return new NextResponse(
@@ -172,6 +181,15 @@ export async function PUT(request: NextRequest) {
           { status: 400, headers: { 'content-type': 'application/json' } }
         );
       }
+
+      // Prevent using the same password
+      if (currentPassword === newPassword) {
+        return new NextResponse(
+          JSON.stringify({ success: false, message: 'New password must be different from the current one' }),
+          { status: 400, headers: { 'content-type': 'application/json' } }
+        );
+      }
+
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       $set.password = hashedPassword;
     }
@@ -184,6 +202,7 @@ export async function PUT(request: NextRequest) {
     }
 
     if (organizerProfile) {
+      // Update User model's legacy profile fields for backward compatibility
       if (organizerProfile.companyName !== undefined) $set['organizerProfile.companyName'] = organizerProfile.companyName;
       if (organizerProfile.phone !== undefined) $set['organizerProfile.phone'] = organizerProfile.phone;
       if (organizerProfile.website !== undefined) $set['organizerProfile.website'] = organizerProfile.website;
@@ -194,6 +213,29 @@ export async function PUT(request: NextRequest) {
       if (organizerProfile.bankName !== undefined) $set['organizerProfile.bankName'] = organizerProfile.bankName;
       if (organizerProfile.accountHolderName !== undefined) $set['organizerProfile.accountHolderName'] = organizerProfile.accountHolderName;
       if (organizerProfile.accountNumber !== undefined) $set['organizerProfile.accountNumber'] = organizerProfile.accountNumber;
+
+      // Update OrganizerProfile model (onboarding data)
+      const profileUpdate: any = {};
+      if (organizerProfile.companyName !== undefined) profileUpdate.companyName = organizerProfile.companyName;
+      if (organizerProfile.phone !== undefined) profileUpdate.phone = organizerProfile.phone;
+      if (organizerProfile.website !== undefined) profileUpdate.website = organizerProfile.website;
+      if (organizerProfile.address !== undefined) profileUpdate.address = organizerProfile.address;
+      if (organizerProfile.bio !== undefined) profileUpdate.bio = organizerProfile.bio;
+      if (organizerProfile.avatar !== undefined) profileUpdate.logo = organizerProfile.avatar; // logo in model, avatar in UI
+      if (organizerProfile.payoutMethod !== undefined) profileUpdate.payoutMethod = organizerProfile.payoutMethod;
+      if (organizerProfile.bankName !== undefined) profileUpdate.bankName = organizerProfile.bankName;
+      if (organizerProfile.accountHolderName !== undefined) profileUpdate.accountHolderName = organizerProfile.accountHolderName;
+      if (organizerProfile.accountNumber !== undefined) profileUpdate.accountNumber = organizerProfile.accountNumber;
+      if (organizerProfile.telebirrNumber !== undefined) profileUpdate.telebirrNumber = organizerProfile.telebirrNumber;
+      if (organizerProfile.chapaAccountId !== undefined) profileUpdate.chapaAccountId = organizerProfile.chapaAccountId;
+
+      if (Object.keys(profileUpdate).length > 0) {
+        await OrganizerProfile.findOneAndUpdate(
+          { userId: organizerId },
+          { $set: profileUpdate },
+          { upsert: true }
+        );
+      }
 
       if (organizerProfile.notifications) {
         for (const [key, value] of Object.entries(organizerProfile.notifications)) {

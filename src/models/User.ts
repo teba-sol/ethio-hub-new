@@ -35,8 +35,21 @@ const UserSchema = new mongoose.Schema(
       enum: ["Active", "Suspended", "Banned", "Deleted"],
       default: "Active"
     },
+    suspensionReason: {
+      type: String,
+      default: null
+    },
+suspendedAt: {
+  type: Date,
+  default: null
+},
 
-    phone: {
+suspensionNotified: {
+  type: Boolean,
+  default: false
+},
+
+phone: {
       type: String,
       default: null
     },
@@ -136,7 +149,6 @@ UserSchema.index({ artisanStatus: 1 });
 UserSchema.index({ organizerStatus: 1 });
 UserSchema.index({ status: 1 });
 UserSchema.index({ createdAt: -1 });
-UserSchema.index({ email: 1 });
 
 const User =
   mongoose.models.User || mongoose.model("User", UserSchema);

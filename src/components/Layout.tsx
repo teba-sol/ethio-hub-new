@@ -530,7 +530,7 @@ export const Header: React.FC = () => {
   const router = useRouter();
 
   const navLinks = [
-    { name: t("nav.heritage"), path: "/" },
+    { name: t("nav.home"), path: "/" },
     { name: t("nav.products"), path: "/products" },
     { name: t("nav.festivals"), path: "/festivals" },
     { name: t("nav.about"), path: "/about" },

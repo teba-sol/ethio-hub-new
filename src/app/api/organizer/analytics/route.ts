@@ -55,7 +55,10 @@ export async function GET(request: NextRequest) {
       ]
     }).populate('tourist', 'touristProfile name email');
     
-    const reviews = await Review.find({ organizer: organizerId });
+    const reviews = await Review.find({ 
+      targetId: { $in: festivalIds },
+      targetType: 'Festival'
+    });
 
     const totalFestivals = festivals.length;
     const publishedFestivals = festivals.filter(f => f.status === 'Published').length;
@@ -99,18 +102,22 @@ export async function GET(request: NextRequest) {
     });
 
     // Add reviews to alerts
-    const recentReviews = await Review.find({ organizer: organizerId })
-      .populate('tourist', 'name')
-      .populate('festival', 'name')
+    const recentReviews = await Review.find({ 
+      targetId: { $in: festivalIds },
+      targetType: 'Festival'
+    })
+      .populate('user', 'name')
+      .populate('targetId', 'name')
       .sort({ createdAt: -1 })
       .limit(5);
 
     recentReviews.forEach(r => {
-      const festivalName = (r.festival as any)?.name || 'your event';
+      const festivalName = (r.targetId as any)?.name || 'your event';
+      const userName = (r.user as any)?.name || 'a tourist';
       latestAlerts.push({
         id: `review-${r._id}`,
         type: 'review',
-        message: `${r.rating}-star review on ${festivalName}`,
+        message: `${r.rating}-star review on ${festivalName} from ${userName}`,
         time: r.createdAt,
       });
     });
