@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   Coins, TrendingUp, DollarSign, Download, ArrowUpRight,
-  ArrowDownLeft, RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet, Eye, X
+  ArrowDownLeft, RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet, Eye, X,
+  Truck
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Button, Badge } from '../UI';
 
 interface WalletData {
@@ -17,6 +19,7 @@ interface WalletData {
     currency: string;
     artisanTotalEarned?: number;
     organizerTotalEarned?: number;
+    shippingFeesReceived?: number;
   };
   transactions: Transaction[];
   pagination: {
@@ -113,6 +116,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
   title = 'Wallet',
   showWithdraw = true,
 }) => {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [walletData, setWalletData] = useState<WalletData | null>(null);
@@ -340,7 +344,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
       </div>
 
       {userType === 'admin' && showCommissionBreakdown && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 animate-in slide-in-from-top-4 duration-300">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 animate-in slide-in-from-top-4 duration-300">
           <div className="bg-gradient-to-br from-white to-blue-50/30 p-6 rounded-2xl border border-blue-100 shadow-sm hover:shadow-md transition-all">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -362,6 +366,29 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
             <p className="text-2xl font-bold text-primary">{formatCurrency(wallet.organizerTotalEarned || 0)}</p>
             <p className="text-xs text-purple-400 mt-1">Total cleared commission from festival bookings</p>
           </div>
+
+          <div className="bg-gradient-to-br from-white to-emerald-50/30 p-6 rounded-2xl border border-emerald-100 shadow-sm hover:shadow-md transition-all">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-emerald-100 rounded-lg">
+                <Truck className="w-5 h-5 text-emerald-600" />
+              </div>
+              <span className="text-xs font-bold text-emerald-500 uppercase tracking-wider">Shipping Fees</span>
+            </div>
+            <p className="text-2xl font-bold text-primary">{formatCurrency(wallet.shippingFeesReceived || 0)}</p>
+            <p className="text-xs text-emerald-400 mt-1">For delivery guy payroll</p>
+          </div>
+        </div>
+      )}
+
+      {userType === 'admin' && (
+        <div className="flex justify-end mt-4">
+          <Button 
+            variant="outline" 
+            leftIcon={RefreshCw}
+            onClick={() => router.push('/dashboard/admin/refund-requests')}
+          >
+            Refund Requests
+          </Button>
         </div>
       )}
 

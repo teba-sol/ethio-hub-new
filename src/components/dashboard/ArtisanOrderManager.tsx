@@ -47,10 +47,21 @@ interface Order {
   totalPrice: number;
   artisanEarnings?: number;
   adminCommission?: number;
-  status: 'Pending' | 'Delivered' | 'Returned';
+  status: 'Awaiting Payment' | 'Pending' | 'Paid' | 'Ready for Pickup' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned';
   paymentStatus: 'pending' | 'paid' | 'refunded';
   paymentMethod?: string;
   createdAt: string;
+  verificationCode?: string;
+  assignedDeliveryGuy?: {
+    name: string;
+    phone: string;
+  };
+  deliveryGuyInfo?: {
+    name: string;
+    phone: string;
+  };
+  shippingFee?: number;
+  distanceKm?: number;
   contactInfo: {
     fullName: string;
     email: string;
@@ -73,22 +84,22 @@ interface Order {
 
 const OrderStatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const styles: Record<string, string> = {
+    'Awaiting Payment': 'bg-gray-50 text-gray-600 border-gray-100',
     'Pending': 'bg-amber-50 text-amber-600 border-amber-100',
+    'Paid': 'bg-blue-50 text-blue-600 border-blue-100',
+    'Ready for Pickup': 'bg-purple-50 text-purple-600 border-purple-100',
+    'Shipped': 'bg-indigo-50 text-indigo-600 border-indigo-100',
     'Delivered': 'bg-emerald-50 text-emerald-600 border-emerald-100',
     'Returned': 'bg-gray-50 text-gray-600 border-gray-100',
+    'Cancelled': 'bg-red-50 text-red-600 border-red-100',
     'paid': 'bg-emerald-50 text-emerald-600 border-emerald-100',
     'pending': 'bg-amber-50 text-amber-600 border-amber-100',
     'refunded': 'bg-red-50 text-red-600 border-red-100'
   };
 
-  const label = (status === 'paid') ? 'Paid' : 
-                (status.toLowerCase() === 'pending') ? 'Pending' : 
-                status === 'refunded' ? 'Refunded' : 
-                status;
-
   return (
     <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${styles[status] || 'bg-gray-50 text-gray-500'}`}>
-      {label}
+      {status}
     </span>
   );
 };
@@ -118,18 +129,36 @@ export const ArtisanOrderManager: React.FC = () => {
       const response = await fetch('/api/artisan/orders');
       const data = await response.json();
       if (data.success) {
-        // Map any legacy or backend-specific statuses to the allowed three
-        const mappedOrders = data.orders.map((o: any) => ({
-          ...o,
-          status: (o.status === 'Awaiting Payment' || o.status === 'waiting payment' || o.status === 'Shipped' || o.status === 'Cancelled') ? 'Pending' : o.status
-        }));
-        setOrders(mappedOrders);
+        setOrders(data.orders);
         setStats(data.stats);
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMarkAsReady = async (orderId: string) => {
+    try {
+      const response = await fetch(`/api/artisan/orders/${orderId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Ready for Pickup' }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        fetchOrders();
+        if (data.verificationCode) {
+          alert(`Order marked as ready!\nVerification Code: ${data.verificationCode}\n\nShare this code with the customer via message center.`);
+        } else {
+          alert('Order status updated successfully');
+        }
+      } else {
+        alert(data.message || 'Failed to update order status');
+      }
+    } catch (error) {
+      console.error('Error updating order status:', error);
     }
   };
 
@@ -385,8 +414,28 @@ export const ArtisanOrderManager: React.FC = () => {
             {/* Management Actions */}
             <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-4">
               <h3 className="text-xl font-bold text-primary mb-2">Actions</h3>
-              <Button className="w-full justify-start" variant="outline" leftIcon={Truck}>Add Tracking Number</Button>
-              <Button className="w-full justify-start" variant="outline" leftIcon={RefreshCw}>Process Refund</Button>
+              {order.status === 'Paid' && (
+                <Button 
+                  className="w-full justify-start" 
+                  variant="primary"
+                  leftIcon={CheckCircle2}
+                  onClick={() => handleMarkAsReady(order._id)}
+                >
+                  Mark as Ready for Pickup
+                </Button>
+              )}
+              {order.status === 'Ready for Pickup' && (
+                <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                  <p className="text-sm font-bold text-emerald-800">Waiting for delivery assignment</p>
+                  <p className="text-xs text-emerald-600 mt-1">Admin will assign a delivery driver</p>
+                </div>
+              )}
+              {order.verificationCode && (
+                <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                  <p className="text-xs font-bold text-blue-600 uppercase mb-1">Verification Code</p>
+                  <p className="text-2xl font-mono font-bold text-blue-800 tracking-widest">{order.verificationCode}</p>
+                </div>
+              )}
             </section>
           </div>
         </div>
@@ -438,16 +487,20 @@ export const ArtisanOrderManager: React.FC = () => {
           </div>
           <div className="h-8 w-[1px] bg-gray-100 hidden md:block"></div>
           <div className="relative">
-            <select 
-              className="appearance-none bg-gray-50 border-none rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary cursor-pointer focus:ring-2 focus:ring-primary/10"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="All">All Status</option>
-              <option value="Pending">Pending</option>
-              <option value="Delivered">Delivered</option>
-              <option value="Returned">Returned</option>
-            </select>
+              <select 
+                className="appearance-none bg-gray-50 border-none rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary cursor-pointer focus:ring-2 focus:ring-primary/10"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="All">All Status</option>
+                <option value="Awaiting Payment">Awaiting Payment</option>
+                <option value="Pending">Pending</option>
+                <option value="Paid">Paid</option>
+                <option value="Ready for Pickup">Ready for Pickup</option>
+                <option value="Shipped">Shipped</option>
+                <option value="Delivered">Delivered</option>
+                <option value="Returned">Returned</option>
+              </select>
             <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
           </div>
         </div>

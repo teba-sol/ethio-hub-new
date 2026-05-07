@@ -12,7 +12,7 @@ export interface IOrder extends Document {
   artisanEarnings: number;
   commissionRate: number;
   currency: string;
-  status: 'Awaiting Payment' | 'Pending' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned';
+  status: 'Awaiting Payment' | 'Pending' | 'Paid' | 'Ready for Pickup' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned';
   paymentStatus: 'pending' | 'paid' | 'refunded';
   paymentRef?: string;
   paymentReference?: string;
@@ -30,7 +30,33 @@ export interface IOrder extends Document {
     state: string;
     country: string;
     zipCode: string;
+    latitude?: number;
+    longitude?: number;
   };
+  userLocation?: {
+    latitude: number;
+    longitude: number;
+  };
+  shippingFee: number;
+  distanceKm: number;
+  artisanLocation?: {
+    latitude: number;
+    longitude: number;
+  };
+  assignedDeliveryGuy?: mongoose.Types.ObjectId;
+  deliveryGuyInfo?: {
+    name: string;
+    phone: string;
+  };
+  verificationCode?: string;
+  deliveryAttempts: {
+    enteredCode: string;
+    attemptedAt: Date;
+    success: boolean;
+  }[];
+  isLocked: boolean;
+  lockedAt?: Date;
+  lockedBy?: string;
   timeline: {
     status: string;
     date: Date;
@@ -82,7 +108,7 @@ const OrderSchema: Schema = new Schema(
     },
     commissionRate: {
       type: Number,
-      default: 0.10, // 10% default commission
+      default: 0.10,
     },
     currency: {
       type: String,
@@ -90,7 +116,7 @@ const OrderSchema: Schema = new Schema(
     },
     status: {
       type: String,
-      enum: ['Awaiting Payment', 'Pending', 'Shipped', 'Delivered', 'Cancelled', 'Returned'],
+      enum: ['Awaiting Payment', 'Pending', 'Paid', 'Ready for Pickup', 'Shipped', 'Delivered', 'Cancelled', 'Returned'],
       default: 'Awaiting Payment',
     },
     paymentStatus: {
@@ -107,15 +133,15 @@ const OrderSchema: Schema = new Schema(
     paymentMethod: {
       type: String,
     },
-     paymentDate: {
-       type: Date,
-     },
-     idempotencyKey: {
-       type: String,
-       sparse: true,
-       unique: true,
-     },
-     contactInfo: {
+    paymentDate: {
+      type: Date,
+    },
+    idempotencyKey: {
+      type: String,
+      sparse: true,
+      unique: true,
+    },
+    contactInfo: {
       fullName: { type: String, required: true },
       email: { type: String, required: true },
       phone: { type: String, required: true },
@@ -126,6 +152,53 @@ const OrderSchema: Schema = new Schema(
       state: { type: String },
       country: { type: String },
       zipCode: { type: String },
+      latitude: { type: Number },
+      longitude: { type: Number },
+    },
+    userLocation: {
+      latitude: { type: Number },
+      longitude: { type: Number },
+    },
+    shippingFee: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    distanceKm: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    artisanLocation: {
+      latitude: { type: Number },
+      longitude: { type: Number },
+    },
+    assignedDeliveryGuy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    deliveryGuyInfo: {
+      name: { type: String },
+      phone: { type: String },
+    },
+    verificationCode: {
+      type: String,
+      length: 8,
+    },
+    deliveryAttempts: [{
+      enteredCode: { type: String },
+      attemptedAt: { type: Date, default: Date.now },
+      success: { type: Boolean, default: false },
+    }],
+    isLocked: {
+      type: Boolean,
+      default: false,
+    },
+    lockedAt: {
+      type: Date,
+    },
+    lockedBy: {
+      type: String,
     },
     timeline: [
       {
@@ -139,6 +212,11 @@ const OrderSchema: Schema = new Schema(
     timestamps: true,
   }
 );
+
+OrderSchema.index({ status: 1 });
+OrderSchema.index({ assignedDeliveryGuy: 1 });
+OrderSchema.index({ tourist: 1 });
+OrderSchema.index({ artisan: 1 });
 
 const Order = mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);
 export default Order;

@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { productId, quantity = 1, idempotencyKey } = body;
+    const { productId, quantity = 1, idempotencyKey, userLocation, shippingAddress } = body;
     const isCartCheckout = Array.isArray(body.items);
     const requestItems = isCartCheckout
       ? body.items
@@ -111,6 +111,12 @@ export async function POST(request: NextRequest) {
     const productSummaries: string[] = [];
     const preparedItems: any[] = [];
     let grandTotal = 0;
+    let orderShippingFee = 0;
+    let orderDistanceKm = 0;
+    let orderUserLocation: any = null;
+    let orderArtisanLocation: any = null;
+
+    const GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY || '1bbeff7fa5e64053b535fe3e6ca58ddb';
 
     for (const [index, item] of lineItems.entries()) {
       const product = await Product.findById(item.productId);
@@ -137,9 +143,75 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      let shippingCost = 0;
+      let distanceKm = 0;
+      let artisanLocation: any = null;
+      let userLocationData: any = null;
+
+      if (userLocation && userLocation.latitude && userLocation.longitude) {
+        userLocationData = {
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+        };
+
+        if (product.artisanId) {
+          try {
+            const artisanProfile = await (await import('@/models/artisan/artisanProfile.model')).default.findOne({ userId: product.artisanId });
+            if (artisanProfile && artisanProfile.latitude && artisanProfile.longitude) {
+              artisanLocation = {
+                latitude: artisanProfile.latitude,
+                longitude: artisanProfile.longitude,
+              };
+            }
+          } catch (err) {
+            console.log('No artisan location found');
+          }
+        }
+
+        if (artisanLocation) {
+          try {
+            const routingUrl = `https://api.geoapify.com/v1/routing?waypoints=${artisanLocation.latitude},${artisanLocation.longitude}|${userLocationData.latitude},${userLocationData.longitude}&mode=drive&details=distance`;
+            const routingResponse = await fetch(routingUrl, {
+              headers: { 'Authorization': GEOAPIFY_API_KEY },
+            });
+
+            if (routingResponse.ok) {
+              const routingData = await routingResponse.json();
+              if (routingData.features && routingData.features.length > 0) {
+                const route = routingData.features[0];
+                if (route.properties && route.properties.distance) {
+                  distanceKm = route.properties.distance / 1000;
+                }
+              }
+
+              if (distanceKm === 0) {
+                const latDiff = Math.abs(userLocationData.latitude - artisanLocation.latitude);
+                const lonDiff = Math.abs(userLocationData.longitude - artisanLocation.longitude);
+                const avgLat = (userLocationData.latitude + artisanLocation.latitude) / 2;
+                const latKm = latDiff * 111;
+                const lonKm = lonDiff * 111 * Math.cos(avgLat * Math.PI / 180);
+                distanceKm = Math.sqrt(latKm * latKm + lonKm * lonKm);
+              }
+
+              distanceKm = Math.round(distanceKm * 100) / 100;
+
+              if (distanceKm <= 30) {
+                shippingCost = 100;
+              } else if (distanceKm <= 70) {
+                shippingCost = 250;
+              } else {
+                shippingCost = 450;
+              }
+            }
+          } catch (routingErr) {
+            console.error('Routing API error:', routingErr);
+            shippingCost = 100;
+          }
+        }
+      }
+
       const subtotal = unitPrice * item.quantity;
-      const shippingCost = Number(product.shippingFee) || 0;
-      const total = subtotal + shippingCost;
+      const total = subtotal;
 
       if (isNaN(total) || total <= 0) {
         return NextResponse.json(
@@ -160,6 +232,10 @@ export async function POST(request: NextRequest) {
         total,
         adminCommission,
         artisanEarnings,
+        shippingCost,
+        distanceKm,
+        artisanLocation,
+        userLocationData,
       });
     }
 
@@ -173,6 +249,10 @@ export async function POST(request: NextRequest) {
         total,
         adminCommission,
         artisanEarnings,
+        shippingCost,
+        distanceKm,
+        artisanLocation,
+        userLocationData,
       } = preparedItem;
       const orderIdempotencyKey = requestItems.length === 1
         ? idempotencyKey || undefined
@@ -203,13 +283,25 @@ export async function POST(request: NextRequest) {
           email: user.email || '',
           phone: user.phone || 'Not Provided',
         },
-        shippingAddress: {
+        shippingAddress: shippingAddress ? {
+          street: shippingAddress.street || 'Not Provided',
+          city: shippingAddress.city || 'Addis Ababa',
+          state: shippingAddress.state || 'Addis Ababa',
+          country: shippingAddress.country || 'Ethiopia',
+          zipCode: shippingAddress.zipCode || '',
+          latitude: userLocationData?.latitude,
+          longitude: userLocationData?.longitude,
+        } : {
           street: 'Not Provided',
           city: 'Addis Ababa',
           state: 'Addis Ababa',
           country: 'Ethiopia',
           zipCode: '',
         },
+        userLocation: userLocationData,
+        shippingFee: shippingCost,
+        distanceKm: distanceKm,
+        artisanLocation: artisanLocation,
         timeline: [
           {
             status: 'Awaiting Payment',
@@ -244,7 +336,7 @@ export async function POST(request: NextRequest) {
 
       createdOrders.push(order);
       productSummaries.push(`${item.quantity} x ${product.name}`);
-      grandTotal += total;
+      grandTotal += (total + shippingCost);
 
       const artisanWallet = await Wallet.findOne({ userId: artisan._id }) || new Wallet({
         userId: artisan._id,
@@ -308,7 +400,10 @@ export async function POST(request: NextRequest) {
           currency: 'ETB',
         });
 
+        // Add commission to admin pending balance
         adminWallet.pendingBalance = (adminWallet.pendingBalance || 0) + adminCommission;
+        // Add shipping fee separately to tracking field
+        adminWallet.shippingFeesReceived = (adminWallet.shippingFeesReceived || 0) + shippingCost;
         await adminWallet.save();
 
         const existingAdminTransaction = await Transaction.findOne({
@@ -339,6 +434,37 @@ export async function POST(request: NextRequest) {
               unitPrice,
               totalAmount: total,
               commissionRate,
+              paymentMethod: 'chapa',
+              payerId: user.userId,
+              receiverId: adminUser._id.toString(),
+            },
+          });
+        }
+
+        // Create separate SHIPPING_FEE transaction for the admin
+        const existingShippingTransaction = await Transaction.findOne({
+          walletId: adminWallet._id,
+          orderId: order._id,
+          paymentRef: txRef,
+          type: 'SHIPPING_FEE',
+          userId: adminUser._id,
+        });
+
+        if (!existingShippingTransaction) {
+          await Transaction.create({
+            walletId: adminWallet._id,
+            userId: adminUser._id,
+            orderId: order._id,
+            productId: product._id,
+            type: 'SHIPPING_FEE',
+            amount: shippingCost,
+            currency: 'ETB',
+            status: 'PENDING',
+            paymentRef: txRef,
+            metadata: {
+              orderId: order._id.toString(),
+              productId: product._id.toString(),
+              shippingFee: shippingCost,
               paymentMethod: 'chapa',
               payerId: user.userId,
               receiverId: adminUser._id.toString(),

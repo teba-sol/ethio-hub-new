@@ -45,12 +45,16 @@ export async function POST(
 
     let updateField: string;
     let successMessage: string;
-    let recordRole: 'artisan' | 'organizer';
+    let recordRole: 'artisan' | 'organizer' | 'delivery';
 
     if (userRole === 'organizer') {
       updateField = 'organizerStatus';
       successMessage = 'Organizer approved successfully';
       recordRole = 'organizer';
+    } else if (userRole === 'delivery' || userRole === 'Delivery Guy') {
+      updateField = 'deliveryStatus';
+      successMessage = 'Delivery guy approved successfully';
+      recordRole = 'delivery';
     } else {
       updateField = 'artisanStatus';
       successMessage = 'Artisan approved successfully';
@@ -60,7 +64,7 @@ export async function POST(
     const updatedUser = await User.findByIdAndUpdate(
       id,
       { [updateField]: 'Approved' },
-      { new: true, select: 'name email role artisanStatus organizerStatus' }
+      { new: true, select: 'name email role artisanStatus organizerStatus deliveryStatus' }
     );
 
     if (!updatedUser) {
@@ -89,6 +93,7 @@ export async function POST(
           role: updatedUser.role,
           artisanStatus: updatedUser.artisanStatus,
           organizerStatus: updatedUser.organizerStatus,
+          deliveryStatus: updatedUser.deliveryStatus,
         },
       }),
       { status: 200, headers: { 'content-type': 'application/json' } }

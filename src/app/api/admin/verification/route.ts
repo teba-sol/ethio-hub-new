@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     const requests: any[] = [];
 
     // Parallelize artisan and organizer data fetching
-    const [artisanData, organizerData] = await Promise.all([
+    const [artisanData, organizerData, deliveryData] = await Promise.all([
       // Artisan block
       (async () => {
         if (role === 'all' || role === 'artisan') {
@@ -171,10 +171,54 @@ export async function GET(request: NextRequest) {
           }
         }
         return [];
+      })(),
+
+      // Delivery block
+      (async () => {
+        if (role === 'all' || role === 'delivery') {
+          const deliveryQuery: any = {
+            role: 'delivery',
+            deliveryStatus: { $in: statusFilter },
+          };
+
+          if (search) {
+            deliveryQuery.$or = [
+              { name: { $regex: search, $options: 'i' } },
+              { email: { $regex: search, $options: 'i' } },
+            ];
+          }
+
+          const deliveryUsers = await User.find(deliveryQuery)
+            .select('-password')
+            .sort({ createdAt: -1 })
+            .lean();
+
+          return deliveryUsers.map((user: any) => {
+            return {
+              id: user._id.toString(),
+              userId: user._id.toString(),
+              userName: user.name,
+              userEmail: user.email,
+              userPhone: user.deliveryProfile?.phone || user.phone || '',
+              userRole: 'Delivery Guy',
+              profileCompletion: calculateDeliveryProfileCompletion(user),
+              registrationDate: formatDate(user.createdAt),
+              submittedAt: formatDate(user.updatedAt),
+              status: mapStatus(user.deliveryStatus),
+              documents: buildDeliveryDocuments(user),
+              profile: user.deliveryProfile || null,
+              rejectionReason: user.rejectionReason || '',
+              userAvatar: user.profileImage || null,
+              vehicleType: user.deliveryProfile?.vehicleType || '',
+              licensePlate: user.deliveryProfile?.licensePlate || '',
+            };
+          });
+        }
+        return [];
       })()
     ]);
 
-    requests.push(...artisanData, ...organizerData);
+    requests.push(...artisanData, ...organizerData, ...deliveryData);
 
     requests.sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime());
 
@@ -210,6 +254,16 @@ function calculateOrganizerProfileCompletion(profile: any): number {
   ];
   const filled = fields.filter((f) => profile[f] && profile[f] !== '').length;
   return Math.round((filled / fields.length) * 100);
+}
+
+function calculateDeliveryProfileCompletion(user: any): number {
+  const profile = user.deliveryProfile || {};
+  const fields = [
+    'phone', 'vehicleType', 'licensePlate', 'idDocument'
+  ];
+  const profileFilled = fields.filter((f) => profile[f] && profile[f] !== '').length;
+  const avatarFilled = user.profileImage ? 1 : 0;
+  return Math.round(((profileFilled + avatarFilled) / (fields.length + 1)) * 100);
 }
 
 function formatDate(date: any): string {
@@ -291,6 +345,21 @@ function buildOrganizerDocuments(profile: any): any[] {
       type: 'image',
       url: profile.logo,
       uploadedAt: formatDate(profile.createdAt),
+    });
+  }
+  return docs;
+}
+
+function buildDeliveryDocuments(user: any): any[] {
+  const docs: any[] = [];
+  const profile = user.deliveryProfile || {};
+  if (profile.idDocument) {
+    docs.push({
+      id: 'id_document',
+      name: 'National ID / Passport',
+      type: 'image',
+      url: profile.idDocument,
+      uploadedAt: formatDate(user.updatedAt),
     });
   }
   return docs;

@@ -3,6 +3,8 @@ import { jwtVerify } from 'jose';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/models/User';
 import { cookies } from 'next/headers';
+import { sendUserWelcomeEmail } from '@/lib/email';
+import crypto from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
@@ -75,10 +77,26 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { name, email, role } = body;
+    const { name, email, role, deliveryProfile } = body;
 
     if (!name || !email || !role) {
       return NextResponse.json({ message: 'Name, email, and role are required' }, { status: 400 });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ message: 'Invalid email format' }, { status: 400 });
+    }
+
+    const validRoles = ['admin', 'tourist', 'organizer', 'artisan', 'delivery'];
+    if (!validRoles.includes(role.toLowerCase())) {
+      return NextResponse.json({ message: 'Invalid role' }, { status: 400 });
+    }
+
+    if (role.toLowerCase() === 'delivery') {
+      if (!deliveryProfile?.phone || !deliveryProfile?.vehicleType) {
+        return NextResponse.json({ message: 'Phone and vehicle type are required for delivery personnel' }, { status: 400 });
+      }
     }
 
     const existingUser = await User.findOne({ email });
@@ -86,24 +104,57 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'User with this email already exists' }, { status: 409 });
     }
 
-    const defaultPassword = 'TempPass123!';
+    // Generate a secure random temporary password
+    const tempPassword = crypto.randomBytes(6).toString('hex').toUpperCase(); // 12 char readable hex
     const bcrypt = await import('bcryptjs');
-    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
-    const newUser = await User.create({
+    const userData: any = {
       name,
       email,
       password: hashedPassword,
       role: role.toLowerCase(),
       status: 'Active',
-    });
+      isVerified: true,
+    };
+
+    if (role.toLowerCase() === 'delivery' && deliveryProfile) {
+      userData.deliveryProfile = {
+        phone: deliveryProfile.phone || '',
+        vehicleType: deliveryProfile.vehicleType || '',
+        licensePlate: deliveryProfile.licensePlate || '',
+        availabilityStatus: 'available',
+        totalDeliveries: 0,
+        rating: 0,
+        totalEarnings: 0,
+      };
+    }
+
+    const newUser = await User.create(userData);
+
+    // Send welcome email with credentials
+    try {
+      console.log(`[AdminAPI] Attempting to send welcome email to: ${email}`);
+      await sendUserWelcomeEmail({
+        to: email,
+        name: name,
+        role: role,
+        password: tempPassword
+      });
+      console.log(`[AdminAPI] Welcome email sent successfully to: ${email}`);
+    } catch (emailErr: any) {
+      console.error('[AdminAPI] Failed to send welcome email:', emailErr.message);
+      // We still return 201 because the user was created, but we log the error
+    }
 
     const userResponse = newUser.toObject();
     delete (userResponse as any).password;
 
     return NextResponse.json({
-      message: 'User created successfully. Default password: TempPass123!',
+      message: 'User created successfully.',
       user: userResponse,
+      tempPassword,
+      success: true,
     }, { status: 201 });
   } catch (error: any) {
     console.error('Error creating user:', error);

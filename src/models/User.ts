@@ -20,7 +20,7 @@ const UserSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["admin", "tourist", "organizer", "artisan"],
+      enum: ["admin", "tourist", "organizer", "artisan", "delivery"],
       default: "tourist"
     },
 
@@ -47,6 +47,12 @@ const UserSchema = new mongoose.Schema(
     },
 
     organizerStatus: {
+      type: String,
+      enum: ["Not Submitted", "Pending", "Under Review", "Approved", "Rejected", "Modification Requested"],
+      default: "Not Submitted"
+    },
+
+    deliveryStatus: {
       type: String,
       enum: ["Not Submitted", "Pending", "Under Review", "Approved", "Rejected", "Modification Requested"],
       default: "Not Submitted"
@@ -98,6 +104,26 @@ const UserSchema = new mongoose.Schema(
       nationality: { type: String },
       dateOfBirth: { type: String },
       profileImage: { type: String },
+    },
+
+    // Delivery Guy Profile Fields
+    deliveryProfile: {
+      phone: { type: String },
+      vehicleType: { type: String },
+      licensePlate: { type: String },
+      availabilityStatus: { 
+        type: String, 
+        enum: ['available', 'busy', 'offline'],
+        default: 'offline'
+      },
+      totalDeliveries: { type: Number, default: 0 },
+      rating: { type: Number, default: 0 },
+      totalEarnings: { type: Number, default: 0 },
+      avatar: { type: String },
+      bankName: { type: String },
+      accountNumber: { type: String },
+      telebirrNumber: { type: String },
+      idDocument: { type: String },
     },
 
     // Password reset fields

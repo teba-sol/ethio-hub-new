@@ -153,17 +153,67 @@ export const EventStatusBadge: React.FC<EventStatusBadgeProps> = ({
   );
 };
 
-export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label?: string, error?: boolean }> = ({ label, error, ...props }) => (
-  <div className="flex flex-col space-y-1 w-full">
-    {label && <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${error ? 'text-red-500' : 'text-gray-500'}`} htmlFor={props.id}>{label}</label>}
-    <input 
-      className={`block w-full px-4 py-3 rounded-[12px] border focus:ring-1 transition-all bg-white text-sm ${
-        error 
-          ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50/30' 
-          : 'border-gray-200 focus:ring-primary focus:border-primary'
-      }`}
-      {...props}
-    />
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+  error?: boolean;
+  leftIcon?: LucideIcon;
+  rightIcon?: LucideIcon;
+  helperText?: string;
+}
+
+export const Input: React.FC<InputProps> = ({ 
+  label, 
+  error, 
+  leftIcon: LeftIcon, 
+  rightIcon: RightIcon,
+  helperText,
+  className = '',
+  ...props 
+}) => (
+  <div className="flex flex-col space-y-1.5 w-full">
+    {label && (
+      <label 
+        className={`text-xs font-bold uppercase tracking-widest ml-1 transition-colors ${
+          error ? 'text-red-500' : 'text-gray-500'
+        }`} 
+        htmlFor={props.id}
+      >
+        {label}
+      </label>
+    )}
+    <div className="relative group">
+      {LeftIcon && (
+        <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
+          error ? 'text-red-400' : 'text-gray-400 group-focus-within:text-primary'
+        }`}>
+          <LeftIcon className="w-5 h-5" />
+        </div>
+      )}
+      <input 
+        className={`block w-full rounded-[16px] border transition-all duration-200 bg-white text-sm
+          ${LeftIcon ? 'pl-11' : 'px-4'} 
+          ${RightIcon ? 'pr-11' : 'px-4'} 
+          ${label ? 'py-3.5' : 'py-3'}
+          ${
+            error 
+              ? 'border-red-500 focus:ring-4 focus:ring-red-500/10 focus:border-red-500 bg-red-50/30' 
+              : 'border-gray-200 focus:ring-4 focus:ring-primary/10 focus:border-primary hover:border-gray-300'
+          } ${className}`}
+        {...props}
+      />
+      {RightIcon && (
+        <div className={`absolute right-4 top-1/2 -translate-y-1/2 transition-colors ${
+          error ? 'text-red-400' : 'text-gray-400 group-focus-within:text-primary'
+        }`}>
+          <RightIcon className="w-5 h-5" />
+        </div>
+      )}
+    </div>
+    {helperText && (
+      <p className={`text-[10px] ml-1 font-medium ${error ? 'text-red-500' : 'text-gray-400'}`}>
+        {helperText}
+      </p>
+    )}
   </div>
 );
 

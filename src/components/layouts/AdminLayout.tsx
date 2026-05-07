@@ -6,7 +6,8 @@ import {
   LayoutDashboard, Users, CalendarCheck, PackageCheck, Ticket, 
   DollarSign, Flag, LayoutTemplate, FileText, Settings, LogOut, 
   Bell, Search, ShieldAlert, ShieldCheck, UserPlus, Info,
-  ChevronDown, ChevronUp, Briefcase, ShoppingBag, Calendar, Menu, X, TrendingUp
+  ChevronDown, ChevronUp, Briefcase, ShoppingBag, Calendar, Menu, X, TrendingUp,
+  Package, RotateCcw, Truck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -44,6 +45,8 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
     { path: '/dashboard/admin/revenue', name: 'Revenue & Commission', icon: TrendingUp },
     { path: '/dashboard/admin/reports', name: 'Reports & Moderation', icon: Flag },
     { path: '/dashboard/admin/logs', name: 'System Logs', icon: FileText },
+    { path: '/dashboard/admin/orders', name: 'Delivery Orders', icon: Truck },
+    { path: '/dashboard/admin/refund-requests', name: 'Refund Requests', icon: RotateCcw },
     { path: '/dashboard/admin/settings', name: 'Settings', icon: Settings },
   ];
 

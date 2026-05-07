@@ -25,6 +25,10 @@ async function getAuthenticatedUser(req: Request) {
   }
 }
 
+function generateVerificationCode(): string {
+  return Math.random().toString(10).substring(2, 10).toUpperCase().padStart(8, '0').substring(0, 8);
+}
+
 export async function PUT(
   req: Request,
   { params }: { params: { id: string } }
@@ -40,25 +44,102 @@ export async function PUT(
     const { status } = await req.json();
     const orderId = params.id;
 
-    if (!['Pending', 'Shipped', 'Delivered', 'Cancelled', 'Returned'].includes(status)) {
+    const validStatuses = ['Pending', 'Paid', 'Ready for Pickup', 'Shipped', 'Delivered', 'Cancelled', 'Returned'];
+    if (!validStatuses.includes(status)) {
       return NextResponse.json({ message: 'Invalid status' }, { status: 400 });
     }
 
-    const order = await Order.findOneAndUpdate(
+    const order = await Order.findOne({ _id: orderId, artisan: user._id });
+
+    if (!order) {
+      return NextResponse.json({ message: 'Order not found' }, { status: 404 });
+    }
+
+    if (order.isLocked) {
+      return NextResponse.json({ message: 'Order is locked due to failed delivery attempts' }, { status: 400 });
+    }
+
+    const currentStatus = order.status;
+    let updateData: any = { status };
+
+    let timelineNote = `Order status updated to ${status}`;
+
+    if (status === 'Ready for Pickup' && currentStatus === 'Paid') {
+      const verificationCode = generateVerificationCode();
+      updateData.verificationCode = verificationCode;
+      timelineNote = 'Package is ready for pickup. Verification code generated.';
+
+      order.timeline.push({
+        status: 'Ready for Pickup',
+        date: new Date(),
+        note: `Verification Code: ${verificationCode}`,
+      });
+    } else if (status === 'Shipped' && currentStatus === 'Ready for Pickup') {
+      if (!order.assignedDeliveryGuy) {
+        return NextResponse.json({ message: 'Order must be assigned to a delivery person first' }, { status: 400 });
+      }
+      timelineNote = 'Driver has picked up the package and is on the way.';
+      order.timeline.push({
+        status: 'Shipped',
+        date: new Date(),
+        note: 'Package is in transit.',
+      });
+    } else if (status === 'Delivered') {
+      timelineNote = 'Package delivered successfully.';
+      order.timeline.push({
+        status: 'Delivered',
+        date: new Date(),
+        note: 'Delivery confirmed by customer.',
+      });
+    } else {
+      order.timeline.push({
+        status,
+        date: new Date(),
+        note: timelineNote,
+      });
+    }
+
+    const updatedOrder = await Order.findOneAndUpdate(
       { _id: orderId, artisan: user._id },
       { 
-        $set: { status },
-        $push: { 
-          timeline: { 
-            status, 
-            date: new Date(),
-            note: `Order status updated to ${status}`
-          } 
-        }
+        $set: updateData,
+        $push: { timeline: order.timeline[order.timeline.length - 1] }
       },
       { new: true }
     ).populate('product', 'name images sku price')
      .populate('tourist', 'name email profilePicture');
+
+    return NextResponse.json({
+      success: true,
+      message: 'Order status updated',
+      order: updatedOrder,
+      verificationCode: status === 'Ready for Pickup' ? updateData.verificationCode : undefined
+    });
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    return NextResponse.json(
+      { message: 'Failed to update order status' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await connectDB();
+    
+    const user = await getAuthenticatedUser(req);
+    if (!user || user.role !== 'artisan') {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    const order = await Order.findOne({ _id: params.id, artisan: user._id })
+      .populate('product', 'name images sku price description')
+      .populate('tourist', 'name email phone profilePicture touristProfile')
+      .populate('assignedDeliveryGuy', 'name phone deliveryProfile');
 
     if (!order) {
       return NextResponse.json({ message: 'Order not found' }, { status: 404 });
@@ -66,13 +147,12 @@ export async function PUT(
 
     return NextResponse.json({
       success: true,
-      message: 'Order status updated',
       order
     });
   } catch (error) {
-    console.error('Error updating order status:', error);
+    console.error('Error fetching order:', error);
     return NextResponse.json(
-      { message: 'Failed to update order status' },
+      { message: 'Failed to fetch order' },
       { status: 500 }
     );
   }

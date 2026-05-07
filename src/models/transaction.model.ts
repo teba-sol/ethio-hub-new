@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type TransactionType = 'ORDER_PAYMENT' | 'ADMIN_COMMISSION' | 'WITHDRAWAL' | 'REFUND' | 'ESCROW_HOLD' | 'ESCROW_RELEASE' | 'PRODUCT_FEE';
+export type TransactionType = 'ORDER_PAYMENT' | 'ADMIN_COMMISSION' | 'WITHDRAWAL' | 'REFUND' | 'ESCROW_HOLD' | 'ESCROW_RELEASE' | 'PRODUCT_FEE' | 'SHIPPING_FEE';
 export type TransactionStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'HELD_IN_ESCROW';
 
 export interface ITransaction extends Document {
@@ -54,7 +54,7 @@ const TransactionSchema: Schema = new Schema(
     },
     type: {
       type: String,
-      enum: ['ORDER_PAYMENT', 'ADMIN_COMMISSION', 'WITHDRAWAL', 'REFUND', 'ESCROW_HOLD', 'ESCROW_RELEASE', 'PRODUCT_FEE'],
+      enum: ['ORDER_PAYMENT', 'ADMIN_COMMISSION', 'WITHDRAWAL', 'REFUND', 'ESCROW_HOLD', 'ESCROW_RELEASE', 'PRODUCT_FEE', 'SHIPPING_FEE'],
       required: true,
     },
     amount: {

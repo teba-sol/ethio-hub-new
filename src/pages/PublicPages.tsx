@@ -35,6 +35,9 @@ import { UserRole } from '../types';
 import apiClient from '../lib/apiClient';
 import { useContentLanguage } from '@/hooks/useContentLanguage';
 import { CLOUDINARY_CLOUD_NAME } from '@/lib/cloudinary';
+import dynamic from 'next/dynamic';
+
+const LocationPicker = dynamic(() => import('@/components/checkout/LocationPicker').then(mod => mod.LocationPicker), { ssr: false });
 
 const CLOUDINARY_BASE = `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
@@ -1388,11 +1391,22 @@ export const ProductDetailPage: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'select' | 'processing' | 'receipt'>('select');
   const [selectedMethod, setSelectedMethod] = useState<'chapa' | 'telebirr' | null>(null);
-   const [transactionRef, setTransactionRef] = useState("");
+const [transactionRef, setTransactionRef] = useState("");
    const [isBuying, setIsBuying] = useState(false);
- 
+   const [showLocationModal, setShowLocationModal] = useState(false);
+   const [shippingLocation, setShippingLocation] = useState<{
+     street: string;
+     city: string;
+     state: string;
+     latitude?: number;
+     longitude?: number;
+   } | null>(null);
+   const [calculatedShippingFee, setCalculatedShippingFee] = useState<number | null>(null);
+   const [calculatingFee, setCalculatingFee] = useState(false);
+   const [locationCoords, setLocationCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  
    useEffect(() => {
-    const fetchProduct = async () => {
+     const fetchProduct = async () => {
       if (!id) return;
       try {
         const res = await fetch(`/api/public/products/${id}`);
@@ -1458,13 +1472,26 @@ export const ProductDetailPage: React.FC = () => {
   };
 
    const handleBuyNow = async () => {
-    if (isBuying) return;
     if (!isAuthenticated || user?.role?.toLowerCase() !== UserRole.TOURIST) {
       setShowLoginPrompt(true);
       return;
     }
 
+    setShowLocationModal(true);
+    setShippingLocation(null);
+    setCalculatedShippingFee(null);
+    setLocationCoords(null);
+  };
+
+  const handleLocationSubmit = async () => {
+    if (!locationCoords || !shippingLocation?.street || !shippingLocation?.city) {
+      alert('Please fill in your address and select a location on the map');
+      return;
+    }
+
+    if (isBuying) return;
     setIsBuying(true);
+
     try {
       const idempotencyKey = crypto.randomUUID();
       const response = await fetch('/api/chapa/initialize', {
@@ -1474,11 +1501,20 @@ export const ProductDetailPage: React.FC = () => {
           productId: id,
           quantity,
           idempotencyKey,
+          userLocation: locationCoords,
+          shippingFee: calculatedShippingFee,
+          shippingAddress: {
+            street: shippingLocation.street,
+            city: shippingLocation.city,
+            state: shippingLocation.state || 'Addis Ababa',
+            country: 'Ethiopia',
+          },
         }),
       });
 
       const data = await response.json();
       if (data.success && data.checkout_url) {
+        setShowLocationModal(false);
         window.location.href = data.checkout_url;
       } else {
         alert(data.message || 'Failed to initialize payment');
@@ -1488,6 +1524,35 @@ export const ProductDetailPage: React.FC = () => {
       alert('Payment failed. Please try again.');
     } finally {
       setIsBuying(false);
+    }
+  };
+
+  const calculateShippingFee = async (coords: { latitude: number; longitude: number }) => {
+    setCalculatingFee(true);
+    try {
+      const productRes = await fetch(`/api/public/products/${id}`);
+      const productData = await productRes.json();
+      const product = productData.product;
+
+      if (product?.artisanId?._id || product?.artisanId) {
+        const artisanId = product.artisanId._id || product.artisanId;
+        const res = await fetch('/api/routing/calculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            artisanId,
+            userLocation: coords,
+          }),
+        });
+        const feeData = await res.json();
+        if (feeData.success) {
+          setCalculatedShippingFee(feeData.shippingFee);
+        }
+      }
+    } catch (err) {
+      console.error('Error calculating shipping fee:', err);
+    } finally {
+      setCalculatingFee(false);
     }
   };
 
@@ -1919,6 +1984,109 @@ export const ProductDetailPage: React.FC = () => {
                             </div>
                         </div>
                     )}
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Location Selection Modal */}
+      {showLocationModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 relative max-h-[90vh] flex flex-col">
+                <button 
+                    onClick={() => setShowLocationModal(false)} 
+                    className="absolute top-6 right-6 p-2 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors z-10 shadow-sm"
+                >
+                    <X className="w-5 h-5 text-gray-500" />
+                </button>
+
+                <div className="p-8 overflow-y-auto custom-scrollbar">
+                    <div className="text-center space-y-2 mb-8">
+                        <h2 className="text-2xl font-serif font-bold text-primary">Delivery Details</h2>
+                        <p className="text-gray-500 text-sm">Provide your address and select your location on the map</p>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Street Address</label>
+                                <input 
+                                    type="text"
+                                    placeholder="e.g. Bole Road, House 123"
+                                    value={shippingLocation?.street || ''}
+                                    onChange={(e) => setShippingLocation(prev => ({ ...prev!, street: e.target.value }))}
+                                    className="w-full px-5 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all outline-none text-sm"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">City</label>
+                                <input 
+                                    type="text"
+                                    placeholder="e.g. Addis Ababa"
+                                    value={shippingLocation?.city || ''}
+                                    onChange={(e) => setShippingLocation(prev => ({ ...prev!, city: e.target.value }))}
+                                    className="w-full px-5 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all outline-none text-sm"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Pin Location on Map</label>
+                            <div className="h-[250px] rounded-2xl overflow-hidden border border-gray-100 shadow-inner bg-gray-50">
+                                <LocationPicker 
+                                    value={locationCoords || undefined}
+                                    onChange={(coords) => {
+                                        setLocationCoords(coords);
+                                        calculateShippingFee(coords);
+                                    }}
+                                    height="250px"
+                                />
+                            </div>
+                        </div>
+
+                        {calculatingFee ? (
+                            <div className="flex items-center justify-center gap-3 py-6 text-primary animate-pulse bg-primary/5 rounded-2xl">
+                                <RefreshCw className="w-5 h-5 animate-spin" />
+                                <span className="text-xs font-bold uppercase tracking-widest">Calculating Shipping Distance...</span>
+                            </div>
+                        ) : calculatedShippingFee !== null && (
+                            <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-4 shadow-sm">
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-500">Product Price</span>
+                                        <span className="font-bold text-primary">{product.price} ETB</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-500">Quantity</span>
+                                        <span className="font-bold text-primary">{quantity}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-500">Subtotal</span>
+                                        <span className="font-bold text-primary">{product.price * quantity} ETB</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm text-emerald-600">
+                                        <span className="font-medium">Shipping Fee</span>
+                                        <span className="font-bold">{calculatedShippingFee} ETB</span>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex justify-between items-center border-t border-gray-200 pt-4">
+                                    <span className="text-base font-bold text-primary">Grand Total</span>
+                                    <span className="text-2xl font-black text-primary">
+                                        {(product.price * quantity) + calculatedShippingFee} ETB
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+
+                        <Button 
+                            className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20 text-sm font-bold uppercase tracking-widest"
+                            disabled={!locationCoords || !shippingLocation?.street || !shippingLocation?.city || calculatingFee || isBuying}
+                            onClick={handleLocationSubmit}
+                        >
+                            {isBuying ? 'Connecting to Chapa...' : 'Confirm & Pay Now'}
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>

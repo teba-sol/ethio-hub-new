@@ -341,14 +341,23 @@ export const TouristOrdersView: React.FC = () => {
   });
 
   const getOrderStatusBadge = (status: string, paymentStatus: string) => {
-    if (paymentStatus === 'paid' || status === 'confirmed' || status === 'completed') {
-      return <Badge variant="success" className="capitalize">Paid</Badge>;
-    } else if (status === 'pending') {
-      return <Badge variant="warning" className="capitalize">Pending</Badge>;
-    } else if (status === 'cancelled') {
-      return <Badge variant="secondary" className="capitalize">Cancelled</Badge>;
+    const statusStyles: Record<string, { variant: string; label: string }> = {
+      'Awaiting Payment': { variant: 'secondary', label: 'Awaiting Payment' },
+      'Pending': { variant: 'warning', label: 'Pending' },
+      'Paid': { variant: 'info', label: 'Paid - Preparing' },
+      'Ready for Pickup': { variant: 'purple', label: 'Ready for Pickup' },
+      'Shipped': { variant: 'primary', label: 'In Transit' },
+      'Delivered': { variant: 'success', label: 'Delivered' },
+      'Returned': { variant: 'secondary', label: 'Returned' },
+      'Cancelled': { variant: 'error', label: 'Cancelled' },
+    };
+
+    if (paymentStatus === 'refunded') {
+      return <Badge variant="error" className="capitalize">Refunded</Badge>;
     }
-    return <Badge className="capitalize">{status}</Badge>;
+
+    const style = statusStyles[status] || { variant: 'secondary', label: status };
+    return <Badge variant={style.variant as any} className="capitalize">{style.label}</Badge>;
   };
 
   if (loading) {
@@ -476,13 +485,54 @@ export const TouristOrdersView: React.FC = () => {
                   </div>
                 )}
 
-                <div className="pt-4 border-t border-gray-100 flex justify-between items-center">
-                  <span className="font-bold text-gray-900">Total Amount</span>
-                  <span className="font-bold text-xl text-primary">ETB {selectedOrder.totalPrice?.toLocaleString()}</span>
+                {selectedOrder.shippingFee > 0 && (
+                  <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <h4 className="font-bold text-sm text-emerald-800 mb-2">Shipping Details</h4>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-emerald-700">Shipping Fee:</span>
+                      <span className="font-bold text-emerald-800">ETB {selectedOrder.shippingFee}</span>
+                    </div>
+                    {selectedOrder.distanceKm > 0 && (
+                      <p className="text-xs text-emerald-600 mt-1">Distance: {selectedOrder.distanceKm} km</p>
+                    )}
+                    {selectedOrder.deliveryGuyInfo && (
+                      <div className="mt-3 pt-2 border-t border-emerald-100">
+                        <p className="text-xs font-bold text-emerald-700 mb-1">Delivery Person</p>
+                        <p className="text-sm text-emerald-800">{selectedOrder.deliveryGuyInfo.name}</p>
+                        <p className="text-xs text-emerald-600">{selectedOrder.deliveryGuyInfo.phone}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="pt-4 border-t border-gray-100">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-600">Product Total:</span>
+                    <span className="font-medium">ETB {selectedOrder.totalPrice?.toLocaleString()}</span>
+                  </div>
+                  {selectedOrder.shippingFee > 0 && (
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm text-gray-600">Shipping:</span>
+                      <span className="font-medium">ETB {selectedOrder.shippingFee}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                    <span className="font-bold text-gray-900">Total Paid</span>
+                    <span className="font-bold text-xl text-primary">ETB {(selectedOrder.totalPrice + (selectedOrder.shippingFee || 0))?.toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
 
               <div className="flex gap-3 pt-2">
+                {selectedOrder.paymentStatus === 'paid' && selectedOrder.status !== 'Returned' && (
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+                    onClick={() => alert('Refund request feature coming soon! Please contact support.')}
+                  >
+                    Request Refund
+                  </Button>
+                )}
                 <Button variant="outline" className="flex-1" onClick={() => window.print()}>Download Receipt</Button>
               </div>
             </div>

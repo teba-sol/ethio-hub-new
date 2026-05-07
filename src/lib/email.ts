@@ -198,12 +198,14 @@ const sendMail = async (to: string, subject: string, html: string) => {
     const transporter = getTransporter();
     const { fromEmail, fromName } = getRequiredSenderConfig();
 
-    await transporter.sendMail({
+    console.log(`[EmailService] Sending email to: ${to} with subject: ${subject}`);
+    const info = await transporter.sendMail({
       from: `"${fromName}" <${fromEmail}>`,
       to,
       subject,
       html,
     });
+    console.log(`[EmailService] Email sent! Message ID: ${info.messageId}`);
   } catch (error: any) {
     const message = String(error?.message || "");
     const code = String(error?.code || "").toUpperCase();
@@ -391,5 +393,90 @@ export const sendApprovalDecisionEmail = async (input: ApprovalDecisionEmailInpu
     input.to,
     input.approved ? "Your submission was approved" : "Action required on your submission",
     buildDecisionHtml(input)
+  );
+};
+
+type DeliveryCodeEmailInput = {
+  to: string;
+  name: string;
+  orderId: string;
+  verificationCode: string;
+  productName: string;
+  deliveryGuyName?: string;
+  deliveryGuyPhone?: string;
+};
+
+const buildDeliveryCodeHtml = (input: DeliveryCodeEmailInput) => `
+  <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1f2937;">
+    <h2 style="margin-bottom: 16px; color: #0f172a;">Your Order is Ready for Delivery!</h2>
+    <p style="margin-bottom: 16px;">Hello ${input.name},</p>
+    <p style="margin-bottom: 16px;">Great news! Your order <strong>#${input.orderId.slice(-6).toUpperCase()}</strong> for <strong>${input.productName}</strong> is ready and will be delivered soon.</p>
+    ${input.deliveryGuyName ? `
+    <div style="margin: 20px 0; padding: 16px 20px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;">
+      <p style="margin-bottom: 8px;"><strong>Delivery Person:</strong> ${input.deliveryGuyName}</p>
+      <p style="margin: 0;"><strong>Contact:</strong> ${input.deliveryGuyPhone || 'N/A'}</p>
+    </div>
+    ` : ''}
+    <div style="margin: 24px 0; padding: 20px 24px; background: #f8fafc; border: 2px dashed #0f766e; border-radius: 14px; text-align: center;">
+      <p style="margin-bottom: 8px; color: #64748b; font-size: 14px;">Your Verification Code</p>
+      <div style="font-size: 32px; letter-spacing: 12px; font-weight: 700; color: #0f172a; font-family: monospace;">${input.verificationCode}</div>
+    </div>
+    <p style="margin-bottom: 16px; color: #64748b;">Share this code with the delivery person when they arrive to confirm your delivery.</p>
+    <p style="margin: 0; color: #64748b; font-size: 13px;">If you did not order this product, please ignore this email.</p>
+  </div>
+`;
+
+export const sendDeliveryCodeEmail = async (input: DeliveryCodeEmailInput) => {
+  await sendMail(
+    input.to,
+    `Your Delivery Verification Code - Order #${input.orderId.slice(-6).toUpperCase()}`,
+    buildDeliveryCodeHtml(input)
+  );
+};
+
+type UserWelcomeEmailInput = {
+  to: string;
+  name: string;
+  role: string;
+  password?: string;
+};
+
+const buildUserWelcomeHtml = (input: UserWelcomeEmailInput) => `
+  <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1f2937;">
+    <h2 style="margin-bottom: 16px; color: #0f766e;">Welcome to Ethio Craft Hub!</h2>
+    <p style="margin-bottom: 16px;">Hello Mr/Ms ${input.name},</p>
+    <p style="margin-bottom: 16px;">An account has been created for you as a <strong>${input.role}</strong> on our platform.</p>
+    
+    ${input.password ? `
+    <div style="margin: 24px 0; padding: 20px 24px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px;">
+      <p style="margin-bottom: 12px; color: #64748b; font-size: 14px; font-weight: 600; text-transform: uppercase;">Your Login Credentials</p>
+      <div style="margin-bottom: 8px;">
+        <span style="color: #64748b; font-size: 14px;">Email:</span>
+        <span style="font-weight: 600; color: #0f172a; margin-left: 8px;">${input.to}</span>
+      </div>
+      <div>
+        <span style="color: #64748b; font-size: 14px;">Temporary Password:</span>
+        <span style="font-weight: 600; color: #0f172a; margin-left: 8px; font-family: monospace; font-size: 16px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${input.password}</span>
+      </div>
+    </div>
+    <p style="margin-bottom: 16px;">Use this password to access our service. For your security, please change it after your first login.</p>
+    ` : ''}
+
+    <div style="text-align: center; margin-top: 32px;">
+      <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/login" style="display: inline-block; padding: 14px 28px; background: #0f766e; color: #ffffff; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 15px;">
+        Login to Your Account
+      </a>
+    </div>
+
+    <hr style="margin: 32px 0; border: 0; border-top: 1px solid #f1f5f9;" />
+    <p style="margin: 0; color: #94a3b8; font-size: 12px; text-align: center;">This is an automated message. Thank you for using our service.</p>
+  </div>
+`;
+
+export const sendUserWelcomeEmail = async (input: UserWelcomeEmailInput) => {
+  await sendMail(
+    input.to,
+    "Welcome to Ethio Craft Hub - Account Created",
+    buildUserWelcomeHtml(input)
   );
 };

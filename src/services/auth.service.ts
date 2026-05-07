@@ -64,8 +64,10 @@ return {
       isVerified: !!freshUser.isVerified,
       artisanStatus: freshUser.artisanStatus || 'Not Submitted',
       organizerStatus: freshUser.organizerStatus || 'Not Submitted',
+      deliveryStatus: freshUser.deliveryStatus || 'Not Submitted',
       organizerProfile: freshUser.organizerProfile || null,
       touristProfile: freshUser.touristProfile || null,
+      deliveryProfile: freshUser.deliveryProfile || null,
     } 
   };
 };
@@ -92,6 +94,9 @@ export const register = async (userData: { email: string; password: string; name
     newUserData.organizerStatus = 'Not Submitted';
   } else if (role === 'artisan') {
     newUserData.artisanStatus = 'Not Submitted';
+  } else if (role === 'delivery') {
+    newUserData.deliveryStatus = 'Not Submitted';
+    newUserData.deliveryProfile = null;
   }
   
   const newUser = await User.create(newUserData);
@@ -116,6 +121,8 @@ export const register = async (userData: { email: string; password: string; name
       isVerified: !!newUser.isVerified,
       artisanStatus: newUser.artisanStatus || 'Not Submitted',
       organizerStatus: newUser.organizerStatus || 'Not Submitted',
+      deliveryStatus: newUser.deliveryStatus || 'Not Submitted',
+      deliveryProfile: null,
     } 
   };
 };

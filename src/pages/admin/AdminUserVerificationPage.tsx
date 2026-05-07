@@ -42,7 +42,7 @@ interface VerificationRequest {
   userName: string;
   userEmail: string;
   userPhone: string;
-  userRole: 'Organizer' | 'Artisan';
+  userRole: 'Organizer' | 'Artisan' | 'Delivery Guy';
   profileCompletion: number;
   registrationDate: string;
   submittedAt: string;
@@ -56,6 +56,15 @@ interface VerificationRequest {
   region?: string;
   city?: string;
   artisanProfile?: any;
+  deliveryProfile?: {
+    bankName?: string;
+    accountNumber?: string;
+    telebirrNumber?: string;
+    profileImage?: string;
+    idDocument?: string;
+  };
+  vehicleType?: string;
+  licensePlate?: string;
 }
 
 interface VerificationStats {
@@ -118,7 +127,7 @@ export const AdminUserVerificationPage: React.FC = () => {
     fetchStats();
   }, [fetchRequests, fetchStats]);
 
-  const handleApprove = async (id: string, role: 'Organizer' | 'Artisan') => {
+  const handleApprove = async (id: string, role: 'Organizer' | 'Artisan' | 'Delivery Guy') => {
     // Optimistic UI update
     const previousRequests = [...requests];
     setRequests(prev => prev.map(req => 
@@ -130,7 +139,7 @@ export const AdminUserVerificationPage: React.FC = () => {
       const res = await fetch(`/api/admin/verification/${id}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: role.toLowerCase() }),
+        body: JSON.stringify({ role: role === 'Delivery Guy' ? 'delivery' : role.toLowerCase() }),
       });
       const data = await res.json();
       if (data.success) {
@@ -150,7 +159,7 @@ export const AdminUserVerificationPage: React.FC = () => {
     }
   };
 
-  const handleReject = async (id: string, role: 'Organizer' | 'Artisan') => {
+  const handleReject = async (id: string, role: 'Organizer' | 'Artisan' | 'Delivery Guy') => {
     if (!rejectionReason.trim()) return;
     
     // Optimistic UI update
@@ -282,15 +291,16 @@ export const AdminUserVerificationPage: React.FC = () => {
             />
           </div>
           <div className="flex flex-wrap gap-2">
-             <select 
-               className="px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 border-none cursor-pointer"
-               value={filterRole}
-               onChange={(e) => setFilterRole(e.target.value)}
-             >
-               <option value="All">{t("common.all")}</option>
-               <option value="Organizer">Organizer</option>
-               <option value="Artisan">Artisan</option>
-             </select>
+<select 
+                className="px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 border-none cursor-pointer"
+                value={filterRole}
+                onChange={(e) => setFilterRole(e.target.value)}
+              >
+                <option value="All">{t("common.all")}</option>
+                <option value="Organizer">Organizer</option>
+                <option value="Artisan">Artisan</option>
+                <option value="Delivery Guy">Delivery Guy</option>
+              </select>
              <select 
                className="px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 border-none cursor-pointer"
                value={filterStatus}
@@ -349,6 +359,7 @@ export const AdminUserVerificationPage: React.FC = () => {
             { key: 'allRequests', role: 'All', status: 'All' },
             { key: 'organizerRequests', role: 'Organizer', status: 'All' },
             { key: 'artisanRequests', role: 'Artisan', status: 'All' },
+            { key: 'deliveryRequests', role: 'Delivery Guy', status: 'All' },
             { key: 'pending', role: 'All', status: 'Submitted' },
             { key: 'approved', role: 'All', status: 'Approved' },
             { key: 'rejected', role: 'All', status: 'Rejected' }
@@ -519,6 +530,20 @@ export const AdminUserVerificationPage: React.FC = () => {
                         <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.submittedOn')}</p>
                         <p className="text-sm font-medium text-gray-700">{selectedRequest.submittedAt}</p>
                       </div>
+                      
+                      {selectedRequest.userRole === 'Delivery Guy' && (
+                        <>
+                          <div className="space-y-1">
+                            <p className="text-xs font-bold text-gray-400 uppercase">Vehicle Type</p>
+                            <p className="text-sm font-medium text-gray-700">{selectedRequest.vehicleType || 'N/A'}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs font-bold text-gray-400 uppercase">License Plate</p>
+                            <p className="text-sm font-medium text-gray-700">{selectedRequest.licensePlate || 'N/A'}</p>
+                          </div>
+                        </>
+                      )}
+
                       <div className="md:col-span-2 space-y-2">
                         <div className="flex justify-between items-center">
                           <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.profileCompletion')}</p>
@@ -545,6 +570,15 @@ export const AdminUserVerificationPage: React.FC = () => {
                           <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.paymentInfo')}</p>
                           <p className="text-sm font-medium text-gray-700">
                             {selectedRequest.artisanProfile.bankName} - {selectedRequest.artisanProfile.accountName} ({selectedRequest.artisanProfile.accountNumber})
+                          </p>
+                        </div>
+                      )}
+                      {selectedRequest.userRole === 'Delivery Guy' && selectedRequest.deliveryProfile?.bankName && (
+                        <div className="md:col-span-2 space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.paymentInfo')}</p>
+                          <p className="text-sm font-medium text-gray-700">
+                            {selectedRequest.deliveryProfile.bankName} - {selectedRequest.deliveryProfile.accountNumber}
+                            {selectedRequest.deliveryProfile.telebirrNumber && ` (Telebirr: ${selectedRequest.deliveryProfile.telebirrNumber})`}
                           </p>
                         </div>
                       )}
@@ -656,7 +690,11 @@ export const AdminUserVerificationPage: React.FC = () => {
                   {selectedRequest.status === 'approved' ? (
                     <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-center">
                       <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                      <p className="text-sm font-bold text-emerald-700">{t('admin.thisArtisanIsApproved')}</p>
+                      <p className="text-sm font-bold text-emerald-700">
+                        {selectedRequest.userRole === 'Artisan' ? t('admin.thisArtisanIsApproved') : 
+                         selectedRequest.userRole === 'Organizer' ? 'This organizer is approved' :
+                         'This delivery guy is approved'}
+                      </p>
                       <p className="text-xs text-emerald-600 mt-1">{t('admin.fullDashboardAccess')}</p>
                     </div>
                   ) : (

@@ -33,6 +33,7 @@ export async function GET(req: Request) {
     const organizerCount = await User.countDocuments({ ...query, role: 'organizer' });
     const artisanCount = await User.countDocuments({ ...query, role: 'artisan' });
     const touristCount = await User.countDocuments({ ...query, role: 'tourist' });
+    const deliveryCount = await User.countDocuments({ ...query, role: 'delivery' });
     const activeCount = await User.countDocuments({ ...query, status: 'Active' });
     const suspendedCount = await User.countDocuments({ ...query, status: 'Suspended' });
     const bannedCount = await User.countDocuments({ ...query, status: 'Banned' });
@@ -44,6 +45,7 @@ export async function GET(req: Request) {
         organizer: organizerCount,
         artisan: artisanCount,
         tourist: touristCount,
+        delivery: deliveryCount,
         active: activeCount,
         suspended: suspendedCount,
         banned: bannedCount,
