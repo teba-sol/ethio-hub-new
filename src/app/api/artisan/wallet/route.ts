@@ -3,8 +3,13 @@ import { connectDB } from '@/lib/mongodb';
 import Wallet from '@/models/wallet.model';
 import Transaction from '@/models/transaction.model';
 import Order from '@/models/order.model';
+import Product from '@/models/product.model';
+import User from '@/models/User';
+import ArtisanProduct from '@/models/artisan/product.model';
 import { verifyToken } from '@/services/auth.service';
 import mongoose from 'mongoose';
+
+Product; // Ensure Product model is registered
 
 export async function GET(request: NextRequest) {
   try {
