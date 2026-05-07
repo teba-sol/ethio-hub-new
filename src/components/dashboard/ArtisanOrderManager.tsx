@@ -47,7 +47,7 @@ interface Order {
   totalPrice: number;
   artisanEarnings?: number;
   adminCommission?: number;
-  status: 'Awaiting Payment' | 'Pending' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned';
+  status: 'Pending' | 'Delivered' | 'Returned';
   paymentStatus: 'pending' | 'paid' | 'refunded';
   paymentMethod?: string;
   createdAt: string;
@@ -73,18 +73,18 @@ interface Order {
 
 const OrderStatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const styles: Record<string, string> = {
-    'Awaiting Payment': 'bg-amber-50 text-amber-600 border-amber-100',
     'Pending': 'bg-amber-50 text-amber-600 border-amber-100',
-    'Shipped': 'bg-purple-50 text-purple-600 border-purple-100',
     'Delivered': 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    'Cancelled': 'bg-red-50 text-red-600 border-red-100',
     'Returned': 'bg-gray-50 text-gray-600 border-gray-100',
     'paid': 'bg-emerald-50 text-emerald-600 border-emerald-100',
     'pending': 'bg-amber-50 text-amber-600 border-amber-100',
     'refunded': 'bg-red-50 text-red-600 border-red-100'
   };
 
-  const label = status === 'paid' ? 'Paid' : status === 'pending' || status === 'Awaiting Payment' ? 'Pending' : status === 'refunded' ? 'Refunded' : status;
+  const label = (status === 'paid') ? 'Paid' : 
+                (status.toLowerCase() === 'pending') ? 'Pending' : 
+                status === 'refunded' ? 'Refunded' : 
+                status;
 
   return (
     <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${styles[status] || 'bg-gray-50 text-gray-500'}`}>
@@ -118,7 +118,12 @@ export const ArtisanOrderManager: React.FC = () => {
       const response = await fetch('/api/artisan/orders');
       const data = await response.json();
       if (data.success) {
-        setOrders(data.orders);
+        // Map any legacy or backend-specific statuses to the allowed three
+        const mappedOrders = data.orders.map((o: any) => ({
+          ...o,
+          status: (o.status === 'Awaiting Payment' || o.status === 'waiting payment' || o.status === 'Shipped' || o.status === 'Cancelled') ? 'Pending' : o.status
+        }));
+        setOrders(mappedOrders);
         setStats(data.stats);
       }
     } catch (error) {
@@ -137,7 +142,11 @@ export const ArtisanOrderManager: React.FC = () => {
       });
       const data = await response.json();
       if (data.success) {
-        setOrders(prev => prev.map(o => o._id === orderId ? data.order : o));
+        const mappedOrder = {
+          ...data.order,
+          status: (data.order.status === 'Awaiting Payment' || data.order.status === 'waiting payment' || data.order.status === 'Shipped' || data.order.status === 'Cancelled') ? 'Pending' : data.order.status
+        };
+        setOrders(prev => prev.map(o => o._id === orderId ? mappedOrder : o));
         // Refresh stats
         const statsRes = await fetch('/api/artisan/orders');
         const statsData = await statsRes.json();
@@ -204,17 +213,18 @@ export const ArtisanOrderManager: React.FC = () => {
   const paginatedOrders = filteredOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // --- Handlers ---
-  const toggleSelection = (id: string) => {
-    setSelectedItems(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
 
-  const handleBulkAction = (action: string) => {
-    alert(`${action} ${selectedItems.length} orders`);
-    setSelectedItems([]);
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   // --- Detail View ---
   if (selectedOrderId) {
+
     const order = orders.find(o => o._id === selectedOrderId);
     if (!order) return <div>Order not found</div>;
 
@@ -299,12 +309,13 @@ export const ArtisanOrderManager: React.FC = () => {
                     <div key={idx} className="relative flex gap-6 items-start">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center z-10 border-4 border-white ${idx === order.timeline!.length - 1 ? 'bg-primary text-white' : 'bg-gray-100 text-gray-400'}`}>
                         {idx === 0 ? <FileText className="w-4 h-4" /> : 
-                         event.status === 'Shipped' ? <Truck className="w-4 h-4" /> :
                          event.status === 'Delivered' ? <CheckCircle2 className="w-4 h-4" /> :
                          <Clock className="w-4 h-4" />}
                       </div>
                       <div>
-                        <p className="font-bold text-primary">{event.status}</p>
+                        <p className="font-bold text-primary">
+                          {['Awaiting Payment', 'waiting payment', 'Shipped', 'Cancelled'].includes(event.status) ? 'Pending' : event.status}
+                        </p>
                         <p className="text-xs text-gray-500">{new Date(event.date).toLocaleString()}</p>
                         {event.note && <p className="text-xs text-gray-600 mt-1 bg-gray-50 p-2 rounded-lg">{event.note}</p>}
                       </div>
@@ -399,7 +410,7 @@ export const ArtisanOrderManager: React.FC = () => {
         {[
           { label: 'Total Orders', val: (stats.totalOrders || 0).toString(), icon: Package, color: 'text-blue-600', bg: 'bg-blue-50' },
           { label: 'Pending', val: (stats.pending || 0).toString(), icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-          { label: 'Delivered', val: (stats.delivered || 0).toString(), icon: Truck, color: 'text-purple-600', bg: 'bg-purple-50' },
+          { label: 'Delivered', val: (stats.delivered || 0).toString(), icon: CheckCircle2, color: 'text-purple-600', bg: 'bg-purple-50' },
           { label: 'Returns', val: (stats.returns || 0).toString(), icon: RefreshCw, color: 'text-red-600', bg: 'bg-red-50' },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
@@ -569,18 +580,6 @@ export const ArtisanOrderManager: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <div className="relative">
-                        <select 
-                          className="appearance-none bg-gray-50 border-none rounded-xl py-1 pl-3 pr-8 text-[10px] font-bold text-primary cursor-pointer focus:ring-2 focus:ring-primary/10"
-                          value={order.status}
-                          onChange={(e) => handleUpdateStatus(order._id, e.target.value)}
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="Delivered">Delivered</option>
-                          <option value="Returned">Returned</option>
-                        </select>
-                        <RefreshCw className="absolute right-2 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-gray-400 pointer-events-none" />
-                      </div>
                       <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setSelectedOrderId(order._id)}>View</Button>
                     </div>
                   </td>
