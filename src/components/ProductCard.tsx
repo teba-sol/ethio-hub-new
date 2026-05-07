@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Star, Heart, ShoppingCart, Truck, Eye, Flag } from 'lucide-react';
+import { Star, Heart, ShoppingCart, Truck, Eye, Flag, MapPin, Sparkles } from 'lucide-react';
 import { Button, VerifiedBadge, Badge } from './UI';
 import { Product } from '../types';
 import { useCart } from '../context/CartContext';
@@ -11,12 +11,26 @@ import { useLanguage } from '../context/LanguageContext';
 import { getLocalizedText } from '../utils/getLocalizedText';
 import { ReportModal } from './ReportModal';
 
+const regionLabels: Record<string, string> = {
+  'addis ababa': 'Addis Ababa',
+  'sidama': 'Sidama',
+  'oromia': 'Oromia',
+  'amhara': 'Amhara',
+  'tigray': 'Tigray',
+  'afar': 'Afar',
+  'snnpr': 'SNNPR',
+  'harari': 'Harar',
+  'gambella': 'Gambella',
+  'benishangul': 'Benishangul',
+};
+
 export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { user } = useAuth();
   const { language, t } = useLanguage();
   const [showReportModal, setShowReportModal] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const isWishlisted = isInWishlist(product.id);
   const isTourist = user?.role === UserRole.TOURIST;
@@ -25,6 +39,10 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
 
   const productName = getLocalizedText(product as any, 'name', language);
   const artisanName = getLocalizedText(product as any, 'artisanName' as any, language) || product.artisanName || '';
+  
+  const productRegion = (product as any).region || (product as any)?.artisanId?.region || '';
+  const displayRegion = productRegion ? (regionLabels[productRegion.toLowerCase()] || productRegion) : null;
+  const isHandmade = product.isHandmade || (product as any).isHandmade === true;
 
   const handleWishlistClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -51,7 +69,8 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
             src={product.images[0]}
             alt={productName}
             loading="lazy"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            onLoad={() => setImageLoaded(true)}
+            className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-110 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
           />
         </Link>
         
@@ -70,6 +89,12 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
             {lowStock && (
               <Badge className="bg-amber-500 text-white border-none text-[10px] font-bold px-3 py-1.5 rounded-full shadow-lg backdrop-blur-sm">
                 Only {product.stock} left
+              </Badge>
+            )}
+            {isHandmade && (
+              <Badge className="bg-gradient-to-r from-amber-500 to-yellow-400 text-white border-none text-[9px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                Handmade
               </Badge>
             )}
           </div>
@@ -113,6 +138,16 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
           </div>
         ) : null}
 
+        {/* Region Badge - Show on card */}
+        {displayRegion && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2">
+            <span className="text-[9px] font-bold text-white uppercase tracking-wider bg-primary/80 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1 shadow-lg">
+              <MapPin className="w-3 h-3" />
+              {displayRegion}
+            </span>
+          </div>
+        )}
+
         {/* Quick View Overlay */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
           <Link
@@ -149,16 +184,27 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
             <Link href={`/products/${product.id}`}>{productName}</Link>
           </h3>
 
-          {/* Artisan */}
-          <Link
-            href={`/products?artisan=${product.artisanId}`}
-            className="text-[11px] text-gray-500 hover:text-primary transition-colors font-medium mb-4 block flex items-center gap-1.5"
-          >
-            <span className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-bold text-primary">
-              {artisanName.charAt(0).toUpperCase()}
-            </span>
-            {t('productCard.by')} <span className="text-gray-700">{artisanName}</span>
-          </Link>
+          {/* Artisan & Region */}
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
+            <Link
+              href={`/products?artisan=${product.artisanId}`}
+              className="text-[11px] text-gray-500 hover:text-primary transition-colors font-medium flex items-center gap-1.5"
+            >
+              <span className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-bold text-primary">
+                {artisanName.charAt(0).toUpperCase()}
+              </span>
+              {t('productCard.by')} <span className="text-gray-700">{artisanName}</span>
+            </Link>
+            {displayRegion && (
+              <>
+                <span className="text-gray-300">•</span>
+                <span className="text-[10px] text-primary font-medium flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
+                  {displayRegion}
+                </span>
+              </>
+            )}
+          </div>
 
           {/* Shipping Info */}
           <div className="flex items-center text-[10px] text-gray-400 mb-4 gap-1.5">

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, MapPin, Star, SlidersHorizontal, Wifi, Waves, Utensils, Dumbbell, Car, Coffee } from 'lucide-react';
+import { ArrowLeft, MapPin, Star, SlidersHorizontal, Wifi, Waves, Utensils, Dumbbell, Car, Coffee, ShieldCheck } from 'lucide-react';
 import { useBooking } from '@/context/BookingContext';
 import apiClient from '@/lib/apiClient';
 import { Festival, HotelAccommodation } from '@/types';
@@ -24,19 +24,19 @@ export default function HotelsPage() {
   const router = useRouter();
   const eventId = params?.id as string;
    
-  const { setEvent, setSelectedHotel, setSelectedRoom } = useBooking();
+  const { setEvent, setSelectedHotel, setSelectedRoom, ticketSelection } = useBooking();
   const { language, t } = useLanguage();
 
   const [festival, setFestival] = useState<Festival | null>(null);
   const [hotels, setHotels] = useState<HotelAccommodation[]>([]);
   const [filteredHotels, setFilteredHotels] = useState<HotelAccommodation[]>([]);
-  const [loading, setLoading] = useState(true);
-  
-  const [showFilters, setShowFilters] = useState(false);
-  const [sortBy, setSortBy] = useState('recommended');
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
-  const [selectedStars, setSelectedStars] = useState<number[]>([]);
-  const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
+   const [loading, setLoading] = useState(true);
+   
+   const [showFilters, setShowFilters] = useState(false);
+   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+   const [selectedStars, setSelectedStars] = useState<number[]>([]);
+   const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
+   const [wantsHotel, setWantsHotel] = useState<boolean | null>(ticketSelection?.type === 'vip' ? true : null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -69,19 +69,34 @@ export default function HotelsPage() {
         
         const hotelsData = availabilityRes?.hotels || festivalData?.hotels || [];
         
-        const tier = ticketSelection?.type === 'vip' ? 'vip' : 'standard'; // earlyBird treated as standard
-        const normalizedHotels = hotelsData.map((hotel: any, index: number) => ({
-          ...hotel,
-          id: hotel._id || hotel.id || `hotel-${index}`,
-          rooms: (hotel.rooms || []).filter((room: any) => {
+        const tier = ticketSelection?.type === 'vip' ? 'vip' : 'standard';
+        const vipIncludedHotels = festivalData?.pricing?.vipIncludedHotels || [];
+
+        const normalizedHotels = hotelsData.map((hotel: any, index: number) => {
+          const filteredRooms = (hotel.rooms || []).filter((room: any) => {
             const roomTier = room.tier || 'both';
             return roomTier === 'both' || roomTier === tier;
-          }).map((room: any, roomIndex: number) => ({
-            ...room,
-            id: room._id || room.id || `room-${index}-${roomIndex}`,
-            remaining: (room.availability || 0) - (room.bookedCount || 0),
-          })),
-        }));
+          }).map((room: any, roomIndex: number) => {
+            const currentAvailable = typeof room.available === 'number' ? room.available : (Number(room.availability) || 0);
+            return {
+              ...room,
+              id: room._id || room.id || `room-${index}-${roomIndex}`,
+              remaining: currentAvailable,
+            };
+          });
+
+          return {
+            ...hotel,
+            id: hotel._id || hotel.id || `hotel-${index}`,
+            rooms: filteredRooms,
+          };
+        }).filter((hotel: any) => {
+          // If VIP, only show included hotels if specified
+          if (tier === 'vip' && vipIncludedHotels.length > 0) {
+            return vipIncludedHotels.includes(hotel.id) && hotel.rooms.length > 0;
+          }
+          return hotel.rooms.length > 0;
+        });
         
         setHotels(normalizedHotels);
         setFilteredHotels(normalizedHotels);
@@ -95,38 +110,33 @@ export default function HotelsPage() {
     fetchData();
   }, [eventId]);
 
-  useEffect(() => {
-    let result = [...hotels];
-    
-    result = result.filter(h => {
-      const minPrice = h.rooms?.[0]?.pricePerNight || 0;
-      return minPrice >= priceRange[0] && minPrice <= priceRange[1];
-    });
-    
-    if (selectedStars.length > 0) {
-      result = result.filter(h => selectedStars.includes(h.starRating));
-    }
-    
-    if (selectedFacilities.length > 0) {
-      result = result.filter(h => 
-        selectedFacilities.every(f => h.facilities?.includes(f))
-      );
-    }
-    
-    switch (sortBy) {
-      case 'price_low':
-        result.sort((a, b) => (a.rooms?.[0]?.pricePerNight || 0) - (b.rooms?.[0]?.pricePerNight || 0));
-        break;
-      case 'price_high':
-        result.sort((a, b) => (b.rooms?.[0]?.pricePerNight || 0) - (a.rooms?.[0]?.pricePerNight || 0));
-        break;
-      case 'rating':
-        result.sort((a, b) => b.starRating - a.starRating);
-        break;
-    }
-    
-    setFilteredHotels(result);
-  }, [hotels, priceRange, selectedStars, selectedFacilities, sortBy]);
+   useEffect(() => {
+     let result = [...hotels];
+     
+     result = result.filter(h => {
+       const minPrice = h.rooms?.[0]?.pricePerNight || 0;
+       return minPrice >= priceRange[0] && minPrice <= priceRange[1];
+     });
+     
+     if (selectedStars.length > 0) {
+       result = result.filter(h => selectedStars.includes(h.starRating));
+     }
+     
+     if (selectedFacilities.length > 0) {
+       result = result.filter(h => 
+         selectedFacilities.every(f => h.facilities?.includes(f))
+       );
+     }
+     
+     // Sort by star rating (highest first) then by price (low to high)
+     result.sort((a, b) => {
+       const ratingDiff = b.starRating - a.starRating;
+       if (ratingDiff !== 0) return ratingDiff;
+       return (a.rooms?.[0]?.pricePerNight || 0) - (b.rooms?.[0]?.pricePerNight || 0);
+     });
+     
+     setFilteredHotels(result);
+   }, [hotels, priceRange, selectedStars, selectedFacilities]);
 
   const toggleStar = (star: number) => {
     setSelectedStars(prev => 
@@ -185,6 +195,56 @@ export default function HotelsPage() {
             >
               Continue to Transport & Tickets →
             </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (wantsHotel === null && ticketSelection?.type !== 'vip') {
+    return (
+      <div className="min-h-screen bg-gray-50/50 flex items-center justify-center p-6">
+        <div className="max-w-xl w-full bg-white rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
+          <div className="p-10 text-center">
+            <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-8">
+              <MapPin className="w-10 h-10 text-primary" />
+            </div>
+            <h1 className="text-3xl font-serif font-black text-gray-900 mb-4">Add Accommodation?</h1>
+            <p className="text-gray-500 text-lg leading-relaxed mb-10">
+              Your Standard ticket includes event entry. Would you like to add a hotel stay for an extra fee?
+            </p>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <button
+                onClick={() => setWantsHotel(true)}
+                className="group p-6 rounded-2xl border-2 border-primary bg-primary/5 hover:bg-primary transition-all text-left"
+              >
+                <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center mb-4 group-hover:bg-white/20">
+                  <Star className="w-5 h-5 text-white" />
+                </div>
+                <h3 className="font-bold text-primary group-hover:text-white mb-1">Yes, I need one</h3>
+                <p className="text-xs text-primary/60 group-hover:text-white/60 font-medium">Extra fees apply per night</p>
+              </button>
+
+              <button
+                onClick={() => {
+                  setSelectedHotel(null);
+                  setSelectedRoom(null);
+                  router.push(`/event/${eventId}/transport`);
+                }}
+                className="group p-6 rounded-2xl border-2 border-gray-100 bg-white hover:border-gray-200 transition-all text-left"
+              >
+                <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-gray-100">
+                  <ArrowLeft className="w-5 h-5 text-gray-400 rotate-180" />
+                </div>
+                <h3 className="font-bold text-gray-900 mb-1">No, skip this</h3>
+                <p className="text-xs text-gray-400 font-medium italic">Continue to transport options</p>
+              </button>
+            </div>
+
+            <div className="mt-10 pt-8 border-t border-gray-50 flex items-center justify-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest">
+              <ShieldCheck className="w-4 h-4 text-emerald-500" /> Secure Booking Experience
+            </div>
           </div>
         </div>
       </div>
@@ -315,26 +375,16 @@ export default function HotelsPage() {
           </div>
 
           <div className="lg:col-span-3 space-y-4">
-            <div className="flex items-center justify-between mb-4">
+            <div className="mb-4">
               <p className="text-gray-500 text-sm">
                 {filteredHotels.length} {filteredHotels.length === 1 ? t('festival.hotelFound') : t('festival.hotelsFound')}
               </p>
-                <select 
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="recommended">{t('festival.recommended')}</option>
-                  <option value="price_low">{t('common.priceLowToHigh')}</option>
-                  <option value="price_high">{t('common.priceHighToLow')}</option>
-                  <option value="rating">{t('common.ratingHighToLow')}</option>
-                </select>
             </div>
 
             {filteredHotels.map((hotel) => {
               const minPrice = hotel.rooms?.[0]?.pricePerNight || 0;
               const totalRemaining = (hotel.rooms || []).reduce(
-                (sum, room) => sum + (room.remaining ?? room.availability ?? 0),
+                (sum, room) => sum + (room.remaining || 0),
                 0
               );
               const isSoldOut = totalRemaining <= 0;
@@ -356,6 +406,11 @@ export default function HotelsPage() {
                         alt={hotel.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
+                      {ticketSelection?.type === 'vip' && (
+                        <div className="absolute top-4 left-4 bg-amber-500 text-white text-[10px] font-black px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 uppercase tracking-wider">
+                          <Star className="w-3.5 h-3.5 fill-white" /> Included for VIP
+                        </div>
+                      )}
                     </div>
                     
                     <div className="flex-1 p-5">
@@ -382,10 +437,12 @@ export default function HotelsPage() {
                         
                         <div className="text-right">
                           <span className="text-2xl font-bold text-primary">
-                            ${minPrice}
+                            {ticketSelection?.type === 'vip' ? 'Included' : `${festival?.pricing?.currency || festival?.currency || 'ETB'} ${minPrice}`}
                           </span>
-                          <span className="text-gray-500 text-sm">/night</span>
-                          <p className="text-xs text-gray-400 mt-1">from</p>
+                          {ticketSelection?.type !== 'vip' && <span className="text-gray-500 text-sm">/night</span>}
+                          <p className="text-xs text-gray-400 mt-1">
+                            {ticketSelection?.type === 'vip' ? 'with VIP ticket' : 'from'}
+                          </p>
                           <div className="mt-2">
                             {isSoldOut ? (
                               <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">

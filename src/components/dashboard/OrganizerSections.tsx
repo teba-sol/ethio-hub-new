@@ -11,11 +11,11 @@ import {
   Utensils, Heart, Image as ImageIcon, Mail, Phone, CreditCard, QrCode,
   History, UserCheck, UserMinus, FileText, ChevronLeft, Eye,
   LayoutGrid, CalendarDays, BarChart2, MoreHorizontal, Bell, AlertTriangle, Filter, ArrowUpDown,
-  HelpCircle, Lightbulb, BarChart, Map, Clock, Camera, ZoomIn, Maximize2, Check
+  HelpCircle, Lightbulb, BarChart, Map, Clock, Camera, ZoomIn, Maximize2, Check, Settings
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { Festival, HotelAccommodation, Review } from '../../types';
-import { Button, Badge, VerifiedBadge, Input } from '../UI';
+import { Festival, HotelAccommodation, Review, TransportOption, RoomType, FoodPackage } from '../../types';
+import { Button, Badge, VerifiedBadge, Input, Textarea } from '../UI';
 import { useLanguage } from '../../context/LanguageContext';
 import { getLocalizedText } from '../../utils/getLocalizedText';
 import { MOCK_FESTIVALS } from '../../data/constants';
@@ -35,6 +35,15 @@ const ENGAGEMENT_DATA = [];
 const MOCK_REVIEWS: Review[] = [
   { id: 'rev-1', userId: 'u1', userName: 'Abebe Bikila', userImage: 'https://picsum.photos/seed/abebe/100/100', targetId: 'f1', targetName: 'Timket 2025 (Epiphany)', rating: 5, comment: 'An absolutely breathtaking experience.', date: 'Jan 22, 2025', isVerified: true },
 ];
+
+import { 
+  normalizeSchedule, 
+  normalizeHotels, 
+  normalizeTransportation, 
+  normalizeServices, 
+  normalizePolicies 
+} from '../../lib/festivalNormalization';
+import { FestivalCreationWizard } from './Wizards';
 
 export const EventDetailPanel: React.FC<{ eventId: string; onBack: () => void }> = ({ eventId, onBack }) => {
   const router = useRouter();
@@ -145,52 +154,19 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
    const handleSaveChanges = async () => {
      setSaving(true);
      try {
-       const dataToSave = { ...editData };
-
-       // Strip incomplete array entries with empty required fields
-       if (Array.isArray(dataToSave.transportation)) {
-         dataToSave.transportation = dataToSave.transportation
-           .filter((t: any) => t.type?.trim())
-           .map((t: any) => ({
-             ...t,
-             type: String(t?.type || '').trim(),
-             capacity: Number.isFinite(Number(t?.capacity)) ? Number(t.capacity) : 0,
-             price: Number.isFinite(Number(t?.price)) ? Number(t.price) : 0,
-             availability: Number.isFinite(Number(t?.availability)) ? Number(t.availability) : 0,
-             description: String(t?.description || '').trim(),
-             pickupLocations: String(t?.pickupLocations || '').trim(),
-           }));
-       }
-       if (Array.isArray(dataToSave.hotels)) {
-          dataToSave.hotels = dataToSave.hotels
-            .filter((h: any) => h.name?.trim())
-            .map((h: any) => {
-              const sourceRooms = Array.isArray(h.rooms) ? h.rooms : [];
-              const normalizedRooms = sourceRooms
-                .filter((r: any) => hasMeaningfulRoomData(r))
-                .map((r: any, roomIndex: number) => ({
-                  ...r,
-                  name: String(r?.name || '').trim() || `Room ${roomIndex + 1}`,
-                  bedType: String(r?.bedType || '').trim() || 'King Size',
-                  capacity: Number.isFinite(Number(r?.capacity)) ? Number(r.capacity) : 2,
-                  pricePerNight: Number.isFinite(Number(r?.pricePerNight)) ? Number(r.pricePerNight) : 0,
-                  availability: Number.isFinite(Number(r?.availability)) ? Number(r.availability) : 0,
-                  sqm: Number.isFinite(Number(r?.sqm)) ? Number(r.sqm) : 30,
-                  amenities: Array.isArray(r?.amenities) ? r.amenities : [],
-                }));
-
-              return {
-                ...h,
-                rooms: normalizedRooms,
-              };
-            });
-        }
-       if (Array.isArray(dataToSave.schedule)) {
-         dataToSave.schedule = dataToSave.schedule.filter((s: any) => s.title?.trim());
-       }
+       // Normalize data before saving
+       const isDraft = editData.verificationStatus === 'Draft' || !editData.verificationStatus;
+       const dataToSave = { 
+         ...editData,
+         hotels: normalizeHotels(editData.hotels, isDraft),
+         transportation: normalizeTransportation(editData.transportation, isDraft),
+         schedule: normalizeSchedule(editData.schedule, isDraft),
+         services: normalizeServices(editData.services, isDraft),
+         policies: normalizePolicies(editData.policies)
+       };
 
        // If this is an approved event being edited, mark it for reverification
-       if (currentData.verificationStatus === 'Approved') {
+       if (festival.verificationStatus === 'Approved') {
          dataToSave.isEditedAfterApproval = true;
          dataToSave.verificationStatus = 'Pending Approval';
          dataToSave.status = 'Draft';
@@ -259,15 +235,15 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
     return Number.isFinite(parsed) ? parsed : fallback;
   };
 
-  const hasMeaningfulRoomData = (room: any) => {
+  const hasMeaningfulRoomData = (room: RoomType) => {
     if (!room || typeof room !== 'object') return false;
 
-    const textFields = ['name', 'description', 'image', 'bedType'];
-    const hasText = textFields.some((field) => String(room[field] || '').trim().length > 0);
+    const textFields = ['name', 'name_en', 'name_am', 'description', 'description_en', 'description_am', 'image', 'bedType'] as const;
+    const hasText = textFields.some((field) => String((room as any)[field] || '').trim().length > 0);
 
-    const numericFields = ['capacity', 'pricePerNight', 'availability', 'sqm'];
+    const numericFields = ['capacity', 'pricePerNight', 'availability', 'sqm'] as const;
     const hasNumeric = numericFields.some((field) => {
-      const value = Number(room[field]);
+      const value = Number((room as any)[field]);
       return Number.isFinite(value) && value > 0;
     });
 
@@ -331,11 +307,23 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
     );
   }
 
-  if (!festival || !editData) {
-    return null;
+  const handleWizardSave = async (updatedFestival: any) => {
+    setFestival(updatedFestival);
+    setIsEditing(false);
+    alert('Event updated successfully!');
+  };
+
+  if (isEditing) {
+    return (
+      <FestivalCreationWizard 
+        onCancel={() => setIsEditing(false)} 
+        initialData={festival}
+        onSave={handleWizardSave}
+      />
+    );
   }
 
-  const currentData = isEditing ? editData : festival;
+   const currentData = (isEditing ? editData : festival) as any;
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
@@ -576,60 +564,33 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   <Info className="w-5 h-5 text-secondary" /> Basic Information
                 </h3>
                 <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Festival Name</p>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={currentData.name}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
-                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                      />
-                    ) : (
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1 ml-1">Festival Name</p>
+                    <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                       <p className="text-sm font-bold text-primary">{currentData.name}</p>
-                    )}
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Status</p>
-                    {isEditing ? (
-                      <select
-                        value={currentData.status}
-                        onChange={(e) => handleInputChange('status', e.target.value)}
-                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                      >
-                        <option>Draft</option>
-                        <option>Published</option>
-                        <option>Cancelled</option>
-                      </select>
-                    ) : (
-                      <p className="text-sm font-bold text-primary">{currentData.status}</p>
-                    )}
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1 ml-1">Status</p>
+                    <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                      <Badge variant={currentData.status === 'Published' ? 'success' : 'secondary'} size="sm">
+                        {currentData.status}
+                      </Badge>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Start Date</p>
-                    {isEditing ? (
-                      <input
-                        type="date"
-                        value={new Date(currentData.startDate).toISOString().split('T')[0]}
-                        onChange={(e) => handleInputChange('startDate', e.target.value)}
-                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                      />
-                    ) : (
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1 ml-1">Start Date</p>
+                    <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-secondary" />
                       <p className="text-sm font-bold text-primary">{new Date(currentData.startDate).toDateString()}</p>
-                    )}
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">End Date</p>
-                    {isEditing ? (
-                      <input
-                        type="date"
-                        value={new Date(currentData.endDate).toISOString().split('T')[0]}
-                        onChange={(e) => handleInputChange('endDate', e.target.value)}
-                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                      />
-                    ) : (
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1 ml-1">End Date</p>
+                    <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-secondary" />
                       <p className="text-sm font-bold text-primary">{new Date(currentData.endDate).toDateString()}</p>
-                    )}
+                    </div>
                   </div>
                 </div>
               </section>
@@ -655,10 +616,10 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   <div>
                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Physical Address</p>
                     {isEditing ? (
-                      <textarea
+                      <Textarea
+                        hideLabel
                         value={currentData.location?.address || ''}
                         onChange={(e) => handleNestedChange('location', 'address', e.target.value)}
-                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                         rows={2}
                       />
                     ) : (
@@ -678,10 +639,10 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   <div>
                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Short Description</p>
                     {isEditing ? (
-                      <textarea
+                      <Textarea
+                        hideLabel
                         value={currentData.shortDescription}
                         onChange={(e) => handleInputChange('shortDescription', e.target.value)}
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
                         rows={3}
                       />
                     ) : (
@@ -691,10 +652,10 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                   <div>
                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Full Description</p>
                     {isEditing ? (
-                      <textarea
+                      <Textarea
+                        hideLabel
                         value={currentData.fullDescription}
                         onChange={(e) => handleInputChange('fullDescription', e.target.value)}
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
                         rows={6}
                       />
                     ) : (
@@ -798,69 +759,81 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
             </div>
             <div className="space-y-6">
               {(currentData.schedule || []).map((day: any, idx: number) => (
-                <div key={idx} className="bg-ethio-bg/30 p-8 rounded-[32px] border border-gray-50 flex gap-8 relative">
+                <div key={idx} className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm flex flex-col md:flex-row gap-8 relative hover:shadow-md transition-all group">
                   {isEditing && (
                     <button
                       onClick={() => handleRemoveArrayItem('schedule', idx)}
-                      className="absolute top-4 right-4 text-red-500 hover:text-red-700"
+                      className="absolute top-6 right-6 p-2 bg-red-50 text-red-500 rounded-xl opacity-0 group-hover:opacity-100 transition-all"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   )}
-                  <div className="w-20 h-20 bg-primary text-white rounded-2xl flex flex-col items-center justify-center flex-shrink-0">
+                  <div className="w-20 h-20 bg-primary text-white rounded-2xl flex flex-col items-center justify-center flex-shrink-0 shadow-lg shadow-primary/20">
                     <span className="text-[10px] font-black uppercase tracking-tighter opacity-70">Day</span>
                     {isEditing ? (
                       <input
                         type="number"
                         value={day.day}
                         onChange={(e) => handleArrayChange('schedule', idx, 'day', parseNumberInput(e.target.value))}
-                        className="text-2xl font-serif font-bold bg-transparent text-white text-center w-12"
+                        className="text-2xl font-serif font-bold bg-transparent text-white text-center w-12 outline-none"
                       />
                     ) : (
                       <span className="text-3xl font-serif font-bold">{day.day}</span>
                     )}
                   </div>
-                  <div className="flex-1 space-y-4">
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={day.title}
-                        onChange={(e) => handleArrayChange('schedule', idx, 'title', e.target.value)}
-                        className="text-xl font-serif font-bold text-primary w-full bg-white border border-gray-200 rounded-lg p-2"
-                        placeholder="Day title"
-                      />
-                    ) : (
-                      <h4 className="text-xl font-serif font-bold text-primary">{day.title || 'Special Celebration Day'}</h4>
-                    )}
+                  <div className="flex-1 space-y-6">
+                    <div>
+                      {isEditing ? (
+                        <Input
+                          placeholder="Day Title (e.g. Grand Opening Ceremony) *"
+                          hideLabel
+                          value={day.title}
+                          onChange={(e) => handleArrayChange('schedule', idx, 'title', e.target.value)}
+                          className="text-xl font-bold"
+                        />
+                      ) : (
+                        <h4 className="text-2xl font-serif font-bold text-primary">{day.title || 'Special Celebration Day'}</h4>
+                      )}
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div>
-                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Activities</p>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Activities</label>
                         {isEditing ? (
-                          <textarea
+                          <Textarea
+                            hideLabel
                             value={day.activities}
                             onChange={(e) => handleArrayChange('schedule', idx, 'activities', e.target.value)}
-                            className="w-full p-2 bg-white border border-gray-200 rounded-lg text-sm"
                             rows={3}
+                            placeholder="Describe the main activities for this day..."
                           />
                         ) : (
-                          <p className="text-sm text-gray-600">{day.activities || 'Traditional ceremonies and community gathering.'}</p>
+                          <p className="text-sm text-gray-600 leading-relaxed bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                            {day.activities || 'Traditional ceremonies and community gathering.'}
+                          </p>
                         )}
                       </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Performers</p>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Performers & Guests</label>
                         {isEditing ? (
-                          <input
-                            type="text"
+                          <Input
+                            hideLabel
+                            placeholder="Comma separated list of performers..."
                             value={day.performers?.join(', ') || ''}
                             onChange={(e) => handleArrayChange('schedule', idx, 'performers', e.target.value.split(',').map((p: string) => p.trim()))}
-                            className="w-full p-2 bg-white border border-gray-200 rounded-lg text-sm"
-                            placeholder="Comma separated list"
+                            icon={Users}
                           />
                         ) : (
-                          <div className="flex flex-wrap gap-2">
-                            {(day.performers || ['Local Artists', 'Cultural Troupe']).map((p: string, i: number) => (
-                              <Badge key={`performer-${i}`} variant="outline" className="bg-white">{p}</Badge>
-                            ))}
+                          <div className="flex flex-wrap gap-2 bg-gray-50/50 p-4 rounded-2xl border border-gray-100 min-h-[60px] content-start">
+                            {(day.performers && day.performers.length > 0) ? (
+                              day.performers.map((p: string, i: number) => (
+                                <Badge key={`performer-${i}`} variant="outline" className="bg-white border-primary/20 text-primary py-1.5 px-3">
+                                  {p}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-xs text-gray-400 italic">No performers listed</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1294,268 +1267,94 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
 
             {hotel.rooms && hotel.rooms.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {hotel.rooms.map((room: any, rIdx: number) => (
+                  {hotel.rooms.map((room: any, rIdx: number) => (
                   <div 
                     key={rIdx} 
-                    className="group/room bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1"
+                    className="group/room bg-white rounded-[32px] overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1"
                   >
-                    {/* Room Image */}
-                    <div className="relative h-56 overflow-hidden">
-                      {isEditing ? (
-                        <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative group/edit">
-                          {room.image ? (
-                            <img 
-                              src={getImageUrl(room.image)} 
-                              className="w-full h-full object-cover" 
-                              alt={room.name} 
-                            />
-                          ) : (
-                            <Hotel className="w-12 h-12 text-gray-400" />
-                          )}
-                          <label className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover/edit:opacity-100 transition-opacity duration-300 cursor-pointer">
-                            <span className="bg-white text-primary px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg">
-                              Change Image
-                            </span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={async (e) => {
-                                if (e.target.files?.[0]) {
-                                  const formData = new FormData();
-                                  formData.append('file', e.target.files[0]);
-                                  try {
-                                    const res = await fetch('/api/upload', { method: 'POST', body: formData });
-                                    const data = await res.json();
-                                    if (data.success) {
-                                      const newRooms = [...editData.hotels[idx].rooms];
-                                      newRooms[rIdx] = { ...newRooms[rIdx], image: data.url };
-                                      const newHotels = [...editData.hotels];
-                                      newHotels[idx].rooms = newRooms;
-                                      handleInputChange('hotels', newHotels);
-                                    }
-                                  } catch (err) {
-                                    console.error('Room image upload failed:', err);
-                                  }
-                                }
-                              }}
-                            />
-                          </label>
+                    {/* Room Image & Badges */}
+                    <div className="relative h-64 overflow-hidden">
+                      <img 
+                        src={getImageUrl(room.image)} 
+                        className="w-full h-full object-cover transform group-hover/room:scale-110 transition-transform duration-700" 
+                        alt={room.name} 
+                      />
+                      <div className="absolute top-4 left-4 flex flex-col gap-2">
+                        <Badge className={`px-3 py-1.5 rounded-full shadow-lg backdrop-blur-md uppercase tracking-widest text-[10px] font-black ${
+                          room.tier === 'vip' ? 'bg-amber-500/90 text-white' : 
+                          room.tier === 'standard' ? 'bg-primary/90 text-white' : 
+                          'bg-white/90 text-primary'
+                        }`}>
+                          {room.tier === 'vip' ? 'VIP Tier' : room.tier === 'standard' ? 'Standard Tier' : 'All Tiers'}
+                        </Badge>
+                      </div>
+                      <div className="absolute top-4 right-4">
+                        <div className={`px-4 py-2 rounded-2xl shadow-lg backdrop-blur-md flex flex-col items-center ${
+                          (room.remaining ?? room.availability ?? 0) > 0 ? 'bg-white/90 text-emerald-600' : 'bg-red-500/90 text-white'
+                        }`}>
+                          <span className="text-lg font-black leading-none">{room.remaining ?? room.availability ?? 0}</span>
+                          <span className="text-[8px] font-bold uppercase tracking-tighter">Remaining</span>
                         </div>
-                      ) : (
-                        <>
-                          <img 
-                            src={getImageUrl(room.image)} 
-                            className="w-full h-full object-cover transform group-hover/room:scale-110 transition-transform duration-700" 
-                            alt={room.name} 
-                          />
-                          <div className="absolute top-3 right-3">
-                            <Badge className="bg-white/95 backdrop-blur-sm text-primary text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg">
-                              {room.remaining ?? room.availability ?? 0} left
-                            </Badge>
-                          </div>
-                        </>
-                      )}
-                      
-                      {isEditing && (
-                        <button
-                          onClick={() => {
-                            const newRooms = hotel.rooms.filter((_: any, i: number) => i !== rIdx);
-                            handleArrayChange('hotels', idx, 'rooms', newRooms);
-                          }}
-                          className="absolute top-3 right-3 z-10 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md text-red-500 hover:text-red-700 transition-all duration-300"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                      </div>
                     </div>
 
-                    {/* Room Details */}
-                    <div className="p-6 space-y-4">
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={room.name}
-                          onChange={(e) => {
-                            const newRooms = [...hotel.rooms];
-                            newRooms[rIdx] = { ...newRooms[rIdx], name: e.target.value };
-                            handleArrayChange('hotels', idx, 'rooms', newRooms);
-                          }}
-                          className="w-full text-xl font-bold text-primary bg-gray-50 border border-gray-200 rounded-xl p-2 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                          placeholder="Room name"
-                        />
-                      ) : (
-                        <h6 className="text-xl font-bold text-primary">{room.name}</h6>
-                      )}
+                    {/* Room Info */}
+                    <div className="p-8 space-y-6">
+                      <div className="space-y-1">
+                        <h6 className="text-2xl font-serif font-bold text-primary leading-tight">{room.name}</h6>
+                        <p className="text-xs text-gray-400 font-medium uppercase tracking-widest flex items-center gap-2">
+                          <Hotel className="w-3 h-3" />
+                          {room.bedType || 'King Size Bed'}
+                        </p>
+                      </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-1">Bed Type</p>
-                          {isEditing ? (
-                            <input
-                              type="text"
-                              value={room.bedType}
-                              onChange={(e) => {
-                                const newRooms = [...hotel.rooms];
-                                newRooms[rIdx] = { ...newRooms[rIdx], bedType: e.target.value };
-                                handleArrayChange('hotels', idx, 'rooms', newRooms);
-                              }}
-                              className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                            />
-                          ) : (
-                            <p className="font-semibold text-gray-800 text-sm">{room.bedType || 'Standard Bed'}</p>
-                          )}
+                      <div className="grid grid-cols-2 gap-6 py-6 border-y border-gray-50">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Capacity</p>
+                          <div className="flex items-center gap-2 text-primary">
+                            <Users className="w-4 h-4" />
+                            <span className="font-bold">{room.capacity} Persons</span>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-1">Max Guests</p>
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              value={room.capacity}
-                              onChange={(e) => {
-                                const newRooms = [...hotel.rooms];
-                                newRooms[rIdx] = { ...newRooms[rIdx], capacity: parseNumberInput(e.target.value) };
-                                handleArrayChange('hotels', idx, 'rooms', newRooms);
-                              }}
-                              className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                            />
-                          ) : (
-                            <p className="font-semibold text-gray-800 text-sm">{room.capacity} Persons</p>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-1">Room Size (m²)</p>
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              value={room.sqm || 30}
-                              onChange={(e) => {
-                                const newRooms = [...hotel.rooms];
-                                newRooms[rIdx] = { ...newRooms[rIdx], sqm: parseNumberInput(e.target.value) };
-                                handleArrayChange('hotels', idx, 'rooms', newRooms);
-                              }}
-                              className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                            />
-                          ) : (
-                            <p className="font-semibold text-gray-800 text-sm">{room.sqm || 30} m²</p>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-1">Availability</p>
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              value={room.availability ?? ''}
-                              onChange={(e) => {
-                                const newRooms = [...hotel.rooms];
-                                newRooms[rIdx] = { ...newRooms[rIdx], availability: parseNumberInput(e.target.value) };
-                                handleArrayChange('hotels', idx, 'rooms', newRooms);
-                              }}
-                              className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                            />
-                          ) : (
-                            <div className="space-y-1">
-                              <p className="font-semibold text-gray-800 text-sm">
-                                {room.remaining ?? room.availability ?? 0} remaining
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {room.initialAvailability ?? room.availability ?? 0} total, {room.bookedCount ?? 0} booked
-                              </p>
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
+                            {room.tier === 'vip' ? 'Included in VIP' : 'Price / Night'}
+                          </p>
+                          {room.tier !== 'vip' ? (
+                            <div className="flex items-center gap-1 text-secondary">
+                              <span className="text-lg font-black">{currentData.pricing?.currency || '$'}</span>
+                              <span className="text-2xl font-black">{room.pricePerNight?.toLocaleString() || '0'}</span>
                             </div>
-                          )}
-                        </div>
-                        <div className="col-span-2">
-                          <p className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-1">Price per Night ($)</p>
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              value={Number.isFinite(Number(room.pricePerNight)) ? Number(room.pricePerNight) : 0}
-                              onChange={(e) => {
-                                const newRooms = [...hotel.rooms];
-                                newRooms[rIdx] = { ...newRooms[rIdx], pricePerNight: parseNumberInput(e.target.value) };
-                                handleArrayChange('hotels', idx, 'rooms', newRooms);
-                              }}
-                              className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                            />
                           ) : (
-                            <p className="text-2xl font-bold text-secondary">${room.pricePerNight.toLocaleString()}</p>
+                            <div className="flex items-center gap-1 text-amber-600">
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span className="font-bold text-sm">VIP Included</span>
+                            </div>
                           )}
                         </div>
                       </div>
 
-                      {isEditing && (
-                        <div className="pt-4 border-t border-gray-100">
-                          <p className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-2">Description</p>
-                          <textarea
-                            value={room.description || ''}
-                            onChange={(e) => {
-                              const newRooms = [...hotel.rooms];
-                              newRooms[rIdx] = { ...newRooms[rIdx], description: e.target.value };
-                              handleArrayChange('hotels', idx, 'rooms', newRooms);
-                            }}
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                            rows={2}
-                            placeholder="Room description"
-                          />
-                        </div>
-                      )}
-
-                      {isEditing && (
-                        <div className="pt-4 border-t border-gray-100">
-                          <p className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-2">Amenities</p>
-                          <div className="flex flex-wrap gap-2">
-                            {['Free WiFi', 'Air Conditioning', 'Mini Bar', 'Flat-screen TV', 'Safe', 'Coffee Machine', 'Jacuzzi', 'Bathtub', 'Balcony', 'City View'].map((amenity) => (
-                              <label key={amenity} className="flex items-center gap-1.5 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={(room.amenities || []).includes(amenity)}
-                                  onChange={(e) => {
-                                    const newRooms = [...hotel.rooms];
-                                    const amenities = room.amenities || [];
-                                    if (e.target.checked) {
-                                      newRooms[rIdx] = { ...newRooms[rIdx], amenities: [...amenities, amenity] };
-                                    } else {
-                                      newRooms[rIdx] = { ...newRooms[rIdx], amenities: amenities.filter((a: string) => a !== amenity) };
-                                    }
-                                    handleArrayChange('hotels', idx, 'rooms', newRooms);
-                                  }}
-                                  className="w-3.5 h-3.5 text-primary rounded border-gray-300 focus:ring-primary"
-                                />
-                                <span className="text-xs text-gray-600">{amenity}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {!isEditing && room.sqm && (
-                        <div className="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t border-gray-100">
-                          <Maximize2 className="w-3.5 h-3.5" />
-                          <span>{room.sqm} m²</span>
-                        </div>
-                      )}
-
-                      {!isEditing && room.description && (
-                        <p className="text-xs text-gray-500 line-clamp-2">{room.description}</p>
-                      )}
-
-                      {!isEditing && room.amenities?.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-2">
-                          {room.amenities.slice(0, 3).map((a: string, ai: number) => (
-                            <span key={ai} className="px-2.5 py-1 bg-primary/10 text-primary text-[10px] font-medium rounded-full">{a}</span>
+                      <div className="space-y-4">
+                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Amenities</p>
+                        <div className="flex flex-wrap gap-2">
+                          {(room.amenities || []).slice(0, 4).map((a: string, ai: number) => (
+                            <span key={ai} className="px-3 py-1.5 bg-gray-50 text-gray-600 text-[10px] font-bold rounded-xl border border-gray-100 flex items-center gap-1.5">
+                              <Check className="w-3 h-3 text-emerald-500" />
+                              {a}
+                            </span>
                           ))}
-                          {room.amenities.length > 3 && (
-                            <span className="px-2.5 py-1 bg-gray-100 text-gray-600 text-[10px] font-medium rounded-full">
-                              +{room.amenities.length - 3} more
+                          {room.amenities?.length > 4 && (
+                            <span className="px-3 py-1.5 bg-primary/5 text-primary text-[10px] font-bold rounded-xl">
+                              +{room.amenities.length - 4} more
                             </span>
                           )}
                         </div>
-                      )}
+                      </div>
 
-                      {!isEditing && (
-                        <button className="w-full mt-4 bg-gradient-to-r from-primary to-primary/90 text-white py-3 rounded-xl font-semibold text-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
-                          Book Now
-                        </button>
+                      {room.description && (
+                        <p className="text-sm text-gray-500 leading-relaxed line-clamp-2 italic">
+                          "{room.description}"
+                        </p>
                       )}
                     </div>
                   </div>
@@ -1576,212 +1375,230 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
 )}
 
         {/* ==================== TRANSPORT TAB ==================== */}
-        {activeTab === 'transport' && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center">
-              <h3 className="text-2xl font-serif font-bold text-primary">Transportation & Transfers</h3>
-              {isEditing && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                 onClick={() => handleAddArrayItem('transportation', { 
-  id: `trans-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
-                    type: '', 
-                    price: 0, 
-                    description: '', 
-                    image: '', 
-                    availability: 5, 
-                    capacity: 4, 
-                    pickupLocations: '' 
-                  })}
-                >
-                  + Add Transport
-                </Button>
+        {/* ==================== TRANSPORT TAB ==================== */}
+{activeTab === 'transport' && (
+  <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="flex justify-between items-center">
+      <h3 className="text-2xl font-serif font-bold text-primary">Transportation & Transfers</h3>
+      {isEditing && (
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => handleAddArrayItem('transportation', { 
+            id: `trans-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
+            type: '', 
+            price: 0, 
+            description: '', 
+            image: '', 
+            availability: 5, 
+            capacity: 4, 
+            pickupLocations: '' 
+          })}
+        >
+          + Add Transport
+        </Button>
+      )}
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {(currentData.transportation || []).map((transport: any, idx: number) => (
+        <div key={idx} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm hover:shadow-md transition-all flex gap-8 relative">
+          {isEditing && (
+            <button
+              onClick={() => handleRemoveArrayItem('transportation', idx)}
+              className="absolute top-4 right-4 text-red-500 hover:text-red-700 z-10"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+          <div className="w-32 h-32 rounded-3xl overflow-hidden flex-shrink-0 relative group">
+            {isEditing ? (
+              <div className="w-full h-full bg-gray-100 flex flex-col items-center justify-center">
+                {transport.image ? (
+                  <img 
+                    src={getImageUrl(transport.image)} 
+                    className="w-full h-full object-cover" 
+                    alt={transport.type} 
+                  />
+                ) : (
+                  <Car className="w-8 h-8 text-gray-400" />
+                )}
+                <label className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                  <span className="bg-white text-primary px-2 py-1 rounded-lg text-[10px] font-bold">
+                    Change
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      if (e.target.files?.[0]) {
+                        const formData = new FormData();
+                        formData.append('file', e.target.files[0]);
+                        try {
+                          const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                          const data = await res.json();
+                          if (data.success) {
+                            const newTransport = [...editData.transportation];
+                            newTransport[idx] = { ...newTransport[idx], image: data.url };
+                            handleInputChange('transportation', newTransport);
+                          }
+                        } catch (err) {
+                          console.error('Upload failed:', err);
+                        }
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+            ) : (
+              <img 
+                src={getImageUrl(transport.image)} 
+                className="w-full h-full object-cover" 
+                alt={transport.type} 
+              />
+            )}
+          </div>
+          <div className="flex-1 space-y-6">
+            <div className="flex justify-between items-start">
+              <div>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={transport.type}
+                    onChange={(e) => handleArrayChange('transportation', idx, 'type', e.target.value)}
+                    className="text-xl font-serif font-bold text-primary bg-gray-50 border border-gray-200 rounded-lg p-2 w-full"
+                    placeholder="Transport type"
+                  />
+                ) : (
+                  <h4 className="text-xl font-serif font-bold text-primary">{transport.type}</h4>
+                )}
+                {transport.vipIncluded && (
+                  <Badge className="mt-2 bg-amber-100 text-amber-700 border-amber-200">VIP Included</Badge>
+                )}
+              </div>
+              <div className="text-right">
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={transport.availability}
+                    onChange={(e) => handleArrayChange('transportation', idx, 'availability', parseNumberInput(e.target.value))}
+                    className="w-20 p-1 bg-gray-50 border border-gray-200 rounded-lg text-xs"
+                  />
+                ) : (
+                  <Badge variant="outline" className="text-emerald-600 border-emerald-100 bg-emerald-50">
+                    {transport.remaining ?? transport.availability ?? 0} Units
+                  </Badge>
+                )}
+              </div>
+            </div>
+            
+            {isEditing ? (
+              <textarea
+                value={transport.description || ''}
+                onChange={(e) => handleArrayChange('transportation', idx, 'description', e.target.value)}
+                className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                rows={2}
+                placeholder="Description"
+              />
+            ) : (
+              <p className="text-sm text-gray-500">{transport.description}</p>
+            )}
+            
+            <div className="grid grid-cols-2 gap-6 py-6 border-y border-gray-50">
+              <div>
+                <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2">Capacity</p>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={transport.capacity}
+                    onChange={(e) => handleArrayChange('transportation', idx, 'capacity', parseNumberInput(e.target.value))}
+                    className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                    disabled={transport.vipIncluded}
+                  />
+                ) : (
+                  <div className="space-y-1">
+                    <p className="font-bold text-primary">{transport.capacity} Passengers</p>
+                    <p className="text-[10px] text-gray-500">
+                      {transport.initialAvailability ?? transport.availability ?? 0} total, {transport.bookedCount ?? 0} booked
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2">
+                  {transport.vipIncluded ? 'Included in VIP' : 'Price'}
+                </p>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={transport.price}
+                    onChange={(e) => handleArrayChange('transportation', idx, 'price', parseNumberInput(e.target.value))}
+                    className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                    disabled={transport.vipIncluded}
+                  />
+                ) : (
+                  transport.vipIncluded ? (
+                    <p className="font-bold text-amber-600 flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4" /> VIP Included
+                    </p>
+                  ) : (
+                    <p className="font-bold text-secondary">{currentData.pricing?.currency || 'ETB'} {transport.price}/trip</p>
+                  )
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2">Pickup Locations</p>
+              {isEditing ? (
+                <textarea
+                  value={transport.pickupLocations || ''}
+                  onChange={(e) => handleArrayChange('transportation', idx, 'pickupLocations', e.target.value)}
+                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                  rows={2}
+                  placeholder="Pickup locations"
+                />
+              ) : (
+                <p className="text-sm text-gray-500">{transport.pickupLocations}</p>
               )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {(currentData.transportation || []).map((transport: any, idx: number) => (
-                <div key={idx} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex gap-6 relative">
-                  {isEditing && (
-                    <button
-                      onClick={() => handleRemoveArrayItem('transportation', idx)}
-                      className="absolute top-4 right-4 text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                <div className="w-32 h-32 rounded-3xl overflow-hidden flex-shrink-0 relative group">
-  {isEditing ? (
-    <div className="w-full h-full bg-gray-100 flex flex-col items-center justify-center">
-      {transport.image ? (
-        <img 
-          src={getImageUrl(transport.image)} 
-          className="w-full h-full object-cover" 
-          alt={transport.type} 
-        />
-      ) : (
-        <Car className="w-8 h-8 text-gray-400" />
-      )}
-      <label className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-        <span className="bg-white text-primary px-2 py-1 rounded-lg text-[10px] font-bold">
-          Change
-        </span>
-        <input
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={async (e) => {
-            if (e.target.files?.[0]) {
-              const formData = new FormData();
-              formData.append('file', e.target.files[0]);
-              try {
-                const res = await fetch('/api/upload', { method: 'POST', body: formData });
-                const data = await res.json();
-                if (data.success) {
-                  const newTransport = [...editData.transportation];
-                  newTransport[idx] = { ...newTransport[idx], image: data.url };
-                  handleInputChange('transportation', newTransport);
-                }
-              } catch (err) {
-                console.error('Upload failed:', err);
-              }
-            }
-          }}
-        />
-      </label>
-    </div>
-  ) : (
-    <img 
-      src={getImageUrl(transport.image)} 
-      className="w-full h-full object-cover" 
-      alt={transport.type} 
-    />
-  )}
-</div>
-                  <div className="flex-1 space-y-4">
-                    <div className="flex justify-between items-start">
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={transport.type}
-                          onChange={(e) => handleArrayChange('transportation', idx, 'type', e.target.value)}
-                          className="text-xl font-serif font-bold text-primary bg-gray-50 border border-gray-200 rounded-lg p-2 w-full"
-                          placeholder="Transport type"
-                        />
-                      ) : (
-                        <h4 className="text-xl font-serif font-bold text-primary">{transport.type}</h4>
-                      )}
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          value={transport.availability}
-                          onChange={(e) => handleArrayChange('transportation', idx, 'availability', parseNumberInput(e.target.value))}
-                          className="w-20 p-1 bg-gray-50 border border-gray-200 rounded-lg text-xs"
-                        />
-                      ) : (
-                        <Badge variant="outline" className="text-emerald-600 border-emerald-100 bg-emerald-50">
-                          {transport.remaining ?? transport.availability ?? 0} Units
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    {isEditing ? (
-                      <textarea
-                        value={transport.description || ''}
-                        onChange={(e) => handleArrayChange('transportation', idx, 'description', e.target.value)}
-                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                        rows={2}
-                        placeholder="Description"
+            
+            <div>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2">Features</p>
+              {isEditing ? (
+                <div className="flex flex-wrap gap-2">
+                  {['AC', 'WiFi', 'GPS', 'USB Charging', 'Leather Seats', 'Refreshments', 'Professional Driver', 'Luggage Space'].map((feature) => (
+                    <label key={feature} className="flex items-center gap-1 text-[10px] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={(transport.features || []).includes(feature)}
+                        onChange={(e) => {
+                          const current = transport.features || [];
+                          const next = e.target.checked 
+                            ? [...current, feature] 
+                            : current.filter((f: string) => f !== feature);
+                          handleArrayChange('transportation', idx, 'features', next);
+                        }}
+                        className="w-3 h-3 text-primary rounded border-gray-300"
                       />
-                    ) : (
-                      <p className="text-xs text-gray-500">{transport.description}</p>
-                    )}
-                    
-                    <div className="grid grid-cols-2 gap-4 text-xs">
-                      <div>
-                        <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">Capacity</p>
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            value={transport.capacity}
-                            onChange={(e) => handleArrayChange('transportation', idx, 'capacity', parseNumberInput(e.target.value))}
-                            className="w-full p-1 bg-gray-50 border border-gray-200 rounded-lg text-xs"
-                          />
-                        ) : (
-                          <div className="space-y-1">
-                            <p className="font-bold text-primary">{transport.capacity} Passengers</p>
-                            <p className="text-[10px] text-gray-500">
-                              {transport.initialAvailability ?? transport.availability ?? 0} total, {transport.bookedCount ?? 0} booked
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">Price</p>
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            value={transport.price}
-                            onChange={(e) => handleArrayChange('transportation', idx, 'price', parseNumberInput(e.target.value))}
-                            className="w-full p-1 bg-gray-50 border border-gray-200 rounded-lg text-xs"
-                          />
-                        ) : (
-                          <p className="font-bold text-secondary">ETB {transport.price}/trip</p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">Pickup Locations</p>
-                      {isEditing ? (
-                        <textarea
-                          value={transport.pickupLocations || ''}
-                          onChange={(e) => handleArrayChange('transportation', idx, 'pickupLocations', e.target.value)}
-                          className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs"
-                          rows={2}
-                          placeholder="Pickup locations"
-                        />
-                      ) : (
-                        <p className="text-[10px] text-gray-500">{transport.pickupLocations}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">Features</p>
-                      {isEditing ? (
-                        <div className="flex flex-wrap gap-2">
-                          {['AC', 'WiFi', 'GPS', 'USB Charging', 'Leather Seats', 'Refreshments', 'Professional Driver', 'Luggage Space'].map((feature) => (
-                            <label key={feature} className="flex items-center gap-1 text-[10px]">
-                              <input
-                                type="checkbox"
-                                checked={transport.features?.includes(feature) || false}
-                                onChange={(e) => {
-                                  const currentFeatures = transport.features || [];
-                                  const newFeatures = e.target.checked
-                                    ? [...currentFeatures, feature]
-                                    : currentFeatures.filter((f: string) => f !== feature);
-                                  handleArrayChange('transportation', idx, 'features', newFeatures);
-                                }}
-                                className="rounded"
-                              />
-                              {feature}
-                            </label>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex flex-wrap gap-1">
-                          {transport.features?.map((feature: string, i: number) => (
-                            <span key={i} className="text-[10px] bg-gray-100 px-2 py-0.5 rounded-full text-gray-600">{feature}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                      <span className="text-gray-600">{feature}</span>
+                    </label>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {(transport.features || []).map((feature: string, fi: number) => (
+                    <span key={fi} className="text-[10px] bg-gray-100 px-2 py-0.5 rounded-full text-gray-600">{feature}</span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-        )}
+        </div>
+      ))}
+    </div>
+  </div>
+)}
 
         {/* ==================== SERVICES TAB ==================== */}
         {activeTab === 'services' && (
@@ -1903,8 +1720,8 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
                 <Heart className="w-5 h-5 text-secondary" /> Cultural Services
               </h3>
               <div className="space-y-4">
-                {(currentData.services?.culturalServices || []).map((item: string, i: number) => (
-                  <div  className="flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm relative">
+                 {(currentData.services?.culturalServices || []).map((item: string, i: number) => (
+                   <div key={i} className="flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm relative">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                     {isEditing ? (
                       <input
@@ -1953,7 +1770,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
               </h3>
               <div className="space-y-4">
                 {(currentData.services?.specialAssistance || []).map((item: string, i: number) => (
-                  <div  className="flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm relative">
+                  <div key={i} className="flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm relative">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                     {isEditing ? (
                       <input
@@ -2002,7 +1819,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
               </h3>
               <div className="space-y-4">
                 {(currentData.services?.extras || []).map((item: string, i: number) => (
-                  <div  className="flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm relative">
+                  <div key={i} className="flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm relative">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                     {isEditing ? (
                       <input
@@ -2128,7 +1945,6 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
         )}
 
         {/* ==================== PRICING TAB ==================== */}
-      // ==================== PRICING TAB WITH TIER LOGIC ====================
 {activeTab === 'pricing' && (
   <div className="space-y-10 animate-in fade-in duration-500">
     <h3 className="text-2xl font-serif font-bold text-primary">Pricing & Ticket Tiers</h3>
@@ -2184,25 +2000,28 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
     </div>
 
     {/* STANDARD TICKET CARD */}
-    <div className="bg-white p-8 rounded-[40px] border-2 border-gray-200 shadow-sm">
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <div className="inline-flex items-center gap-2 bg-gray-100 px-4 py-1.5 rounded-full mb-3">
+    <div className="bg-white p-8 rounded-[40px] border-2 border-gray-200 shadow-sm hover:shadow-md transition-all">
+      <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-8">
+        <div className="flex-1">
+          <div className="inline-flex items-center gap-2 bg-gray-100 px-4 py-1.5 rounded-full mb-4">
             <Ticket className="w-4 h-4 text-gray-500" />
-            <span className="text-[10px] font-black uppercase text-gray-600 tracking-wider">TIER 1</span>
+            <span className="text-[10px] font-black uppercase text-gray-600 tracking-wider">TIER 1 • STANDARD</span>
           </div>
-          <h4 className="text-2xl font-serif font-bold text-primary">Standard Ticket</h4>
-          <p className="text-sm text-gray-500 mt-1">General admission with optional add-ons</p>
+          <h4 className="text-2xl font-serif font-bold text-primary mb-2">Standard Ticket</h4>
+          <p className="text-sm text-gray-500">Pay as you go - rooms & transport sold separately</p>
         </div>
-        <div className="text-right">
-          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Price</p>
+        <div className="text-left md:text-right">
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Price Per Ticket</p>
           {isEditing ? (
-            <input
-              type="number"
-              value={currentData.pricing?.standardPrice || 0}
-              onChange={(e) => handleNestedChange('pricing', 'standardPrice', parseNumberInput(e.target.value))}
-              className="text-3xl font-bold text-primary bg-gray-50 border border-gray-200 rounded-xl p-2 w-32 text-right"
-            />
+            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 w-48 md:w-auto">
+              <span className="text-xl font-bold text-primary">{currentData.pricing?.currency || 'ETB'}</span>
+              <input
+                type="number"
+                value={currentData.pricing?.standardPrice || 0}
+                onChange={(e) => handleNestedChange('pricing', 'standardPrice', parseNumberInput(e.target.value))}
+                className="flex-1 text-2xl font-bold text-primary bg-transparent border-0 outline-none min-w-0"
+              />
+            </div>
           ) : (
             <p className="text-3xl font-bold text-primary">
               {currentData.pricing?.currency || 'ETB'} {currentData.pricing?.standardPrice?.toLocaleString() || '0'}
@@ -2210,80 +2029,107 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
           )}
         </div>
       </div>
-
+      
       {/* Standard Ticket Benefits */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-2xl">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 p-6 bg-gray-50 rounded-2xl">
+        <div className="flex items-center gap-2 text-sm text-gray-700">
           <CheckCircle2 className="w-4 h-4 text-emerald-500" /> General Admission
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+        <div className="flex items-center gap-2 text-sm text-gray-700">
           <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Standard Seating
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+        <div className="flex items-center gap-2 text-sm text-gray-700">
           <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Access to All Days
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+        <div className="flex items-center gap-2 text-sm text-gray-700">
           <Clock className="w-4 h-4 text-amber-500" /> Early Bird Available
         </div>
       </div>
-
-      {/* Standard: Hotel & Transport are OPTIONAL (extra fee) - Show info only */}
-      <div className="border-t border-gray-100 pt-6 mt-2">
-        <p className="text-xs text-gray-400 flex items-center gap-2">
-          <Info className="w-3 h-3" />
-          Standard ticket holders can add hotels and transport as paid extras during checkout
+      
+      {/* Standard: Hotel & Transport are OPTIONAL (extra fee) */}
+      <div className="border-t border-gray-100 pt-6">
+        <p className="text-sm text-gray-500 flex items-center gap-2">
+          <Info className="w-4 h-4 text-gray-400" />
+          Standard ticket holders pay separately for hotels & transport based on availability
         </p>
       </div>
     </div>
 
     {/* VIP TICKET CARD */}
-    <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 p-8 rounded-[40px] border-2 border-secondary/30 shadow-lg">
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <div className="inline-flex items-center gap-2 bg-secondary/20 px-4 py-1.5 rounded-full mb-3">
-            <Star className="w-4 h-4 text-secondary" />
+    <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 p-8 rounded-[40px] border-2 border-secondary/30 shadow-lg hover:shadow-xl transition-all">
+      <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-8">
+        <div className="flex-1">
+          <div className="inline-flex items-center gap-2 bg-secondary/20 px-4 py-1.5 rounded-full mb-4">
+            <Star className="w-4 h-4 text-secondary fill-current" />
             <span className="text-[10px] font-black uppercase text-secondary tracking-wider">TIER 2 • PREMIUM</span>
           </div>
-          <h4 className="text-2xl font-serif font-bold text-primary">VIP Ticket</h4>
-          <p className="text-sm text-gray-600 mt-1">Premium experience with hotel & transport INCLUDED</p>
+          <h4 className="text-2xl font-serif font-bold text-primary mb-2">VIP Ticket</h4>
+          <p className="text-sm text-gray-600">All-inclusive premium experience</p>
         </div>
-        <div className="text-right">
-          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Price (All Inclusive)</p>
+        <div className="text-left md:text-right">
           {isEditing ? (
-            <input
-              type="number"
-              value={currentData.pricing?.vipPrice || 0}
-              onChange={(e) => handleNestedChange('pricing', 'vipPrice', parseNumberInput(e.target.value))}
-              className="text-3xl font-bold text-secondary bg-white border border-secondary/30 rounded-xl p-2 w-32 text-right"
-            />
+            <>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Price (All Inclusive)</p>
+              <div className="flex items-center gap-2 bg-white border border-secondary/30 rounded-xl px-4 py-3 w-48 md:w-auto">
+                <span className="text-xl font-bold text-secondary">{currentData.pricing?.currency || 'ETB'}</span>
+                <input
+                  type="number"
+                  value={currentData.pricing?.vipPrice || 0}
+                  onChange={(e) => handleNestedChange('pricing', 'vipPrice', parseNumberInput(e.target.value))}
+                  className="flex-1 text-2xl font-bold text-secondary bg-transparent border-0 outline-none min-w-0"
+                />
+              </div>
+            </>
           ) : (
-            <p className="text-3xl font-bold text-secondary">
-              {currentData.pricing?.currency || 'ETB'} {currentData.pricing?.vipPrice?.toLocaleString() || '0'}
-            </p>
+            <>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Package Type</p>
+              <p className="text-xl font-bold text-secondary">All Inclusive</p>
+              <p className="text-xs text-gray-400 mt-1">Hotel + Transport included</p>
+            </>
           )}
-          <p className="text-[10px] text-gray-400 mt-1">Includes hotel + transport</p>
         </div>
       </div>
-
+      
+      {/* VIP Ticket Count & Remaining */}
+      {!isEditing && (() => {
+        const vipTicket = currentData.ticketTypes?.find((t) => t.name_en === 'VIP' || t.name === 'VIP');
+        const total = vipTicket?.quantity || 0;
+        const remaining = vipTicket?.available || total;
+        return (
+          <div className="mb-6 p-4 bg-white/60 rounded-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold text-primary">VIP Tickets</p>
+                <p className="text-xs text-gray-500">1 ticket = 1 room + transport</p>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-secondary">{remaining}<span className="text-sm font-normal text-gray-400"> / {total}</span></p>
+                <p className="text-[10px] text-gray-400">Remaining</p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+      
       {/* VIP Benefits */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
-        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8 p-6 bg-white/60 rounded-2xl">
+        <div className="flex items-center gap-2 text-sm text-gray-700">
           <CheckCircle2 className="w-4 h-4 text-secondary" /> Priority Entry
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
-          <CheckCircle2 className="w-4 h-4 text-secondary" /> VIP Lounge Access
+        <div className="flex items-center gap-2 text-sm text-gray-700">
+          <CheckCircle2 className="w-4 h-4 text-secondary" /> VIP Lounge
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
+        <div className="flex items-center gap-2 text-sm text-gray-700">
           <CheckCircle2 className="w-4 h-4 text-secondary" /> Meet & Greet
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
-          <CheckCircle2 className="w-4 h-4 text-secondary" /> Complimentary Drinks
+        <div className="flex items-center gap-2 text-sm text-gray-700">
+          <CheckCircle2 className="w-4 h-4 text-secondary" /> Drinks Included
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
-          <Hotel className="w-4 h-4 text-secondary" /> Hotel Included (1 night)
+        <div className="flex items-center gap-2 text-sm text-gray-700">
+          <Hotel className="w-4 h-4 text-secondary" /> Hotel (1 night)
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-700 bg-white/60 p-2 rounded-xl">
-          <Car className="w-4 h-4 text-secondary" /> Transport Included
+        <div className="flex items-center gap-2 text-sm text-gray-700">
+          <Car className="w-4 h-4 text-secondary" /> Transport
         </div>
       </div>
 
@@ -2385,7 +2231,7 @@ const handleImageUpload = async (file: File, type: 'cover' | 'gallery', index?: 
         <div className="border-t border-secondary/20 pt-6 mt-4">
           <p className="text-xs text-gray-500 flex items-center gap-2">
             <Hotel className="w-3 h-3" />
-            VIP includes choice of: {currentData.pricing.vipIncludedHotels.map((id: string) => {
+            VIP includes choice of: {(currentData.pricing?.vipIncludedHotels || []).map((id: string) => {
               const hotel = currentData.hotels?.find((h: any) => h.id === id);
               return hotel?.name;
             }).filter(Boolean).join(', ')}

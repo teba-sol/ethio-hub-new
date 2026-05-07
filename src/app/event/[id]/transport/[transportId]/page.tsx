@@ -33,6 +33,8 @@ export default function TransportDetailPage() {
     setSelectedTransport,
     transportDays,
     setTransportDays,
+    ticketSelection,
+    event
   } = useBooking();
   const { language, t } = useLanguage();
 
@@ -93,7 +95,7 @@ export default function TransportDetailPage() {
   };
 
   const handleContinue = () => {
-    router.push(`/event/${eventId}/tickets`);
+    router.push(`/event/${eventId}/checkout`);
   };
 
   if (loading) {
@@ -249,8 +251,14 @@ export default function TransportDetailPage() {
              <div className="text-center mb-6">
                <p className="text-sm text-gray-500">{t('festival.startingFrom')}</p>
                <div className="flex items-baseline justify-center gap-1">
-                 <span className="text-4xl font-bold text-primary">${transport.price}</span>
-                 <span className="text-gray-500">{t('festival.perDay')}</span>
+                 <span className="text-4xl font-bold text-primary">
+                   {ticketSelection?.type === 'vip' && transport.vipIncluded 
+                    ? 'Included' 
+                    : `${event?.pricing?.currency || event?.currency || 'ETB'} ${transport.price}`}
+                 </span>
+                 {!(ticketSelection?.type === 'vip' && transport.vipIncluded) && (
+                   <span className="text-gray-500">{t('festival.perDay')}</span>
+                 )}
                </div>
              </div>
 
@@ -280,12 +288,22 @@ export default function TransportDetailPage() {
 
                  <div className="bg-gray-50 p-4 rounded-xl">
                    <div className="flex justify-between items-center mb-2">
-                     <span className="text-gray-600">${transport.price} x {transportDays} {t('transport.days')}</span>
-                     <span className="font-bold text-gray-900">${transport.price * transportDays}</span>
+                     <span className="text-gray-600">
+                       {event?.pricing?.currency || event?.currency || 'ETB'} {transport.price} x {transportDays} {t('transport.days')}
+                     </span>
+                     <span className="font-bold text-gray-900">
+                       {ticketSelection?.type === 'vip' && transport.vipIncluded 
+                        ? 'Included' 
+                        : `${event?.pricing?.currency || event?.currency || 'ETB'} ${transport.price * transportDays}`}
+                     </span>
                    </div>
                    <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                      <span className="font-medium text-gray-900">{t('common.total')}</span>
-                     <span className="text-xl font-bold text-primary">${transport.price * transportDays}</span>
+                     <span className="text-xl font-bold text-primary">
+                       {ticketSelection?.type === 'vip' && transport.vipIncluded 
+                        ? 'Included' 
+                        : `${event?.pricing?.currency || event?.currency || 'ETB'} ${transport.price * transportDays}`}
+                     </span>
                    </div>
                  </div>
 

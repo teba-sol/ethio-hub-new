@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '../../../../lib/mongodb';
 import Festival from '../../../../models/festival.model';
 import Booking from '../../../../models/booking.model';
-import User from '../../../../models/User';
 import mongoose from 'mongoose';
 import { attachAvailabilityToFestival } from '../../../../lib/festivalAvailability';
 
@@ -14,20 +13,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     await connectDB();
 
-    const festival: any = await Festival.findById(id).populate('organizer', 'name email status');
+    const festival = await Festival.findById(id).populate('organizer', 'name email').lean();
     console.log('Festival found:', festival ? 'yes' : 'no');
     console.log('Festival _id:', festival?._id);
     console.log('Festival status:', festival?.status);
     console.log('Festival isVerified:', festival?.isVerified);
 
     if (!festival) {
-      return new NextResponse(
-        JSON.stringify({ success: false, message: 'Festival not found', debug: { id } }),
-        { status: 404, headers: { 'content-type': 'application/json' } }
-      );
-    }
-
-    if (festival.organizer && festival.organizer.status === 'Suspended') {
       return new NextResponse(
         JSON.stringify({ success: false, message: 'Festival not found', debug: { id } }),
         { status: 404, headers: { 'content-type': 'application/json' } }

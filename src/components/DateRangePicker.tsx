@@ -98,10 +98,10 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   const nextDaysInMonth = getDaysInMonth(nextMonthNum, nextMonthYear);
 
   const renderMonth = (month: number, year: number, days: number) => {
-    const paddingDays = month === 11 ? getFirstDayOfMonth(0, year + 1) : getFirstDayOfMonth(month + 1, year);
+    const firstDay = getFirstDayOfMonth(month, year);
     
     const daysArray = [];
-    for (let i = 0; i < paddingDays; i++) {
+    for (let i = 0; i < firstDay; i++) {
       daysArray.push(null);
     }
     for (let i = 1; i <= days; i++) {
@@ -109,14 +109,14 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     }
 
     return (
-      <div className="flex-1">
-        <div className="text-center font-semibold text-gray-800 mb-4">{MONTHS[month]} {year}</div>
-        <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="flex-1 min-w-[280px]">
+        <div className="text-center font-bold text-gray-900 mb-6">{MONTHS[month]} {year}</div>
+        <div className="grid grid-cols-7 gap-0 mb-2">
           {DAYS.map(day => (
-            <div key={day} className="text-center text-xs text-gray-400 font-medium py-1">{day}</div>
+            <div key={day} className="text-center text-[10px] text-gray-400 font-bold uppercase tracking-widest py-2">{day}</div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-y-1">
           {daysArray.map((day, idx) => {
             if (!day) {
               return <div key={`empty-${idx}`} className="h-10" />;
@@ -126,6 +126,8 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
             const isDisabled = isDateDisabled(date);
             const isSelected = isDateSelected(date);
             const isInRange = isDateInRange(date);
+            const isStart = checkIn && date.toDateString() === checkIn.toDateString();
+            const isEnd = checkOut && date.toDateString() === checkOut.toDateString();
             
             return (
               <button
@@ -133,10 +135,12 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
                 onClick={() => handleDateClick(day)}
                 disabled={isDisabled}
                 className={`
-                  h-10 rounded-lg text-sm font-medium transition-all
-                  ${isDisabled ? 'text-gray-200 cursor-not-allowed' : 'hover:bg-gray-100 cursor-pointer'}
-                  ${isSelected ? 'bg-primary text-white hover:bg-primary/90' : ''}
-                  ${isInRange ? 'bg-primary/10 text-primary' : ''}
+                  h-10 w-full text-sm font-semibold transition-all relative
+                  ${isDisabled ? 'text-gray-200 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}
+                  ${isSelected ? 'bg-primary text-white z-10 rounded-xl shadow-md' : ''}
+                  ${isInRange ? 'bg-primary/5 text-primary' : ''}
+                  ${isStart && checkOut ? 'rounded-r-none' : ''}
+                  ${isEnd && checkIn ? 'rounded-l-none' : ''}
                 `}
               >
                 {day}
@@ -149,40 +153,38 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   };
 
   return (
-    <div className={`bg-white rounded-2xl shadow-lg border border-gray-100 ${className}`}>
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex gap-6">
-          <div className="flex-1">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Check In</label>
-            <div className={`flex items-center gap-2 mt-1 ${selecting === 'checkIn' ? 'text-primary' : 'text-gray-600'}`}>
-              <Calendar className="w-4 h-4" />
-              <span className="font-medium">{formatDate(checkIn) || 'Select date'}</span>
+    <div className={`bg-white rounded-[32px] shadow-2xl border border-gray-100 overflow-hidden ${className}`}>
+      <div className="p-8">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <button onClick={prevMonth} className="p-3 hover:bg-gray-50 rounded-2xl transition-all border border-gray-100 shadow-sm active:scale-95">
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-gray-900">{MONTHS[currentMonth]} {currentYear}</span>
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Select dates</span>
             </div>
           </div>
-          <div className="w-px bg-gray-200" />
-          <div className="flex-1">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Check Out</label>
-            <div className={`flex items-center gap-2 mt-1 ${selecting === 'checkOut' ? 'text-primary' : 'text-gray-600'}`}>
-              <Calendar className="w-4 h-4" />
-              <span className="font-medium">{formatDate(checkOut) || 'Select date'}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-4">
-          <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <ChevronLeft className="w-5 h-5 text-gray-600" />
-          </button>
-          <span className="text-sm font-medium text-gray-500">Click to select dates</span>
-          <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+          <button onClick={nextMonth} className="p-3 hover:bg-gray-50 rounded-2xl transition-all border border-gray-100 shadow-sm active:scale-95">
             <ChevronRight className="w-5 h-5 text-gray-600" />
           </button>
         </div>
-        <div className="flex gap-8">
+        
+        <div className="flex flex-col lg:flex-row gap-12">
           {renderMonth(currentMonth, currentYear, daysInMonth)}
+          <div className="hidden lg:block w-px bg-gray-100" />
           {renderMonth(nextMonthNum, nextMonthYear, nextDaysInMonth)}
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-primary" />
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Selected Range</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-primary/10" />
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">In Between</span>
+          </div>
         </div>
       </div>
     </div>

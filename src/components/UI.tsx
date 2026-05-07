@@ -201,11 +201,47 @@ export const EventStatusBadge: React.FC<EventStatusBadgeProps> = ({
   );
 };
 
-export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label?: string }> = ({ label, ...props }) => (
-  <div className="flex flex-col space-y-1 w-full">
-    {label && <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1" htmlFor={props.id}>{label}</label>}
-    <input 
-      className="block w-full px-4 py-3 rounded-[12px] border border-gray-200 focus:ring-1 focus:ring-primary focus:border-primary transition-all bg-white text-sm"
+export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label?: string; hideLabel?: boolean; icon?: LucideIcon }> = ({ label, hideLabel, icon: Icon, ...props }) => (
+  <div className="flex flex-col space-y-2 w-full group">
+    {label && !hideLabel && (
+      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 transition-colors group-focus-within:text-primary" htmlFor={props.id}>
+        {label} {props.required && <span className="text-red-500 ml-0.5">*</span>}
+      </label>
+    )}
+    <div className="relative">
+      {Icon && (
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors z-10">
+          <Icon className="w-4 h-4" />
+        </div>
+      )}
+      <input 
+        className={`
+          block w-full rounded-[14px] border border-gray-200 bg-gray-50/50 px-4 py-3.5 text-sm transition-all duration-200
+          placeholder:text-gray-300 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none
+          shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 hover:bg-white
+          ${Icon ? 'pl-12' : 'px-4'}
+          ${props.className || ''}
+        `}
+        {...props}
+      />
+    </div>
+  </div>
+);
+
+export const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label?: string; hideLabel?: boolean }> = ({ label, hideLabel, ...props }) => (
+  <div className="flex flex-col space-y-2 w-full group">
+    {label && !hideLabel && (
+      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 transition-colors group-focus-within:text-primary" htmlFor={props.id}>
+        {label}
+      </label>
+    )}
+    <textarea 
+      className={`
+        block w-full rounded-[14px] border border-gray-200 bg-gray-50/50 px-4 py-3.5 text-sm transition-all duration-200
+        placeholder:text-gray-400 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none
+        shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 hover:bg-white
+        ${props.className || ''}
+      `}
       {...props}
     />
   </div>

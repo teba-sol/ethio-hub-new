@@ -143,13 +143,16 @@ export interface HotelAccommodation {
   checkInTime: string;
   checkOutTime: string;
   facilities: string[];
-  rooms: RoomType[];
+  foodAndDrink?: string[];
+  propertyType?: string;
   hotelServices?: Array<{  // Pay-at-hotel services (display only)
     name: string;
     price: number;
     description?: string;
   }>;
+  hotelRules?: string[];
   gallery: string[];
+  rooms: RoomType[];
 }
 
 export interface TransportOption {
@@ -195,7 +198,14 @@ export interface Festival {
   fullDescription_am: string;
   coverImage: string;
   gallery: string[];
-  schedule: { day: number; title: string; activities: string }[];
+  schedule: Array<{
+    day: number;
+    title: string;
+    title_en?: string;
+    title_am?: string;
+    activities: string;
+    performers?: string[];
+  }>;
   mainActivities: string;
   performances: string[];
   hotels: HotelAccommodation[];
@@ -207,8 +217,13 @@ export interface Festival {
   vipPerks?: string[];  // Priority perks included with VIP ticket
   ticketTypes?: Array<{
     name: string;
+    name_en?: string;
+    name_am?: string;
     price: number;
+    quantity?: number;
+    available?: number;
     perks?: string[];
+    benefits?: string[];
   }>;
   earlyBirdPrice?: number;
   currency: string;
@@ -216,11 +231,65 @@ export interface Festival {
   bookingTerms: string;
   safetyRules?: string;
   ageRestriction?: string;
+  policies?: {
+    cancellation?: string;
+    terms?: string;
+    safety?: string;
+    ageRestriction?: string;
+    ageRestriction_en?: string;
+    ageRestriction_am?: string;
+    cancellation_en?: string;
+    cancellation_am?: string;
+    terms_en?: string;
+    terms_am?: string;
+    safety_en?: string;
+    safety_am?: string;
+  };
+  pricing?: {
+    basePrice?: number;
+    standardPrice?: number;
+    regularPrice?: number;
+    vipPrice?: number;
+    currency?: string;
+    earlyBird?: number;
+    earlyBirdDeadline?: string;
+    groupDiscount?: number;
+    vipIncludedHotels?: string[];
+    vipIncludedTransport?: string[];
+  };
+  location?: {
+    name?: string;
+    name_en?: string;
+    name_am?: string;
+    address?: string;
+    coordinates?: { lat?: number; lng?: number };
+  };
   organizerId: string;
+  organizer?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
   isVerified: boolean;
   ticketsAvailable: number;
+  totalCapacity?: number;
+  capacity?: number;
   ticketsSold?: number;
   revenue?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  services?: {
+    foodPackages?: FoodPackage[];
+    culturalServices?: string[];
+    culturalServices_en?: string[];
+    culturalServices_am?: string[];
+    specialAssistance?: string[];
+    specialAssistance_en?: string[];
+    specialAssistance_am?: string[];
+    extras?: string[];
+    extras_en?: string[];
+    extras_am?: string[];
+  };
   status: 'Draft' | 'Published' | 'Completed' | 'Cancelled';
   verificationStatus: 'Draft' | 'Pending Approval' | 'Pending Review' | 'Under Review' | 'Approved' | 'Rejected' | 'Not Submitted';
   submittedAt?: string;
