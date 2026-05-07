@@ -1702,7 +1702,7 @@ export const FestivalCreationWizard: React.FC<{
                                         <div className="space-y-2">
                                           <label className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">VIP Pricing</label>
                                           <div className="px-4 py-3.5 bg-amber-50 rounded-xl border border-amber-100 flex items-center gap-2">
-                                            <VerifiedBadge width={16} height={16} className="text-amber-600" />
+                                            <CheckCircle2 width={16} height={16} className="text-amber-600" />
                                             <span className="text-[10px] text-amber-800 font-black uppercase">Included</span>
                                           </div>
                                         </div>
