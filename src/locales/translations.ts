@@ -1,4 +1,4 @@
-﻿export type Language = 'en' | 'am';
+export type Language = 'en' | 'am';
 
 export interface TranslationDictionary {
   [key: string]: string | TranslationDictionary;
@@ -628,6 +628,9 @@ export const translations: Record<Language, TranslationDictionary> = {
         searchPlaceholder: "Search festivals or locations...",
         types: {
           religious: "Religious",
+          historical: "Historical",
+          harvest: "Harvest",
+          newyear: "New Year",
           culturaltraditional: "Cultural / Traditional",
           nationalpublicholidays: "National / Public Holidays"
         },
@@ -665,6 +668,7 @@ export const translations: Record<Language, TranslationDictionary> = {
        fitnessCenter: "Fitness Center",
        freeParking: "Free Parking",
        spaWellness: "Spa & Wellness",
+      hotelFound: "hotel found",
       hotelsFound: "hotels found",
       recommended: "Recommended",
       roomsAvailable: "rooms available",
@@ -1505,9 +1509,12 @@ export const translations: Record<Language, TranslationDictionary> = {
   },
   searchPlaceholder: "በዓላትን ወይም አካባቢዎችን ይፈልጉ...",
   types: {
-    religious: "ሃይስኖታ",
+    religious: "ሃይማኖታዊ",
+    historical: "ታሪካዊ",
+    harvest: "መከር",
+    newyear: "አዲስ ዓመት",
     culturaltraditional: "ባህላዊ / ባህላዊ",
-    nationalpublicholidays: "ብሔራ / የሕብሰት ቀንዎች"
+    nationalpublicholidays: "ብሔራዊ / የሕዝብ በዓላት"
   },
   featured: {
     heading: "የተመረጠ በዓላት",

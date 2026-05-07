@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Festival, HotelAccommodation, RoomType, TransportOption, FoodPackage } from '../types';
 
 interface TicketSelection {
@@ -69,7 +69,7 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [selectedRoom, setSelectedRoom] = useState<RoomType | null>(null);
   const [checkIn, setCheckIn] = useState<Date | null>(null);
   const [checkOut, setCheckOut] = useState<Date | null>(null);
-  const [guests, setGuests] = useState(0);
+  const [guests, setGuests] = useState(1);
   const [selectedFoodPackages, setSelectedFoodPackages] = useState<FoodPackage[]>([]);
   
   // Transport
@@ -79,6 +79,15 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
   // Tickets
   const [ticketSelection, setTicketSelection] = useState<TicketSelection | null>(null);
   
+  // Keep guests in sync with ticket quantity
+  useEffect(() => {
+    if (ticketSelection?.quantity) {
+      setGuests(ticketSelection.quantity);
+    } else {
+      setGuests(1);
+    }
+  }, [ticketSelection?.quantity]);
+
   // Booking ID
   const [bookingId, setBookingId] = useState<string | null>(null);
   
@@ -105,13 +114,16 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
   
 const getHotelTotal = () => {
   if (!selectedRoom || !checkIn || !checkOut) return 0;
-  // VIP guests get included rooms free if room tier matches
+  // VIP guests get 1 night included free if room tier matches
   const isVip = ticketSelection?.type === 'vip';
   const roomIncluded = isVip && (selectedRoom.tier === 'vip' || selectedRoom.tier === 'both');
-  if (roomIncluded) return 0;
-  const roomTotal = selectedRoom.pricePerNight * hotelNights * guests;
+  
+  // If included, first night is free. Subsequent nights are paid.
+  const paidNights = roomIncluded ? Math.max(0, hotelNights - 1) : hotelNights;
+  
+  const roomTotal = selectedRoom.pricePerNight * paidNights;
   const foodTotal = (selectedFoodPackages || []).reduce(
-    (sum: number, pkg: any) => sum + (pkg?.pricePerPerson || 0) * guests, 0
+    (sum: number, pkg: any) => sum + (pkg?.pricePerPerson || 0) * (guests || 1), 0
   );
   return roomTotal + foodTotal;
 };
@@ -132,7 +144,7 @@ const getTransportTotal = () => {
 };
   
   const getGrandTotal = () => {
-    return getTicketTotal() + getHotelTotal() + getTransportTotal() + getServiceFee();
+    return getTicketTotal() + getHotelTotal() + getTransportTotal();
   };
   
   const clearFoodPackages = () => {

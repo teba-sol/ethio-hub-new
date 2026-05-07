@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { 
   ArrowLeft, MapPin, Star, Wifi, Car, Coffee as CoffeeIcon, Dumbbell, Waves, 
   Utensils, Sparkles, Check, X, ChevronLeft, ChevronRight, Users, Maximize,
-  BedDouble, Calendar, ChevronDown, Minus, Plus, ExternalLink, Facebook, Twitter,
+  BedDouble, Calendar, ChevronDown, ExternalLink, Facebook, Twitter,
   AlertCircle,
   Linkedin, Mail, Shield, Image as ImageIcon
 } from 'lucide-react';
@@ -32,10 +32,10 @@ export default function HotelDetailPage() {
     checkOut,
     setCheckOut,
     guests,
-    setGuests,
     selectedFoodPackages,
     selectFoodPackage,
-    clearFoodPackages
+    clearFoodPackages,
+    ticketSelection
   } = useBooking();
   const { language, t } = useLanguage();
   const [festival, setFestival] = useState<Festival | null>(null);
@@ -45,22 +45,31 @@ export default function HotelDetailPage() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showGuestSelector, setShowGuestSelector] = useState(false);
   const [showEnquiryModal, setShowEnquiryModal] = useState(false);
   const [enquiryMessage, setEnquiryMessage] = useState('');
-  const [guestSelectionConfirmed, setGuestSelectionConfirmed] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  const normalizeHotel = (hotelData: any, hotelIndex = 0): HotelAccommodation => ({
-    ...hotelData,
-    id: hotelData._id || hotelData.id || `hotel-${hotelIndex}`,
-    hotelServices: hotelData.hotelServices || [],
-    rooms: (hotelData.rooms || []).map((room: any, roomIndex: number) => ({
-      ...room,
-      id: room._id || room.id || `room-${hotelIndex}-${roomIndex}`,
-      remaining: (room.availability || 0) - (room.bookedCount || 0),
-    })),
-  });
+  const normalizeHotel = (hotelData: any, hotelIndex = 0): HotelAccommodation => {
+    const tier = ticketSelection?.type === 'vip' ? 'vip' : 'standard';
+    return {
+      ...hotelData,
+      id: hotelData._id || hotelData.id || `hotel-${hotelIndex}`,
+      hotelServices: hotelData.hotelServices || [],
+      rooms: (hotelData.rooms || [])
+        .filter((room: any) => {
+          const roomTier = room.tier || 'both';
+          return roomTier === 'both' || roomTier === tier;
+        })
+        .map((room: any, roomIndex: number) => {
+          const currentAvailable = typeof room.available === 'number' ? room.available : (Number(room.availability) || 0);
+          return {
+            ...room,
+            id: room._id || room.id || `room-${hotelIndex}-${roomIndex}`,
+            remaining: currentAvailable,
+          };
+        }),
+    };
+  };
 
   useEffect(() => {
     setSelectedRoom(null);
@@ -131,7 +140,17 @@ export default function HotelDetailPage() {
     }
   };
 
-  const handleContinue = (destination: 'transport' | 'tickets') => {
+  // For VIP: Auto-select first available VIP room if not selected
+  useEffect(() => {
+    if (ticketSelection?.type === 'vip' && hotel?.rooms && !selectedRoom) {
+      const vipRoom = hotel.rooms.find(r => (r.remaining ?? 0) > 0);
+      if (vipRoom) {
+        setSelectedRoom(vipRoom);
+      }
+    }
+  }, [ticketSelection, hotel, selectedRoom]);
+
+  const handleContinue = (destination: 'transport' | 'checkout') => {
     if (!selectedRoom) return;
 
     if (missingSelections.length > 0) {
@@ -142,7 +161,7 @@ export default function HotelDetailPage() {
     router.push(
       destination === 'transport'
         ? `/event/${eventId}/transport`
-        : `/event/${eventId}/tickets`
+        : `/event/${eventId}/checkout`
     );
   };
 
@@ -167,13 +186,12 @@ export default function HotelDetailPage() {
     !selectedRoom ? 'Room selection' : null,
     !checkIn ? 'Check-in date' : null,
     !checkOut ? 'Check-out date' : null,
-    !guestSelectionConfirmed ? 'Guest selection' : null,
     requiresFoodPackage && selectedFoodPackages.length === 0 ? 'Food & Drink package' : null,
   ].filter(Boolean) as string[];
 
   useEffect(() => {
     setValidationErrors((prev) => (prev.length > 0 ? [] : prev));
-  }, [selectedRoom, checkIn, checkOut, guestSelectionConfirmed, selectedFoodPackages.length]);
+  }, [selectedRoom, checkIn, checkOut, selectedFoodPackages.length]);
 
   const renderValidationNotice = () => {
     if (validationErrors.length === 0) return null;
@@ -343,25 +361,123 @@ export default function HotelDetailPage() {
               </p>
             </div>
 
+            {/* Structured Info Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-8 border-y border-gray-100">
+              {/* Facilities */}
+              {hotel.facilities && hotel.facilities.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    Facilities
+                  </h3>
+                  <div className="grid grid-cols-2 gap-y-3">
+                    {hotel.facilities.map((facility, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-sm text-gray-600">
+                        <Check className="w-4 h-4 text-emerald-500" />
+                        {facility}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Food & Drink */}
+              {hotel.foodAndDrink && hotel.foodAndDrink.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <Utensils className="w-5 h-5 text-primary" />
+                    Food and Drink
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {hotel.foodAndDrink.map((item, idx) => (
+                      <span key={idx} className="px-3 py-1 bg-gray-50 text-gray-600 rounded-full text-sm border border-gray-100">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-8 border-b border-gray-100">
+              {/* Hotel Rules */}
+              {hotel.hotelRules && hotel.hotelRules.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-primary" />
+                    Hotel Rules - Policies
+                  </h3>
+                  <div className="space-y-3">
+                    {hotel.hotelRules.map((rule, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-sm text-gray-600">
+                        <div className="w-1.5 h-1.5 rounded-full bg-gray-300 mt-1.5 flex-shrink-0" />
+                        {rule}
+                      </div>
+                    ))}
+                    <div className="flex gap-6 mt-4 pt-4 border-t border-gray-50">
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Check In</p>
+                        <p className="text-sm font-bold text-gray-700">{hotel.checkInTime || '12:00 PM'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Check Out</p>
+                        <p className="text-sm font-bold text-gray-700">{hotel.checkOutTime || '11:00 AM'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Property Type & Location Info */}
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  Property Info
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-50">
+                    <span className="text-sm text-gray-500">Property Type</span>
+                    <span className="text-sm font-bold text-gray-700">{hotel.propertyType || 'Hotel'}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-50">
+                    <span className="text-sm text-gray-500">Location</span>
+                    <span className="text-sm font-bold text-gray-700">{getLocalizedText(hotel, 'address', language)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Select Your Room Section */}
              <div id="select-room">
-               <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">{t('hotel.selectRoom')}</h2>
+               <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">
+                 {ticketSelection?.type === 'vip' ? 'Your Included VIP Room' : t('hotel.selectRoom')}
+               </h2>
               
               <div className="space-y-4">
-                {(hotel.rooms || []).map((room) => {
-                  const isSelected = selectedRoom?.id === room.id;
+                {(hotel.rooms || [])
+                  .filter(room => {
+                    if (ticketSelection?.type === 'vip') {
+                      // If VIP, only show the 'vip' tier room or the first one if no tier is specified
+                      return room.tier === 'vip' || (!hotel.rooms.some((r: any) => r.tier === 'vip') && hotel.rooms.indexOf(room) === 0);
+                    }
+                    return true;
+                  })
+                  .map((room) => {
+                  const isSelected = selectedRoom?.id === room.id || (ticketSelection?.type === 'vip');
                   const remainingRooms = room.remaining ?? room.availability ?? 0;
                   const isSoldOut = remainingRooms <= 0;
                   return (
                     <div 
                       key={room.id}
-                      onClick={() => handleSelectRoom(room)}
+                      onClick={ticketSelection?.type === 'vip' ? undefined : () => handleSelectRoom(room)}
                       className={`bg-gray-50 rounded-2xl p-6 border-2 transition-all ${
-                        isSoldOut
-                          ? 'cursor-not-allowed border-red-100 opacity-70'
-                          : isSelected
-                            ? 'cursor-pointer border-primary bg-primary/5'
-                            : 'cursor-pointer border-transparent hover:border-gray-200'
+                        ticketSelection?.type === 'vip'
+                          ? 'border-amber-200 bg-amber-50/30 shadow-sm'
+                          : isSoldOut
+                            ? 'cursor-not-allowed border-red-100 opacity-70'
+                            : isSelected
+                              ? 'cursor-pointer border-primary bg-primary/5'
+                              : 'cursor-pointer border-transparent hover:border-gray-200'
                       }`}
                     >
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -401,25 +517,37 @@ export default function HotelDetailPage() {
                         </div>
                         <div className="md:col-span-1 flex flex-col justify-between items-end">
                           <div className="text-right">
-                            <div className="text-2xl font-bold text-primary">${room.pricePerNight}</div>
-                            <div className="text-sm text-gray-500">/night</div>
+                            <div className="text-2xl font-bold text-primary">
+                              {ticketSelection?.type === 'vip' ? 'Included' : `${festival?.pricing?.currency || festival?.currency || 'ETB'} ${room.pricePerNight}`}
+                            </div>
+                            {ticketSelection?.type !== 'vip' && <div className="text-sm text-gray-500">/night</div>}
+                            {ticketSelection?.type === 'vip' && (
+                              <div className="flex items-center justify-end gap-1.5 text-amber-600 font-bold mt-1">
+                                <Star className="w-3 h-3 fill-amber-600" />
+                                <span className="text-xs uppercase tracking-widest">VIP Pass</span>
+                              </div>
+                            )}
                           </div>
-                          {isSoldOut ? (
-                            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-2">
-                              Sold out
-                            </span>
-                          ) : remainingRooms <= 3 ? (
-                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full mt-2">
-                              Only {remainingRooms} left
-                            </span>
-                          ) : (
-                            <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full mt-2">
-                              {remainingRooms} rooms available
-                            </span>
+                          {ticketSelection?.type !== 'vip' && (
+                            isSoldOut ? (
+                              <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-2">
+                                Sold out
+                              </span>
+                            ) : remainingRooms <= 3 ? (
+                              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full mt-2">
+                                Only {remainingRooms} left
+                              </span>
+                            ) : (
+                              <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full mt-2">
+                                {remainingRooms} rooms available
+                              </span>
+                            )
                           )}
                           {isSelected && (
-                            <span className="flex items-center justify-center gap-2 mt-2 py-2 px-4 bg-primary text-white rounded-xl text-sm font-medium">
-                              <Check className="w-4 h-4" /> Selected
+                            <span className={`flex items-center justify-center gap-2 mt-2 py-2 px-4 rounded-xl text-sm font-medium ${
+                              ticketSelection?.type === 'vip' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-primary text-white'
+                            }`}>
+                              <Check className="w-4 h-4" /> {ticketSelection?.type === 'vip' ? 'Package Included' : 'Selected'}
                             </span>
                           )}
                         </div>
@@ -446,7 +574,9 @@ export default function HotelDetailPage() {
                       <div key={idx} className="p-4 bg-white rounded-xl border border-gray-100">
                         <h3 className="font-bold text-gray-900">{service.name}</h3>
                         {service.description && <p className="text-sm text-gray-500 mt-1">{service.description}</p>}
-                        <p className="text-lg font-bold text-primary mt-2">${service.price}</p>
+                        <p className="text-lg font-bold text-primary mt-2">
+                          {festival?.pricing?.currency || festival?.currency || 'ETB'} {service.price}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -524,11 +654,11 @@ export default function HotelDetailPage() {
                 </Button>
                 <Button
                   className={`w-full py-3 ${validationErrors.length > 0 ? 'mt-4' : ''}`}
-                  onClick={() => handleContinue('tickets')}
+                  onClick={() => handleContinue('checkout')}
                   disabled={!selectedRoom}
                   variant="outline"
                 >
-                  Continue Without Transport
+                  Continue to Checkout
                 </Button>
               </div>
             </div>
@@ -687,170 +817,160 @@ export default function HotelDetailPage() {
 
           {/* Sidebar - Booking Widget */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sticky top-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Check In</span>
-                  <button 
-                    onClick={() => { setShowDatePicker(!showDatePicker); setShowGuestSelector(false); }}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    <Calendar className="w-4 h-4 text-gray-500" />
-                    <span className="font-medium text-sm">{formatShortDate(checkIn)}</span>
-                    <ChevronDown className="w-4 h-4 text-gray-400" />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Check Out</span>
-                  <button 
-                    onClick={() => { setShowDatePicker(!showDatePicker); setShowGuestSelector(false); }}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    <Calendar className="w-4 h-4 text-gray-500" />
-                    <span className="font-medium text-sm">{formatShortDate(checkOut)}</span>
-                    <ChevronDown className="w-4 h-4 text-gray-400" />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Guests</span>
-                  <button 
-                    onClick={() => { setShowGuestSelector(!showGuestSelector); setShowDatePicker(false); }}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    <Users className="w-4 h-4 text-gray-500" />
-                    <span className="font-medium text-sm">{guests} Adult{guests !== 1 ? 's' : ''}</span>
-                    <ChevronDown className="w-4 h-4 text-gray-400" />
-                  </button>
-                </div>
-
-                {showDatePicker && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded-xl">
-                    <p className="text-sm text-gray-500 mb-2">Select dates</p>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Check In</p>
-                        <input 
-                          type="date" 
-                          className="w-full p-2 border rounded-lg text-sm"
-                          min={new Date().toISOString().split('T')[0]}
-                          onChange={(e) => setCheckIn(e.target.value ? new Date(e.target.value) : null)}
-                        />
+            <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 p-8 sticky top-28">
+              {ticketSelection?.type === 'vip' ? (
+                <div className="space-y-6">
+                  <div className="bg-amber-50 rounded-2xl p-6 border border-amber-100">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-amber-500 rounded-lg">
+                        <Star className="w-5 h-5 text-white fill-white" />
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Check Out</p>
-                        <input 
-                          type="date" 
-                          className="w-full p-2 border rounded-lg text-sm"
-                          min={checkIn ? new Date(checkIn).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
-                          onChange={(e) => setCheckOut(e.target.value ? new Date(e.target.value) : null)}
-                        />
-                      </div>
+                      <h3 className="font-bold text-amber-900">VIP Package</h3>
+                    </div>
+                    <p className="text-sm text-amber-800 leading-relaxed mb-4">
+                      Your stay at {hotel.name} is fully included in your VIP pass. No additional selection or dates are required.
+                    </p>
+                    <div className="flex items-center gap-2 text-xs font-black text-amber-600 uppercase tracking-widest">
+                      <Check className="w-4 h-4" /> All-Inclusive Stay
                     </div>
                   </div>
-                )}
-
-                {showGuestSelector && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded-xl">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <p className="font-medium text-sm">Adults</p>
-                        <p className="text-xs text-gray-500">Age 13+</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <button 
-                          onClick={() => {
-                            setGuestSelectionConfirmed(true);
-                            setGuests(Math.max(0, guests - 1));
-                          }}
-                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center"
-                        >
-                          <Minus className="w-4 h-4" />
-                        </button>
-                        <span className="w-6 text-center font-medium">{guests}</span>
-                        <button 
-                          onClick={() => {
-                            setGuestSelectionConfirmed(true);
-                            setGuests(Math.min(10, guests + 1));
-                          }}
-                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <Button className="w-full py-3" onClick={() => {
-                  document.getElementById('select-room')?.scrollIntoView({ behavior: 'smooth' });
-                }}>
-                  Check Availability
-                </Button>
-              </div>
-
-              <div className="mt-6 pt-6 border-t border-gray-100">
-                {selectedRoom ? (
-                  <div className="bg-primary/5 rounded-xl p-4 mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wider">Room</p>
-                        <p className="font-bold text-primary">{selectedRoom.name}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xl font-bold text-primary">${selectedRoom.pricePerNight}</p>
-                        <p className="text-xs text-gray-500">/night</p>
-                      </div>
-                    </div>
-                    {selectedFoodPackages.length > 0 && (
-                      <div className="border-t border-primary/10 pt-2 mt-2">
-                        <p className="text-xs text-gray-500">Food Packages:</p>
-                        {selectedFoodPackages.map((pkg, idx) => (
-                          <div key={idx} className="flex justify-between text-sm">
-                            <span className="text-gray-600">{pkg.name}</span>
-                            <span className="font-medium">${pkg.pricePerPerson * guests}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="bg-gray-50 rounded-xl p-4 mb-4 text-center">
-                    <p className="text-sm text-gray-500">Select a room below to book</p>
-                  </div>
-                )}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-2xl font-bold text-primary">
-                      ${selectedRoom?.pricePerNight || hotel.rooms?.[0]?.pricePerNight || 0}
-                    </span>
-                    <span className="text-gray-500 text-sm"> /night</span>
-                  </div>
-                  <div className="text-right text-sm text-gray-500">
-                    {selectedRoom?.remaining ?? selectedRoom?.availability ?? hotel.rooms?.[0]?.remaining ?? hotel.rooms?.[0]?.availability ?? 0} rooms left
+                  
+                  <div className="pt-6 border-t border-gray-100">
+                    <Button 
+                      className="w-full py-6 rounded-2xl shadow-lg shadow-primary/20"
+                      onClick={() => handleContinue('transport')}
+                    >
+                      Continue to Transport
+                    </Button>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Check In</span>
+                    <button 
+                      onClick={() => { setShowDatePicker(!showDatePicker); setShowGuestSelector(false); }}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      <Calendar className="w-4 h-4 text-gray-500" />
+                      <span className="font-medium text-sm">{formatShortDate(checkIn)}</span>
+                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                    </button>
+                  </div>
 
-              <div className="space-y-3">
-                {renderValidationNotice()}
-                <Button 
-                  className={`w-full py-3 ${validationErrors.length > 0 ? 'mt-4' : ''}`}
-                  onClick={() => handleContinue('transport')}
-                  disabled={!selectedRoom}
-                >
-                  {selectedRoom ? 'Continue to Transport' : 'Select a Room'}
-                </Button>
-                <Button
-                  className="w-full py-3"
-                  onClick={() => handleContinue('tickets')}
-                  disabled={!selectedRoom}
-                  variant="outline"
-                >
-                  Continue Without Transport
-                </Button>
-              </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Check Out</span>
+                    <button 
+                      onClick={() => { setShowDatePicker(!showDatePicker); }}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      <Calendar className="w-4 h-4 text-gray-500" />
+                      <span className="font-medium text-sm">{formatShortDate(checkOut)}</span>
+                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                    </button>
+                  </div>
+
+                  {showDatePicker && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded-xl">
+                      <p className="text-sm text-gray-500 mb-2">Select dates</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Check In</p>
+                          <input 
+                            type="date" 
+                            className="w-full p-2 border rounded-lg text-sm"
+                            min={new Date().toISOString().split('T')[0]}
+                            onChange={(e) => setCheckIn(e.target.value ? new Date(e.target.value) : null)}
+                          />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Check Out</p>
+                          <input 
+                            type="date" 
+                            className="w-full p-2 border rounded-lg text-sm"
+                            min={checkIn ? new Date(checkIn).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                            onChange={(e) => setCheckOut(e.target.value ? new Date(e.target.value) : null)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <Button className="w-full py-3" onClick={() => {
+                    document.getElementById('select-room')?.scrollIntoView({ behavior: 'smooth' });
+                  }}>
+                    Check Availability
+                  </Button>
+                </div>
+              )}
+
+              {ticketSelection?.type !== 'vip' && (
+                <div className="mt-6 pt-6 border-t border-gray-100">
+                  {selectedRoom ? (
+                    <div className="bg-primary/5 rounded-xl p-4 mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wider">Room</p>
+                          <p className="font-bold text-primary">{selectedRoom.name}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-bold text-primary">
+                            {festival?.pricing?.currency || festival?.currency || 'ETB'} {selectedRoom.pricePerNight}
+                          </p>
+                          <p className="text-xs text-gray-500">/night</p>
+                        </div>
+                      </div>
+                      {selectedFoodPackages.length > 0 && (
+                        <div className="border-t border-primary/10 pt-2 mt-2">
+                          <p className="text-xs text-gray-500">Food Packages:</p>
+                          {selectedFoodPackages.map((pkg, idx) => (
+                            <div key={idx} className="flex justify-between text-sm">
+                              <span className="text-gray-600">{pkg.name}</span>
+                              <span className="font-medium">{festival?.pricing?.currency || festival?.currency || 'ETB'} {pkg.pricePerPerson * guests}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 rounded-xl p-4 mb-4 text-center">
+                      <p className="text-sm text-gray-500">Select a room below to book</p>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-2xl font-bold text-primary">
+                        {`${festival?.pricing?.currency || festival?.currency || 'ETB'} ${selectedRoom?.pricePerNight || hotel.rooms?.[0]?.pricePerNight || 0}`}
+                      </span>
+                      <span className="text-gray-500 text-sm"> /night</span>
+                    </div>
+                    <div className="text-right text-sm text-gray-500">
+                      {selectedRoom?.remaining ?? selectedRoom?.availability ?? hotel.rooms?.[0]?.remaining ?? hotel.rooms?.[0]?.availability ?? 0} rooms left
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {ticketSelection?.type !== 'vip' && (
+                <div className="space-y-3">
+                  {renderValidationNotice()}
+                  <Button 
+                    className={`w-full py-3 ${validationErrors.length > 0 ? 'mt-4' : ''}`}
+                    onClick={() => handleContinue('transport')}
+                    disabled={!selectedRoom}
+                  >
+                    {selectedRoom ? 'Continue to Transport' : 'Select a Room'}
+                  </Button>
+                  <Button
+                    className="w-full py-3"
+                    onClick={() => handleContinue('checkout')}
+                    disabled={!selectedRoom}
+                    variant="outline"
+                  >
+                    Continue to Checkout
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>

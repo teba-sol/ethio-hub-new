@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { HeroVideo } from '@/components/HeroVideo';
+import { EthiopiaMap } from '@/components/EthiopiaMap';
+import { TouristGallery } from '@/components/TouristGallery';
 import type { Festival } from '../types';
 
 const formatDate = (dateStr: string) => {
@@ -385,6 +387,9 @@ export const Homepage: React.FC = () => {
             </div>
           </div>
       </section>
+
+      {/* Interactive Ethiopia Map Section */}
+      <EthiopiaMap />
 
       {/* UNESCO World Heritage & Festival Events Section */}
       <section className="py-16 md:py-20 bg-gray-50">
@@ -821,6 +826,9 @@ export const Homepage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Tourist Experience Gallery */}
+      <TouristGallery />
     </main>
   );
 };

@@ -8,6 +8,15 @@ import { isFestivalCompleteForReview } from '../../../../../lib/reviewAutomation
 import { queueAdminReviewEmail } from '../../../../../lib/adminApproval';
 import User from '../../../../../models/User';
 
+import { 
+  normalizeSchedule, 
+  normalizeHotels, 
+  normalizeTransportation, 
+  normalizeServices, 
+  normalizePolicies,
+  normalizeTicketTypes
+} from '../../../../../lib/festivalNormalization';
+
 export async function GET(request: NextRequest) {
   let id: string | undefined;
   try {
@@ -82,71 +91,57 @@ export async function PUT(request: NextRequest) {
 
     const isApprovedEvent = existingFestival.verificationStatus === 'Approved';
     
-    let normalUpdate = { ...body };
+    // Normalize data before update
+    const isDraft = body.verificationStatus === 'Draft' || !body.verificationStatus;
+    const normalizedHotels = normalizeHotels(body.hotels, isDraft);
+    const normalizedTransportation = normalizeTransportation(body.transportation, isDraft);
+    const normalizedSchedule = normalizeSchedule(body.schedule, isDraft);
+    const normalizedServices = normalizeServices(body.services, isDraft);
+    const normalizedPolicies = normalizePolicies(body.policies);
 
-    if (Array.isArray(normalUpdate.hotels)) {
-      normalUpdate.hotels = normalUpdate.hotels.map((hotel: any) => ({
-        ...hotel,
-        rooms: (hotel.rooms || []).map((room: any) => {
-          const { initialAvailability, bookedCount, remaining, isSoldOut, ...cleanRoom } = room;
-          return cleanRoom;
-        }),
-      }));
-    }
+    let normalUpdate = { 
+      ...body,
+      hotels: normalizedHotels,
+      transportation: normalizedTransportation,
+      schedule: normalizedSchedule,
+      services: normalizedServices,
+      policies: normalizedPolicies,
+      ticketTypes: normalizeTicketTypes(body.ticketTypes, isDraft)
+    };
 
-    if (Array.isArray(normalUpdate.transportation)) {
-      normalUpdate.transportation = normalUpdate.transportation.map((transport: any) => {
-        const { initialAvailability, bookedCount, remaining, isSoldOut, ...cleanTransport } = transport;
-        return cleanTransport;
-      });
-    }
+    // Use Object.assign to update existing festival and then save it.
+    // This is much safer than findByIdAndUpdate for nested arrays/objects.
+    Object.assign(existingFestival, normalUpdate);
 
     if (isApprovedEvent) {
-      normalUpdate.lastEditedAt = new Date();
-      const newVersion = (existingFestival.changesVersion || 0) + 1;
-      
-      await Festival.collection.updateOne(
-        { _id: existingFestival._id },
-        {
-          $set: {
-            lastEditedAt: new Date(),
-            changesVersion: newVersion,
-            verificationStatus: 'Draft',
-            status: 'Draft',
-            isVerified: false,
-            isEditedAfterApproval: true
-          }
-        }
-      );
+      existingFestival.lastEditedAt = new Date();
+      existingFestival.changesVersion = (existingFestival.changesVersion || 0) + 1;
+      existingFestival.verificationStatus = 'Draft';
+      existingFestival.status = 'Draft';
+      existingFestival.isVerified = false;
+      existingFestival.isEditedAfterApproval = true;
     }
 
-    const updatedFestival = await Festival.findOneAndUpdate(
-      { _id: id, organizer: organizerId },
-      isApprovedEvent ? { $set: normalUpdate } : { $set: normalUpdate },
-      { new: true }
-    );
-
-    const finalFestival = await Festival.findById(id);
     if (
-      finalFestival &&
-      finalFestival.verificationStatus === 'Draft' &&
-      isFestivalCompleteForReview(finalFestival)
+      existingFestival.verificationStatus === 'Draft' &&
+      isFestivalCompleteForReview(existingFestival)
     ) {
-      finalFestival.verificationStatus = 'Pending Approval';
-      finalFestival.submittedAt = new Date();
-      await finalFestival.save();
+      existingFestival.verificationStatus = 'Pending Approval';
+      existingFestival.submittedAt = new Date();
 
       const organizer = await User.findById(organizerId).select('name email');
       await queueAdminReviewEmail({
         subjectType: 'event',
-        subjectId: finalFestival._id.toString(),
-        subjectLabel: finalFestival.name || 'Festival',
+        subjectId: existingFestival._id.toString(),
+        subjectLabel: existingFestival.name || 'Festival',
         submittedByEmail: organizer?.email || 'unknown@unknown.local',
         submittedByName: organizer?.name || 'Organizer',
       }).catch(() => null);
     }
 
-    return new NextResponse(JSON.stringify({ success: true, festival: finalFestival }), { status: 200 });
+    const updatedFestival = await existingFestival.save();
+
+    return new NextResponse(JSON.stringify({ success: true, festival: updatedFestival }), { status: 200 });
 
   } catch (error: any) {
     console.error(`Error updating festival by ID: ${id}`, error);

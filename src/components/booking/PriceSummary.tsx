@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useBooking } from '@/context/BookingContext';
-import { Check, X } from 'lucide-react';
+import { Check, X, Info, Tag, CreditCard } from 'lucide-react';
 
 interface PriceSummaryProps {
   eventId: string;
@@ -32,112 +32,84 @@ export const PriceSummary: React.FC<PriceSummaryProps> = ({ eventId }) => {
     : 0;
   
   const grandTotal = getGrandTotal();
-  const foodPackageTotal = getFoodPackageTotal();
-  const serviceFee = !ticketSelection ? 0 : Math.round(getTicketTotal() * 0.05 * 100) / 100;
+  const currency = 'ETB';
   
+  if (!ticketSelection) return null;
+
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="bg-gray-50 px-6 py-4 border-b border-gray-100">
-        <h3 className="text-lg font-bold text-primary">Price Summary</h3>
+    <div className="bg-primary rounded-[40px] p-8 text-white shadow-2xl shadow-primary/20 relative overflow-hidden group">
+      {/* Background Decor */}
+      <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:rotate-12 transition-transform duration-700">
+         <CreditCard className="w-32 h-32" />
       </div>
-      
-      <div className="p-6 space-y-4">
-        {/* Tickets */}
-        {ticketSelection ? (
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="font-medium text-gray-900">
-                {ticketSelection.type.toUpperCase()} Tickets
-              </p>
-              <p className="text-sm text-gray-500">
-                {ticketSelection.quantity} × ${ticketSelection.price}
-              </p>
-            </div>
-            <span className="font-bold text-primary">${getTicketTotal()}</span>
-          </div>
-        ) : (
-          <div className="text-sm text-gray-400">Select tickets to continue</div>
-        )}
+
+      <div className="relative z-10 space-y-8">
+        <div className="flex justify-between items-center border-b border-white/10 pb-6">
+          <h3 className="text-xl font-serif font-black tracking-tight">Order Summary</h3>
+          <span className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest">
+            {ticketSelection.type} Pass
+          </span>
+        </div>
         
-        {/* Hotel */}
-        {selectedRoom ? (
-          <div className="space-y-2">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="font-medium text-gray-900">
-                  {selectedHotel?.name || selectedRoom.name || 'Selected Hotel'}
-                </p>
-                <p className="text-sm text-gray-500">
-                  {guests > 0 ? `${guests} guest${guests > 1 ? 's' : ''} × ` : ''}{hotelNights > 0 ? `${hotelNights} night${hotelNights > 1 ? 's' : ''} × ` : ''}${selectedRoom.pricePerNight}/night
-                </p>
-              </div>
-              <span className="font-bold text-primary">
-                ${checkIn && checkOut ? selectedRoom.pricePerNight * hotelNights * guests : selectedRoom.pricePerNight}
-              </span>
+        <div className="space-y-6">
+          {/* Tickets */}
+          <div className="flex justify-between items-start">
+            <div className="space-y-1">
+              <p className="font-bold text-sm uppercase tracking-wider text-white/80">Tickets</p>
+              <p className="text-lg font-black">{ticketSelection.quantity} × {ticketSelection.type.toUpperCase()}</p>
             </div>
-            
-            {/* Food Packages */}
-            {selectedFoodPackages.length > 0 && (
-              <div className="bg-primary/5 p-3 rounded-lg space-y-2">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Food Packages</p>
-                {selectedFoodPackages.map((pkg, idx) => (
-                  <div key={idx} className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">{pkg.name} ({guests} × ${pkg.pricePerPerson})</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-primary">${pkg.pricePerPerson * guests}</span>
-                      <button 
-                        onClick={() => removeFoodPackage(pkg.id)}
-                        className="text-gray-400 hover:text-red-500"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
+            <span className="text-lg font-black">{currency} {getTicketTotal().toLocaleString()}</span>
+          </div>
+          
+          {/* Hotel & Transport (if VIP or selected) */}
+          {(selectedRoom || ticketSelection.type === 'vip') && (
+            <div className="pt-6 border-t border-white/10 space-y-4">
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                  <p className="font-bold text-sm uppercase tracking-wider text-white/80">Stay & Travel</p>
+                  <p className="text-xs font-medium text-white/60">
+                    {ticketSelection.type === 'vip' ? 'VIP All-Inclusive' : (selectedHotel?.name || 'Selected Stay')}
+                  </p>
+                </div>
+                <span className="text-lg font-black">
+                  {ticketSelection.type === 'vip' ? 'INCLUDED' : `${currency} ${(getHotelTotal() + getTransportTotal()).toLocaleString()}`}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Food Packages */}
+          {selectedFoodPackages.length > 0 && (
+            <div className="pt-6 border-t border-white/10 space-y-3">
+              <p className="font-bold text-sm uppercase tracking-wider text-white/80">Dining</p>
+              {selectedFoodPackages.map((pkg, idx) => (
+                <div key={idx} className="flex justify-between items-center text-sm">
+                  <span className="text-white/70">{pkg.name} ({guests} guests)</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black">{currency} {(pkg.pricePerPerson * guests).toLocaleString()}</span>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-sm text-gray-400">Select hotel to continue</div>
-        )}
-        
-        {/* Transport */}
-        {selectedTransport ? (
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="font-medium text-gray-900">
-                {selectedTransport.type || 'Selected Transport'}
-              </p>
-              <p className="text-sm text-gray-500">
-                {transportDays} day{transportDays > 1 ? 's' : ''} × ${selectedTransport.price}
-              </p>
+                </div>
+              ))}
             </div>
-            <span className="font-bold text-primary">${getTransportTotal()}</span>
-          </div>
-        ) : (
-          <div className="text-sm text-gray-400">Optional transport</div>
-        )}
-        
-        {/* Service Fee */}
-        {serviceFee > 0 && (
-          <div className="flex justify-between text-sm text-green-600">
-            <span>Service Fee (5%)</span>
-            <span>+${serviceFee.toFixed(2)}</span>
-          </div>
-        )}
-        
-        {/* Divider */}
-        <div className="border-t border-gray-200 pt-4">
-          <div className="flex justify-between items-center">
-            <span className="text-lg font-bold text-gray-900">Total</span>
-            <span className="text-2xl font-bold text-primary">${grandTotal.toFixed(2)}</span>
-          </div>
-          {serviceFee > 0 && (
-            <p className="text-xs text-gray-400 mt-1">Includes 5% service fee</p>
           )}
         </div>
+        
+        {/* Grand Total */}
+        <div className="pt-8 border-t-2 border-dashed border-white/20">
+          <div className="flex justify-between items-end">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60 mb-1">Estimated Total</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black">{currency}</span>
+                <span className="text-5xl font-black tracking-tighter">{grandTotal.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+          <p className="text-[10px] text-white/40 mt-6 flex items-center gap-2">
+            <Info className="w-3 h-3" /> All taxes and service fees included
+          </p>
+        </div>
       </div>
-      
     </div>
   );
 };

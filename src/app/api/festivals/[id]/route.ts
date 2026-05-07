@@ -13,7 +13,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     await connectDB();
 
-    const festival = await Festival.findById(id).populate('organizer', 'name email');
+    const festival = await Festival.findById(id).populate('organizer', 'name email').lean();
     console.log('Festival found:', festival ? 'yes' : 'no');
     console.log('Festival _id:', festival?._id);
     console.log('Festival status:', festival?.status);

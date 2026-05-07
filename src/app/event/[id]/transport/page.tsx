@@ -3,24 +3,36 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Car, Users, TrendingUp, AlertCircle, Maximize2 } from 'lucide-react';
+import { 
+  ArrowLeft, Car, Users, TrendingUp, AlertCircle, Maximize2, 
+  Check, ShieldCheck, Clock, Info, Fuel, Settings2
+} from 'lucide-react';
 import { useBooking } from '@/context/BookingContext';
 import apiClient from '@/lib/apiClient';
 import { Festival, TransportOption } from '@/types';
 import { useLanguage } from '@/context/LanguageContext';
 import { getLocalizedText } from '@/utils/getLocalizedText';
+import { Button } from '@/components/UI';
 
 export default function TransportPage() {
   const params = useParams();
   const router = useRouter();
   const eventId = params?.id as string;
 
-  const { selectedTransport, transportDays, setTransportDays } = useBooking();
+  const { 
+    selectedTransport, 
+    setSelectedTransport, 
+    transportDays, 
+    setTransportDays, 
+    ticketSelection,
+    getTransportTotal
+  } = useBooking();
   const { language, t } = useLanguage();
 
   const [festival, setFestival] = useState<Festival | null>(null);
   const [transports, setTransports] = useState<TransportOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [wantsTransport, setWantsTransport] = useState<boolean | null>(ticketSelection?.type === 'vip' ? true : null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -33,10 +45,23 @@ export default function TransportPage() {
         const festivalData = festRes?.festival || festRes;
         if (festivalData) setFestival(festivalData);
 
-        const mapped = ((availabilityRes?.transportation || festivalData?.transportation) || []).map((t: any, idx: number) => ({
-          ...t,
-          id: t._id || t.id || `transport-${idx}`,
-        }));
+        const tier = ticketSelection?.type === 'vip' ? 'vip' : 'standard';
+        const vipIncludedTransport = (festivalData as any)?.pricing?.vipIncludedTransport || [];
+
+        const mapped = ((availabilityRes?.transportation || festivalData?.transportation) || []).map((t: any, idx: number) => {
+          const currentAvailable = typeof t.available === 'number' ? t.available : (Number(t.availability) || 0);
+          return {
+            ...t,
+            id: t._id || t.id || `transport-${idx}`,
+            remaining: currentAvailable,
+          };
+        }).filter((t: any) => {
+          // If VIP, only show included transport if specified
+          if (tier === 'vip' && vipIncludedTransport.length > 0) {
+            return vipIncludedTransport.includes(t.id);
+          }
+          return true;
+        });
         setTransports(mapped);
       } catch (e) {
         console.error('Error:', e);
@@ -48,245 +73,343 @@ export default function TransportPage() {
     fetchData();
   }, [eventId]);
 
-  const handleContinue = () => router.push(`/event/${eventId}/tickets`);
+  const handleContinue = () => router.push(`/event/${eventId}/checkout`);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-ethio-bg flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-gray-500 font-medium">Finding available transport...</p>
+        </div>
       </div>
     );
   }
 
+  const currency = festival?.pricing?.currency || festival?.currency || 'ETB';
   const currentTransport = selectedTransport && transports.find((t) => t.id === selectedTransport.id);
-  const firstTransport = transports[0];
-  const displayedRemaining =
-    currentTransport?.remaining ??
-    currentTransport?.availability ??
-    firstTransport?.remaining ??
-    firstTransport?.availability;
+
+  if (wantsTransport === null && ticketSelection?.type !== 'vip') {
+    return (
+      <div className="min-h-screen bg-gray-50/50 flex items-center justify-center p-6">
+        <div className="max-w-xl w-full bg-white rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
+          <div className="p-10 text-center">
+            <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-8">
+              <Car className="w-10 h-10 text-primary" />
+            </div>
+            <h1 className="text-3xl font-serif font-black text-gray-900 mb-4">Add Transport?</h1>
+            <p className="text-gray-500 text-lg leading-relaxed mb-10">
+              Need a ride? Add a private car or shuttle service for an extra fee.
+            </p>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <button
+                onClick={() => setWantsTransport(true)}
+                className="group p-6 rounded-2xl border-2 border-primary bg-primary/5 hover:bg-primary transition-all text-left"
+              >
+                <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center mb-4 group-hover:bg-white/20">
+                  <Car className="w-5 h-5 text-white" />
+                </div>
+                <h3 className="font-bold text-primary group-hover:text-white mb-1">Yes, I need one</h3>
+                <p className="text-xs text-primary/60 group-hover:text-white/60 font-medium">Extra fees apply per day</p>
+              </button>
+
+              <button
+                onClick={() => {
+                  setSelectedTransport(null);
+                  router.push(`/event/${eventId}/checkout`);
+                }}
+                className="group p-6 rounded-2xl border-2 border-gray-100 bg-white hover:border-gray-200 transition-all text-left"
+              >
+                <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-gray-100">
+                  <ArrowLeft className="w-5 h-5 text-gray-400 rotate-180" />
+                </div>
+                <h3 className="font-bold text-gray-900 mb-1">No, skip this</h3>
+                <p className="text-xs text-gray-400 font-medium italic">Continue to checkout</p>
+              </button>
+            </div>
+
+            <div className="mt-10 pt-8 border-t border-gray-50 flex items-center justify-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest">
+              <ShieldCheck className="w-4 h-4 text-emerald-500" /> Secure Booking Experience
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-ethio-bg">
-         <div className="bg-white border-b border-gray-100">
-           <div className="max-w-7xl mx-auto px-6 py-4">
-             <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-500 hover:text-primary">
-               <ArrowLeft className="w-4 h-4" />
-               <span>{t('common.back')}</span>
-             </button>
-           </div>
-         </div>
+    <div className="min-h-screen bg-gray-50/50">
+      {/* Sticky Navigation */}
+      <div className="bg-white border-b border-gray-100 sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <button 
+            onClick={() => router.push(`/event/${eventId}/hotels`)} 
+            className="flex items-center gap-2 text-gray-500 hover:text-primary transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm font-medium">Back to Accommodation</span>
+          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Step 3 of 4</span>
+            <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="w-3/4 h-full bg-primary rounded-full" />
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="mb-12">
-          <h1 className="text-4xl font-serif font-bold text-primary mb-4">{t('festival.selectTransport')}</h1>
-          <p className="text-gray-500 text-lg">{t('festival.chooseTransport')}</p>
+        <div className="max-w-3xl mb-12">
+          <h1 className="text-4xl md:text-5xl font-serif font-black text-gray-900 mb-4">
+            Select Your Transport
+          </h1>
+          <p className="text-gray-500 text-lg leading-relaxed">
+            Choose a vehicle that fits your group and comfort needs. 
+            VIP tickets include selected transport options at no extra cost.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-             {transports.length === 0 ? (
-               <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 md:col-span-2">
-                 <h3 className="text-xl font-bold text-gray-700 mb-2">{t('transport.noTransportAvailable')}</h3>
-                 <p className="text-gray-500 mb-4">{t('transport.noTransportOptions')}</p>
-                 <button
-                   onClick={() => router.push(`/event/${eventId}/tickets`)}
-                   className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-primary/90"
-                 >
-                   {t('festival.continueToCheckout')}
-                 </button>
-               </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          {/* Main List */}
+          <div className="lg:col-span-2 space-y-6">
+            {transports.length === 0 ? (
+              <div className="bg-white rounded-3xl p-16 text-center border border-dashed border-gray-200">
+                <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Car className="w-10 h-10 text-gray-300" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No Transport Available</h3>
+                <p className="text-gray-500 mb-8 max-w-sm mx-auto">
+                  The organizer hasn't listed any transport options for this event yet.
+                </p>
+                <Button onClick={handleContinue}>Continue to Checkout</Button>
+              </div>
             ) : (
               transports.map((transport) => {
-                const remainingUnits = transport.remaining ?? transport.availability ?? 0;
+                const remainingUnits = transport.remaining ?? 0;
                 const isSoldOut = remainingUnits <= 0;
-                const isLowStock = remainingUnits > 0 && remainingUnits <= 3;
+                const isSelected = selectedTransport?.id === transport.id;
+                const isVipFree = ticketSelection?.type === 'vip' && transport.vipIncluded;
 
                 return (
-                  <Link
+                  <div
                     key={transport.id}
-                    href={`/event/${eventId}/transport/${transport.id}`}
-                    className={`block h-full bg-white rounded-2xl overflow-hidden border transition-all ${
-                      isSoldOut
-                        ? 'border-red-100 opacity-80'
-                        : selectedTransport?.id === transport.id
-                          ? 'border-primary shadow-lg hover:border-primary'
-                          : 'border-gray-100 hover:border-gray-200 hover:shadow-lg'
-                    }`}
+                    onClick={() => !isSoldOut && setSelectedTransport(transport)}
+                    className={`relative flex flex-col md:flex-row bg-white rounded-3xl overflow-hidden cursor-pointer transition-all duration-300 border-2 ${
+                      isSelected 
+                        ? 'border-primary ring-4 ring-primary/5 shadow-xl translate-x-1' 
+                        : 'border-transparent hover:border-gray-200 shadow-sm hover:shadow-md'
+                    } ${isSoldOut ? 'opacity-60 grayscale cursor-not-allowed' : ''}`}
                   >
-                    <div className="flex flex-col">
-                      <div className="w-full h-56 flex-shrink-0 relative group">
-                        <img
-                          src={transport.image || 'https://images.unsplash.com/photo-1449966308865-2d33e1d7a7a3?w=400&h=300&fit=crop'}
-                          alt={getLocalizedText(transport, 'type', language)}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                      <div className="flex-1 p-5">
-                        <div className="flex justify-between items-start">
+                    {/* Visual Perforation (Left) */}
+                    <div className="absolute left-[300px] top-0 bottom-0 w-px border-l-2 border-dashed border-gray-100 hidden md:block" />
+                    <div className="absolute left-[292px] -top-2 w-4 h-4 bg-gray-50 rounded-full hidden md:block" />
+                    <div className="absolute left-[292px] -bottom-2 w-4 h-4 bg-gray-50 rounded-full hidden md:block" />
+
+                    {/* Image Section */}
+                    <div className="w-full md:w-[300px] h-64 md:h-auto relative flex-shrink-0">
+                      <img
+                        src={transport.image || 'https://images.unsplash.com/photo-1449966308865-2d33e1d7a7a3?w=400&h=300&fit=crop'}
+                        alt={getLocalizedText(transport, 'type', language)}
+                        className="w-full h-full object-cover"
+                      />
+                      {isVipFree && (
+                        <div className="absolute top-4 left-4 bg-amber-500 text-white text-[10px] font-black px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 uppercase tracking-wider">
+                          <ShieldCheck className="w-3.5 h-3.5" /> Included for VIP
+                        </div>
+                      )}
+                      {isSelected && (
+                        <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
+                          <div className="bg-primary text-white p-3 rounded-full shadow-xl">
+                            <Check className="w-8 h-8" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Content Section */}
+                    <div className="flex-1 p-8 flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-start mb-4">
                           <div>
-                            <h3 className="text-lg font-bold text-primary">{getLocalizedText(transport, 'type', language)}</h3>
-                            {transport.provider && <p className="text-gray-500 text-sm">{transport.provider}</p>}
+                            <h3 className="text-2xl font-serif font-black text-gray-900">
+                              {getLocalizedText(transport, 'type', language)}
+                            </h3>
+                            <p className="text-primary font-bold text-sm">{transport.provider || 'Verified Partner'}</p>
                           </div>
-                        <div className="text-right">
-                          {transport.vipIncluded && (
-                            <span className="inline-block px-2 py-1 text-xs font-bold bg-amber-100 text-amber-800 rounded-full mb-1">VIP FREE</span>
-                          )}
-                          <span className="text-2xl font-bold text-primary">${transport.price}</span>
-                          <span className="text-gray-500 text-sm">/day</span>
-                        </div>
-                        </div>
-                        {transport.description && (
-                          <p className="mt-3 text-sm leading-relaxed text-gray-500 line-clamp-3">{getLocalizedText(transport, 'description', language)}</p>
-                        )}
-                        <div className="mt-5">
-                          <h4 className="text-sm font-bold uppercase tracking-wide text-gray-700 mb-3">{t('festival.vehicleSpecifications')}</h4>
-                          <div className="grid grid-cols-3 gap-4">
-                            <div
-                              className={`rounded-xl p-3 border ${
-                                isSoldOut
-                                  ? 'bg-red-50 border-red-100'
-                                  : isLowStock
-                                    ? 'bg-amber-50 border-amber-100'
-                                    : 'bg-emerald-50 border-emerald-100'
-                              }`}
-                            >
-                              <TrendingUp
-                                className={`w-6 h-6 mb-2 ${
-                                  isSoldOut ? 'text-red-600' : isLowStock ? 'text-amber-600' : 'text-emerald-600'
-                                }`}
-                              />
-                              <h3
-                                className={`font-bold ${
-                                  isSoldOut ? 'text-red-700' : isLowStock ? 'text-amber-700' : 'text-emerald-700'
-                                }`}
-                              >
-                                {remainingUnits}
-                              </h3>
-                               <p
-                                 className={`text-sm ${
-                                   isSoldOut ? 'text-red-700' : isLowStock ? 'text-amber-700' : 'text-emerald-700'
-                                 }`}
-                               >
-                                 {isSoldOut ? t('transport.soldOut') : isLowStock ? t('transport.limitedUnits') : t('transport.availableUnits')}
-                               </p>
-                            </div>
-                            <div className="rounded-xl bg-gray-50 p-3">
-                              <Car className="w-6 h-6 text-gray-400 mb-2" />
-                               <h3 className="font-bold text-gray-900">{getLocalizedText(transport, 'type', language)}</h3>
-                               <p className="text-sm text-gray-500">{t('transport.vehicleType')}</p>
-                            </div>
-                            <div className="rounded-xl bg-gray-50 p-3">
-                              <Users className="w-6 h-6 text-gray-400 mb-2" />
-                              <h3 className="font-bold text-gray-900">{transport.capacity || 5}</h3>
-                               <p className="text-sm text-gray-500">{t('transport.passengerCapacity')}</p>
-                            </div>
-                             <div className="rounded-xl bg-gray-50 p-3">
-                               <AlertCircle className="w-6 h-6 text-gray-400 mb-2" />
-                               <h3 className="font-bold text-gray-900">{t('transport.fuelType')}</h3>
-                               <p className="text-sm text-gray-500">{t('transport.fuelType')}</p>
-                             </div>
-                             <div className="rounded-xl bg-gray-50 p-3">
-                               <Maximize2 className="w-6 h-6 text-gray-400 mb-2" />
-                               <h3 className="font-bold text-gray-900">{t('transport.transmission')}</h3>
-                               <p className="text-sm text-gray-500">{t('transport.transmission')}</p>
-                             </div>
+                          <div className="text-right">
+                            {isVipFree ? (
+                              <span className="text-2xl font-black text-emerald-600">Included</span>
+                            ) : (
+                              <div className="flex flex-col items-end">
+                                <span className="text-2xl font-black text-gray-900">
+                                  {currency} {transport.price}
+                                </span>
+                                <span className="text-xs font-bold text-gray-400 uppercase">per day</span>
+                              </div>
+                            )}
                           </div>
                         </div>
-                        <div className="border-t border-gray-100 p-4 bg-gray-50">
-                          <span className={`font-medium ${isSoldOut ? 'text-red-600' : 'text-primary'}`}>
-                            {isSoldOut ? t('transport.soldOut') : t('transport.viewFullDetails')}
-                          </span>
+
+                        <p className="text-gray-500 text-sm leading-relaxed mb-6 line-clamp-2">
+                          {getLocalizedText(transport, 'description', language)}
+                        </p>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                              <Users className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Capacity</p>
+                              <p className="text-xs font-bold text-gray-900">{transport.capacity || 5} Seats</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                              <Fuel className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Fuel</p>
+                              <p className="text-xs font-bold text-gray-900">Standard</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                              <Settings2 className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Transmission</p>
+                              <p className="text-xs font-bold text-gray-900">Manual/Auto</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                              <TrendingUp className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Status</p>
+                              <p className={`text-xs font-bold ${remainingUnits <= 3 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                {remainingUnits} available
+                              </p>
+                            </div>
+                          </div>
                         </div>
+                      </div>
+
+                      <div className="mt-8 pt-6 border-t border-gray-50 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase tracking-wide">
+                          <ShieldCheck className="w-4 h-4" /> Comprehensive Insurance
+                        </div>
+                        <span className="text-primary font-black text-xs uppercase tracking-widest hover:underline">
+                          {isSoldOut ? 'Sold Out' : 'View Full Specs'}
+                        </span>
                       </div>
                     </div>
-                  </Link>
+                  </div>
                 );
               })
             )}
-            <button
-              onClick={() => router.push(`/event/${eventId}/tickets`)}
-              className="w-full mt-4 py-3 text-center text-gray-500 text-sm hover:text-primary md:col-span-2"
-            >
-              {t('festival.skipTransport')}
-            </button>
+            
+            <div className="pt-10 flex justify-center">
+              <button
+                onClick={() => router.push(`/event/${eventId}/checkout`)}
+                className="text-gray-400 font-bold text-sm hover:text-primary transition-colors flex items-center gap-2"
+              >
+                No transport needed? <span className="underline decoration-2 underline-offset-4">Skip this step</span>
+              </button>
+            </div>
           </div>
 
+          {/* Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sticky top-6">
-              <div className="space-y-6">
-                <div className="text-center mb-6">
-                  <p className="text-sm text-gray-500">{t('festival.startingFrom')}</p>
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-4xl font-bold text-primary">
-                      {currentTransport ? currentTransport.price : firstTransport?.price}
-                    </span>
-                    <span className="text-gray-500">{t('festival.perDay')}</span>
+            <div className="sticky top-28 space-y-6">
+              <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
+                <div className="p-8 pb-4">
+                  <h3 className="text-lg font-serif font-black text-gray-900 mb-6">Transport Summary</h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Duration</label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[1, 2, 3, 4].map((num) => (
+                          <button
+                            key={num}
+                            onClick={() => setTransportDays(num)}
+                            className={`py-3 rounded-xl font-bold text-sm transition-all ${
+                              transportDays === num 
+                                ? 'bg-primary text-white shadow-lg shadow-primary/20' 
+                                : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                            }`}
+                          >
+                            {num}d
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pt-6 border-t border-gray-50">
+                      {selectedTransport ? (
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-500 font-medium">Selected Vehicle</span>
+                            <span className="text-sm font-black text-gray-900">{getLocalizedText(selectedTransport, 'type', language)}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-500 font-medium">Daily Rate</span>
+                            <span className="text-sm font-black text-gray-900">
+                              {ticketSelection?.type === 'vip' && selectedTransport.vipIncluded 
+                                ? 'Included' 
+                                : `${currency} ${selectedTransport.price}`}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center pt-4 border-t border-gray-50">
+                            <span className="text-base font-black text-gray-900">Transport Total</span>
+                            <span className="text-2xl font-serif font-black text-primary">
+                              {getTransportTotal() === 0 ? 'Included' : `${currency} ${getTransportTotal()}`}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="py-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                          <Car className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">No vehicle selected</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-sm text-gray-500">{t('festival.availableUnits')}</p>
-                  <p
-                    className={`text-3xl font-bold ${
-                      displayedRemaining === 0
-                        ? 'text-red-600'
-                        : (displayedRemaining ?? 0) <= 3
-                          ? 'text-amber-600'
-                          : 'text-gray-900'
-                    }`}
+
+                <div className="p-8 pt-4">
+                  <Button
+                    onClick={handleContinue}
+                    className="w-full py-4 shadow-lg shadow-primary/25"
+                    disabled={!selectedTransport && transports.length > 0}
                   >
-                    {displayedRemaining ?? 'Not set'}
-                    {displayedRemaining === 0 && <span className="ml-2 text-xs bg-red-100 px-2 py-1 rounded">Sold Out</span>}
-                  </p>
-                  <div className="mt-3">
-                    {(displayedRemaining ?? 0) === 0 && (
-                      <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">
-                        {t('transport.soldOut')}
-                      </span>
-                    )}
-                    {(displayedRemaining ?? 0) > 0 && (displayedRemaining ?? 0) <= 3 && (
-                      <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
-                        {t('transport.limitedAvailability', { count: displayedRemaining ?? 0 })}
-                      </span>
-                    )}
-                    {(displayedRemaining ?? 0) > 3 && (
-                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
-                        {t('transport.availableUnitsCount', { count: displayedRemaining ?? 0 })}
-                      </span>
-                    )}
+                    {selectedTransport ? 'Continue to Checkout' : 'Select a Vehicle'}
+                  </Button>
+                  
+                  <div className="mt-6 space-y-3">
+                    <div className="flex items-center gap-3 text-xs text-gray-400 font-medium">
+                      <Clock className="w-3.5 h-3.5 text-primary" /> 24/7 Driver Support
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-gray-400 font-medium">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> GPS Tracked Fleet
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">{t('transport.numberOfDays')}</label>
-                  <select
-                    value={transportDays}
-                    onChange={(e) => setTransportDays(parseInt(e.target.value))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl"
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7].map((num) => (
-                      <option key={num} value={num}>
-                         {num} {num === 1 ? t('festival.dayLabel') : t('festival.days')}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-xl">
-                  <div className="flex justify-between items-center mb-2">
-                     <span className="text-gray-600">$ {(currentTransport?.price || firstTransport?.price) || 0} x {transportDays} {transportDays === 1 ? t('festival.dayLabel') : t('festival.days')}</span>
-                    <span className="font-bold text-gray-900">$ {(currentTransport?.price || firstTransport?.price || 0) * transportDays}</span>
+              </div>
+
+              <div className="bg-amber-50 rounded-3xl p-6 border border-amber-100">
+                <div className="flex gap-3">
+                  <Info className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold text-amber-900 mb-1">Travel Tip</p>
+                    <p className="text-xs text-amber-700 leading-relaxed">
+                      We recommend booking transport for at least 2 days to fully explore Addis Ababa during the festival.
+                    </p>
                   </div>
-                   <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                     <span className="font-medium text-gray-900">{t('common.total')}</span>
-                     <span className="text-xl font-bold text-primary">$ {(currentTransport?.price || firstTransport?.price || 0) * transportDays}</span>
-                   </div>
                 </div>
-                <button
-                  className="w-full py-3 text-center rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
-                  onClick={handleContinue}
-                >
-                  {t('common.continueToCheckout')}
-                </button>
-                <p className="text-center text-xs text-gray-500">{t('festival.freeCancellation')}</p>
               </div>
             </div>
           </div>

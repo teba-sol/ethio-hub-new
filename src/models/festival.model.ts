@@ -278,7 +278,6 @@ const FestivalSchema: Schema = new Schema(
     name_am: { type: String, required: true },
     type: {
       type: String,
-      enum: ['Religious', 'CulturalTraditional', 'NationalPublicHolidays'],
       required: true,
       default: 'CulturalTraditional'
     },

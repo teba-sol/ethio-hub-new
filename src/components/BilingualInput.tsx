@@ -29,9 +29,10 @@ interface DualLanguageFieldProps {
   className?: string;
   showEnglish?: boolean;
   showAmharic?: boolean;
+  hideLabel?: boolean;
 }
 
-export const BilingualInput: React.FC<BilingualInputProps> = ({
+export const BilingualInput: React.FC<BilingualInputProps & { hideLabel?: boolean }> = ({
   label,
   name,
   value,
@@ -42,6 +43,7 @@ export const BilingualInput: React.FC<BilingualInputProps> = ({
   className = '',
   required = false,
   placeholder,
+  hideLabel = false,
 }) => {
   const { language } = useLanguage();
 
@@ -50,23 +52,26 @@ export const BilingualInput: React.FC<BilingualInputProps> = ({
   };
 
   return (
-    <div className={`flex flex-col space-y-1 w-full ${className}`}>
-      {label && (
-        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">
+    <div className={`flex flex-col space-y-2 w-full group ${className}`}>
+      {label && !hideLabel && (
+        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 transition-colors group-focus-within:text-primary">
           {label}
         </label>
       )}
 
-      <div>
-        <label className="text-[10px] font-bold text-gray-400 ml-1">
-          {language === 'en' ? 'English' : 'አማርኛ'} {required && <span className="text-red-500">*</span>}
-        </label>
+      <div className="space-y-2">
+        {!hideLabel && (
+          <label className="text-[10px] font-bold text-gray-400 ml-1 flex items-center gap-2">
+            <span className="w-1 h-1 rounded-full bg-primary/40" />
+            {language === 'en' ? 'English' : 'አማርኛ'} {required && <span className="text-red-500">*</span>}
+          </label>
+        )}
         {textarea ? (
           <textarea
             value={value}
             onChange={handleChange}
             rows={rows}
-            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+            className="w-full p-4 bg-gray-50/50 border border-gray-200 rounded-[14px] text-sm focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white outline-none transition-all duration-200 placeholder:text-gray-400 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 hover:bg-white"
             placeholder={placeholder || (language === 'en' ? 'Enter in English...' : 'አማርኛ ያስገቡ...')}
             required={required}
             dir="ltr"
@@ -76,7 +81,7 @@ export const BilingualInput: React.FC<BilingualInputProps> = ({
             type="text"
             value={value}
             onChange={handleChange}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+            className="w-full px-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-[14px] text-sm focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white outline-none transition-all duration-200 placeholder:text-gray-400 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 hover:bg-white"
             placeholder={placeholder || (language === 'en' ? 'Enter in English...' : 'አማርኛ ያስገቡ...')}
             required={required}
             dir="ltr"
@@ -101,21 +106,26 @@ export const DualLanguageField: React.FC<DualLanguageFieldProps> = ({
   className = '',
   showEnglish = true,
   showAmharic = true,
+  hideLabel = false,
 }) => {
   const baseClass = 'w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all';
   const Field = textarea ? 'textarea' : 'input';
 
   return (
     <div className={`space-y-3 ${className}`}>
-      <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
+      {label && !hideLabel && (
+        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+      )}
       <div className={`grid ${(showEnglish && showAmharic) ? 'grid-cols-1 md:grid-cols-2 gap-4' : 'grid-cols-1'} gap-4`}>
         {showEnglish && (
           <div className="space-y-2">
-            <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-700">
-              English
-            </span>
+            {!hideLabel && (
+              <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-700">
+                English
+              </span>
+            )}
             <Field
               {...(textarea ? { rows } : { type: 'text' })}
               value={englishValue}
@@ -129,9 +139,11 @@ export const DualLanguageField: React.FC<DualLanguageFieldProps> = ({
         )}
         {showAmharic && (
           <div className="space-y-2">
-            <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-700">
-              Amharic
-            </span>
+            {!hideLabel && (
+              <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-700">
+                Amharic
+              </span>
+            )}
             <Field
               {...(textarea ? { rows } : { type: 'text' })}
               value={amharicValue}

@@ -1,7 +1,7 @@
 // src/utils/getLocalizedText.ts
 import { Language } from '@/locales/translations';
 
-type LocalizedField = 'name' | 'description' | 'shortDescription' | 'fullDescription' | 'title' | 'type' | 'locationName' | 'cancellation' | 'terms' | 'safety' | 'activities' | 'description';
+type LocalizedField = 'name' | 'description' | 'shortDescription' | 'fullDescription' | 'title' | 'type' | 'locationName' | 'cancellation' | 'terms' | 'safety' | 'activities';
 
 interface LocalizedObject {
   [key: string]: any;
@@ -14,9 +14,15 @@ export function getLocalizedText(
 ): string {
   if (!obj) return '';
 
-  // Try language-specific field first (name_am, description_en, etc.)
+  // Try language-specific field first (name_en, description_en, etc.)
   const localizedField = `${field}_${language}`;
   if (obj[localizedField]) return obj[localizedField];
+
+  // Try nested object structure (name: { en: "...", am: "..." })
+  if (obj[field] && typeof obj[field] === 'object' && !Array.isArray(obj[field])) {
+    if (obj[field][language]) return obj[field][language];
+    if (obj[field]['en']) return obj[field]['en'];
+  }
 
   // Fallback to English
   const englishField = `${field}_en`;
