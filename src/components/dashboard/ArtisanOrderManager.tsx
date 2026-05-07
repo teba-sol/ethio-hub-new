@@ -102,7 +102,9 @@ export const ArtisanOrderManager: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [paymentFilter, setPaymentFilter] = useState('All');
   const [dateFilter, setDateFilter] = useState('All Time');
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [tempDateRange, setTempDateRange] = useState({ start: '', end: '' });
+  const [appliedDateRange, setAppliedDateRange] = useState({ start: '', end: '' });
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
@@ -179,10 +181,24 @@ export const ArtisanOrderManager: React.FC = () => {
         const d = new Date(o.createdAt);
         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
       });
+    } else if (dateFilter === 'This Year') {
+      result = result.filter(o => {
+        const d = new Date(o.createdAt);
+        return d.getFullYear() === now.getFullYear();
+      });
+    } else if (dateFilter === 'Custom' && appliedDateRange.start && appliedDateRange.end) {
+      const start = new Date(appliedDateRange.start);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(appliedDateRange.end);
+      end.setHours(23, 59, 59, 999);
+      result = result.filter(o => {
+        const d = new Date(o.createdAt);
+        return d >= start && d <= end;
+      });
     }
 
     return result;
-  }, [orders, searchQuery, statusFilter, paymentFilter, dateFilter]);
+  }, [orders, searchQuery, statusFilter, paymentFilter, dateFilter, appliedDateRange]);
 
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
   const paginatedOrders = filteredOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -214,7 +230,6 @@ export const ArtisanOrderManager: React.FC = () => {
               <div className="flex items-center gap-3">
                 <h1 className="text-3xl font-serif font-bold text-primary">{order._id.slice(-6).toUpperCase()}</h1>
                 <OrderStatusBadge status={order.status} />
-                <OrderStatusBadge status={order.paymentStatus} />
                 {order.isVerified && (
                   <Badge variant="success" className="flex items-center gap-1">
                     <ShieldCheck className="w-3 h-3" /> Verified
@@ -222,24 +237,11 @@ export const ArtisanOrderManager: React.FC = () => {
                 )}
               </div>
               <p className="text-gray-500 text-sm mt-1">
-                Placed on {new Date(order.createdAt).toLocaleString()} via {order.paymentMethod || 'N/A'}
+                Placed on {new Date(order.createdAt).toLocaleString()} via Chap
               </p>
             </div>
           </div>
           <div className="flex gap-3">
-            <div className="relative">
-              <select 
-                className="appearance-none bg-white border border-gray-200 rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary cursor-pointer focus:ring-2 focus:ring-primary/10"
-                value={order.status}
-                onChange={(e) => handleUpdateStatus(order._id, e.target.value)}
-              >
-                <option value="Pending">Pending</option>
-                <option value="Delivered">Delivered</option>
-                <option value="Returned">Returned</option>
-              </select>
-              <RefreshCw className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
-            </div>
-            <Button variant="outline" leftIcon={Printer}>Print Invoice</Button>
           </div>
         </header>
 
@@ -271,15 +273,7 @@ export const ArtisanOrderManager: React.FC = () => {
                 </div>
                 
                 <div className="bg-gray-50 p-6 rounded-2xl space-y-3">
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>Subtotal</span>
-                    <span>ETB {(order.totalPrice - 150).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>Shipping</span>
-                    <span>ETB 150</span>
-                  </div>
-                  <div className="flex justify-between text-lg font-bold text-primary pt-3 border-t border-gray-200">
+                  <div className="flex justify-between text-lg font-bold text-primary pt-3">
                     <span>Total Price (Paid by Tourist)</span>
                     <span>ETB {order.totalPrice.toLocaleString()}</span>
                   </div>
@@ -374,13 +368,6 @@ export const ArtisanOrderManager: React.FC = () => {
                     )}
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <CreditCard className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-bold text-gray-500 uppercase">Billing Info</p>
-                    <p className="text-sm text-primary mt-1">Same as shipping</p>
-                  </div>
-                </div>
               </div>
             </section>
 
@@ -439,49 +426,105 @@ export const ArtisanOrderManager: React.FC = () => {
             />
           </div>
           <div className="h-8 w-[1px] bg-gray-100 hidden md:block"></div>
-          <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 no-scrollbar">
-            {['All', 'Pending', 'Delivered', 'Returned'].map(status => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  statusFilter === status ? 'bg-primary text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-                }`}
-              >
-                {status}
-              </button>
-            ))}
+          <div className="relative">
+            <select 
+              className="appearance-none bg-gray-50 border-none rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary cursor-pointer focus:ring-2 focus:ring-primary/10"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="All">All Status</option>
+              <option value="Pending">Pending</option>
+              <option value="Delivered">Delivered</option>
+              <option value="Returned">Returned</option>
+            </select>
+            <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-end">
           {/* Date Filter */}
           <div className="relative">
-            <select 
-              className="appearance-none bg-gray-50 border-none rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary cursor-pointer focus:ring-2 focus:ring-primary/10"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-            >
-              <option>All Time</option>
-              <option>Today</option>
-              <option>This Week</option>
-              <option>This Month</option>
-            </select>
-            <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <select 
+                  className="appearance-none bg-gray-50 border-none rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary cursor-pointer focus:ring-2 focus:ring-primary/10"
+                  value={dateFilter}
+                  onChange={(e) => {
+                    setDateFilter(e.target.value);
+                    if (e.target.value === 'Custom') {
+                      setIsDateFilterOpen(true);
+                    } else {
+                      setIsDateFilterOpen(false);
+                      setAppliedDateRange({ start: '', end: '' });
+                    }
+                  }}
+                >
+                  <option>All Time</option>
+                  <option>Today</option>
+                  <option>This Week</option>
+                  <option>This Month</option>
+                  <option>This Year</option>
+                  <option>Custom</option>
+                </select>
+                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+              </div>
+
+              {isDateFilterOpen && (
+                <div className="absolute right-0 top-full mt-2 bg-white p-4 rounded-2xl border border-gray-100 shadow-xl z-50 w-72 animate-in fade-in slide-in-from-top-2">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Start Date</label>
+                      <input 
+                        type="date" 
+                        className="w-full bg-gray-50 border-none rounded-xl py-2 px-3 text-xs focus:ring-2 focus:ring-primary/10"
+                        value={tempDateRange.start}
+                        onChange={(e) => setTempDateRange(prev => ({ ...prev, start: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">End Date</label>
+                      <input 
+                        type="date" 
+                        className="w-full bg-gray-50 border-none rounded-xl py-2 px-3 text-xs focus:ring-2 focus:ring-primary/10"
+                        value={tempDateRange.end}
+                        onChange={(e) => setTempDateRange(prev => ({ ...prev, end: e.target.value }))}
+                      />
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1 h-9 text-xs"
+                        onClick={() => {
+                          setIsDateFilterOpen(false);
+                          setDateFilter('All Time');
+                          setTempDateRange({ start: '', end: '' });
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        className="flex-1 h-9 text-xs"
+                        onClick={() => {
+                          if (tempDateRange.start && tempDateRange.end) {
+                            setAppliedDateRange(tempDateRange);
+                            setIsDateFilterOpen(false);
+                          } else {
+                            alert('Please select both start and end dates');
+                          }
+                        }}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Bulk Actions */}
-      {selectedItems.length > 0 && (
-        <div className="bg-primary text-white p-4 rounded-2xl flex justify-between items-center animate-in slide-in-from-top-2">
-          <span className="text-sm font-bold">{selectedItems.length} orders selected</span>
-          <div className="flex gap-3">
-            <button onClick={() => handleBulkAction('Mark Shipped')} className="px-4 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold transition-colors">Mark Shipped</button>
-            <button onClick={() => setSelectedItems([])} className="px-4 py-1.5 text-white/60 hover:text-white text-xs font-bold">Cancel</button>
-          </div>
-        </div>
-      )}
 
       {/* Orders Table */}
       <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
@@ -489,34 +532,19 @@ export const ArtisanOrderManager: React.FC = () => {
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50">
               <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                <th className="px-6 py-4 w-12">
-                  <input 
-                    type="checkbox" 
-                    className="rounded border-gray-300 text-primary focus:ring-primary"
-                    checked={selectedItems.length === paginatedOrders.length && paginatedOrders.length > 0}
-                    onChange={() => setSelectedItems(selectedItems.length === paginatedOrders.length ? [] : paginatedOrders.map(o => o._id))}
-                  />
-                </th>
                 <th className="px-6 py-4">Order ID</th>
                 <th className="px-6 py-4">Customer</th>
                 <th className="px-6 py-4">Item</th>
-                <th className="px-6 py-4">Artisan Earning</th>
+                <th className="px-6 py-4">Payout</th>
                 <th className="px-6 py-4">Payment</th>
+                <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Date</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {paginatedOrders.map(order => (
-                <tr key={order._id} className={`hover:bg-gray-50 transition-colors ${selectedItems.includes(order._id) ? 'bg-primary/5' : ''}`}>
-                  <td className="px-6 py-4">
-                    <input 
-                      type="checkbox" 
-                      className="rounded border-gray-300 text-primary focus:ring-primary"
-                      checked={selectedItems.includes(order._id)}
-                      onChange={() => toggleSelection(order._id)}
-                    />
-                  </td>
+                <tr key={order._id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 font-mono font-bold text-primary">{order._id.slice(-6).toUpperCase()}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
@@ -530,9 +558,11 @@ export const ArtisanOrderManager: React.FC = () => {
                   <td className="px-6 py-4 font-bold text-primary">ETB {((order as any).artisanEarnings || (order.totalPrice * 0.8)).toLocaleString()}</td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-gray-600">Chapa</span>
-                      <OrderStatusBadge status={order.paymentStatus} />
+                      <span className="text-xs text-gray-600">Chap</span>
                     </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <OrderStatusBadge status={order.status} />
                   </td>
                   <td className="px-6 py-4 text-xs text-gray-500">
                     {new Date(order.createdAt).toLocaleDateString()}
