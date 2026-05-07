@@ -823,3 +823,5 @@ export const OrganizerOnboardingPage: React.FC = () => {
     </div>
   );
 };
+
+export default OrganizerOnboardingPage;

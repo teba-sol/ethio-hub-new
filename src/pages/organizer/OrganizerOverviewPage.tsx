@@ -19,3 +19,5 @@ export const OrganizerOverviewPage: React.FC = () => {
     />
   );
 };
+
+export default OrganizerOverviewPage;

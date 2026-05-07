@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Button, Input, Badge } from '../../components/UI';
 import { DualLanguageField } from '../../components/BilingualInput';
+import { ETHIOPIA_REGIONS } from '../../data/constants';
 
 export const ArtisanCreateProductPage: React.FC = () => {
   const router = useRouter();
@@ -208,23 +209,30 @@ export const ArtisanCreateProductPage: React.FC = () => {
                   onChange={e => setFormData({...formData, material: e.target.value})}
                 />
                 <Input 
-                  label="Handmade By" 
-                  placeholder="e.g. Dorze Weavers" 
-                  value={formData.handmadeBy}
-                  onChange={e => setFormData({...formData, handmadeBy: e.target.value})}
-                />
-                <Input 
-                  label="Region" 
-                  placeholder="e.g. Southern Ethiopia" 
-                  value={formData.region}
-                  onChange={e => setFormData({...formData, region: e.target.value})}
-                />
-                <Input 
-                  label="Care Instructions" 
-                  placeholder="e.g. Hand wash only" 
-                  value={formData.careInstructions}
-                  onChange={e => setFormData({...formData, careInstructions: e.target.value})}
-                />
+                    label="Handmade By" 
+                    placeholder="e.g. Dorze Weavers" 
+                    value={formData.handmadeBy}
+                    onChange={e => setFormData({...formData, handmadeBy: e.target.value})}
+                  />
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Origin / Region</label>
+                    <select 
+                      className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10"
+                      value={formData.region}
+                      onChange={e => setFormData({...formData, region: e.target.value})}
+                    >
+                      <option value="">Select Origin Region</option>
+                      {ETHIOPIA_REGIONS.map(region => (
+                        <option key={region.id} value={region.id}>{region.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <Input 
+                    label="Care Instructions" 
+                    placeholder="e.g. Hand wash only" 
+                    value={formData.careInstructions}
+                    onChange={e => setFormData({...formData, careInstructions: e.target.value})}
+                  />
               </div>
             </div>
           </section>
@@ -433,3 +441,5 @@ export const ArtisanCreateProductPage: React.FC = () => {
     </div>
   );
 };
+
+export default ArtisanCreateProductPage;

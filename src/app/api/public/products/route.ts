@@ -12,8 +12,14 @@ export async function GET(req: Request) {
     const category = searchParams.get('category');
     const search = searchParams.get('search');
     const artisanId = searchParams.get('artisanId');
+    const region = searchParams.get('region');
+    const limit = parseInt(searchParams.get('limit') || '50');
 
     const query: any = {};
+
+    if (region) {
+      query.region = region;
+    }
 
     if (artisanId) {
       if (mongoose.Types.ObjectId.isValid(artisanId)) {
@@ -45,7 +51,8 @@ export async function GET(req: Request) {
 
     const products = await Product.find(query)
       .populate('artisanId', 'name email profilePicture')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .limit(limit);
 
     const formattedProducts = products.map((p: any) => ({
       ...p.toObject(),

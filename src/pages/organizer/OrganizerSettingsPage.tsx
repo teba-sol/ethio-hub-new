@@ -692,3 +692,5 @@ export const OrganizerSettingsPage: React.FC = () => {
     </div>
   );
 };
+
+export default OrganizerSettingsPage;

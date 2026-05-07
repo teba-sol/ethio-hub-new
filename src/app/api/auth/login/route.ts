@@ -1,8 +1,8 @@
 import { NextResponse, NextRequest } from "next/server";
-import * as authService from "../../../../services/auth.service";
-import { connectDB } from "../../../../lib/mongodb";
-import { serialize } from "cookie";
-import { applyRateLimit, getRequestIp } from "../../../../lib/rateLimit";
+import * as authService from "@/services/auth.service";
+import { connectDB } from "@/lib/mongodb";
+import { generateAccessToken, generateRefreshToken } from "@/services/auth.service";
+import { applyRateLimit, getRequestIp } from "@/lib/rateLimit";
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,19 +26,27 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Login request body:', body); // <-- Add this line for debugging
-const { token, user, showSuspensionModal } = await authService.login(body);
-
-const serialized = serialize("sessionToken", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 60 * 60, // 1 hour
-      path: "/",
-    });
+    const { accessToken, refreshToken, user, showSuspensionModal } = await authService.login(body);
 
     const response = NextResponse.json({ success: true, user, showSuspensionModal }, { status: 200 });
 
-    response.headers.set("Set-Cookie", serialized);
+    // Set Access Token (1 hour)
+    response.cookies.set('sessionToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 3600, // 1 hour
+      path: '/',
+    });
+
+    // Set Refresh Token (7 days)
+    response.cookies.set('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 3600, // 7 days
+      path: '/',
+    });
 
     return response;
   } catch (error: any) {

@@ -1,5 +1,6 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -350,75 +351,84 @@ const UserMenu: React.FC = () => {
   };
 
   return (
-    <div className="relative group z-50 mr-4">
+    <div className="relative group z-50">
       <Link
         href={isAuthenticated ? getDashboardHomePath() : "/login"}
-        className="flex items-center gap-2 hover:bg-gray-50 px-3 py-2 rounded-full transition-all"
+        className="flex items-center gap-3 pl-3 pr-1 py-1 rounded-full border border-gray-100 bg-gray-50/50 hover:bg-white hover:shadow-md transition-all duration-300 group/nav"
       >
-        <UserIcon className="w-6 h-6 text-gray-700" />
-        <div className="flex flex-col text-xs leading-tight">
-          <span className="text-gray-500 font-medium">{t("header.welcome")}</span>
-          <span className="font-bold text-gray-900">
+        <div className="flex flex-col text-right items-end hidden lg:flex">
+          <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none mb-0.5">{t("header.welcome")}</span>
+          <span className="text-xs font-black text-primary leading-none truncate max-w-[100px]">
             {isAuthenticated ? user?.name?.split(" ")[0] : t("header.signInRegister")}
           </span>
         </div>
+        <div className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center text-primary shadow-sm group-hover/nav:border-primary/20 transition-colors">
+          {isAuthenticated && user?.touristProfile?.profileImage ? (
+            <img src={user.touristProfile.profileImage} alt="" className="w-full h-full rounded-full object-cover" />
+          ) : (
+            <UserIcon className="w-5 h-5" />
+          )}
+        </div>
       </Link>
 
-      <div className="absolute top-full right-0 pt-2 w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-right">
-        <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden p-2">
+      <div className="absolute top-full right-0 pt-3 w-72 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-right scale-95 group-hover:scale-100">
+        <div className="bg-white rounded-[24px] shadow-2xl border border-gray-100 overflow-hidden">
           {!isAuthenticated ? (
-            <div className="p-4 text-center bg-gray-50/50 rounded-xl mb-2">
+            <div className="p-6 text-center bg-gradient-to-br from-gray-50 to-white">
+              <div className="w-16 h-16 bg-primary/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <UserIcon className="w-8 h-8 text-primary" />
+              </div>
+              <h4 className="font-serif font-bold text-primary mb-2">Join Ethio-Craft Hub</h4>
+              <p className="text-xs text-gray-400 mb-6">Discover the soul of Ethiopian craftsmanship and heritage.</p>
               <Button
-                className="w-full rounded-full font-bold mb-3 shadow-lg shadow-primary/20"
+                className="w-full rounded-xl font-black uppercase tracking-widest text-[10px] mb-4 shadow-lg shadow-primary/20 h-12"
                 onClick={() => router.push("/login")}
               >
                 {t("auth.signIn")}
               </Button>
-              <div className="text-xs text-gray-500">
+              <p className="text-[10px] font-bold text-gray-400">
                 {t("header.newHere")}{" "}
                 <Link
                   href="/register"
-                  className="text-primary font-bold hover:underline"
+                  className="text-secondary hover:underline"
                 >
                   {t("auth.register")}
                 </Link>
-              </div>
+              </p>
             </div>
           ) : (
-            <div className="p-4 text-center bg-gray-50/50 rounded-xl mb-2">
-              <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-2 font-bold text-xl">
-                {user?.name?.charAt(0)}
+            <div className="p-6 bg-gradient-to-br from-primary/5 to-transparent">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-14 h-14 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-primary shadow-sm font-black text-xl">
+                  {user?.name?.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-black text-primary truncate leading-tight">{user?.name}</p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{user?.role}</p>
+                </div>
               </div>
-              <p className="font-bold text-gray-900 mb-3 line-clamp-1">
-                {user?.name}
-              </p>
                <Button
                  variant="outline"
-                 size="sm"
                  onClick={logout}
-                 className="rounded-full w-full border-gray-200"
+                 className="rounded-xl w-full border-gray-200 h-11 text-[10px] font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all"
                >
                  {t("header.signOut")}
                </Button>
             </div>
           )}
 
-          <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
-            <div className="space-y-0.5">
+          <div className="p-2 space-y-1 max-h-[350px] overflow-y-auto custom-scrollbar">
+            <div className="px-3 py-2">
+               <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 px-1">Navigation</p>
+               <MenuLink
+                icon={Briefcase}
+                label="Dashboard Overview"
+                to={getDashboardHomePath()}
+              />
               <MenuLink
                 icon={FileText}
                 label={t("header.myOrders")}
                 to={getDashboardPath("orders")}
-              />
-              <MenuLink
-                icon={MessageSquare}
-                label={t("header.messageCenter")}
-                to={getDashboardPath("messages")}
-              />
-              <MenuLink
-                icon={CreditCard}
-                label={t("header.payments")}
-                to={getDashboardPath("payments")}
               />
               <MenuLink
                 icon={Heart}
@@ -426,8 +436,11 @@ const UserMenu: React.FC = () => {
                 to={getDashboardPath("wishlist")}
               />
             </div>
-            <div className="h-px bg-gray-100 my-2 mx-2" />
-            <div className="space-y-0.5">
+            
+            <div className="h-px bg-gray-50 mx-4" />
+            
+            <div className="px-3 py-2">
+              <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 px-1">Settings & Support</p>
               <MenuLink
                 icon={Settings}
                 label={t("header.settings")}
@@ -437,11 +450,6 @@ const UserMenu: React.FC = () => {
                 icon={HelpCircle}
                 label={t("header.helpCenter")}
                 to={getDashboardPath("help")}
-              />
-              <MenuLink
-                icon={AlertCircle}
-                label={t("header.disputes")}
-                to={getDashboardPath("disputes")}
               />
             </div>
           </div>
@@ -522,12 +530,19 @@ const ThemeToggle = () => {
 };
 
 export const Header: React.FC = () => {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const { user, logout, isAuthenticated } = useAuth();
   const { cartCount, toggleCart } = useCart();
   const pathname = usePathname();
   const router = useRouter();
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const navLinks = [
     { name: t("nav.home"), path: "/" },
@@ -539,26 +554,35 @@ export const Header: React.FC = () => {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <header className="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-50">
+    <header 
+      className={`sticky top-0 z-50 transition-all duration-500 ${
+        isScrolled 
+          ? "bg-white/80 backdrop-blur-xl shadow-lg shadow-primary/5 py-3" 
+          : "bg-white py-5"
+      }`}
+    >
       <CartDrawer />
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-20 items-center">
-          <Link href="/" className="flex items-center space-x-2">
-            <span className="text-2xl font-bold font-serif text-primary tracking-tight">
-              Ethio<span className="text-secondary">-Craft</span> Hub
+      <nav className="max-w-7xl mx-auto px-6">
+        <div className="flex justify-between items-center">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center rotate-3 group-hover:rotate-0 transition-transform duration-300 shadow-lg shadow-primary/20">
+              <span className="text-white font-black text-xl">E</span>
+            </div>
+            <span className="text-xl font-black font-serif text-primary tracking-tighter hidden sm:block">
+              Ethio<span className="text-secondary">Hub</span>
             </span>
           </Link>
 
           {/* Desktop Nav */}
-          <div className="hidden md:flex items-center space-x-10">
+          <div className="hidden md:flex items-center bg-gray-50/50 border border-gray-100 p-1 rounded-full">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
                 href={link.path}
-                className={`text-[11px] font-bold uppercase tracking-[0.2em] transition-all hover:text-secondary ${
+                className={`px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] rounded-full transition-all duration-300 ${
                   isActive(link.path)
-                    ? "text-primary border-b-2 border-secondary pb-1"
-                    : "text-gray-400"
+                    ? "bg-white text-primary shadow-sm"
+                    : "text-gray-400 hover:text-primary"
                 }`}
               >
                 {link.name}
@@ -567,21 +591,23 @@ export const Header: React.FC = () => {
           </div>
 
           {/* Actions */}
-          <div className="hidden md:flex items-center">
+          <div className="hidden md:flex items-center gap-2">
             <SearchBar />
+
+            <div className="h-8 w-px bg-gray-100 mx-2" />
 
             <LanguageToggle />
             <ThemeToggle />
 
             <button
               onClick={toggleCart}
-              className="p-2 text-gray-400 hover:text-primary transition-colors relative ml-2 mr-4 group"
+              className="p-3 text-gray-400 hover:text-primary transition-all relative group"
               aria-label="Shopping Cart"
             >
               <div className="relative">
-                <ShoppingCart className="w-6 h-6 group-hover:text-primary transition-colors" />
+                <ShoppingCart className="w-5 h-5 group-hover:scale-110 transition-transform" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 h-5 w-5 bg-accent text-white text-[10px] flex items-center justify-center rounded-full font-bold border-2 border-white shadow-sm animate-in zoom-in">
+                  <span className="absolute -top-2 -right-2 h-5 w-5 bg-accent text-white text-[9px] flex items-center justify-center rounded-full font-black border-2 border-white shadow-lg animate-bounce">
                     {cartCount}
                   </span>
                 )}
@@ -592,81 +618,102 @@ export const Header: React.FC = () => {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
-            <LanguageToggle />
-            <ThemeToggle />
+          <div className="md:hidden flex items-center gap-3">
+            <button
+              onClick={toggleCart}
+              className="p-2 text-gray-400 relative"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 bg-accent text-white text-[8px] flex items-center justify-center rounded-full font-black">
+                  {cartCount}
+                </span>
+              )}
+            </button>
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="p-2 text-primary ml-2"
+              className="p-2 w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-primary"
               aria-label="Toggle Menu"
             >
-              {isOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
+              {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
       </nav>
 
       {/* Mobile Menu */}
-      {isOpen && (
-        <div className="md:hidden bg-white border-t border-gray-100 animate-in fade-in slide-in-from-top duration-300">
-          <div className="px-4 pt-4 pb-12 space-y-2">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                href={link.path}
-                onClick={() => setIsOpen(false)}
-                className={`block px-4 py-5 text-sm font-bold uppercase tracking-widest rounded-2xl ${
-                  isActive(link.path)
-                    ? "bg-ethio-bg text-primary"
-                    : "text-gray-600"
-                }`}
-              >
-                {link.name}
-              </Link>
-            ))}
-            <div className="pt-6 grid grid-cols-2 gap-4 px-2">
-              {!isAuthenticated ? (
-                <>
-                  <Button
-                    variant="outline"
-                    className="w-full rounded-2xl py-4"
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-full left-0 right-0 bg-white border-t border-gray-50 shadow-2xl md:hidden overflow-hidden rounded-b-[32px]"
+          >
+            <div className="px-6 pt-8 pb-12 space-y-4">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4 mb-2">Discovery</p>
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.path}
+                    href={link.path}
+                    onClick={() => setIsOpen(false)}
+                    className={`flex items-center justify-between px-6 py-4 rounded-2xl transition-all ${
+                      isActive(link.path)
+                        ? "bg-primary text-white shadow-lg shadow-primary/20"
+                        : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    <span className="text-sm font-black uppercase tracking-widest">{link.name}</span>
+                    <ArrowRight className={`w-4 h-4 ${isActive(link.path) ? "opacity-100" : "opacity-0"}`} />
+                  </Link>
+                ))}
+              </div>
+
+              <div className="pt-8 grid grid-cols-2 gap-4">
+                {!isAuthenticated ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="rounded-2xl h-14 text-[10px] font-black uppercase tracking-widest"
+                      onClick={() => {
+                        setIsOpen(false);
+                        router.push("/login");
+                      }}
+                    >
+                      {t("auth.signIn")}
+                    </Button>
+                    <Button
+                      className="rounded-2xl h-14 text-[10px] font-black uppercase tracking-widest"
+                      onClick={() => {
+                        setIsOpen(false);
+                        router.push("/register");
+                      }}
+                    >
+                      {t("auth.register")}
+                    </Button>
+                  </>
+                ) : (
+                  <Button 
+                    className="col-span-2 rounded-2xl h-14 text-[10px] font-black uppercase tracking-widest"
                     onClick={() => {
                       setIsOpen(false);
-                      router.push("/login");
+                      router.push("/dashboard");
                     }}
                   >
-                    {t("auth.signIn")}
+                    Go to Dashboard
                   </Button>
-                  <Button
-                    variant="primary"
-                    className="w-full rounded-2xl py-4"
-                    onClick={() => {
-                      setIsOpen(false);
-                      router.push("/register");
-                    }}
-                  >
-                    {t("auth.register")}
-                  </Button>
-                </>
-              ) : (
-                <Link
-                  href="/dashboard"
-                  onClick={() => setIsOpen(false)}
-                  className="col-span-2"
-                >
-                  <Button className="w-full rounded-2xl py-4">
-                    {t("nav.dashboard")}
-                  </Button>
-                </Link>
-              )}
+                )}
+              </div>
+              
+              <div className="pt-6 flex justify-center gap-6 border-t border-gray-50 mt-4 pt-8">
+                 <LanguageToggle />
+                 <ThemeToggle />
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 };

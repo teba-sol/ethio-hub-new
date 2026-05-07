@@ -4,3 +4,5 @@ import { ArtisanOrderManager } from '../../components/dashboard/ArtisanOrderMana
 export const ArtisanOrdersPage: React.FC = () => {
   return <ArtisanOrderManager />;
 };
+
+export default ArtisanOrdersPage;

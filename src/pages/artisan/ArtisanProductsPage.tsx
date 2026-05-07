@@ -10,3 +10,5 @@ export const ArtisanProductsPage: React.FC = () => {
     </div>
   );
 };
+
+export default ArtisanProductsPage;

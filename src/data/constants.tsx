@@ -99,6 +99,20 @@ export const MOCK_PRODUCTS: Product[] = [
   }
 ];
 
+export const ETHIOPIA_REGIONS = [
+  { id: 'addis-ababa', name: 'Addis Ababa', nameAm: 'አዲስ አበባ' },
+  { id: 'amhara', name: 'Amhara', nameAm: 'አማራ' },
+  { id: 'oromia', name: 'Oromia', nameAm: 'ኦሮሚያ' },
+  { id: 'tigray', name: 'Tigray', nameAm: 'ትግራይ' },
+  { id: 'sidama', name: 'Sidama', nameAm: 'ስዳማ' },
+  { id: 'snnpr', name: 'SNNPR', nameAm: 'ደቡብ ብሔር ሕዝቦች' },
+  { id: 'harari', name: 'Harar', nameAm: 'ሐረር' },
+  { id: 'afar', name: 'Afar', nameAm: 'አፋር' },
+  { id: 'somali', name: 'Somali', nameAm: 'ሶማሌ' },
+  { id: 'benishangul', name: 'Benishangul-Gumuz', nameAm: 'ቤኒሻንጉል ጉሙዝ' },
+  { id: 'gambela', name: 'Gambela', nameAm: 'ጋምቤላ' }
+];
+
 export const MOCK_FESTIVALS: Festival[] = [
   {
     id: 'f1',

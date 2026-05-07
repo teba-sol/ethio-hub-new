@@ -1369,3 +1369,5 @@ export const AdminEventsPage: React.FC = () => {
     </div>
   );
 };
+
+export default AdminEventsPage;

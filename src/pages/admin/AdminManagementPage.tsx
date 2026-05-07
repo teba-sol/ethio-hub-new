@@ -81,3 +81,5 @@ export const AdminManagementPage: React.FC = () => {
     </div>
   );
 };
+
+export default AdminManagementPage;

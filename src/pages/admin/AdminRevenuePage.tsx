@@ -231,3 +231,4 @@ export const AdminRevenuePage: React.FC = () => {
     </div>
   );
 };
+export default AdminRevenuePage;

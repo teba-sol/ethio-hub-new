@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "../../../../../lib/mongodb";
-import User from "../../../../../models/User";
-import PendingRegistration from "../../../../../models/PendingRegistration";
+import { connectDB } from "@/lib/mongodb";
+import User from "@/models/User";
+import PendingRegistration from "@/models/PendingRegistration";
 import {
   hashOtp,
   normalizeEmail,
   REGISTRATION_OTP_MAX_ATTEMPTS,
-} from "../../../../../lib/registrationOtp";
-import { applyRateLimit, getRequestIp } from "../../../../../lib/rateLimit";
+} from "@/lib/registrationOtp";
+import { applyRateLimit, getRequestIp } from "@/lib/rateLimit";
+import { generateAccessToken, generateRefreshToken } from "@/services/auth.service";
 
 export async function POST(request: Request) {
   try {
@@ -117,10 +118,23 @@ export async function POST(request: Request) {
     const user = await User.create(newUserData);
     await PendingRegistration.deleteOne({ _id: pending._id });
 
+    // Generate tokens for automatic login after verification
+    const accessToken = await generateAccessToken({
+      userId: user._id.toString(),
+      email: user.email,
+      role: user.role
+    });
+
+    const refreshToken = await generateRefreshToken({
+      userId: user._id.toString(),
+      email: user.email,
+      role: user.role
+    });
+
     const response = NextResponse.json(
       {
         success: true,
-        message: "Email verified. Your account is now active. Please sign in.",
+        message: "Email verified. Your account is now active.",
         user: {
           id: user._id,
           email: user.email,
@@ -135,8 +149,27 @@ export async function POST(request: Request) {
       { status: 200 }
     );
 
+    // Set Access Token (1 hour)
+    response.cookies.set('sessionToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 3600, // 1 hour
+      path: '/',
+    });
+
+    // Set Refresh Token (7 days)
+    response.cookies.set('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 3600, // 7 days
+      path: '/',
+    });
+
     return response;
   } catch (error: any) {
+    console.error("Verify OTP Error:", error);
     return NextResponse.json(
       {
         success: false,

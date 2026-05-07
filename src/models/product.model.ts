@@ -19,6 +19,8 @@ export interface IProduct extends Document {
   material_am?: string;
   careInstructions_en?: string;
   careInstructions_am?: string;
+  region?: string;
+  origin?: string;
   rating: number;
   numReviews: number;
 }
@@ -42,6 +44,8 @@ const ProductSchema: Schema = new Schema(
     material_am: { type: String },
     careInstructions_en: { type: String },
     careInstructions_am: { type: String },
+    region: { type: String },
+    origin: { type: String },
     rating: { type: Number, default: 0 },
     numReviews: { type: Number, default: 0 },
   },

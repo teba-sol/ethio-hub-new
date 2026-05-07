@@ -14,3 +14,5 @@ export const OrganizerWalletPage: React.FC = () => {
     </div>
   );
 };
+
+export default OrganizerWalletPage;

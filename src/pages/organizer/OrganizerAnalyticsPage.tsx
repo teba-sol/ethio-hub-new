@@ -403,3 +403,4 @@ export const OrganizerAnalyticsPage: React.FC = () => {
     </div>
   );
 };
+export default OrganizerAnalyticsPage;

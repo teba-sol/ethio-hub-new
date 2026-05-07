@@ -101,3 +101,5 @@ export const AdminLogsPage: React.FC = () => {
     </div>
   );
 };
+
+export default AdminLogsPage;

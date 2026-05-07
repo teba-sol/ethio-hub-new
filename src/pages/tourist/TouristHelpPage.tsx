@@ -112,3 +112,5 @@ export const TouristHelpPage = () => {
     </div>
   );
 };
+
+export default TouristHelpPage;

@@ -19,3 +19,5 @@ export const OrganizerFestivalsPage: React.FC = () => {
     />
   );
 };
+
+export default OrganizerFestivalsPage;

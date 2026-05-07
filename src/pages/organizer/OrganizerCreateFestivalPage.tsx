@@ -6,3 +6,5 @@ export const OrganizerCreateFestivalPage: React.FC = () => {
   const router = useRouter();
   return <FestivalCreationWizard onCancel={() => router.push('/dashboard/organizer/festivals')} />;
 };
+
+export default OrganizerCreateFestivalPage;

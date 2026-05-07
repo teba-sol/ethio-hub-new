@@ -40,3 +40,5 @@ export const OrganizerBookingsPage: React.FC = () => {
     />
   );
 };
+
+export default OrganizerBookingsPage;

@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const search = url.searchParams.get('search');
     const status = url.searchParams.get('status'); // Filter by live/upcoming
+    const region = url.searchParams.get('region');
+    const limit = parseInt(url.searchParams.get('limit') || '50');
 
     const activeUsers = await User.find({
       status: { $ne: 'Suspended' }
@@ -27,10 +29,11 @@ export async function GET(request: NextRequest) {
      // Build query for verified and published festivals only
      const query: any = {
        organizer: { $in: activeUserIds }
-      // REMOVED STRICT FILTER FOR TESTING
-      // isVerified: true,
-      // status: 'Published'
     };
+
+    if (region) {
+      query.region = region;
+    }
 
     // Add search filter
     if (search) {
@@ -44,6 +47,7 @@ export async function GET(request: NextRequest) {
     const festivals = await Festival.find(query)
       .populate('organizer', 'name email')
       .sort({ startDate: 1 }) // Sort by start date ascending
+      .limit(limit)
       .lean();
 
     // Process festivals to add displayStatus and calculate ticket info

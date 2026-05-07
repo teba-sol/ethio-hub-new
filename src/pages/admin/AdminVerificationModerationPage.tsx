@@ -122,3 +122,5 @@ const Badge: React.FC<{ children: React.ReactNode; variant?: 'warning' | 'succes
     </span>
   );
 };
+
+export default AdminVerificationModerationPage;

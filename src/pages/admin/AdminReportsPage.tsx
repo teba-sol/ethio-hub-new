@@ -979,3 +979,4 @@ export const AdminReportsPage: React.FC = () => {
     </div>
   );
 };
+export default AdminReportsPage;

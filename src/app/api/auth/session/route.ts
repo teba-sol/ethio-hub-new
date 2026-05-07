@@ -1,80 +1,88 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
-import User from '../../../../models/User';
-import { connectDB } from '../../../../lib/mongodb';
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { verifyToken, generateAccessToken } from '@/services/auth.service';
+import User from '@/models/User';
+import { connectDB } from '@/lib/mongodb';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const token = request.cookies.get('sessionToken')?.value;
+    const cookieStore = await cookies();
+    let sessionToken = cookieStore.get('sessionToken')?.value;
+    const refreshToken = cookieStore.get('refreshToken')?.value;
 
-    if (!token) {
-      return new NextResponse(
-        JSON.stringify({ success: false, message: 'No session token found' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
+    if (!sessionToken && !refreshToken) {
+      return NextResponse.json({ user: null }, { status: 200 });
     }
 
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'ethio-hub-secret-key-2025');
-    const { payload } = await jwtVerify(token, secret);
-    
+    let payload = null;
+    if (sessionToken) {
+      payload = await verifyToken(sessionToken);
+    }
+
+    // If session token is invalid/expired but refresh token exists, try to refresh
+    if (!payload && refreshToken) {
+      const refreshPayload = await verifyToken(refreshToken);
+      if (refreshPayload) {
+        // Refresh token is valid, generate new access token
+        const newAccessToken = await generateAccessToken({
+          userId: refreshPayload.userId,
+          email: refreshPayload.email,
+          role: refreshPayload.role
+        });
+
+        // Update the payload for the current request
+        payload = refreshPayload;
+
+        // Set the new access token cookie
+        // We will set this on the final response object below
+        
+        // We need to continue and fetch the user data
+        sessionToken = newAccessToken;
+      }
+    }
+
+    if (!payload) {
+      return NextResponse.json({ user: null }, { status: 200 });
+    }
+
     await connectDB();
-    const user = await User.findById(payload.userId).select('-password');
-    
-    console.log('Session user touristProfile:', user?.touristProfile);
+    const user = await User.findById(payload.userId)
+      .select('-password')
+      .lean();
 
     if (!user) {
-      return new NextResponse(
-        JSON.stringify({ success: false, message: 'User not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
+      return NextResponse.json({ user: null }, { status: 200 });
     }
 
-    // Check if account is suspended or banned
-    if (user.status === 'Suspended' || user.status === 'Banned') {
-      return new NextResponse(
-        JSON.stringify({ success: false, user: null, message: 'Account suspended or banned' }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    return new NextResponse(
-      JSON.stringify({
-        success: true,
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          status: user.status,
-          suspensionReason: user.suspensionReason || null,
-          suspendedAt: user.suspendedAt ? user.suspendedAt.toISOString() : null,
-          isVerified: !!user.isVerified,
-          artisanStatus: user.artisanStatus,
-          organizerStatus: user.organizerStatus,
-          organizerProfile: user.organizerProfile || null,
-          touristProfile: user.touristProfile ? {
-            phone: user.touristProfile?.phone || null,
-            country: user.touristProfile?.country || null,
-            nationality: user.touristProfile?.nationality || null,
-            dateOfBirth: user.touristProfile?.dateOfBirth || null,
-            profileImage: user.touristProfile?.profileImage || null,
-          } : null,
-        }
-      }),
-      {
-        status: 200,
-        headers: {
-          'content-type': 'application/json',
-          'Cache-Control': 'no-store, no-cache, must-revalidate',
-          'Pragma': 'no-cache'
-        }
+    const responseData = {
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        touristProfile: user.touristProfile,
+        artisanStatus: user.artisanStatus,
+        organizerStatus: user.organizerStatus,
+        status: user.status
       }
-    );
+    };
 
+    const response = NextResponse.json(responseData);
+
+    // If we generated a new sessionToken during this request, make sure it's in the final response
+    if (sessionToken && !cookieStore.get('sessionToken')) {
+       response.cookies.set('sessionToken', sessionToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 3600,
+          path: '/',
+        });
+    }
+
+    return response;
   } catch (error) {
-    return new NextResponse(
-      JSON.stringify({ success: false, message: 'Invalid session token' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } }
-    );
+    console.error('Session API Error:', error);
+    return NextResponse.json({ user: null }, { status: 500 });
   }
 }

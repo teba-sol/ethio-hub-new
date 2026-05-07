@@ -4,3 +4,5 @@ import { ArtisanReviewManager } from '../../components/dashboard/ArtisanReviewMa
 export const ArtisanReviewsPage: React.FC = () => {
   return <ArtisanReviewManager />;
 };
+
+export default ArtisanReviewsPage;

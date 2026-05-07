@@ -361,3 +361,5 @@ export const OrganizerReviewsPage: React.FC = () => {
     </div>
   );
 };
+
+export default OrganizerReviewsPage;

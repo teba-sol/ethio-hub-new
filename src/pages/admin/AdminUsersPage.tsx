@@ -815,3 +815,5 @@ export const AdminUsersPage: React.FC = () => {
     </div>
   );
 };
+
+export default AdminUsersPage;

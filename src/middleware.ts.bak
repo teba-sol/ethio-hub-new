@@ -1,0 +1,52 @@
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/request';
+import { jwtVerify } from 'jose';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'ethio-hub-secret-key-2025';
+
+// Protected routes patterns
+const protectedRoutes = ['/dashboard', '/checkout', '/profile'];
+const publicOnlyRoutes = ['/login', '/register', '/forgot-password'];
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const sessionToken = request.cookies.get('sessionToken')?.value;
+  const refreshToken = request.cookies.get('refreshToken')?.value;
+
+  // Check if it's a protected route
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+  const isPublicOnlyRoute = publicOnlyRoutes.some(route => pathname.startsWith(route));
+
+  if (isProtectedRoute) {
+    // If no session and no refresh token, redirect to login
+    if (!sessionToken && !refreshToken) {
+      const url = new URL('/login', request.url);
+      url.searchParams.set('callbackUrl', pathname);
+      return NextResponse.redirect(url);
+    }
+
+    // Even if session token is expired, we allow the request to proceed to the page
+    // where the client-side AuthContext or the server-side session API will handle the refresh.
+    // However, we can do a quick check if session token is valid if we want stricter middleware.
+  }
+
+  if (isPublicOnlyRoute && sessionToken) {
+    // If user is already logged in and tries to access login/register, redirect to home or dashboard
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ],
+};

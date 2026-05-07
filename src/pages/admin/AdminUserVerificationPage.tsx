@@ -706,3 +706,5 @@ export const AdminUserVerificationPage: React.FC = () => {
     </div>
   );
 };
+
+export default AdminUserVerificationPage;

@@ -24,8 +24,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
      const checkUserSession = async () => {
        try {
          const response = await fetch('/api/auth/session', { cache: 'no-store' });
+         
+         if (!response.ok) {
+           console.error(`Session check failed with status: ${response.status}`);
+           setUser(null);
+           return;
+         }
+
+         const contentType = response.headers.get('content-type');
+         if (!contentType || !contentType.includes('application/json')) {
+           console.error('Session check received non-JSON response');
+           setUser(null);
+           return;
+         }
+
          const data = await response.json();
-         if (data && data.success && data.user) {
+         if (data && data.user) {
            const userData = {
              ...data.user,
              role: data.user.role // Keep original case stored in DB
@@ -53,8 +67,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = 'Login failed';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // If not JSON, use the raw text if it's short
+          if (errorText.length < 100) errorMessage = errorText;
+        }
+        throw new Error(errorMessage);
+      }
+
       const data = await response.json();
-      if (response.ok && data.success) {
+      if (data.success) {
         setUser(data.user);
       } else {
         throw new Error(data.message || 'Login failed');
@@ -91,10 +119,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       });
-      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
+        const errorText = await response.text();
+        let errorMessage = 'Registration failed';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          if (errorText.length < 100) errorMessage = errorText;
+        }
+        throw new Error(errorMessage);
       }
+
+      const data = await response.json();
       return data;
     } finally {
       setLoading(false);

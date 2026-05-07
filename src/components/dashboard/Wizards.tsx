@@ -14,6 +14,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { DualLanguageField } from '../BilingualInput';
 import { DateRangePicker } from '../DateRangePicker';
+import { ETHIOPIA_REGIONS } from '../../data/constants';
 
 const MapPickerModal = dynamic(() => import('../MapPickerModal'), { 
   ssr: false 
@@ -136,6 +137,7 @@ export const FestivalCreationWizard: React.FC<{
       locationName_en: initialData?.location?.name_en || initialData?.location?.name || initialData?.locationName_en || '', 
       locationName_am: initialData?.location?.name_am || initialData?.location?.name || initialData?.locationName_am || '',
       address: initialData?.location?.address || initialData?.address || '',
+      region: initialData?.region || '',
       shortDescription_en: initialData?.shortDescription_en || initialData?.shortDescription || '',
       shortDescription_am: initialData?.shortDescription_am || initialData?.shortDescription || '',
       fullDescription_en: initialData?.fullDescription_en || initialData?.fullDescription || '',
@@ -629,6 +631,7 @@ export const FestivalCreationWizard: React.FC<{
         shortDescription_am: formData.core.shortDescription_am,
         fullDescription_en: formData.core.fullDescription_en,
         fullDescription_am: formData.core.fullDescription_am,
+        region: formData.core.region,
         location: {
           name_en: formData.core.locationName_en,
           name_am: formData.core.locationName_am,
@@ -725,8 +728,8 @@ export const FestivalCreationWizard: React.FC<{
         response = await apiClient.post('/api/organizer/festivals', dataToPublish);
       }
 
-      if (response.success) {
-        alert('Festival submitted for verification successfully!');
+       if (response.success) {
+        alert(initialData ? 'Festival updated successfully!' : 'Festival submitted for verification successfully!');
         if (onSave) {
           await onSave(response.festival);
         } else {
@@ -779,7 +782,7 @@ export const FestivalCreationWizard: React.FC<{
           setIsMapModalOpen(false);
           setHotelMapTarget(null);
         }}
-        initialPosition={hotelMapTarget ? formData.hotels[hotelMapTarget.hotelIdx]?.coordinates : formData.core.coordinates}
+        initialPosition={hotelMapTarget ? (formData.hotels[hotelMapTarget.hotelIdx]?.coordinates || { lat: 9.0333, lng: 38.7500 }) : (formData.core.coordinates || { lat: 9.0333, lng: 38.7500 })}
         onLocationSelect={(coords) => {
           if (hotelMapTarget) {
             updateHotel(hotelMapTarget.hotelIdx, 'coordinates', coords);
@@ -803,8 +806,8 @@ export const FestivalCreationWizard: React.FC<{
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <Button variant="outline" leftIcon={Save} onClick={handleSaveDraft}>Save Draft</Button>
-          <Button onClick={handlePublish} disabled={step !== 8}>Publish Festival</Button>
+          <Button variant="outline" leftIcon={Save} onClick={handleSaveDraft}>{initialData ? 'Save Changes' : 'Save Draft'}</Button>
+          <Button onClick={handlePublish} disabled={step !== 8}>{initialData ? 'Save Changes' : 'Publish Festival'}</Button>
         </div>
       </header>
 
@@ -882,6 +885,20 @@ export const FestivalCreationWizard: React.FC<{
                             <option value="NationalPublicHolidays">National / Public Holidays *</option>
                           </select>
                         </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Region / Origin *</label>
+                        <select
+                          value={formData.core.region}
+                          onChange={(e) => setFormData(prev => ({...prev, core: {...prev.core, region: e.target.value}}))}
+                          className="w-full px-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-[14px] focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all duration-200 text-sm font-medium shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300"
+                        >
+                          <option value="">Select Region</option>
+                          {ETHIOPIA_REGIONS.map(region => (
+                            <option key={region.id} value={region.id}>{region.name}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
 
@@ -2785,7 +2802,7 @@ export const FestivalCreationWizard: React.FC<{
               onClick={step === 8 ? handlePublish : nextStep}
               className={step === 8 ? 'bg-emerald-500 hover:bg-emerald-600 border-emerald-500' : ''}
             >
-              {step === 8 ? 'Complete & Submit' : 'Continue'}
+              {step === 8 ? (initialData ? 'Save Changes' : 'Complete & Submit') : 'Continue'}
             </Button>
           </div>
         </div>

@@ -602,3 +602,5 @@ export const AdminProductsPage: React.FC = () => {
     </div>
   );
 };
+
+export default AdminProductsPage;

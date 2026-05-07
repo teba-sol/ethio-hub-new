@@ -4,3 +4,5 @@ import { ArtisanRevenueManager } from '../../components/dashboard/ArtisanRevenue
 export const ArtisanRevenuePage: React.FC = () => {
   return <ArtisanRevenueManager />;
 };
+
+export default ArtisanRevenuePage;

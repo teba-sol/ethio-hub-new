@@ -4,3 +4,5 @@ import { ArtisanSettingsManager } from '../../components/dashboard/ArtisanSettin
 export const ArtisanSettingsPage: React.FC = () => {
   return <ArtisanSettingsManager />;
 };
+
+export default ArtisanSettingsPage;

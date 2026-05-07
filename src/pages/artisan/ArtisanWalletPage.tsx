@@ -14,3 +14,5 @@ export const ArtisanWalletPage: React.FC = () => {
     </div>
   );
 };
+
+export default ArtisanWalletPage;

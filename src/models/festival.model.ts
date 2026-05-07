@@ -133,6 +133,7 @@ export interface IFestival extends Document {
   status: 'Draft' | 'Published' | 'Completed' | 'Cancelled';
   isVerified: boolean;
   verificationStatus: 'Draft' | 'Pending Approval' | 'Under Review' | 'Approved' | 'Rejected';
+  region?: string;
   submittedAt?: Date;
   reviewedAt?: Date;
   reviewedBy?: mongoose.Types.ObjectId;
@@ -319,6 +320,7 @@ const FestivalSchema: Schema = new Schema(
       enum: ['Draft', 'Pending Approval', 'Under Review', 'Approved', 'Rejected'],
       default: 'Draft',
     },
+    region: { type: String },
     submittedAt: { type: Date },
     reviewedAt: { type: Date },
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

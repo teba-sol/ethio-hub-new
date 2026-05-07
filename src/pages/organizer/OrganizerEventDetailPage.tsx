@@ -11,3 +11,5 @@ export const OrganizerEventDetailPage: React.FC = () => {
   
   return <EventDetailPanel eventId={id} onBack={() => router.push('/dashboard/organizer/festivals')} />;
 };
+
+export default OrganizerEventDetailPage;

@@ -49,11 +49,22 @@ const LocationMarker: React.FC<{ position: L.LatLng | null; setPosition: (positi
 };
 
 const MapPickerModal: React.FC<MapPickerModalProps> = ({ isOpen, onClose, onLocationSelect, initialPosition }) => {
-  const [position, setPosition] = useState<L.LatLng | null>(L.latLng(initialPosition.lat, initialPosition.lng));
+  const defaultPos = { lat: 9.03, lng: 38.74 }; // Addis Ababa
+  const [position, setPosition] = useState<L.LatLng | null>(
+    L.latLng(
+      initialPosition?.lat ?? defaultPos.lat, 
+      initialPosition?.lng ?? defaultPos.lng
+    )
+  );
 
   useEffect(() => {
       if(isOpen) {
-          setPosition(L.latLng(initialPosition.lat, initialPosition.lng));
+          setPosition(
+            L.latLng(
+              initialPosition?.lat ?? defaultPos.lat, 
+              initialPosition?.lng ?? defaultPos.lng
+            )
+          );
       }
   }, [isOpen, initialPosition]);
 

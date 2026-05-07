@@ -14,3 +14,5 @@ export const AdminWalletPage: React.FC = () => {
     </div>
   );
 };
+
+export default AdminWalletPage;

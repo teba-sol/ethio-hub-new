@@ -530,3 +530,4 @@ export const OrganizerRevenuePage: React.FC = () => {
     </div>
   );
 };
+export default OrganizerRevenuePage;

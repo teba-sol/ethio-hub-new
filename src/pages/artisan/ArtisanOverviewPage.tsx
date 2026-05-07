@@ -18,3 +18,5 @@ export const ArtisanOverviewPage: React.FC = () => {
     />
   );
 };
+
+export default ArtisanOverviewPage;

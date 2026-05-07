@@ -4,3 +4,5 @@ import { ArtisanAnalyticsManager } from '../../components/dashboard/ArtisanAnaly
 export const ArtisanAnalyticsPage: React.FC = () => {
   return <ArtisanAnalyticsManager />;
 };
+
+export default ArtisanAnalyticsPage;

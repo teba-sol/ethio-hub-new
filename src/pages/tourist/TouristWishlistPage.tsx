@@ -25,3 +25,5 @@ export const TouristWishlistPage: React.FC = () => {
     </div>
   );
 };
+
+export default TouristWishlistPage;

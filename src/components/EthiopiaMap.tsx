@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { MapPin, ArrowRight, Package, Music, Coffee } from 'lucide-react';
+import { MapPin, ArrowRight, Package, Music, Coffee, Star } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 
 interface RegionData {
@@ -101,6 +101,34 @@ export const EthiopiaMap: React.FC = () => {
   const { language, t } = useLanguage();
   const [activeRegion, setActiveRegion] = useState<RegionData | null>(null);
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
+  const [regionProducts, setRegionProducts] = useState<any[]>([]);
+  const [regionFestivals, setRegionFestivals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeRegion) {
+      fetchRegionData(activeRegion.id);
+    }
+  }, [activeRegion]);
+
+  const fetchRegionData = async (regionId: string) => {
+    try {
+      setLoading(true);
+      // Fetch products for this region
+      const prodRes = await fetch(`/api/public/products?region=${regionId}&limit=3`);
+      const prodData = await prodRes.json();
+      setRegionProducts(prodData.products || []);
+
+      // Fetch festivals for this region
+      const festRes = await fetch(`/api/festivals?region=${regionId}&limit=2`);
+      const festData = await festRes.json();
+      setRegionFestivals(festData.festivals || []);
+    } catch (error) {
+      console.error('Error fetching region data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getEventIcon = (event: string) => {
     if (event.toLowerCase().includes('coffee')) return <Coffee className="w-3 h-3" />;
@@ -330,17 +358,63 @@ export const EthiopiaMap: React.FC = () => {
                       {language === 'am' ? 'ዝግጅቶች' : 'Events & Festivals'}
                     </h4>
                     <div className="space-y-2">
-                      {activeRegion.events.map((event, idx) => (
-                        <div 
-                          key={idx}
-                          className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg"
-                        >
-                          <span className="text-secondary">{getEventIcon(event)}</span>
-                          {event}
-                        </div>
-                      ))}
+                      {regionFestivals.length > 0 ? (
+                        regionFestivals.map((fest, idx) => (
+                          <Link 
+                            key={idx}
+                            href={`/festivals/${fest.slug || fest._id}`}
+                            className="flex items-center gap-3 p-2 bg-gray-50 rounded-xl hover:bg-primary/5 transition-colors group"
+                          >
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
+                              <img src={fest.coverImage || (fest.gallery?.[0])} alt="" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-primary truncate">{language === 'am' ? fest.name_am : fest.name_en}</p>
+                              <p className="text-[10px] text-gray-400">{new Date(fest.startDate).toLocaleDateString()}</p>
+                            </div>
+                            <ArrowRight className="w-3 h-3 text-gray-300 group-hover:text-primary transition-colors" />
+                          </Link>
+                        ))
+                      ) : (
+                        activeRegion.events.slice(0, 2).map((event, idx) => (
+                          <div 
+                            key={idx}
+                            className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg"
+                          >
+                            <span className="text-secondary">{getEventIcon(event)}</span>
+                            {event}
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
+
+                  {/* Real Products from this Region */}
+                  {regionProducts.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-3">
+                        {language === 'am' ? 'የክልሉ የጥበብ ውጤቶች' : 'Featured Regional Crafts'}
+                      </h4>
+                      <div className="grid grid-cols-3 gap-2">
+                        {regionProducts.map((product, idx) => (
+                          <Link 
+                            key={idx}
+                            href={`/products/${product._id}`}
+                            className="group relative aspect-square rounded-xl overflow-hidden bg-gray-100"
+                          >
+                            <img 
+                              src={product.images?.[0]} 
+                              alt="" 
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+                              <p className="text-[8px] font-bold text-white truncate w-full">ETB {product.price}</p>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* CTA Button */}
                   <Link

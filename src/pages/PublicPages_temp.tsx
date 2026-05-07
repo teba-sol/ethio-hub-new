@@ -1081,3 +1081,5 @@ export const ProductListingPage: React.FC = () => {
 </div>
     );
   }
+
+export default Homepage;

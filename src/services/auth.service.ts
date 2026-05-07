@@ -5,17 +5,31 @@ import { SignJWT, jwtVerify } from 'jose';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'ethio-hub-secret-key-2025';
 
+const ACCESS_TOKEN_EXPIRES = '1h';
+const REFRESH_TOKEN_EXPIRES = '7d';
+
+export async function generateAccessToken(payload: any) {
+  return await new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(ACCESS_TOKEN_EXPIRES)
+    .sign(new TextEncoder().encode(JWT_SECRET));
+}
+
+export async function generateRefreshToken(payload: any) {
+  return await new SignJWT({ ...payload, type: 'refresh' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(REFRESH_TOKEN_EXPIRES)
+    .sign(new TextEncoder().encode(JWT_SECRET));
+}
+
 const generateToken = async (user: any) => {
-  const token = await new SignJWT({ 
+  return await generateAccessToken({ 
     userId: user._id.toString(),
     email: user.email,
     role: user.role 
-  })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime('1h')
-    .sign(new TextEncoder().encode(JWT_SECRET));
-  return token;
+  });
 };
 
 const formatUserResponse = (user: any) => ({ 
@@ -66,7 +80,17 @@ export const login = async (credentials: { email: string; password: string }) =>
     throw new Error('Your account has been banned. Please contact support.');
   }
   
-  const token = await generateToken(user);
+  const accessToken = await generateAccessToken({ 
+    userId: user._id.toString(),
+    email: user.email,
+    role: user.role 
+  });
+
+  const refreshToken = await generateRefreshToken({
+    userId: user._id.toString(),
+    email: user.email,
+    role: user.role
+  });
   
   // Refresh user from DB to get latest data
   const freshUser = await User.findById(user._id);
@@ -74,7 +98,8 @@ export const login = async (credentials: { email: string; password: string }) =>
   const showSuspensionModal = freshUser.status === 'Suspended';
 
   return { 
-    token, 
+    accessToken,
+    refreshToken,
     user: { 
       id: freshUser._id,
       email: freshUser.email, 
@@ -119,10 +144,21 @@ export const register = async (userData: { email: string; password: string; name
   
   const newUser = await User.create(newUserData);
   
-  const token = await generateToken(newUser);
+  const accessToken = await generateAccessToken({
+    userId: newUser._id.toString(),
+    email: newUser.email,
+    role: newUser.role
+  });
+
+  const refreshToken = await generateRefreshToken({
+    userId: newUser._id.toString(),
+    email: newUser.email,
+    role: newUser.role
+  });
   
   return { 
-    token, 
+    accessToken,
+    refreshToken,
     user: { 
       id: newUser._id,
       email: newUser.email, 
@@ -135,14 +171,14 @@ export const register = async (userData: { email: string; password: string; name
   };
 };
 
-export const verifyToken = async (token: string) => {
+export async function verifyToken(token: string) {
   try {
     const { payload } = await jwtVerify(token, new TextEncoder().encode(JWT_SECRET));
-    return { valid: true, payload };
-  } catch {
-    return { valid: false };
+    return payload;
+  } catch (error) {
+    return null;
   }
-};
+}
 
 export const logout = async () => {
   return { success: true };

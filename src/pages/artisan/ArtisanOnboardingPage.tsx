@@ -624,3 +624,5 @@ export const ArtisanOnboardingPage: React.FC = () => {
     </div>
   );
 };
+
+export default ArtisanOnboardingPage;

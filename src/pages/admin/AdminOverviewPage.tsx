@@ -577,3 +577,5 @@ export const AdminOverviewPage: React.FC = () => {
     </div>
   );
 };
+
+export default AdminOverviewPage;
