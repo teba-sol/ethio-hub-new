@@ -227,7 +227,7 @@ const withLocalProductFallbacks = (products: any[]) =>
   }));
 
 export const Homepage: React.FC = () => {
-  const { language, t } = useLanguage();
+  const { t } = useLanguage();
   const { getLocalizedField } = useContentLanguage();
   const [products, setProducts] = useState<any[]>([]);
   const [festivals, setFestivals] = useState<Festival[]>([]);
@@ -397,45 +397,32 @@ export const Homepage: React.FC = () => {
       <section className="py-16 md:py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
-            <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#D4AF37] mb-3">
-              {language === 'am' ? 'ዘላለማዊ መስህቦች' : 'TIMELESS ATTRACTIONS'}
-            </p>
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary mb-4">
-              {language === 'am' ? 'የዩኔስኮ የዓለም ቅርስ እና የባህል ፌስቲቫሎች' : 'UNESCO World Heritage & Festival Events'}
-            </h2>
-            <p className="text-gray-500 max-w-2xl mx-auto">
-              {language === 'am' 
-                ? 'ለዘመናት ተጓዦችን የሳቡትን የተቀደሱ በዓሎቻችንን እና ታዋቂ የቅርስ ቦታዎቻችንን በማየት የኢትዮጵያን የበለፀገ የባህል ታሪክ ይለማመዱ።'
-                : "Experience Ethiopia's rich cultural tapestry through our sacred festivals and legendary heritage sites that have captivated travelers for centuries."}
-            </p>
+            <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#D4AF37] mb-3">TIMELESS ATTRACTIONS</p>
+            <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary mb-4">UNESCO World Heritage & Festival Events</h2>
+            <p className="text-gray-500 max-w-2xl mx-auto">Experience Ethiopia's rich cultural tapestry through our sacred festivals and legendary heritage sites that have captivated travelers for centuries.</p>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Timket Card */}
             <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
               <div className="h-48 bg-gray-200 relative overflow-hidden">
+                {/* <!-- Replace with actual Timket festival image --> */}
                 <img 
-                  src="/uploads/festivals/timket.jpg" 
+                  src="https://images.unsplash.com/photo-1562962280-749b6e76a9d2?w=600&h=400&fit=crop" 
                   alt="Timket Festival" 
                   className="w-full h-full object-cover"
                 />
               </div>
               <div className="p-4">
-                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">
-                  {language === 'am' ? 'በዓል' : 'Festival'}
-                </span>
-                <h3 className="font-bold text-lg mt-2 text-primary">{language === 'am' ? 'ጥምቀት' : 'Timket'}</h3>
-                <p className="text-gray-600 text-sm mt-1">
-                  {language === 'am' 
-                    ? 'በቀለማት ያሸበረቁ ሰልፎች እና ባህላዊ የታቦት ስነ-ስርዓቶች የሚታዩበት የጥምቀት በዓል አከባበር።'
-                    : 'Epiphany celebration featuring colorful processions and traditional Tabot ceremonies.'}
-                </p>
+                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">Festival</span>
+                <h3 className="font-bold text-lg mt-2 text-primary">Timket</h3>
+                <p className="text-gray-600 text-sm mt-1">Epiphany celebration featuring colorful processions and traditional Tabot ceremonies.</p>
                 <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
                   <Calendar className="w-4 h-4" />
-                  <span>{language === 'am' ? 'ጥር 11' : 'January 19'}</span>
+                  <span>January 19</span>
                 </div>
                 <Link href="https://en.wikipedia.org/wiki/Timket" target="_blank" rel="noopener noreferrer" className="inline-flex items-center mt-3 text-sm font-medium text-[#D4AF37] hover:text-[#B8962E] transition-colors">
-                  {language === 'am' ? 'ተጨማሪ ይመልከቱ' : 'Discover More'} <ArrowRight className="w-4 h-4 ml-1" />
+                  Discover More <ArrowRight className="w-4 h-4 ml-1" />
                 </Link>
               </div>
             </div>
@@ -443,28 +430,23 @@ export const Homepage: React.FC = () => {
             {/* Meskel Card */}
             <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
               <div className="h-48 bg-gray-200 relative overflow-hidden">
+                {/* <!-- Replace with actual Meskel festival image --> */}
                 <img 
-                  src="/uploads/festivals/meskel.jpg" 
+                  src="https://images.unsplash.com/photo-1572252009286-268acec5ca0a8?w=600&h=400&fit=crop" 
                   alt="Meskel Festival" 
                   className="w-full h-full object-cover"
                 />
               </div>
               <div className="p-4">
-                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">
-                  {language === 'am' ? 'በዓል' : 'Festival'}
-                </span>
-                <h3 className="font-bold text-lg mt-2 text-primary">{language === 'am' ? 'መስቀል' : 'Meskel'}</h3>
-                <p className="text-gray-600 text-sm mt-1">
-                  {language === 'am' 
-                    ? 'በአዲስ አበባ ደማቅ የደመራ እሳት የሚከበርበት የእውነተኛው መስቀል መገኘት በዓል።'
-                    : 'Finding of the True Cross celebration with the iconic Demera bonfire in Addis Ababa.'}
-                </p>
+                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">Festival</span>
+                <h3 className="font-bold text-lg mt-2 text-primary">Meskel</h3>
+                <p className="text-gray-600 text-sm mt-1">Finding of the True Cross celebration with the iconic Demera bonfire in Addis Ababa.</p>
                 <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
                   <Calendar className="w-4 h-4" />
-                  <span>{language === 'am' ? 'መስከረም 17' : 'September 27'}</span>
+                  <span>September 27</span>
                 </div>
                 <Link href="https://en.wikipedia.org/wiki/Meskel" target="_blank" rel="noopener noreferrer" className="inline-flex items-center mt-3 text-sm font-medium text-[#D4AF37] hover:text-[#B8962E] transition-colors">
-                  {language === 'am' ? 'ተጨማሪ ይመልከቱ' : 'Discover More'} <ArrowRight className="w-4 h-4 ml-1" />
+                  Discover More <ArrowRight className="w-4 h-4 ml-1" />
                 </Link>
               </div>
             </div>
@@ -472,28 +454,23 @@ export const Homepage: React.FC = () => {
             {/* Lalibela Card */}
             <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
               <div className="h-48 bg-gray-200 relative overflow-hidden">
+                {/* <!-- Replace with actual Lalibela image --> */}
                 <img 
-                  src="/uploads/festivals/Lalibela,_san_giorgio,_esterno_24.jpg" 
+                  src="https://images.unsplash.com/photo-1563184572-339991b7e7fe?w=600&h=400&fit=crop" 
                   alt="Lalibela Rock-Hewn Churches" 
                   className="w-full h-full object-cover"
                 />
               </div>
               <div className="p-4">
-                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">
-                  {language === 'am' ? 'የዓለም ቅርስ' : 'World Heritage'}
-                </span>
-                <h3 className="font-bold text-lg mt-2 text-primary">{language === 'am' ? 'ላሊበላ' : 'Lalibela'}</h3>
-                <p className="text-gray-600 text-sm mt-1">
-                  {language === 'am' 
-                    ? '11 አሀዳዊ የውቅር አብያተ ክርስቲያናትን የያዘው የዩኔስኮ ቅርስ "ስምንተኛው የአለም ድንቅ" ተብሎ የሚታወቀው።'
-                    : 'UNESCO site featuring 11 monolithic rock-hewn churches, the "Eighth Wonder of the World."'}
-                </p>
+                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">World Heritage</span>
+                <h3 className="font-bold text-lg mt-2 text-primary">Lalibela</h3>
+                <p className="text-gray-600 text-sm mt-1">UNESCO site featuring 11 monolithic rock-hewn churches, the "Eighth Wonder of the World."</p>
                 <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
                   <MapPin className="w-4 h-4" />
-                  <span>{language === 'am' ? 'አማራ ክልል' : 'Amhara Region'}</span>
+                  <span>Amhara Region</span>
                 </div>
                 <Link href="https://en.wikipedia.org/wiki/Lalibela" target="_blank" rel="noopener noreferrer" className="inline-flex items-center mt-3 text-sm font-medium text-[#D4AF37] hover:text-[#B8962E] transition-colors">
-                  {language === 'am' ? 'ተጨማሪ ይመልከቱ' : 'Discover More'} <ArrowRight className="w-4 h-4 ml-1" />
+                  Discover More <ArrowRight className="w-4 h-4 ml-1" />
                 </Link>
               </div>
             </div>
@@ -501,28 +478,23 @@ export const Homepage: React.FC = () => {
             {/* Irreecha Card */}
             <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
               <div className="h-48 bg-gray-200 relative overflow-hidden">
+                {/* <!-- Replace with actual Irreecha festival image --> */}
                 <img 
-                  src="/uploads/festivals/irrecha.webp" 
+                  src="https://images.unsplash.com/photo-1545389336-cf090694435e?w=600&h=400&fit=crop" 
                   alt="Irreecha Festival" 
                   className="w-full h-full object-cover"
                 />
               </div>
               <div className="p-4">
-                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">
-                  {language === 'am' ? 'በዓል' : 'Festival'}
-                </span>
-                <h3 className="font-bold text-lg mt-2 text-primary">{language === 'am' ? 'ኢሬቻ' : 'Irreecha'}</h3>
-                <p className="text-gray-600 text-sm mt-1">
-                  {language === 'am' 
-                    ? 'በቱፖ ሐይቅ የሚከበር የምስጋና እና የእድሳት ምልክት የሆነው የኦሮሞ የምስጋና በዓል።'
-                    : 'Oromo thanksgiving celebration at Lake Tuppo, symbolizing gratitude and renewal.'}
-                </p>
+                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">Festival</span>
+                <h3 className="font-bold text-lg mt-2 text-primary">Irreecha</h3>
+                <p className="text-gray-600 text-sm mt-1">Oromo thanksgiving celebration at Lake Tuppo, symbolizing gratitude and renewal.</p>
                 <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
                   <Calendar className="w-4 h-4" />
-                  <span>{language === 'am' ? 'ጥቅምት' : 'October'}</span>
+                  <span>October</span>
                 </div>
-                <Link href="https://en.wikipedia.org/wiki/Irreechaa" target="_blank" rel="noopener noreferrer" className="inline-flex items-center mt-3 text-sm font-medium text-[#D4AF37] hover:text-[#B8962E] transition-colors">
-                  {language === 'am' ? 'ተጨማሪ ይመልከቱ' : 'Discover More'} <ArrowRight className="w-4 h-4 ml-1" />
+                <Link href="/festivals" className="inline-flex items-center text-[#D4AF37] font-medium hover:text-[#B8962E] transition-colors">
+                  Discover More <ArrowRight className="w-4 h-4 ml-1" />
                 </Link>
               </div>
             </div>
@@ -534,17 +506,9 @@ export const Homepage: React.FC = () => {
       <section className="py-16 md:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
-            <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#D4AF37] mb-3">
-              {language === 'am' ? 'ባህላዊ በዓላት' : 'CULTURAL CELEBRATIONS'}
-            </p>
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary mb-4">
-              {language === 'am' ? 'የኢትዮጵያ በዓላትን ይለማመዱ' : 'Experience Ethiopian Festivities'}
-            </h2>
-            <p className="text-gray-500 max-w-2xl mx-auto">
-              {language === 'am' 
-                ? 'ከጥንታዊ የሃይማኖት ወጎች እስከ ደማቅ የባህል በዓላት፣ የኢትዮጵያን ነፍስ በበዓላቶቿ አማካኝነት ያግኙ።'
-                : 'From ancient religious traditions to vibrant cultural celebrations, discover the soul of Ethiopia through its festivals.'}
-            </p>
+            <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#D4AF37] mb-3">CULTURAL CELEBRATIONS</p>
+            <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary mb-4">Experience Ethiopian Festivities</h2>
+            <p className="text-gray-500 max-w-2xl mx-auto">From ancient religious traditions to vibrant cultural celebrations, discover the soul of Ethiopia through its festivals.</p>
           </div>
 
           {celebrationLoading ? (
@@ -2591,7 +2555,7 @@ const getImageUrl = (path: string | undefined | null) => {
     }
     
     // Check if profile is complete
-    const touristProfile = (user as any)?.touristProfile;
+    const touristProfile = user?.touristProfile;
     if (!touristProfile?.phone || !touristProfile?.country || !touristProfile?.nationality) {
       alert('Please complete your profile before booking. Go to Settings to add your phone, country, and nationality.');
       router.push('/dashboard/tourist/settings');
@@ -3731,5 +3695,3 @@ const getImageUrl = (path: string | undefined | null) => {
     </div>
   );
 };
-
-export default Homepage;

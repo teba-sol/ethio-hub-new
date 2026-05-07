@@ -53,6 +53,26 @@ export interface User {
       darkMode?: boolean;
     };
   };
+  touristProfile?: {
+    phone?: string;
+    country?: string;
+    nationality?: string;
+    bio?: string;
+    profileImage?: string;
+    interests?: string[];
+    language?: string;
+    currency?: string;
+  };
+  artisanProfile?: {
+    companyName?: string;
+    phone?: string;
+    website?: string;
+    address?: string;
+    bio?: string;
+    avatar?: string;
+    specialties?: string[];
+    yearsOfExperience?: number;
+  };
 }
 
 export interface Product {

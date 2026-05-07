@@ -4,9 +4,9 @@ import { Button } from './UI';
 import { useLanguage } from '@/context/LanguageContext';
 
 const videoSources = [
-  '/uploads/videos/3967184-uhd_4096_2160_24fps.mp4',
-  '/uploads/videos/20719516-uhd_3840_2160_25fps.mp4',
-  '/uploads/videos/14742585_1080_1920_24fps.mp4',
+  'https://res.cloudinary.com/dmhu32ya9/video/upload/v1778191200/ethio-hub/hero-videos/3967184-uhd_4096_2160_24fps.mp4',
+  'https://res.cloudinary.com/dmhu32ya9/video/upload/v1778191200/ethio-hub/hero-videos/20719516-uhd_3840_2160_25fps.mp4',
+  'https://res.cloudinary.com/dmhu32ya9/video/upload/v1778191200/ethio-hub/hero-videos/14742585_1080_1920_24fps.mp4',
 ];
 
 const posterImage = 'https://res.cloudinary.com/dmhu32ya9/image/upload/w_1920,h_1080,c_fill/v1777798803/ethio-hub/avatars/festivalandproductimage/fzfj0bverugasrobafk0.webp';
