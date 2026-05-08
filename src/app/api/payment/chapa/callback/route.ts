@@ -36,12 +36,20 @@ export async function GET(request: NextRequest) {
       const result = await processSuccessfulPayment(txRef, data.data);
       
       if (result.success) {
-        const redirectPath = result.order
-          ? `/payment-success?orderId=${result.order._id}&status=success&tx_ref=${txRef}`
-          : result.booking
-          ? `/payment-success?bookingId=${result.booking._id}&status=success&tx_ref=${txRef}`
-          : `/payment-success?status=success&tx_ref=${txRef}`;
-
+        // Build redirect URL with booking/order info
+        let redirectPath = '/payment-success?status=success';
+        
+        if (result.booking?._id) {
+          redirectPath += `&bookingId=${result.booking._id}&tx_ref=${txRef}`;
+        } else if (result.order?._id) {
+          redirectPath += `&orderId=${result.order._id}&tx_ref=${txRef}`;
+        } else if (result.payment?.orderId) {
+          redirectPath += `&orderId=${result.payment.orderId}&tx_ref=${txRef}`;
+        }
+        
+        redirectPath += `&payment=success`;
+        
+        console.log('Redirecting to:', redirectPath);
         return NextResponse.redirect(new URL(redirectPath, request.url));
       } else {
         console.error('Failed to process payment:', result.message);
@@ -50,7 +58,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Payment failed - redirect to root with failed param
-    return NextResponse.redirect(new URL('/payment/success?status=failed', request.url));
+    return NextResponse.redirect(new URL('/?payment=failed', request.url));
 
   } catch (error: any) {
     console.error('Chapa callback error:', error);

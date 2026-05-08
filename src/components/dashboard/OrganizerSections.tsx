@@ -2127,22 +2127,7 @@ const getImageUrl = (path: string | undefined | null) => {
               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
             />
           ) : (
-            <p className="text-sm font-bold text-primary">{currentData.capacity?.toLocaleString()} people</p>
-          )}
-        </div>
-        <div>
-          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Early Bird Deadline</p>
-          {isEditing ? (
-            <input
-              type="date"
-              value={currentData.pricing?.earlyBirdDeadline?.split('T')[0] || ''}
-              onChange={(e) => handleNestedChange('pricing', 'earlyBirdDeadline', e.target.value)}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
-            />
-          ) : (
-            <p className="text-sm font-bold text-primary">
-              {currentData.pricing?.earlyBirdDeadline ? new Date(currentData.pricing.earlyBirdDeadline).toDateString() : 'No early bird'}
-            </p>
+            <p className="text-sm font-bold text-primary">{currentData.capacity?.toLocaleString() || '0'}</p>
           )}
         </div>
       </div>
@@ -2173,7 +2158,7 @@ const getImageUrl = (path: string | undefined | null) => {
             </div>
           ) : (
             <p className="text-3xl font-bold text-primary">
-              {currentData.pricing?.currency || 'ETB'} {currentData.pricing?.standardPrice?.toLocaleString() || '0'}
+              {currentData.pricing?.currency || 'ETB'} {(currentData.ticketTypes?.find((t: any) => !t.name?.toLowerCase().includes('vip'))?.price || currentData.pricing?.standardPrice || 0)?.toLocaleString()}
             </p>
           )}
         </div>
@@ -2230,11 +2215,9 @@ const getImageUrl = (path: string | undefined | null) => {
               </div>
             </>
           ) : (
-            <>
-              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Package Type</p>
-              <p className="text-xl font-bold text-secondary">All Inclusive</p>
-              <p className="text-xs text-gray-400 mt-1">Hotel + Transport included</p>
-            </>
+            <p className="text-3xl font-bold text-secondary">
+              {currentData.pricing?.currency || 'ETB'} {(currentData.ticketTypes?.find((t: any) => t.name?.toLowerCase().includes('vip'))?.price || currentData.pricing?.vipPrice || 0)?.toLocaleString()}
+            </p>
           )}
         </div>
       </div>
@@ -2420,42 +2403,6 @@ const getImageUrl = (path: string | undefined | null) => {
             />
           ) : (
             <p className="text-sm font-bold text-primary">{currentData.pricing?.vipEarlyBird || 0}% off</p>
-          )}
-        </div>
-      </div>
-    </div>
-
-    {/* Group Discount */}
-    <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-      <h4 className="font-bold text-primary mb-4 flex items-center gap-2">
-        <Users className="w-4 h-4 text-secondary" />
-        Group Discount
-      </h4>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Minimum Group Size</p>
-          {isEditing ? (
-            <input
-              type="number"
-              value={currentData.pricing?.groupMinSize || 10}
-              onChange={(e) => handleNestedChange('pricing', 'groupMinSize', parseNumberInput(e.target.value))}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
-            />
-          ) : (
-            <p className="text-sm font-bold text-primary">{currentData.pricing?.groupMinSize || 10}+ people</p>
-          )}
-        </div>
-        <div>
-          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Group Discount (%)</p>
-          {isEditing ? (
-            <input
-              type="number"
-              value={currentData.pricing?.groupDiscount || 0}
-              onChange={(e) => handleNestedChange('pricing', 'groupDiscount', parseNumberInput(e.target.value))}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
-            />
-          ) : (
-            <p className="text-sm font-bold text-primary">{currentData.pricing?.groupDiscount || 0}% off</p>
           )}
         </div>
       </div>

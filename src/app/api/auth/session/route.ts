@@ -30,13 +30,8 @@ export async function GET() {
           role: refreshPayload.role
         });
 
-        // Update the payload for the current request
+        // Update for current request
         payload = refreshPayload;
-
-        // Set the new access token cookie
-        // We will set this on the final response object below
-        
-        // We need to continue and fetch the user data
         sessionToken = newAccessToken;
       }
     }
@@ -69,13 +64,13 @@ export async function GET() {
 
     const response = NextResponse.json(responseData);
 
-    // If we generated a new sessionToken during this request, make sure it's in the final response
-    if (sessionToken && !cookieStore.get('sessionToken')) {
+    // If we refreshed the token, set it on the response
+    if (sessionToken && sessionToken !== cookieStore.get('sessionToken')?.value) {
        response.cookies.set('sessionToken', sessionToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
-          maxAge: 3600,
+          maxAge: 24 * 3600, // 24 hours
           path: '/',
         });
     }

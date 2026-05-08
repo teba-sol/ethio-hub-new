@@ -1,7 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import * as authService from "@/services/auth.service";
 import { connectDB } from "@/lib/mongodb";
-import { generateAccessToken, generateRefreshToken } from "@/services/auth.service";
 import { applyRateLimit, getRequestIp } from "@/lib/rateLimit";
 
 export async function POST(request: NextRequest) {
@@ -25,17 +24,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Login request body:', body); // <-- Add this line for debugging
     const { accessToken, refreshToken, user, showSuspensionModal } = await authService.login(body);
 
     const response = NextResponse.json({ success: true, user, showSuspensionModal }, { status: 200 });
 
-    // Set Access Token (1 hour)
+    // Set Access Token (24 hours for better persistence)
     response.cookies.set('sessionToken', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 3600, // 1 hour
+      maxAge: 24 * 3600, // 24 hours
       path: '/',
     });
 

@@ -115,7 +115,33 @@ export default function CheckoutPage() {
         
         const data = await response.json();
         
-        if (data.success && data.checkoutUrl) {
+        if (data.success && data.booking?._id) {
+          const bookingId = data.booking._id;
+          
+          // Build URL with all booking details
+          const params = new URLSearchParams();
+          params.set('bookingId', bookingId);
+          params.set('status', 'success');
+          params.set('eventName', event?.name_en || event?.name || 'Event');
+          params.set('ticketType', ticketSelection?.type || 'Standard');
+          params.set('totalAmount', grandTotal.toString());
+          
+          if (selectedRoom && checkIn && checkOut) {
+            params.set('hotelName', selectedHotel?.name || '');
+            params.set('roomName', selectedRoom.name);
+          }
+          
+          if (selectedTransport) {
+            params.set('transportType', selectedTransport.type);
+            params.set('transportPrice', selectedTransport.price.toString());
+          }
+          
+          params.set('guestName', user?.name || 'Guest');
+          params.set('guestEmail', user?.email || 'guest@email.com');
+          
+          // Redirect to success page with booking details in URL
+          router.push(`/payment-success?${params.toString()}`);
+        } else if (data.success && data.checkoutUrl) {
           window.location.href = data.checkoutUrl;
         } else {
           setError('Payment initialization failed. Please try again.');
@@ -298,7 +324,7 @@ export default function CheckoutPage() {
                 className="w-full py-4 shadow-lg shadow-primary/20"
                 leftIcon={CreditCard}
               >
-                Secure Checkout
+                Secure Payment
               </Button>
 
               <div className="mt-6 space-y-3">

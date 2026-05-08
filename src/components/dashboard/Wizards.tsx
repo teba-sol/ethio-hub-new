@@ -190,8 +190,7 @@ export const FestivalCreationWizard: React.FC<{
       vipPrice: initialData?.pricing?.vipPrice || initialData?.vipTicketPrice || 0, 
       currency: initialData?.pricing?.currency || initialData?.currency || 'ETB', 
       earlyBird: initialData?.pricing?.earlyBird || 0, 
-      earlyBirdPrice: initialData?.pricing?.earlyBirdPrice || initialData?.earlyBirdPrice || 0,
-      earlyBirdDeadline: initialData?.pricing?.earlyBirdDeadline || '',
+      earlyBirdDays: initialData?.pricing?.earlyBirdDays || 7,
       groupDiscount: initialData?.pricing?.groupDiscount || 0,
       vipIncludedHotels: initialData?.pricing?.vipIncludedHotels || [] as string[],
       vipIncludedTransport: initialData?.pricing?.vipIncludedTransport || [] as string[]
@@ -2301,36 +2300,41 @@ export const FestivalCreationWizard: React.FC<{
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Early Bird Price</label>
+<div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Early Bird Discount (%)</label>
                             <div className="flex items-center gap-3 px-4 py-3.5 bg-emerald-50/30 rounded-[14px] border border-emerald-100 focus-within:bg-white focus-within:border-emerald-300 transition-all">
-                              <span className="text-xs font-black text-emerald-600">ETB</span>
+                              <Zap className="w-5 h-5 text-emerald-600" />
                               <input
                                 type="number"
                                 min="0"
-                                value={formData.pricing.earlyBirdPrice || ''}
+                                max="100"
+                                value={formData.pricing.earlyBird || ''}
                                 onChange={(e) => setFormData(prev => ({ 
                                   ...prev, 
-                                  pricing: { ...prev.pricing, earlyBirdPrice: parseFloat(e.target.value) || 0 }
+                                  pricing: { ...prev.pricing, earlyBird: parseInt(e.target.value) || 0 }
                                 }))}
                                 className="flex-1 text-lg font-bold bg-transparent border-0 outline-none text-emerald-700 placeholder-emerald-200"
-                                placeholder="e.g., 50"
+                                placeholder="e.g., 20"
                               />
+                              <span className="text-xs font-black text-emerald-600">%</span>
                             </div>
                           </div>
                           <div className="space-y-2">
-                            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Early Bird Deadline</label>
-                            <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50/30 rounded-[14px] border border-emerald-100 focus-within:bg-white focus-within:border-emerald-300 transition-all">
+                            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Valid for (Days)</label>
+                            <div className="flex items-center gap-3 px-4 py-3.5 bg-emerald-50/30 rounded-[14px] border border-emerald-100 focus-within:bg-white focus-within:border-emerald-300 transition-all">
                               <Calendar className="w-5 h-5 text-emerald-600" />
                               <input
-                                type="date"
-                                value={formData.pricing.earlyBirdDeadline || ''}
+                                type="number"
+                                min="1"
+                                value={formData.pricing.earlyBirdDays || 7}
                                 onChange={(e) => setFormData(prev => ({ 
                                   ...prev, 
-                                  pricing: { ...prev.pricing, earlyBirdDeadline: e.target.value }
+                                  pricing: { ...prev.pricing, earlyBirdDays: parseInt(e.target.value) || 7 }
                                 }))}
                                 className="flex-1 text-lg font-bold bg-transparent border-0 outline-none text-emerald-700"
+                                placeholder="e.g., 7"
                               />
+<span className="text-xs font-black text-emerald-600">days</span>
                             </div>
                           </div>
                         </div>
@@ -2738,15 +2742,15 @@ export const FestivalCreationWizard: React.FC<{
                         </h4>
                         
                         <div className="space-y-6">
-                          {formData.pricing.earlyBirdPrice > 0 && (
+                          {formData.pricing.earlyBird > 0 && (
                             <div className="flex justify-between items-center pb-4 border-b border-white/10">
                               <div>
                                 <p className="text-[10px] font-black uppercase text-emerald-400 tracking-widest">Early Bird</p>
-                                <p className="text-2xl font-black">ETB {formData.pricing.earlyBirdPrice}</p>
+                                <p className="text-2xl font-black">{formData.pricing.earlyBird}% OFF</p>
                               </div>
                               <div className="text-right">
-                                <p className="text-[10px] text-gray-500">Deadline</p>
-                                <p className="text-xs font-bold">{formData.pricing.earlyBirdDeadline}</p>
+                                <p className="text-[10px] text-gray-500">Valid for</p>
+                                <p className="text-xs font-bold">{formData.pricing.earlyBirdDays} days</p>
                               </div>
                             </div>
                           )}

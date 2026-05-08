@@ -35,8 +35,9 @@ export default function HotelsPage() {
    const [showFilters, setShowFilters] = useState(false);
    const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
    const [selectedStars, setSelectedStars] = useState<number[]>([]);
-   const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
-   const [wantsHotel, setWantsHotel] = useState<boolean | null>(ticketSelection?.type === 'vip' ? true : null);
+const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
+    // Always show hotels directly for Standard tickets (no "Add Accommodation?" modal)
+    const wantsHotel = true;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -201,55 +202,7 @@ export default function HotelsPage() {
     );
   }
 
-  if (wantsHotel === null && ticketSelection?.type !== 'vip') {
-    return (
-      <div className="min-h-screen bg-gray-50/50 flex items-center justify-center p-6">
-        <div className="max-w-xl w-full bg-white rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
-          <div className="p-10 text-center">
-            <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-8">
-              <MapPin className="w-10 h-10 text-primary" />
-            </div>
-            <h1 className="text-3xl font-serif font-black text-gray-900 mb-4">Add Accommodation?</h1>
-            <p className="text-gray-500 text-lg leading-relaxed mb-10">
-              Your Standard ticket includes event entry. Would you like to add a hotel stay for an extra fee?
-            </p>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button
-                onClick={() => setWantsHotel(true)}
-                className="group p-6 rounded-2xl border-2 border-primary bg-primary/5 hover:bg-primary transition-all text-left"
-              >
-                <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center mb-4 group-hover:bg-white/20">
-                  <Star className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="font-bold text-primary group-hover:text-white mb-1">Yes, I need one</h3>
-                <p className="text-xs text-primary/60 group-hover:text-white/60 font-medium">Extra fees apply per night</p>
-              </button>
-
-              <button
-                onClick={() => {
-                  setSelectedHotel(null);
-                  setSelectedRoom(null);
-                  router.push(`/event/${eventId}/transport`);
-                }}
-                className="group p-6 rounded-2xl border-2 border-gray-100 bg-white hover:border-gray-200 transition-all text-left"
-              >
-                <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-gray-100">
-                  <ArrowLeft className="w-5 h-5 text-gray-400 rotate-180" />
-                </div>
-                <h3 className="font-bold text-gray-900 mb-1">No, skip this</h3>
-                <p className="text-xs text-gray-400 font-medium italic">Continue to transport options</p>
-              </button>
-            </div>
-
-            <div className="mt-10 pt-8 border-t border-gray-50 flex items-center justify-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest">
-              <ShieldCheck className="w-4 h-4 text-emerald-500" /> Secure Booking Experience
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Show hotels directly (no "Add Accommodation?" modal)
 
   return (
     <div className="min-h-screen bg-ethio-bg">

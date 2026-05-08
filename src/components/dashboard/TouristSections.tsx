@@ -235,33 +235,46 @@ export const TouristBookingsView: React.FC = () => {
                 <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-gray-400" /><span className="font-medium">{selectedBooking.contactInfo?.phone || 'N/A'}</span></div>
               </div>
 
-              {selectedBooking.bookingDetails && (selectedBooking.bookingDetails.room || selectedBooking.bookingDetails.transport) && (
+              {/* Hotel and Transport Info */}
+              {(selectedBooking.hotelName || selectedBooking.transportType) && (
                 <div className="bg-gray-50 p-4 rounded-xl space-y-2">
                   <p className="text-xs text-gray-400 uppercase">Additional Services</p>
-                  {selectedBooking.bookingDetails.room && (
-                    <div className="text-sm flex justify-between">
-                      <span>Hotel: {selectedBooking.bookingDetails.room.hotelName}</span>
-                      <span className="font-medium">ETB {selectedBooking.bookingDetails.room.roomPrice}</span>
+                  {selectedBooking.hotelName && (
+                    <div className="text-sm flex flex-col border-b border-gray-100 pb-2">
+                      <div className="flex justify-between">
+                        <span>Hotel: {selectedBooking.hotelName}</span>
+                        <span className="font-medium">ETB {selectedBooking.roomPrice || 0}</span>
+                      </div>
+                      {(selectedBooking.hotelRefCode || selectedBooking.bookingDetails?.room?.hotelRefCode) && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                            Hotel Ref: {selectedBooking.hotelRefCode || selectedBooking.bookingDetails?.room?.hotelRefCode}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
-                  {selectedBooking.bookingDetails.transport && (
-                    <div className="text-sm flex justify-between">
-                      <span>Transport: {selectedBooking.bookingDetails.transport.type}</span>
-                      <span className="font-medium">ETB {selectedBooking.bookingDetails.transport.price}</span>
+                  {selectedBooking.transportType && (
+                    <div className="text-sm flex flex-col pt-1">
+                      <div className="flex justify-between">
+                        <span>Transport: {selectedBooking.transportType}</span>
+                        <span className="font-medium">ETB {selectedBooking.transportPrice || 0}</span>
+                      </div>
+                      {(selectedBooking.transportRefCode || selectedBooking.bookingDetails?.transport?.transportRefCode) && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <span className="text-[10px] bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                            Transport Ref: {selectedBooking.transportRefCode || selectedBooking.bookingDetails?.transport?.transportRefCode}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               )}
               
+
+              
               <div className="border-t pt-4 space-y-2">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-500">Subtotal</span>
-                  <span className="font-medium">ETB {(selectedBooking.totalPrice - (selectedBooking.platformFee || 0)).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-500">Service Fee</span>
-                  <span className="font-medium">ETB {(selectedBooking.platformFee || 0).toFixed(2)}</span>
-                </div>
                 <div className="flex justify-between items-center font-bold text-lg">
                   <span className="text-primary">Total Amount</span>
                   <span className="text-primary">ETB {selectedBooking.totalPrice.toFixed(2)}</span>
@@ -272,17 +285,11 @@ export const TouristBookingsView: React.FC = () => {
                 <span>Booked on: {new Date(selectedBooking.createdAt).toLocaleDateString()}</span>
                 <span className={`capitalize ${selectedBooking.paymentStatus === 'paid' ? 'text-green-600' : 'text-amber-600'}`}>Payment: {selectedBooking.paymentStatus}</span>
               </div>
-              
-              {selectedBooking.status === 'pending' && selectedBooking.paymentStatus === 'pending' && (
-                <Button className="w-full bg-red-500 hover:bg-red-600" onClick={() => handleCancelBooking(selectedBooking._id)} disabled={cancelling === selectedBooking._id}>
-                  {cancelling === selectedBooking._id ? 'Cancelling...' : 'Cancel Booking'}
-                </Button>
-              )}
-              
+               
               {selectedBooking.status === 'confirmed' && selectedBooking.paymentStatus === 'paid' && (
-                <div className="text-center text-sm text-green-600 font-medium">
-                  Booking confirmed - enjoy your festival!
-                </div>
+                <Button className="w-full bg-primary hover:bg-primary/90" onClick={() => window.print()}>
+                  Download Receipt
+                </Button>
               )}
             </div>
           </div>
@@ -616,24 +623,47 @@ export const TouristPaymentsView: React.FC = () => {
   useEffect(() => {
     const fetchPayments = async () => {
       try {
-        const response: any = await apiClient.get('/api/tourist/orders');
-        let orders: PaymentData[] = [];
+        let allPayments: any[] = [];
         
-        // Handle both response formats
-        if (response.success && response.orders) {
-          orders = response.orders;
-        } else if (response.orders) {
-          orders = response.orders;
-        } else if (Array.isArray(response)) {
-          orders = response as any[];
+        // Fetch event bookings
+        try {
+          const bookingsResponse: any = await apiClient.get('/api/tourist/bookings');
+          if (bookingsResponse.success && bookingsResponse.bookings) {
+            const paidBookings = bookingsResponse.bookings
+              .filter((b: any) => b.status === 'confirmed' || b.paymentStatus === 'paid')
+              .map((b: any) => ({
+                _id: b._id,
+                paymentRef: b.paymentRef,
+                paymentDate: b.paymentDate || b.updatedAt,
+                product: { name: b.festival?.name_en || b.festival?.name || 'Event' },
+                totalPrice: b.totalPrice,
+                paymentMethod: b.paymentMethod,
+                status: b.status,
+                paymentStatus: b.paymentStatus,
+                receipt: b.receipt,
+                bookingDetails: b.bookingDetails,
+                ticketType: b.ticketType,
+              }));
+            allPayments = [...allPayments, ...paidBookings];
+          }
+        } catch (e) {
+          console.log('No bookings found');
         }
-
-        // Filter for paid orders only to show as payment history
-        const paidOrders = orders.filter((order: any) => 
-          order.paymentStatus === 'paid' || order.status === 'confirmed'
-        );
         
-        setPayments(paidOrders);
+        // Also fetch regular orders
+        try {
+          const ordersResponse: any = await apiClient.get('/api/tourist/orders');
+          if (ordersResponse.success && ordersResponse.orders) {
+            const paidOrders = ordersResponse.orders.filter((order: any) => 
+              order.paymentStatus === 'paid' || order.status === 'confirmed'
+            );
+            allPayments = [...allPayments, ...paidOrders];
+          }
+        } catch (e) {
+          console.log('No orders found');
+        }
+        
+        setPayments(allPayments);
         setError(null);
       } catch (error: any) {
         console.error('Error fetching payments:', error);
@@ -718,7 +748,18 @@ export const TouristPaymentsView: React.FC = () => {
                   <tr key={payment._id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="p-6 font-mono font-medium text-gray-600">{payment.paymentRef || payment._id?.slice(-8).toUpperCase()}</td>
                     <td className="p-6 text-gray-600">{new Date(payment.paymentDate || payment.updatedAt || payment.createdAt || Date.now()).toLocaleDateString()}</td>
-                    <td className="p-6 font-medium text-primary">Order #{payment._id?.slice(-8).toUpperCase()} - {payment.product?.name || 'Product'}</td>
+                    <td className="p-6 font-medium text-primary">
+                      <div>{payment.product?.name || 'Event'}</div>
+                      {payment.ticketType && (
+                        <div className="text-xs text-amber-600 font-medium">{payment.ticketType?.toUpperCase()} Ticket</div>
+                      )}
+                      {payment.bookingDetails?.room?.hotelName && (
+                        <div className="text-xs text-blue-600">Hotel: {payment.bookingDetails.room.hotelName}</div>
+                      )}
+                      {payment.bookingDetails?.transport?.type && (
+                        <div className="text-xs text-purple-600">Transport: {payment.bookingDetails.transport.type}</div>
+                      )}
+                    </td>
                     <td className="p-6 text-gray-500 flex items-center gap-2">
                       <CreditCard className="w-4 h-4" /> <span className="capitalize">{payment.paymentMethod || 'N/A'}</span>
                     </td>

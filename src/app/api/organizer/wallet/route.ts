@@ -17,15 +17,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const tokenResult = await verifyToken(token);
-    if (!tokenResult.valid || !tokenResult.payload?.userId) {
+    const JWT_SECRET = process.env.JWT_SECRET || 'ethio-hub-secret-key-2025';
+    const { payload, valid } = await import('jose').then(jose => 
+      jose.jwtVerify(token, new TextEncoder().encode(JWT_SECRET))
+        .then(res => ({ valid: true, payload: res.payload }))
+        .catch(() => ({ valid: false, payload: null }))
+    );
+    
+    if (!valid || !payload?.userId) {
       return NextResponse.json(
         { success: false, message: 'Invalid token' },
         { status: 401 }
       );
     }
 
-    const userId = tokenResult.payload.userId as string;
+    const userId = payload.userId as string;
     const userObjectId = new mongoose.Types.ObjectId(userId);
     
     const { searchParams } = new URL(request.url);

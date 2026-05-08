@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   BarChart3, Ticket, LogOut, Bell, Search, 
-  Calendar, Star, PieChart, Settings, CheckCircle, Menu, X, Wallet
+  Calendar, Star, PieChart, Settings, CheckCircle, Menu, X, Wallet, CreditCard, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -31,6 +31,7 @@ export const OrganizerLayout: React.FC<{ children?: React.ReactNode }> = ({ chil
     { path: '/dashboard/organizer/festivals', nameKey: 'dashboard.myEvents', icon: Calendar },
     { path: '/dashboard/organizer/bookings', nameKey: 'dashboard.bookings', icon: Ticket },
     { path: '/dashboard/organizer/wallet', label: 'Wallet', icon: Wallet },
+    { path: '/dashboard/organizer/settlements', label: 'Settlements', icon: CreditCard },
     { path: '/dashboard/organizer/reviews', nameKey: 'dashboard.reviews', icon: Star },
     { path: '/dashboard/organizer/analytics', nameKey: 'dashboard.analytics', icon: PieChart },
     { path: '/dashboard/organizer/settings', nameKey: 'dashboard.settings', icon: Settings },

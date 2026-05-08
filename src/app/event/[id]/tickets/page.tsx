@@ -51,24 +51,33 @@ export default function TicketsPage() {
     fetchData();
   }, [eventId]);
 
-  const postedAtRaw = festival?.createdAt || festival?.submittedAt;
+  const postedAtRaw = festival?.reviewedAt || festival?.updatedAt;
   const postedAt = postedAtRaw ? new Date(postedAtRaw) : null;
   const hasValidPostedAt = !!postedAt && !Number.isNaN(postedAt.getTime());
-  const earlyBirdExpiresAt = hasValidPostedAt
-    ? new Date(postedAt!.getTime() + EARLY_BIRD_WINDOW_HOURS * 60 * 60 * 1000)
+  const earlyBirdDays = festival?.pricing?.earlyBirdDays || 0;
+  const earlyBirdExpiresAt = hasValidPostedAt && earlyBirdDays > 0
+    ? new Date(postedAt!.getTime() + earlyBirdDays * 24 * 60 * 60 * 1000)
     : null;
   const now = new Date();
-  const isEarlyBirdAvailable = !earlyBirdExpiresAt || now <= earlyBirdExpiresAt;
+  const isEarlyBirdAvailable = !!earlyBirdExpiresAt && now <= earlyBirdExpiresAt;
 
   // Get pricing values
   const basePrice = festival?.pricing?.basePrice || festival?.baseTicketPrice || 0;
-  const vipPrice = festival?.pricing?.vipPrice || festival?.vipTicketPrice || basePrice * 2;
+  const vipPriceBase = festival?.pricing?.vipPrice || festival?.vipTicketPrice || basePrice * 2;
   
   // Calculate early bird price (percentage stored in backend as 0-100)
   const earlyBirdPercent = (festival?.pricing?.earlyBird || 0);
-  const earlyBirdPrice = basePrice * (1 - earlyBirdPercent / 100);
-  const standardPrice = isEarlyBirdAvailable && earlyBirdPercent > 0 ? earlyBirdPrice : basePrice;
+  
+  const standardPrice = isEarlyBirdAvailable && earlyBirdPercent > 0 
+    ? basePrice * (1 - earlyBirdPercent / 100) 
+    : basePrice;
+    
+  const vipPrice = isEarlyBirdAvailable && earlyBirdPercent > 0 
+    ? vipPriceBase * (1 - earlyBirdPercent / 100) 
+    : vipPriceBase;
+
   const standardDiscount = isEarlyBirdAvailable && earlyBirdPercent > 0 ? earlyBirdPercent : 0;
+  const vipDiscount = isEarlyBirdAvailable && earlyBirdPercent > 0 ? earlyBirdPercent : 0;
 
   // Calculate VIP value (what it would cost separately) - estimate based on first hotel room price
   const firstRoomPrice = festival?.hotels?.[0]?.rooms?.[0]?.pricePerNight || 200;
@@ -87,11 +96,19 @@ export default function TicketsPage() {
   };
 
   const handleViewHotels = () => {
-    router.push(`/event/${eventId}/hotels`);
+    if (ticketSelection?.type === 'vip') {
+      router.push(`/event/${eventId}/package`);
+    } else {
+      router.push(`/event/${eventId}/hotels`);
+    }
   };
 
   const handleViewTransport = () => {
-    router.push(`/event/${eventId}/transport`);
+    if (ticketSelection?.type === 'vip') {
+      router.push(`/event/${eventId}/package`);
+    } else {
+      router.push(`/event/${eventId}/transport`);
+    }
   };
 
   const TICKET_TYPES = useMemo(() => [
@@ -99,6 +116,8 @@ export default function TicketsPage() {
       type: 'vip' as const,
       label: 'VIP All-Inclusive',
       price: vipPrice,
+      originalPrice: vipPriceBase,
+      discountPercent: vipDiscount,
       benefits: festival?.vipPerks || ['Included Hotel Stay', 'VIP Transport', 'Exclusive Access', 'Fast Track Entry'],
       description: 'The ultimate all-inclusive experience with premium accommodation and dedicated transport.',
     },
@@ -166,20 +185,30 @@ export default function TicketsPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-              {TICKET_TYPES.map((ticket) => (
-                <div key={ticket.type} onClick={() => handleSelect(ticket.type)}>
-                  <TicketCard
-                    type={ticket.type}
-                    label={ticket.label}
-                    price={ticket.price}
-                    originalPrice={ticket.originalPrice}
-                    discountPercent={ticket.discountPercent}
-                    benefits={ticket.benefits}
-                    isSelected={ticketSelection?.type === ticket.type}
-                    onSelect={() => handleSelect(ticket.type)}
-                  />
-                </div>
-              ))}
+              {TICKET_TYPES.map((ticket) => {
+                const availability = festival?.ticketTypes?.find(t => 
+                  (t.name_en || t.name || '').toLowerCase().includes(ticket.type)
+                )?.available ?? 10; // Default to 10 if not found
+                
+                const isSoldOut = availability <= 0;
+
+                return (
+                  <div key={ticket.type} onClick={() => !isSoldOut && handleSelect(ticket.type)}>
+                    <TicketCard
+                      type={ticket.type}
+                      label={ticket.label}
+                      price={ticket.price}
+                      originalPrice={ticket.originalPrice}
+                      discountPercent={ticket.discountPercent}
+                      benefits={ticket.benefits}
+                      isSelected={ticketSelection?.type === ticket.type}
+                      onSelect={() => handleSelect(ticket.type)}
+                      disabled={isSoldOut}
+                      disabledReason={isSoldOut ? "This ticket category is currently sold out" : undefined}
+                    />
+                  </div>
+                );
+              })}
             </div>
 
             {/* Navigation hint */}
@@ -242,92 +271,7 @@ export default function TicketsPage() {
                       </div>
                     </div>
 
-                    {/* VIP Specific Details */}
-                    {ticketSelection.type === 'vip' && (
-                      <div className="space-y-6 pt-6 border-t border-gray-100">
-                        {/* Hotel Preview */}
-                        {festival?.hotels && festival.hotels.length > 0 && (
-                          <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-3xl border border-amber-100/50">
-                            <div className="flex items-center justify-between mb-4">
-                              <h4 className="text-sm font-black text-amber-900 uppercase tracking-widest flex items-center gap-2">
-                                <Hotel className="w-4 h-4" />
-                                Included Hotels
-                              </h4>
-                              <span className="text-[10px] font-bold text-amber-700 bg-white px-2 py-1 rounded-md border border-amber-200">
-                                Choose 1 of {festival.hotels.length}
-                              </span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              {festival.hotels.slice(0, 4).map((hotel, i) => (
-                                <div key={i} className="relative aspect-video rounded-2xl overflow-hidden border-2 border-amber-200/50 group-hover:border-amber-400 transition-all">
-                                  {hotel.image ? (
-                                    <img src={hotel.image} alt={hotel.name_en || 'Hotel'} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <div className="w-full h-full bg-amber-100 flex items-center justify-center">
-                                      <Building className="w-8 h-8 text-amber-300" />
-                                    </div>
-                                  )}
-                                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                                  <div className="absolute bottom-2 left-2 right-2">
-                                    <p className="text-[11px] text-white font-bold truncate drop-shadow-md">
-                                      {hotel.name_en || hotel.name_am || `Hotel ${i + 1}`}
-                                    </p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            <button 
-                              onClick={handleViewHotels}
-                              className="mt-4 w-full flex items-center justify-center gap-2 text-amber-700 font-black uppercase tracking-wider text-[10px] hover:text-amber-900 py-2 hover:bg-white/50 rounded-xl transition-all border border-amber-200/50 hover:border-amber-300"
-                            >
-                              View All Hotels & Details
-                              <ChevronRight className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-
-                        {/* Transport Preview */}
-                        {festival?.transportation && festival.transportation.length > 0 && (
-                          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-3xl border border-blue-100/50">
-                            <div className="flex items-center justify-between mb-4">
-                              <h4 className="text-sm font-black text-blue-900 uppercase tracking-widest flex items-center gap-2">
-                                <Car className="w-4 h-4" />
-                                VIP Transport
-                              </h4>
-                              <span className="text-[10px] font-bold text-blue-700 bg-white px-2 py-1 rounded-md border border-blue-200">
-                                Included
-                              </span>
-                            </div>
-                            <div className="flex flex-wrap gap-3">
-                              {festival.transportation.slice(0, 3).map((transport, i) => (
-                                <div key={i} className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-blue-200 shadow-sm">
-                                  {transport.type_en?.includes('Bus') || transport.type_en?.includes('bus') ? (
-                                    <Bus className="w-5 h-5 text-blue-600" />
-                                  ) : transport.type_en?.includes('Car') || transport.type_en?.includes('Taxi') ? (
-                                    <Car className="w-5 h-5 text-blue-600" />
-                                  ) : (
-                                    <Plane className="w-5 h-5 text-blue-600" />
-                                  )}
-                                  <div>
-                                    <p className="text-xs font-bold text-gray-800">{transport.type_en || transport.type_am || 'Transport'}</p>
-                                    <p className="text-[10px] text-gray-500">VIP Pickup</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            <button 
-                              onClick={handleViewTransport}
-                              className="mt-4 w-full flex items-center justify-center gap-2 text-blue-700 font-black uppercase tracking-wider text-[10px] hover:text-blue-900 py-2 hover:bg-white/50 rounded-xl transition-all border border-blue-200/50 hover:border-blue-300"
-                            >
-                              View Transport Details
-                              <ChevronRight className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Standard Upsell */}
+                    {/* Navigation Actions */}
                     {ticketSelection.type === 'standard' && (
                       <div className="space-y-4 pt-6 border-t border-gray-100">
                         <p className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em]">Enhance Your Experience</p>
@@ -335,13 +279,20 @@ export default function TicketsPage() {
                         <div className="grid grid-cols-1 gap-4">
                           <button
                             onClick={handleViewHotels}
-                            className="flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-100 hover:border-blue-300 hover:bg-blue-50/50 transition-all group"
+                            disabled={!festival?.hotels?.some(h => h.rooms?.some(r => r.available > 0))}
+                            className={`flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-100 transition-all group ${
+                              !festival?.hotels?.some(h => h.rooms?.some(r => r.available > 0))
+                              ? 'opacity-50 cursor-not-allowed grayscale'
+                              : 'hover:border-blue-300 hover:bg-blue-50/50'
+                            }`}
                           >
                             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
                               <Bed className="w-6 h-6 text-white" />
                             </div>
                             <div className="flex-1 text-left">
-                              <h5 className="text-sm font-bold text-gray-800">Add Accommodation</h5>
+                              <h5 className="text-sm font-bold text-gray-800">
+                                {!festival?.hotels?.some(h => h.rooms?.some(r => r.available > 0)) ? 'Hotels Sold Out' : 'Add Accommodation'}
+                              </h5>
                               <p className="text-[11px] text-gray-500">Book a hotel near the venue</p>
                             </div>
                             <Plus className="w-5 h-5 text-blue-600 group-hover:translate-x-1 transition-transform" />
@@ -349,13 +300,20 @@ export default function TicketsPage() {
 
                           <button
                             onClick={handleViewTransport}
-                            className="flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-100 hover:border-blue-300 hover:bg-blue-50/50 transition-all group"
+                            disabled={!festival?.transportation?.some(t => t.available > 0)}
+                            className={`flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-100 transition-all group ${
+                              !festival?.transportation?.some(t => t.available > 0)
+                              ? 'opacity-50 cursor-not-allowed grayscale'
+                              : 'hover:border-blue-300 hover:bg-blue-50/50'
+                            }`}
                           >
                             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
                               <Bus className="w-6 h-6 text-white" />
                             </div>
                             <div className="flex-1 text-left">
-                              <h5 className="text-sm font-bold text-gray-800">Add Transport</h5>
+                              <h5 className="text-sm font-bold text-gray-800">
+                                {!festival?.transportation?.some(t => t.available > 0) ? 'Transport Sold Out' : 'Add Transport'}
+                              </h5>
                               <p className="text-[11px] text-gray-500">Get rides to and from event</p>
                             </div>
                             <Plus className="w-5 h-5 text-blue-600 group-hover:translate-x-1 transition-transform" />

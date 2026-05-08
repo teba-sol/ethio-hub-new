@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  ArrowLeft, MapPin, Star, Wifi, Car, Coffee as CoffeeIcon, Dumbbell, Waves, 
+import {
+  ArrowLeft, MapPin, Star, Wifi, Car, Coffee as CoffeeIcon, Dumbbell, Waves,
   Utensils, Sparkles, Check, X, ChevronLeft, ChevronRight, Users, Maximize,
   BedDouble, Calendar, ChevronDown, ExternalLink, Facebook, Twitter,
   AlertCircle,
@@ -22,8 +22,8 @@ export default function HotelDetailPage() {
   const router = useRouter();
   const eventId = params?.id as string;
   const hotelId = params?.hotelId as string;
-   
-  const { 
+
+  const {
     setSelectedHotel,
     selectedRoom,
     setSelectedRoom,
@@ -84,7 +84,7 @@ export default function HotelDetailPage() {
           apiClient.get(`/api/festivals/${eventId}/availability`),
         ]);
         const festivalData = festRes?.festival || festRes;
-        
+
         if (festivalData) {
           setFestival(festivalData);
           const normalizedHotels = ((availabilityRes?.hotels || festivalData.hotels) || []).map((hotel: any, index: number) =>
@@ -92,13 +92,13 @@ export default function HotelDetailPage() {
           );
 
           setAllHotels(normalizedHotels);
-          
+
           // Find the specific hotel - normalize IDs first
           let hotelData = normalizedHotels.find((h: any) => {
             const hId = h.id || '';
             return hId === hotelId || hId === `hotel-${hotelId}`;
           });
-          
+
           // Fallback to index-based lookup
           if (!hotelData) {
             const idx = parseInt(hotelId);
@@ -106,7 +106,7 @@ export default function HotelDetailPage() {
               hotelData = normalizedHotels[idx];
             }
           }
-          
+
           if (hotelData) {
             setHotel(hotelData);
             setSelectedHotel(hotelData);
@@ -118,7 +118,7 @@ export default function HotelDetailPage() {
         setLoading(false);
       }
     };
-    
+
     fetchData();
   }, [eventId, hotelId]);
 
@@ -186,7 +186,6 @@ export default function HotelDetailPage() {
     !selectedRoom ? 'Room selection' : null,
     !checkIn ? 'Check-in date' : null,
     !checkOut ? 'Check-out date' : null,
-    requiresFoodPackage && selectedFoodPackages.length === 0 ? 'Food & Drink package' : null,
   ].filter(Boolean) as string[];
 
   useEffect(() => {
@@ -242,7 +241,7 @@ export default function HotelDetailPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <button 
+          <button
             onClick={() => router.back()}
             className="flex items-center gap-2 text-gray-500 hover:text-primary"
           >
@@ -260,18 +259,18 @@ export default function HotelDetailPage() {
               <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
             ))}
           </div>
-           <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 mb-3">{getLocalizedText(hotel, 'name', language)}</h1>
-           <div className="flex items-center gap-2 text-gray-600">
-             <MapPin className="w-4 h-4" />
-             <span className="text-sm">{getLocalizedText(hotel, 'address', language)}</span>
-            <a 
+          <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 mb-3">{getLocalizedText(hotel, 'name', language)}</h1>
+          <div className="flex items-center gap-2 text-gray-600">
+            <MapPin className="w-4 h-4" />
+            <span className="text-sm">{getLocalizedText(hotel, 'address', language)}</span>
+            <a
               href={`https://maps.google.com/?q=${encodeURIComponent(hotel.address)}`}
               target="_blank"
               rel="noopener noreferrer"
-               className="text-primary hover:underline text-sm ml-2 flex items-center gap-1"
-             >
-                 {t('common.viewOnMap')} <ExternalLink className="w-3 h-3" />
-               </a>
+              className="text-primary hover:underline text-sm ml-2 flex items-center gap-1"
+            >
+              {t('common.viewOnMap')} <ExternalLink className="w-3 h-3" />
+            </a>
           </div>
         </div>
 
@@ -282,8 +281,8 @@ export default function HotelDetailPage() {
             <div>
               <div className="relative rounded-2xl overflow-hidden bg-gray-900 h-[300px] md:h-[450px]">
                 {gallery.length > 0 ? (
-                  <img 
-                    src={gallery[activeImageIndex]} 
+                  <img
+                    src={gallery[activeImageIndex]}
                     alt={hotel.name}
                     className="w-full h-full object-cover cursor-pointer"
                     onClick={() => setLightboxOpen(true)}
@@ -293,16 +292,16 @@ export default function HotelDetailPage() {
                     <ImageIcon className="w-16 h-16 text-gray-400" />
                   </div>
                 )}
-                
+
                 {gallery.length > 1 && (
                   <>
-                    <button 
+                    <button
                       onClick={() => setActiveImageIndex(Math.max(0, activeImageIndex - 1))}
                       className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/20 backdrop-blur-sm rounded-full text-white hover:bg-white/30 transition-colors"
                     >
                       <ChevronLeft className="w-6 h-6" />
                     </button>
-                    <button 
+                    <button
                       onClick={() => setActiveImageIndex(Math.min(gallery.length - 1, activeImageIndex + 1))}
                       className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/20 backdrop-blur-sm rounded-full text-white hover:bg-white/30 transition-colors"
                     >
@@ -314,16 +313,15 @@ export default function HotelDetailPage() {
                         <button
                           key={idx}
                           onClick={() => setActiveImageIndex(idx)}
-                          className={`w-2 h-2 rounded-full transition-all ${
-                            idx === activeImageIndex ? 'bg-white w-6' : 'bg-white/50'
-                          }`}
+                          className={`w-2 h-2 rounded-full transition-all ${idx === activeImageIndex ? 'bg-white w-6' : 'bg-white/50'
+                            }`}
                         />
                       ))}
                     </div>
                   </>
                 )}
 
-                <button 
+                <button
                   onClick={() => setLightboxOpen(true)}
                   className="absolute top-4 right-4 p-2 bg-white/20 backdrop-blur-sm rounded-full text-white hover:bg-white/30 transition-colors"
                 >
@@ -335,15 +333,14 @@ export default function HotelDetailPage() {
               {gallery.length > 1 && (
                 <div className="grid grid-cols-5 gap-2 mt-2">
                   {gallery.slice(0, 5).map((img, idx) => (
-                    <div 
+                    <div
                       key={idx}
                       onClick={() => setActiveImageIndex(idx)}
-                      className={`relative rounded-lg overflow-hidden h-16 cursor-pointer group ${
-                        idx === activeImageIndex ? 'ring-2 ring-primary' : ''
-                      }`}
+                      className={`relative rounded-lg overflow-hidden h-16 cursor-pointer group ${idx === activeImageIndex ? 'ring-2 ring-primary' : ''
+                        }`}
                     >
-                      <img 
-                        src={img} 
+                      <img
+                        src={img}
                         alt=""
                         className="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
                       />
@@ -448,11 +445,11 @@ export default function HotelDetailPage() {
             </div>
 
             {/* Select Your Room Section */}
-             <div id="select-room">
-               <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">
-                 {ticketSelection?.type === 'vip' ? 'Your Included VIP Room' : t('hotel.selectRoom')}
-               </h2>
-              
+            <div id="select-room">
+              <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">
+                {ticketSelection?.type === 'vip' ? 'Your Included VIP Room' : t('hotel.selectRoom')}
+              </h2>
+
               <div className="space-y-4">
                 {(hotel.rooms || [])
                   .filter(room => {
@@ -463,98 +460,96 @@ export default function HotelDetailPage() {
                     return true;
                   })
                   .map((room) => {
-                  const isSelected = selectedRoom?.id === room.id || (ticketSelection?.type === 'vip');
-                  const remainingRooms = room.remaining ?? room.availability ?? 0;
-                  const isSoldOut = remainingRooms <= 0;
-                  return (
-                    <div 
-                      key={room.id}
-                      onClick={ticketSelection?.type === 'vip' ? undefined : () => handleSelectRoom(room)}
-                      className={`bg-gray-50 rounded-2xl p-6 border-2 transition-all ${
-                        ticketSelection?.type === 'vip'
-                          ? 'border-amber-200 bg-amber-50/30 shadow-sm'
-                          : isSoldOut
-                            ? 'cursor-not-allowed border-red-100 opacity-70'
-                            : isSelected
-                              ? 'cursor-pointer border-primary bg-primary/5'
-                              : 'cursor-pointer border-transparent hover:border-gray-200'
-                      }`}
-                    >
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div className="md:col-span-1">
-                          <img 
-                            src={room.image || 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=300&fit=crop'} 
-                            alt={getLocalizedText(room, 'name', language)}
-                            className="w-full h-32 md:h-24 object-cover rounded-xl"
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                           <h3 className="text-lg font-bold text-gray-900 mb-1">{getLocalizedText(room, 'name', language)}</h3>
-                           <p className="text-gray-600 text-sm mb-3">{getLocalizedText(room, 'description', language)}</p>
-                          <div className="flex flex-wrap gap-3">
-                            <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200">
-                              <Maximize className="w-3.5 h-3.5" /> {room.sqm || 30} m²
-                            </span>
-                            <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200">
-                              <Users className="w-3.5 h-3.5" /> {room.capacity || 2} Guests
-                            </span>
-                            <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200">
-                              <BedDouble className="w-3.5 h-3.5" /> {room.bedType || 'King Size'}
-                            </span>
+                    const isSelected = selectedRoom?.id === room.id || (ticketSelection?.type === 'vip');
+                    const remainingRooms = room.remaining ?? room.availability ?? 0;
+                    const isSoldOut = remainingRooms <= 0;
+                    return (
+                      <div
+                        key={room.id}
+                        onClick={ticketSelection?.type === 'vip' ? undefined : () => handleSelectRoom(room)}
+                        className={`bg-gray-50 rounded-2xl p-6 border-2 transition-all ${ticketSelection?.type === 'vip'
+                            ? 'border-amber-200 bg-amber-50/30 shadow-sm'
+                            : isSoldOut
+                              ? 'cursor-not-allowed border-red-100 opacity-70'
+                              : isSelected
+                                ? 'cursor-pointer border-primary bg-primary/5'
+                                : 'cursor-pointer border-transparent hover:border-gray-200'
+                          }`}
+                      >
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                          <div className="md:col-span-1">
+                            <img
+                              src={room.image || 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=300&fit=crop'}
+                              alt={getLocalizedText(room, 'name', language)}
+                              className="w-full h-32 md:h-24 object-cover rounded-xl"
+                            />
                           </div>
-                          {room.amenities && room.amenities.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-3">
-                              {room.amenities.slice(0, 4).map((amenity, idx) => (
-                                <span key={idx} className="text-xs text-gray-600 bg-white px-2 py-1 rounded border border-gray-200">
-                                  {amenity}
-                                </span>
-                              ))}
-                              {room.amenities.length > 4 && (
-                                <span className="text-xs text-gray-400">+{room.amenities.length - 4} more</span>
-                              )}
+                          <div className="md:col-span-2">
+                            <h3 className="text-lg font-bold text-gray-900 mb-1">{getLocalizedText(room, 'name', language)}</h3>
+                            <p className="text-gray-600 text-sm mb-3">{getLocalizedText(room, 'description', language)}</p>
+                            <div className="flex flex-wrap gap-3">
+                              <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200">
+                                <Maximize className="w-3.5 h-3.5" /> {room.sqm || 30} m²
+                              </span>
+                              <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200">
+                                <Users className="w-3.5 h-3.5" /> {room.capacity || 2} Guests
+                              </span>
+                              <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200">
+                                <BedDouble className="w-3.5 h-3.5" /> {room.bedType || 'King Size'}
+                              </span>
                             </div>
-                          )}
-                        </div>
-                        <div className="md:col-span-1 flex flex-col justify-between items-end">
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-primary">
-                              {ticketSelection?.type === 'vip' ? 'Included' : `${festival?.pricing?.currency || festival?.currency || 'ETB'} ${room.pricePerNight}`}
-                            </div>
-                            {ticketSelection?.type !== 'vip' && <div className="text-sm text-gray-500">/night</div>}
-                            {ticketSelection?.type === 'vip' && (
-                              <div className="flex items-center justify-end gap-1.5 text-amber-600 font-bold mt-1">
-                                <Star className="w-3 h-3 fill-amber-600" />
-                                <span className="text-xs uppercase tracking-widest">VIP Pass</span>
+                            {room.amenities && room.amenities.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mt-3">
+                                {room.amenities.slice(0, 4).map((amenity, idx) => (
+                                  <span key={idx} className="text-xs text-gray-600 bg-white px-2 py-1 rounded border border-gray-200">
+                                    {amenity}
+                                  </span>
+                                ))}
+                                {room.amenities.length > 4 && (
+                                  <span className="text-xs text-gray-400">+{room.amenities.length - 4} more</span>
+                                )}
                               </div>
                             )}
                           </div>
-                          {ticketSelection?.type !== 'vip' && (
-                            isSoldOut ? (
-                              <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-2">
-                                Sold out
+                          <div className="md:col-span-1 flex flex-col justify-between items-end">
+                            <div className="text-right">
+                              <div className="text-2xl font-bold text-primary">
+                                {ticketSelection?.type === 'vip' ? 'Included' : `${festival?.pricing?.currency || festival?.currency || 'ETB'} ${room.pricePerNight}`}
+                              </div>
+                              {ticketSelection?.type !== 'vip' && <div className="text-sm text-gray-500">/night</div>}
+                              {ticketSelection?.type === 'vip' && (
+                                <div className="flex items-center justify-end gap-1.5 text-amber-600 font-bold mt-1">
+                                  <Star className="w-3 h-3 fill-amber-600" />
+                                  <span className="text-xs uppercase tracking-widest">VIP Pass</span>
+                                </div>
+                              )}
+                            </div>
+                            {ticketSelection?.type !== 'vip' && (
+                              isSoldOut ? (
+                                <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-2">
+                                  Sold out
+                                </span>
+                              ) : remainingRooms <= 3 ? (
+                                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full mt-2">
+                                  Only {remainingRooms} left
+                                </span>
+                              ) : (
+                                <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full mt-2">
+                                  {remainingRooms} rooms available
+                                </span>
+                              )
+                            )}
+                            {isSelected && (
+                              <span className={`flex items-center justify-center gap-2 mt-2 py-2 px-4 rounded-xl text-sm font-medium ${ticketSelection?.type === 'vip' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-primary text-white'
+                                }`}>
+                                <Check className="w-4 h-4" /> {ticketSelection?.type === 'vip' ? 'Package Included' : 'Selected'}
                               </span>
-                            ) : remainingRooms <= 3 ? (
-                              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full mt-2">
-                                Only {remainingRooms} left
-                              </span>
-                            ) : (
-                              <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full mt-2">
-                                {remainingRooms} rooms available
-                              </span>
-                            )
-                          )}
-                          {isSelected && (
-                            <span className={`flex items-center justify-center gap-2 mt-2 py-2 px-4 rounded-xl text-sm font-medium ${
-                              ticketSelection?.type === 'vip' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-primary text-white'
-                            }`}>
-                              <Check className="w-4 h-4" /> {ticketSelection?.type === 'vip' ? 'Package Included' : 'Selected'}
-                            </span>
-                          )}
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
 
               {(!hotel.rooms || hotel.rooms.length === 0) && (
@@ -562,54 +557,42 @@ export default function HotelDetailPage() {
                   <p className="text-gray-500">No rooms available. Please check back later.</p>
                 </div>
               )}
-              </div>
+            </div>
 
-              {/* Hotel Services (Pay at Hotel) */}
-              {hotel.hotelServices && hotel.hotelServices.length > 0 && (
-                <div className="mt-8 pt-6 border-t border-gray-200">
-                  <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">Hotel Services (Pay at Hotel)</h2>
-                  <p className="text-sm text-gray-500 mb-6">These services are paid directly at the hotel, not through the platform.</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {hotel.hotelServices.map((service: any, idx: number) => (
-                      <div key={idx} className="p-4 bg-white rounded-xl border border-gray-100">
-                        <h3 className="font-bold text-gray-900">{service.name}</h3>
-                        {service.description && <p className="text-sm text-gray-500 mt-1">{service.description}</p>}
-                        <p className="text-lg font-bold text-primary mt-2">
-                          {festival?.pricing?.currency || festival?.currency || 'ETB'} {service.price}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+            {/* Hotel Services (Pay at Hotel) */}
+            {hotel.hotelServices && hotel.hotelServices.length > 0 && (
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <h2 className="text-xl font-serif font-bold text-gray-900 mb-4">Hotel Services (Pay at Hotel)</h2>
+                <p className="text-sm text-gray-500 mb-6">These services are paid directly at the hotel, not through the platform.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {hotel.hotelServices.map((service: any, idx: number) => (
+                    <div key={idx} className="p-4 bg-white rounded-xl border border-gray-100">
+                      <h3 className="font-bold text-gray-900">{service.name}</h3>
+                      {service.description && <p className="text-sm text-gray-500 mt-1">{service.description}</p>}
+                      <p className="text-lg font-bold text-primary mt-2">
+                        {festival?.pricing?.currency || festival?.currency || 'ETB'} {service.price}
+                      </p>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
+            )}
+            {foodPackages.length > 0 && (
+              <div>
+                <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">{t('hotel.foodPackages')}</h2>
+                <p className="text-gray-500 text-sm mb-4">{t('hotel.enhanceStay')}</p>
 
-              {/* Food & Drink Packages Section - from Event Services */}
-             {foodPackages.length > 0 && (
-               <div>
-                 <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">{t('hotel.foodPackages')}</h2>
-                 <p className="text-gray-500 text-sm mb-4">{t('hotel.enhanceStay')}</p>
-                
                 <div className="space-y-3">
                   {foodPackages.map((pkg: any) => {
-                    const isSelected = selectedFoodPackages.some(p => p.id === pkg.id);
-                    const totalPrice = pkg.pricePerPerson * guests;
-                    
                     return (
                       <div
                         key={pkg.id}
-                        onClick={() => selectFoodPackage(pkg)}
-                        className={`cursor-pointer rounded-xl p-5 border-2 transition-all ${
-                          isSelected 
-                            ? 'border-primary bg-primary/5' 
-                            : 'border-gray-200 hover:border-gray-300 bg-white'
-                        }`}
+                        className="rounded-xl p-5 border-2 border-gray-100 bg-gray-50/50 transition-all"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex items-start gap-4">
-                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                              isSelected ? 'border-primary bg-primary' : 'border-gray-300'
-                            }`}>
-                              {isSelected && <Check className="w-3 h-3 text-white" />}
+                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                              <Utensils className="w-5 h-5 text-primary" />
                             </div>
                             <div>
                               <h3 className="font-bold text-gray-900">{pkg.name}</h3>
@@ -617,22 +600,13 @@ export default function HotelDetailPage() {
                               {pkg.items && pkg.items.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-2">
                                   {pkg.items.map((item, idx) => (
-                                    <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                                    <span key={idx} className="text-xs bg-white text-gray-600 px-2 py-0.5 rounded border border-gray-100">
                                       {item}
                                     </span>
                                   ))}
                                 </div>
                               )}
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-xl font-bold text-primary">${pkg.pricePerPerson}</div>
-                            <div className="text-xs text-gray-500">per person</div>
-                            {isSelected && guests > 1 && (
-                              <div className="text-sm text-gray-600 mt-1">
-                                ${totalPrice} ({guests} guests)
-                              </div>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -642,10 +616,11 @@ export default function HotelDetailPage() {
               </div>
             )}
 
+
             <div className="mt-8 pt-6 border-t border-gray-200">
               {renderValidationNotice()}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Button 
+                <Button
                   className={`w-full py-3 ${validationErrors.length > 0 ? 'mt-4' : ''}`}
                   onClick={() => handleContinue('transport')}
                   disabled={!selectedRoom}
@@ -702,7 +677,7 @@ export default function HotelDetailPage() {
             <div>
               <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">Location</h2>
               <div className="relative h-64 bg-gray-200 rounded-2xl overflow-hidden">
-                <iframe 
+                <iframe
                   src={`https://maps.google.com/maps?q=${encodeURIComponent(hotel.address)}&output=embed`}
                   className="w-full h-full border-0"
                   loading="lazy"
@@ -783,14 +758,14 @@ export default function HotelDetailPage() {
                 <h2 className="text-xl font-serif font-bold text-gray-900 mb-6">You might also like...</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {relatedHotels.map((relatedHotel) => (
-                    <Link 
+                    <Link
                       key={relatedHotel.id}
                       href={`/event/${eventId}/hotels/${relatedHotel.id}`}
                       className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow"
                     >
                       <div className="h-32">
-                        <img 
-                          src={relatedHotel.image} 
+                        <img
+                          src={relatedHotel.image}
                           alt={relatedHotel.name}
                           className="w-full h-full object-cover"
                         />
@@ -834,9 +809,9 @@ export default function HotelDetailPage() {
                       <Check className="w-4 h-4" /> All-Inclusive Stay
                     </div>
                   </div>
-                  
+
                   <div className="pt-6 border-t border-gray-100">
-                    <Button 
+                    <Button
                       className="w-full py-6 rounded-2xl shadow-lg shadow-primary/20"
                       onClick={() => handleContinue('transport')}
                     >
@@ -848,7 +823,7 @@ export default function HotelDetailPage() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Check In</span>
-                    <button 
+                    <button
                       onClick={() => { setShowDatePicker(!showDatePicker); setShowGuestSelector(false); }}
                       className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                     >
@@ -860,7 +835,7 @@ export default function HotelDetailPage() {
 
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Check Out</span>
-                    <button 
+                    <button
                       onClick={() => { setShowDatePicker(!showDatePicker); }}
                       className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                     >
@@ -876,8 +851,8 @@ export default function HotelDetailPage() {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <p className="text-xs text-gray-500 mb-1">Check In</p>
-                          <input 
-                            type="date" 
+                          <input
+                            type="date"
                             className="w-full p-2 border rounded-lg text-sm"
                             min={new Date().toISOString().split('T')[0]}
                             onChange={(e) => setCheckIn(e.target.value ? new Date(e.target.value) : null)}
@@ -885,8 +860,8 @@ export default function HotelDetailPage() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500 mb-1">Check Out</p>
-                          <input 
-                            type="date" 
+                          <input
+                            type="date"
                             className="w-full p-2 border rounded-lg text-sm"
                             min={checkIn ? new Date(checkIn).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
                             onChange={(e) => setCheckOut(e.target.value ? new Date(e.target.value) : null)}
@@ -951,26 +926,36 @@ export default function HotelDetailPage() {
                 </div>
               )}
 
-              {ticketSelection?.type !== 'vip' && (
-                <div className="space-y-3">
-                  {renderValidationNotice()}
-                  <Button 
-                    className={`w-full py-3 ${validationErrors.length > 0 ? 'mt-4' : ''}`}
-                    onClick={() => handleContinue('transport')}
-                    disabled={!selectedRoom}
-                  >
-                    {selectedRoom ? 'Continue to Transport' : 'Select a Room'}
-                  </Button>
-                  <Button
-                    className="w-full py-3"
-                    onClick={() => handleContinue('checkout')}
-                    disabled={!selectedRoom}
-                    variant="outline"
-                  >
-                    Continue to Checkout
-                  </Button>
-                </div>
-              )}
+                  <div className="space-y-3">
+                    {renderValidationNotice()}
+                    <Button
+                      className={`w-full py-4 shadow-lg shadow-primary/25 ${validationErrors.length > 0 ? 'mt-4' : ''}`}
+                      onClick={() => handleContinue('transport')}
+                      disabled={!selectedRoom}
+                    >
+                      {selectedRoom ? 'Continue to Transport' : 'Select a Room'}
+                    </Button>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        className="w-full py-3"
+                        onClick={() => handleContinue('checkout')}
+                        disabled={!selectedRoom}
+                        variant="outline"
+                      >
+                        To Checkout
+                      </Button>
+                      <button
+                        onClick={() => {
+                          setSelectedHotel(null);
+                          setSelectedRoom(null);
+                          router.push(`/event/${eventId}/transport`);
+                        }}
+                        className="w-full py-3 text-center text-gray-400 text-xs font-bold uppercase tracking-wider hover:text-primary transition-colors border border-gray-100 rounded-xl"
+                      >
+                        Skip Hotel
+                      </button>
+                    </div>
+                  </div>
             </div>
           </div>
         </div>
@@ -979,26 +964,26 @@ export default function HotelDetailPage() {
       {/* Lightbox */}
       {lightboxOpen && (
         <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center">
-          <button 
+          <button
             onClick={() => setLightboxOpen(false)}
             className="absolute top-6 right-6 p-3 text-white hover:bg-white/20 rounded-full transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
-          <button 
+          <button
             onClick={() => setActiveImageIndex(Math.max(0, activeImageIndex - 1))}
             className="absolute left-6 p-3 text-white hover:bg-white/20 rounded-full transition-colors"
           >
             <ChevronLeft className="w-8 h-8" />
           </button>
-          <button 
+          <button
             onClick={() => setActiveImageIndex(Math.min(gallery.length - 1, activeImageIndex + 1))}
             className="absolute right-6 p-3 text-white hover:bg-white/20 rounded-full transition-colors"
           >
             <ChevronRight className="w-8 h-8" />
           </button>
-          <img 
-            src={gallery[activeImageIndex]} 
+          <img
+            src={gallery[activeImageIndex]}
             alt=""
             className="max-h-[90vh] max-w-[90vw] object-contain"
           />
