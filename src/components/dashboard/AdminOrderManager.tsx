@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Package, MapPin, Phone, User, CheckCircle, 
-  Clock, DollarSign, RefreshCw, AlertCircle, Truck
+  Clock, DollarSign, RefreshCw, AlertCircle, Truck, X
 } from 'lucide-react';
 import { Button, Badge } from '../UI';
 
@@ -65,6 +65,10 @@ export const AdminOrderManager: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [assigningTo, setAssigningTo] = useState<string>('');
   const [assigning, setAssigning] = useState(false);
+  // New state for delivery person details
+  const [selectedDeliveryGuy, setSelectedDeliveryGuy] = useState<string | null>(null);
+  const [deliveryPersonDetails, setDeliveryPersonDetails] = useState<any>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -112,6 +116,22 @@ export const AdminOrderManager: React.FC = () => {
       alert('Error assigning delivery guy');
     } finally {
       setAssigning(false);
+    }
+  };
+
+  const fetchDeliveryPersonDetails = async (guyId: string) => {
+    try {
+      setLoadingDetails(true);
+      setSelectedDeliveryGuy(guyId);
+      const res = await fetch(`/api/admin/delivery-person/${guyId}`);
+      const result = await res.json();
+      if (result.success) {
+        setDeliveryPersonDetails(result);
+      }
+    } catch (err) {
+      console.error('Error fetching delivery person details:', err);
+    } finally {
+      setLoadingDetails(false);
     }
   };
 
@@ -307,7 +327,14 @@ export const AdminOrderManager: React.FC = () => {
                     {formatCurrency(guy.wallet?.availableBalance || 0)}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <Button size="sm" variant="outline" onClick={() => alert(`Phone: ${guy.phone}\nVehicle: ${guy.deliveryProfile?.vehicleType || 'N/A'}`)}>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => {
+                        setSelectedDeliveryGuy(guy._id);
+                        fetchDeliveryPersonDetails(guy._id);
+                      }}
+                    >
                       Details
                     </Button>
                   </td>
@@ -387,6 +414,141 @@ export const AdminOrderManager: React.FC = () => {
           </div>
         </div>
       )}
+
+      {selectedDeliveryGuy && deliveryPersonDetails && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md" 
+          onClick={() => { setSelectedDeliveryGuy(null); setDeliveryPersonDetails(null); }}
+        >
+          <div 
+            className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 bg-primary text-white">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-bold">{deliveryPersonDetails.deliveryGuy?.name || 'Delivery Person'}</h3>
+                  <p className="text-sm text-white/80">Performance & Earnings</p>
+                </div>
+                <button 
+                  onClick={() => { setSelectedDeliveryGuy(null); setDeliveryPersonDetails(null); }} 
+                  className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
+              {loadingDetails ? (
+                <div className="flex justify-center py-8">
+                  <RefreshCw className="w-8 h-8 text-primary animate-spin" />
+                </div>
+              ) : (
+                <>
+                  {/* Personal Info */}
+                  <div className="bg-gray-50 p-4 rounded-xl">
+                    <h4 className="font-bold text-primary mb-3">Personal Information</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div><span className="text-gray-500">Name:</span> <span className="font-medium">{deliveryPersonDetails.deliveryGuy?.name}</span></div>
+                      <div><span className="text-gray-500">Email:</span> <span className="font-medium">{deliveryPersonDetails.deliveryGuy?.email}</span></div>
+                      <div><span className="text-gray-500">Phone:</span> <span className="font-medium">{deliveryPersonDetails.deliveryGuy?.phone}</span></div>
+                      <div><span className="text-gray-500">Vehicle:</span> <span className="font-medium capitalize">{deliveryPersonDetails.deliveryGuy?.deliveryProfile?.vehicleType || 'N/A'}</span></div>
+                    </div>
+                  </div>
+
+                  {/* Wallet Summary */}
+                  {deliveryPersonDetails.wallet && (
+                    <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                      <h4 className="font-bold text-emerald-800 mb-3">Earnings Summary</h4>
+                      <div className="grid grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <p className="text-xs text-emerald-600 uppercase">Available Balance</p>
+                          <p className="text-lg font-bold text-emerald-800">{formatCurrency(deliveryPersonDetails.wallet.availableBalance)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-emerald-600 uppercase">Lifetime Earned</p>
+                          <p className="text-lg font-bold text-emerald-800">{formatCurrency(deliveryPersonDetails.wallet.lifetimeEarned)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-emerald-600 uppercase">Delivery Earnings</p>
+                          <p className="text-lg font-bold text-emerald-800">{formatCurrency(deliveryPersonDetails.wallet.deliveryEarnings)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-emerald-600 uppercase">Trips Completed</p>
+                          <p className="text-lg font-bold text-emerald-800">{deliveryPersonDetails.wallet.deliveryTripsCompleted}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Delivery History */}
+                  <div>
+                    <h4 className="font-bold text-primary mb-3">Delivery History ({deliveryPersonDetails.deliveryLogs?.length || 0} trips)</h4>
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {deliveryPersonDetails.deliveryLogs?.map((log: any) => (
+                        <div key={log._id} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-gray-800">{log.productName || 'Product'}</p>
+                              <p className="text-xs text-gray-500">{new Date(log.deliveredAt).toLocaleDateString()}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-emerald-600">{formatCurrency(log.driverShare)}</p>
+                              <p className="text-xs text-gray-500">Driver Share (80%)</p>
+                            </div>
+                          </div>
+                          <div className="flex justify-between text-xs text-gray-500 mt-2">
+                            <span>Customer: {log.customerName}</span>
+                            <span>Shipping Fee: {formatCurrency(log.shippingFee)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Mock Pay Button */}
+                  <div className="pt-4 border-t border-gray-100">
+                    <Button 
+                      className="w-full"
+                      onClick={async () => {
+                        if (!deliveryPersonDetails.deliveryGuy?.phone) {
+                          alert('No phone number available');
+                          return;
+                        }
+                        const amount = deliveryPersonDetails.wallet?.deliveryEarnings || 0;
+                        if (amount <= 0) {
+                          alert('No earnings to pay');
+                          return;
+                        }
+                        if (confirm(`Mock payment: Send ${formatCurrency(amount)} to ${deliveryPersonDetails.deliveryGuy.phone}?`)) {
+                          try {
+                            const res = await fetch(`/api/admin/delivery-person/${selectedDeliveryGuy}`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ phone: deliveryPersonDetails.deliveryGuy.phone, amount }),
+                            });
+                            const result = await res.json();
+                            if (result.success) {
+                              alert(`Mock payment of ${formatCurrency(amount)} sent to ${deliveryPersonDetails.deliveryGuy.phone}`);
+                              fetchDeliveryPersonDetails(selectedDeliveryGuy);
+                            }
+                          } catch (err) {
+                            alert('Payment failed');
+                          }
+                        }
+                      }}
+                    >
+                      Pay {formatCurrency(deliveryPersonDetails.wallet?.deliveryEarnings || 0)} (Mock)
+                    </Button>
+                    <p className="text-xs text-gray-500 text-center mt-2">This is a mock payment that will deduct from delivery earnings</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

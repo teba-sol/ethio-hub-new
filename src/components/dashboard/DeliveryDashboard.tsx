@@ -25,6 +25,7 @@ interface DeliveryOrder {
     name: string;
     images: string[];
     price: number;
+    description?: string;
   };
   tourist: {
     name: string;
@@ -58,6 +59,7 @@ interface DeliveryLog {
   shippingFee: number;
   deliveredAt: string;
   customerName: string;
+  customerPhone?: string;
   productName: string;
 }
 
@@ -82,6 +84,7 @@ export const DeliveryDashboard: React.FC = () => {
   const [remainingAttempts, setRemainingAttempts] = useState(3);
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
   const [orderStats, setOrderStats] = useState<any>(null);
+  const [expandedLog, setExpandedLog] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDeliveryData();
@@ -290,8 +293,15 @@ export const DeliveryDashboard: React.FC = () => {
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h3 className="font-bold text-primary">{order.product?.name || 'Product'}</h3>
-                        <p className="text-xs text-gray-400 font-mono">Order #{order._id.slice(-6).toUpperCase()}</p>
+                         <h3 className="font-bold text-primary">{order.product?.name || 'Product'}</h3>
+                         <p className="text-xs text-gray-400 font-mono">Order #{order._id.slice(-6).toUpperCase()}</p>
+                         {order.product?.description && (
+                           <p className="text-xs text-gray-500 mt-1 line-clamp-2">{order.product.description}</p>
+                         )}
+                         <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                           <span>Price: {formatCurrency(order.product?.price)}</span>
+                           <span>Driver Share: {formatCurrency(order.shippingFee * 0.8)}</span>
+                         </div>
                       </div>
                       <Badge variant={
                         order.status === 'Assigned' ? 'warning' :
@@ -425,25 +435,38 @@ export const DeliveryDashboard: React.FC = () => {
           ) : (
             <>
               <div className="divide-y divide-gray-50">
-                {recentDeliveries.map((delivery) => (
-                  <div key={delivery._id} className="p-4 flex items-center justify-between hover:bg-gray-50">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                        <CheckCircle className="w-5 h-5 text-emerald-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-800">{delivery.productName}</p>
-                        <p className="text-xs text-gray-500">{delivery.customerName}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-emerald-600">{formatCurrency(delivery.shippingFee)}</p>
-                      <p className="text-xs text-gray-400">
-                        {new Date(delivery.deliveredAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                 {recentDeliveries.map((delivery) => (
+                   <div key={delivery._id} className="p-4 hover:bg-gray-50">
+                     <div 
+                       className="flex items-center justify-between cursor-pointer"
+                       onClick={() => setExpandedLog(expandedLog === delivery._id ? null : delivery._id)}
+                     >
+                       <div className="flex items-center gap-4">
+                         <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                           <CheckCircle className="w-5 h-5 text-emerald-600" />
+                         </div>
+                         <div>
+                           <p className="font-medium text-gray-800">{delivery.productName}</p>
+                           <p className="text-xs text-gray-500">{delivery.customerName} • {delivery.customerPhone}</p>
+                         </div>
+                       </div>
+                       <div className="text-right">
+                         <p className="font-bold text-emerald-600">{formatCurrency(delivery.shippingFee * 0.8)}</p>
+                         <p className="text-xs text-gray-400">{new Date(delivery.deliveredAt).toLocaleDateString()}</p>
+                       </div>
+                     </div>
+                     {expandedLog === delivery._id && (
+                       <div className="mt-3 p-3 bg-gray-50 rounded-lg text-sm">
+                         <div className="grid grid-cols-2 gap-2">
+                           <div><span className="text-gray-500">Order ID:</span> <span className="font-mono">{delivery.orderId?.slice(-6).toUpperCase()}</span></div>
+                           <div><span className="text-gray-500">Shipping Fee:</span> <span>{formatCurrency(delivery.shippingFee)}</span></div>
+                           <div><span className="text-gray-500">Driver Share (80%):</span> <span className="font-bold text-emerald-600">{formatCurrency(delivery.shippingFee * 0.8)}</span></div>
+                           <div><span className="text-gray-500">Customer:</span> <span>{delivery.customerName} - {delivery.customerPhone}</span></div>
+                         </div>
+                       </div>
+                     )}
+                   </div>
+                 ))}
               </div>
               <div className="p-6 bg-gray-50 border-t border-gray-100">
                 <div className="flex justify-between items-center">
