@@ -1,4 +1,4 @@
-﻿export type Language = 'en' | 'am';
+export type Language = 'en' | 'am';
 
 export interface TranslationDictionary {
   [key: string]: string | TranslationDictionary;
@@ -24,7 +24,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       signInRegister: "Sign in / Register",
       newHere: "New here?",
       myOrders: "My Orders",
-      messageCenter: "Message Center",
+      orderTracking: "Order Tracking",
       payments: "Payment",
       wishlist: "Wish List",
       settings: "Settings",
@@ -211,6 +211,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       payments: "Payments",
       wishlist: "Wishlist",
       myOrders: "My Orders",
+      orderTracking: "Order Tracking",
       myEvents: "My Events",
       products: "Products",
       orders: "Orders",
@@ -854,7 +855,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     signInRegister: "ግባ / ተመዝገብ",
     newHere: "አዲስ ነዎት?",
     myOrders: "ትዕዛዞቼ",
-    messageCenter: "የመልዕክት ማዕከል",
+    orderTracking: "ትዕዛዝ መከታተያ",
     payments: "ክፍያ",
     wishlist: "የምኞት ዝርዝር",
     settings: "ቅንብሮች",
@@ -1112,6 +1113,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     payments: "ክፍያዎች",
     wishlist: "የምኞት ዝርዝር",
     myOrders: "ትዕዛዞቼ",
+    orderTracking: "ትዕዛዝ መከታተያ",
     myEvents: "ዝግጅቶቼ",
     products: "ምርቶች",
     orders: "ትዕዛዞች",

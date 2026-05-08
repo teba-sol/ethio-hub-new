@@ -31,7 +31,8 @@ import {
   Check,
   Moon,
   Sun,
-  FileQuestion
+  FileQuestion,
+  Truck
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
@@ -412,9 +413,9 @@ const UserMenu: React.FC = () => {
                 to={getDashboardPath("orders")}
               />
               <MenuLink
-                icon={MessageSquare}
-                label={t("header.messageCenter")}
-                to={getDashboardPath("messages")}
+                icon={Truck}
+                label={t("header.orderTracking")}
+                to={getDashboardPath("order-tracking")}
               />
               <MenuLink
                 icon={CreditCard}

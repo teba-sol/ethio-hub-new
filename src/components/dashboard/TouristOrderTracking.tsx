@@ -7,6 +7,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { Button, Badge } from '../UI';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface DeliveryOrder {
   _id: string;
@@ -48,12 +49,13 @@ interface TourMessage {
   read: boolean;
 }
 
-export const TouristMessages: React.FC = () => {
+export const TouristOrderTracking: React.FC = () => {
   const [orders, setOrders] = useState<DeliveryOrder[]>([]);
   const [messages, setMessages] = useState<TourMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<DeliveryOrder | null>(null);
   const [expandedDeliveryGuy, setExpandedDeliveryGuy] = useState<string | null>(null);
+  const { t } = useLanguage();
 
   useEffect(() => {
     fetchDeliveryOrders();
@@ -140,7 +142,7 @@ export const TouristMessages: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-serif font-bold text-primary">Message Center</h1>
+          <h1 className="text-3xl font-serif font-bold text-primary">{t('dashboard.orderTracking')}</h1>
           <p className="text-gray-500">Delivery updates and verification codes</p>
         </div>
         <Button onClick={fetchDeliveryOrders} leftIcon={RefreshCw} variant="outline" size="sm">
