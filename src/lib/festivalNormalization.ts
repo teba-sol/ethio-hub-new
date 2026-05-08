@@ -19,10 +19,13 @@ export const normalizeSchedule = (schedule: any[] = [], isDraft: boolean) => {
       if (!isDraft && (!titleEn || !titleAm)) return null;
 
       const fallbackTitle = `Day ${index + 1}`;
+      const finalTitle = titleEn || titleAm || fallbackTitle;
       return {
         day: Number(item?.day) || index + 1,
-        title_en: titleEn || titleAm || fallbackTitle,
-        title_am: titleAm || titleEn || fallbackTitle,
+        title: finalTitle,
+        title_en: finalTitle,
+        title_am: titleAm || titleEn || finalTitle,
+        activities: activitiesEn || activitiesAm || '',
         activities_en: activitiesEn || activitiesAm || '',
         activities_am: activitiesAm || activitiesEn || '',
         performers: Array.isArray(item?.performers) ? item.performers : [],
@@ -34,8 +37,10 @@ export const normalizeSchedule = (schedule: any[] = [], isDraft: boolean) => {
 
   return [{
     day: 1,
+    title: 'Day 1',
     title_en: 'Day 1',
     title_am: 'Day 1',
+    activities: '',
     activities_en: '',
     activities_am: '',
     performers: [],
