@@ -115,7 +115,6 @@ export const DualLanguageField: React.FC<DualLanguageFieldProps> = ({
   const inputBaseClass = `w-full ${Icon ? 'pl-11 pr-4' : 'px-4'} py-4 bg-gray-50/30 border border-gray-200 rounded-[16px] text-sm transition-all duration-300 placeholder:text-gray-400 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 hover:bg-white hover:shadow-md focus:bg-white focus:outline-none`;
   const textareaBaseClass = 'w-full px-4 py-4 bg-gray-50/30 border border-gray-200 rounded-[16px] text-sm transition-all duration-300 placeholder:text-gray-400 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 hover:bg-white hover:shadow-md focus:bg-white focus:outline-none resize-none';
   const focusClass = 'focus:border-primary focus:ring-4 focus:ring-primary/10';
-  const Field = textarea ? 'textarea' : 'input';
 
   return (
     <div className={`space-y-3 ${className}`}>
@@ -136,15 +135,27 @@ export const DualLanguageField: React.FC<DualLanguageFieldProps> = ({
               {Icon && !textarea && (
                 <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 transition-colors group-focus-within:text-primary z-10" />
               )}
-              <Field
-                {...(textarea ? { rows } : { type })}
-                value={englishValue}
-                onChange={(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onEnglishChange(event.target.value)}
-                className={`${textarea ? textareaBaseClass : inputBaseClass} ${focusClass}`}
-                placeholder={englishPlaceholder}
-                required={required}
-                dir="ltr"
-              />
+              {textarea ? (
+                <textarea
+                  rows={rows}
+                  value={englishValue}
+                  onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => onEnglishChange(event.target.value)}
+                  className={`${textareaBaseClass} ${focusClass}`}
+                  placeholder={englishPlaceholder}
+                  required={required}
+                  dir="ltr"
+                />
+              ) : (
+                <input
+                  type={type}
+                  value={englishValue}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => onEnglishChange(event.target.value)}
+                  className={`${inputBaseClass} ${focusClass}`}
+                  placeholder={englishPlaceholder}
+                  required={required}
+                  dir="ltr"
+                />
+              )}
               <div className="absolute inset-0 rounded-[16px] pointer-events-none border border-transparent transition-all duration-300 group-hover:border-primary/20 group-focus-within:border-primary/30" />
             </div>
           </div>
@@ -160,15 +171,27 @@ export const DualLanguageField: React.FC<DualLanguageFieldProps> = ({
               {Icon && !textarea && (
                 <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 transition-colors group-focus-within:text-primary z-10" />
               )}
-              <Field
-                {...(textarea ? { rows } : { type })}
-                value={amharicValue}
-                onChange={(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onAmharicChange(event.target.value)}
-                className={`${textarea ? textareaBaseClass : inputBaseClass} ${focusClass}`}
-                placeholder={amharicPlaceholder}
-                required={required}
-                dir="auto"
-              />
+              {textarea ? (
+                <textarea
+                  rows={rows}
+                  value={amharicValue}
+                  onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => onAmharicChange(event.target.value)}
+                  className={`${textareaBaseClass} ${focusClass}`}
+                  placeholder={amharicPlaceholder}
+                  required={required}
+                  dir="auto"
+                />
+              ) : (
+                <input
+                  type={type}
+                  value={amharicValue}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => onAmharicChange(event.target.value)}
+                  className={`${inputBaseClass} ${focusClass}`}
+                  placeholder={amharicPlaceholder}
+                  required={required}
+                  dir="auto"
+                />
+              )}
               <div className="absolute inset-0 rounded-[16px] pointer-events-none border border-transparent transition-all duration-300 group-hover:border-primary/20 group-focus-within:border-primary/30" />
             </div>
           </div>

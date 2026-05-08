@@ -18,7 +18,7 @@ export const normalizeSchedule = (schedule: any[] = [], isDraft: boolean) => {
       
       if (!isDraft && (!titleEn || !titleAm)) return null;
 
-      const fallbackTitle = `Draft day ${index + 1}`;
+      const fallbackTitle = `Day ${index + 1}`;
       return {
         day: Number(item?.day) || index + 1,
         title_en: titleEn || titleAm || fallbackTitle,
@@ -32,14 +32,14 @@ export const normalizeSchedule = (schedule: any[] = [], isDraft: boolean) => {
 
   if (normalized.length > 0) return normalized;
 
-  return isDraft ? [{
+  return [{
     day: 1,
-    title_en: 'Draft day 1',
-    title_am: 'Draft day 1',
+    title_en: 'Day 1',
+    title_am: 'Day 1',
     activities_en: '',
     activities_am: '',
     performers: [],
-  }] : [];
+  }];
 };
 
 export const normalizeHotels = (hotels: any[] = [], isDraft: boolean) => {

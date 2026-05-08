@@ -83,6 +83,7 @@ export async function GET() {
     return response;
   } catch (error) {
     console.error('Session API Error:', error);
-    return NextResponse.json({ user: null }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: message, user: null }, { status: 500 });
   }
 }
