@@ -19,7 +19,7 @@ import {
   Minus,
   ArrowRight,
   FileText,
-  Truck,
+
   CreditCard,
   MessageSquare,
   Settings,
@@ -33,7 +33,8 @@ import {
   Check,
   Moon,
   Sun,
-  FileQuestion
+  FileQuestion,
+  Truck
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
@@ -444,13 +445,16 @@ const UserMenu: React.FC = () => {
                 label={user?.role === UserRole.TOURIST ? t("header.myOrder") : t("header.myOrders")}
                 to={getDashboardPath("orders")}
               />
-              {user?.role === UserRole.TOURIST && (
-                <MenuLink
-                  icon={Truck}
-                  label={t("header.orderTracking")}
-                  to={getDashboardPath("orders")}
-                />
-              )}
+              <MenuLink
+                icon={Truck}
+                label={t("header.orderTracking")}
+                to={getDashboardPath("order-tracking")}
+              />
+              <MenuLink
+                icon={CreditCard}
+                label={t("header.payments")}
+                to={getDashboardPath("payments")}
+              />
               <MenuLink
                 icon={Heart}
                 label={t("header.wishlist")}
