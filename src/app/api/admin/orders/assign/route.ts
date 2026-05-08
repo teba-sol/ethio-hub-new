@@ -63,15 +63,21 @@ export async function PUT(req: Request) {
       name: deliveryGuy.name,
       phone: deliveryGuy.phone || deliveryGuy.deliveryProfile?.phone || '',
     };
-    order.status = 'Shipped';
+    order.status = 'Assigned';
     order.timeline.push({
-      status: 'Shipped',
+      status: 'Assigned',
       date: new Date(),
-      note: `Assigned to delivery person: ${deliveryGuy.name}. Driver is on the way.`,
+      note: `Assigned to delivery person: ${deliveryGuy.name}. Waiting for driver acceptance.`,
     });
 
     await order.save();
 
+    // order.status = 'Assigned'; // Status remains Assigned until driver accepts
+    // Notification will be sent when driver accepts, not here anymore
+    // or we can keep a simple assignment email if needed, but user wants notification on acceptance
+    
+    /* Removed email from here, will send when driver accepts */
+    /*
     const tourist = await User.findById(order.tourist);
     const product = await (await import('@/models/artisan/product.model')).default.findById(order.product);
 
@@ -90,6 +96,7 @@ export async function PUT(req: Request) {
         console.error('Email sending failed:', emailErr);
       }
     }
+    */
 
     return NextResponse.json({
       success: true,
@@ -130,9 +137,27 @@ export async function GET(req: Request) {
       .sort({ createdAt: -1 })
       .lean();
 
-    const deliveryGuys = await User.find({ role: 'delivery', status: 'Active' })
-      .select('_id name phone deliveryProfile')
+    const deliveryGuysRaw = await User.find({ role: 'delivery', status: 'Active' })
+      .select('_id name email phone deliveryProfile')
       .lean();
+
+    const deliveryGuys = await Promise.all(deliveryGuysRaw.map(async (guy: any) => {
+      const wallet = await Wallet.findOne({ userId: guy._id });
+      return {
+        ...guy,
+        wallet: wallet ? {
+          availableBalance: wallet.availableBalance,
+          lifetimeEarned: wallet.lifetimeEarned,
+          deliveryEarnings: wallet.deliveryEarnings,
+          deliveryTripsCompleted: wallet.deliveryTripsCompleted
+        } : {
+          availableBalance: 0,
+          lifetimeEarned: 0,
+          deliveryEarnings: 0,
+          deliveryTripsCompleted: 0
+        }
+      };
+    }));
 
     return NextResponse.json({
       success: true,

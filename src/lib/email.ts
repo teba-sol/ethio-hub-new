@@ -404,6 +404,7 @@ type DeliveryCodeEmailInput = {
   productName: string;
   deliveryGuyName?: string;
   deliveryGuyPhone?: string;
+  expectedTime?: string;
 };
 
 const buildDeliveryCodeHtml = (input: DeliveryCodeEmailInput) => `
@@ -414,7 +415,8 @@ const buildDeliveryCodeHtml = (input: DeliveryCodeEmailInput) => `
     ${input.deliveryGuyName ? `
     <div style="margin: 20px 0; padding: 16px 20px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;">
       <p style="margin-bottom: 8px;"><strong>Delivery Person:</strong> ${input.deliveryGuyName}</p>
-      <p style="margin: 0;"><strong>Contact:</strong> ${input.deliveryGuyPhone || 'N/A'}</p>
+      <p style="margin-bottom: 8px;"><strong>Contact:</strong> ${input.deliveryGuyPhone || 'N/A'}</p>
+      ${input.expectedTime ? `<p style="margin: 0;"><strong>Expected Arrival:</strong> ${input.expectedTime}</p>` : ''}
     </div>
     ` : ''}
     <div style="margin: 24px 0; padding: 20px 24px; background: #f8fafc; border: 2px dashed #0f766e; border-radius: 14px; text-align: center;">

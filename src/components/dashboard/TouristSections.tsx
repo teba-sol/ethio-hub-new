@@ -342,7 +342,7 @@ export const TouristOrdersView: React.FC = () => {
 
   const getOrderStatusBadge = (status: string, paymentStatus: string) => {
     const statusStyles: Record<string, { variant: string; label: string }> = {
-      'Awaiting Payment': { variant: 'secondary', label: 'Awaiting Payment' },
+      'Awaiting Payment': { variant: 'info', label: 'Paid' },
       'Pending': { variant: 'warning', label: 'Pending' },
       'Paid': { variant: 'info', label: 'Paid - Preparing' },
       'Ready for Pickup': { variant: 'purple', label: 'Ready for Pickup' },
@@ -356,7 +356,8 @@ export const TouristOrdersView: React.FC = () => {
       return <Badge variant="error" className="capitalize">Refunded</Badge>;
     }
 
-    const style = statusStyles[status] || { variant: 'secondary', label: status };
+    const normalizedStatus = status === 'Awaiting Payment' ? 'Paid' : status;
+    const style = statusStyles[normalizedStatus] || { variant: 'secondary', label: normalizedStatus };
     return <Badge variant={style.variant as any} className="capitalize">{style.label}</Badge>;
   };
 

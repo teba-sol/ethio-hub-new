@@ -39,12 +39,28 @@ export async function GET(req: Request) {
       query.status = status;
     }
 
-    const orders = await Order.find(query)
+    const ordersRaw = await Order.find(query)
       .populate('tourist', 'name email phone')
       .populate('product', 'name images price description')
       .populate('artisan', 'name phone')
       .sort({ createdAt: -1 })
       .lean();
+
+    const orders = await Promise.all(ordersRaw.map(async (order: any) => {
+      const ArtisanProfile = (await import('@/models/artisan/artisanProfile.model')).default;
+      const artisanProfile = await ArtisanProfile.findOne({ userId: order.artisan._id });
+      return {
+        ...order,
+        artisan: {
+          ...order.artisan,
+          businessName: artisanProfile?.businessName || order.artisan.name,
+          address: artisanProfile?.address || 'Address not provided',
+          city: artisanProfile?.city || '',
+          latitude: artisanProfile?.latitude,
+          longitude: artisanProfile?.longitude,
+        }
+      };
+    }));
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -57,7 +73,7 @@ export async function GET(req: Request) {
 
     const pendingPickups = await Order.countDocuments({
       assignedDeliveryGuy: deliveryGuy._id,
-      status: 'Shipped',
+      status: { $in: ['Assigned', 'Shipped'] },
     });
 
     const wallet = await Wallet.findOne({ userId: deliveryGuy._id });

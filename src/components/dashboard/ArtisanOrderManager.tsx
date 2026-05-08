@@ -47,7 +47,7 @@ interface Order {
   totalPrice: number;
   artisanEarnings?: number;
   adminCommission?: number;
-  status: 'Awaiting Payment' | 'Pending' | 'Paid' | 'Ready for Pickup' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned';
+  status: 'Pending' | 'Paid' | 'Ready for Pickup' | 'Assigned' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned' | 'Awaiting Payment';
   paymentStatus: 'pending' | 'paid' | 'refunded';
   paymentMethod?: string;
   createdAt: string;
@@ -82,27 +82,28 @@ interface Order {
 
 // --- Components ---
 
-const OrderStatusBadge: React.FC<{ status: string }> = ({ status }) => {
-  const styles: Record<string, string> = {
-    'Awaiting Payment': 'bg-gray-50 text-gray-600 border-gray-100',
-    'Pending': 'bg-amber-50 text-amber-600 border-amber-100',
-    'Paid': 'bg-blue-50 text-blue-600 border-blue-100',
-    'Ready for Pickup': 'bg-purple-50 text-purple-600 border-purple-100',
-    'Shipped': 'bg-indigo-50 text-indigo-600 border-indigo-100',
-    'Delivered': 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    'Returned': 'bg-gray-50 text-gray-600 border-gray-100',
-    'Cancelled': 'bg-red-50 text-red-600 border-red-100',
-    'paid': 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    'pending': 'bg-amber-50 text-amber-600 border-amber-100',
-    'refunded': 'bg-red-50 text-red-600 border-red-100'
-  };
+  const OrderStatusBadge: React.FC<{ status: string }> = ({ status }) => {
+    const normalizedStatus = status === 'Awaiting Payment' ? 'Paid' : status;
+    const styles: Record<string, string> = {
+      'Pending': 'bg-amber-50 text-amber-600 border-amber-100',
+      'Paid': 'bg-blue-50 text-blue-600 border-blue-100',
+      'Ready for Pickup': 'bg-purple-50 text-purple-600 border-purple-100',
+      'Assigned': 'bg-violet-50 text-violet-600 border-violet-100',
+      'Shipped': 'bg-indigo-50 text-indigo-600 border-indigo-100',
+      'Delivered': 'bg-emerald-50 text-emerald-600 border-emerald-100',
+      'Returned': 'bg-gray-50 text-gray-600 border-gray-100',
+      'Cancelled': 'bg-red-50 text-red-600 border-red-100',
+      'paid': 'bg-emerald-50 text-emerald-600 border-emerald-100',
+      'pending': 'bg-amber-50 text-amber-600 border-amber-100',
+      'refunded': 'bg-red-50 text-red-600 border-red-100'
+    };
 
-  return (
-    <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${styles[status] || 'bg-gray-50 text-gray-500'}`}>
-      {status}
-    </span>
-  );
-};
+    return (
+      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${styles[normalizedStatus] || 'bg-gray-50 text-gray-500'}`}>
+        {normalizedStatus}
+      </span>
+    );
+  };
 
 export const ArtisanOrderManager: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -148,7 +149,7 @@ export const ArtisanOrderManager: React.FC = () => {
       });
       const data = await response.json();
       if (data.success) {
-        fetchOrders();
+        setOrders(prev => prev.map(o => o._id === orderId ? data.order : o));
         if (data.verificationCode) {
           alert(`Order marked as ready!\nVerification Code: ${data.verificationCode}\n\nShare this code with the customer via message center.`);
         } else {
@@ -171,11 +172,7 @@ export const ArtisanOrderManager: React.FC = () => {
       });
       const data = await response.json();
       if (data.success) {
-        const mappedOrder = {
-          ...data.order,
-          status: (data.order.status === 'Awaiting Payment' || data.order.status === 'waiting payment' || data.order.status === 'Shipped' || data.order.status === 'Cancelled') ? 'Pending' : data.order.status
-        };
-        setOrders(prev => prev.map(o => o._id === orderId ? mappedOrder : o));
+        setOrders(prev => prev.map(o => o._id === orderId ? data.order : o));
         // Refresh stats
         const statsRes = await fetch('/api/artisan/orders');
         const statsData = await statsRes.json();
@@ -201,7 +198,11 @@ export const ArtisanOrderManager: React.FC = () => {
     }
 
     if (statusFilter !== 'All') {
-      result = result.filter(o => o.status === statusFilter);
+      if (statusFilter === 'Pending') {
+        result = result.filter(o => ['Pending', 'Paid'].includes(o.status));
+      } else {
+        result = result.filter(o => o.status === statusFilter);
+      }
     }
 
     if (paymentFilter !== 'All') {
@@ -268,7 +269,7 @@ export const ArtisanOrderManager: React.FC = () => {
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-3xl font-serif font-bold text-primary">{order._id.slice(-6).toUpperCase()}</h1>
-                <OrderStatusBadge status={order.status} />
+                <OrderStatusBadge status={order.paymentStatus === 'paid' && (order.status === 'Pending' || order.status === 'Paid') ? 'Paid' : order.status} />
                 {order.isVerified && (
                   <Badge variant="success" className="flex items-center gap-1">
                     <ShieldCheck className="w-3 h-3" /> Verified
@@ -318,11 +319,11 @@ export const ArtisanOrderManager: React.FC = () => {
                   </div>
                   <div className="flex justify-between text-sm font-bold text-red-500 pt-2">
                     <span>Platform Fee (Admin Commission)</span>
-                    <span>- ETB {(order.adminCommission || (order.totalPrice * 0.2)).toLocaleString()}</span>
+                    <span>- ETB {(order.adminCommission || (order.totalPrice * 0.1)).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-xl font-bold text-emerald-600 pt-3 border-t border-dashed border-gray-300">
                     <span>Artisan Earning (After Cut)</span>
-                    <span>ETB {(order.artisanEarnings || (order.totalPrice * 0.8)).toLocaleString()}</span>
+                    <span>ETB {(order.artisanEarnings || (order.totalPrice * 0.9)).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -343,7 +344,7 @@ export const ArtisanOrderManager: React.FC = () => {
                       </div>
                       <div>
                         <p className="font-bold text-primary">
-                          {['Awaiting Payment', 'waiting payment', 'Shipped', 'Cancelled'].includes(event.status) ? 'Pending' : event.status}
+                          {event.status}
                         </p>
                         <p className="text-xs text-gray-500">{new Date(event.date).toLocaleString()}</p>
                         {event.note && <p className="text-xs text-gray-600 mt-1 bg-gray-50 p-2 rounded-lg">{event.note}</p>}
@@ -414,14 +415,23 @@ export const ArtisanOrderManager: React.FC = () => {
             {/* Management Actions */}
             <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-4">
               <h3 className="text-xl font-bold text-primary mb-2">Actions</h3>
-              {order.status === 'Paid' && (
+              {!['Ready for Pickup', 'Assigned', 'Shipped', 'Delivered'].includes(order.status) ? (
                 <Button 
                   className="w-full justify-start" 
                   variant="primary"
-                  leftIcon={CheckCircle2}
+                  leftIcon={Truck}
                   onClick={() => handleMarkAsReady(order._id)}
                 >
-                  Mark as Ready for Pickup
+                  Mark as Ready
+                </Button>
+              ) : (
+                <Button 
+                  className="w-full justify-start" 
+                  variant="primary"
+                  leftIcon={Truck}
+                  disabled
+                >
+                  Marked as Ready
                 </Button>
               )}
               {order.status === 'Ready for Pickup' && (
@@ -487,20 +497,19 @@ export const ArtisanOrderManager: React.FC = () => {
           </div>
           <div className="h-8 w-[1px] bg-gray-100 hidden md:block"></div>
           <div className="relative">
-              <select 
-                className="appearance-none bg-gray-50 border-none rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary cursor-pointer focus:ring-2 focus:ring-primary/10"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="All">All Status</option>
-                <option value="Awaiting Payment">Awaiting Payment</option>
-                <option value="Pending">Pending</option>
-                <option value="Paid">Paid</option>
-                <option value="Ready for Pickup">Ready for Pickup</option>
-                <option value="Shipped">Shipped</option>
-                <option value="Delivered">Delivered</option>
-                <option value="Returned">Returned</option>
-              </select>
+                <select 
+                  className="appearance-none bg-gray-50 border-none rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary cursor-pointer focus:ring-2 focus:ring-primary/10"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="All">All Status</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Paid">Paid</option>
+                  <option value="Ready for Pickup">Ready for Pickup</option>
+                  <option value="Shipped">Shipped</option>
+                  <option value="Delivered">Delivered</option>
+                  <option value="Returned">Returned</option>
+                </select>
             <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
           </div>
         </div>
@@ -600,6 +609,7 @@ export const ArtisanOrderManager: React.FC = () => {
                 <th className="px-6 py-4">Customer</th>
                 <th className="px-6 py-4">Item</th>
                 <th className="px-6 py-4">Payout</th>
+                <th className="px-6 py-4">Fulfillment</th>
                 <th className="px-6 py-4">Payment</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Date</th>
@@ -619,14 +629,25 @@ export const ArtisanOrderManager: React.FC = () => {
                   <td className="px-6 py-4 text-gray-600">
                     {order.product.name}
                   </td>
-                  <td className="px-6 py-4 font-bold text-primary">ETB {((order as any).artisanEarnings || (order.totalPrice * 0.8)).toLocaleString()}</td>
+                  <td className="px-6 py-4 font-bold text-primary">ETB {((order as any).artisanEarnings || (order.totalPrice * 0.9)).toLocaleString()}</td>
+                  <td className="px-6 py-4">
+                    {['Ready for Pickup', 'Assigned', 'Shipped', 'Delivered'].includes(order.status) ? (
+                      <Badge variant="success" className="flex items-center gap-1 w-fit">
+                        <CheckCircle2 className="w-3 h-3" /> Ready
+                      </Badge>
+                    ) : (
+                      <Badge variant="warning" className="flex items-center gap-1 w-fit">
+                        <Clock className="w-3 h-3" /> Preparing
+                      </Badge>
+                    )}
+                  </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col gap-1">
                       <span className="text-xs text-gray-600">Chap</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <OrderStatusBadge status={order.status} />
+                    <OrderStatusBadge status={order.paymentStatus === 'paid' && (order.status === 'Pending' || order.status === 'Paid') ? 'Paid' : order.status} />
                   </td>
                   <td className="px-6 py-4 text-xs text-gray-500">
                     {new Date(order.createdAt).toLocaleDateString()}

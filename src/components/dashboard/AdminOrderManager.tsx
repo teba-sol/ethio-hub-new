@@ -38,11 +38,19 @@ interface Order {
 interface DeliveryGuy {
   _id: string;
   name: string;
+  email: string;
   phone: string;
   deliveryProfile?: {
     phone?: string;
     vehicleType?: string;
     totalDeliveries?: number;
+    avatar?: string;
+  };
+  wallet?: {
+    availableBalance: number;
+    lifetimeEarned: number;
+    deliveryEarnings: number;
+    deliveryTripsCompleted: number;
   };
 }
 
@@ -236,6 +244,9 @@ export const AdminOrderManager: React.FC = () => {
                     <p className="text-xs text-gray-500 font-mono">#{order._id.slice(-6).toUpperCase()}</p>
                   </div>
                   <div className="flex items-center gap-4">
+                    <div className="text-sm text-gray-600 mr-4">
+                      <span className="font-bold">Driver:</span> {(order as any).deliveryGuyInfo?.name || 'Assigned'}
+                    </div>
                     <Badge variant="info">In Transit</Badge>
                     <div className="text-right text-sm">
                       <p className="font-medium">{order.tourist?.name}</p>
@@ -247,6 +258,64 @@ export const AdminOrderManager: React.FC = () => {
             ))}
           </div>
         )}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-bold text-primary">Delivery Personnel Tracking</h3>
+            <p className="text-sm text-gray-500">Monitor driver performance and earnings</p>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-gray-50">
+              <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                <th className="px-6 py-4">Driver</th>
+                <th className="px-6 py-4">Vehicle</th>
+                <th className="px-6 py-4">Total Trips</th>
+                <th className="px-6 py-4">Total Earned</th>
+                <th className="px-6 py-4">Available Balance</th>
+                <th className="px-6 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {data?.deliveryGuys?.map((guy) => (
+                <tr key={guy._id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                        {guy.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-800">{guy.name}</p>
+                        <p className="text-xs text-gray-500">{guy.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <Badge variant="secondary">{guy.deliveryProfile?.vehicleType || 'N/A'}</Badge>
+                  </td>
+                  <td className="px-6 py-4 font-bold text-gray-700">
+                    {guy.wallet?.deliveryTripsCompleted || 0}
+                  </td>
+                  <td className="px-6 py-4 font-bold text-emerald-600">
+                    {formatCurrency(guy.wallet?.lifetimeEarned || 0)}
+                  </td>
+                  <td className="px-6 py-4 font-bold text-primary">
+                    {formatCurrency(guy.wallet?.availableBalance || 0)}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <Button size="sm" variant="outline" onClick={() => alert(`Phone: ${guy.phone}\nVehicle: ${guy.deliveryProfile?.vehicleType || 'N/A'}`)}>
+                      Details
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {selectedOrder && (

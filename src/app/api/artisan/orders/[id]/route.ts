@@ -25,16 +25,14 @@ async function getAuthenticatedUser(req: Request) {
   }
 }
 
-function generateVerificationCode(): string {
-  return Math.random().toString(10).substring(2, 10).toUpperCase().padStart(8, '0').substring(0, 8);
-}
-
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
+    
+    const { id: orderId } = await params;
     
     const user = await getAuthenticatedUser(req);
     if (!user || user.role !== 'artisan') {
@@ -42,9 +40,8 @@ export async function PUT(
     }
 
     const { status } = await req.json();
-    const orderId = params.id;
 
-    const validStatuses = ['Pending', 'Paid', 'Ready for Pickup', 'Shipped', 'Delivered', 'Cancelled', 'Returned'];
+    const validStatuses = ['Pending', 'Paid', 'Ready for Pickup', 'Assigned', 'Shipped', 'Delivered', 'Cancelled', 'Returned'];
     if (!validStatuses.includes(status)) {
       return NextResponse.json({ message: 'Invalid status' }, { status: 400 });
     }
@@ -65,14 +62,12 @@ export async function PUT(
     let timelineNote = `Order status updated to ${status}`;
 
     if (status === 'Ready for Pickup' && currentStatus === 'Paid') {
-      const verificationCode = generateVerificationCode();
-      updateData.verificationCode = verificationCode;
-      timelineNote = 'Package is ready for pickup. Verification code generated.';
+      timelineNote = 'Package is ready for pickup.';
 
       order.timeline.push({
         status: 'Ready for Pickup',
         date: new Date(),
-        note: `Verification Code: ${verificationCode}`,
+        note: 'Package is ready for pickup, waiting for delivery assignment.',
       });
     } else if (status === 'Shipped' && currentStatus === 'Ready for Pickup') {
       if (!order.assignedDeliveryGuy) {
@@ -126,17 +121,19 @@ export async function PUT(
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
+    
+    const { id } = await params;
     
     const user = await getAuthenticatedUser(req);
     if (!user || user.role !== 'artisan') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const order = await Order.findOne({ _id: params.id, artisan: user._id })
+    const order = await Order.findOne({ _id: id, artisan: user._id })
       .populate('product', 'name images sku price description')
       .populate('tourist', 'name email phone profilePicture touristProfile')
       .populate('assignedDeliveryGuy', 'name phone deliveryProfile');

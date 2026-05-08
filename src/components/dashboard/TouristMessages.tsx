@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   MessageSquare, Package, Truck, User, Phone, Mail, 
-  MapPin, Clock, CheckCircle, RefreshCw, ShieldCheck
+  MapPin, Clock, CheckCircle, RefreshCw, ShieldCheck,
+  ChevronRight
 } from 'lucide-react';
 import { Button, Badge } from '../UI';
 
@@ -14,6 +15,16 @@ interface DeliveryOrder {
   deliveryGuyInfo?: {
     name: string;
     phone: string;
+  };
+  assignedDeliveryGuy?: {
+    _id: string;
+    name: string;
+    phone?: string;
+    deliveryProfile?: {
+      avatar?: string;
+      vehicleType?: string;
+      phone?: string;
+    };
   };
   product: {
     name: string;
@@ -42,9 +53,13 @@ export const TouristMessages: React.FC = () => {
   const [messages, setMessages] = useState<TourMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<DeliveryOrder | null>(null);
+  const [expandedDeliveryGuy, setExpandedDeliveryGuy] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDeliveryOrders();
+    // Poll every 30 seconds to check for verification code updates
+    const interval = setInterval(fetchDeliveryOrders, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchDeliveryOrders = async () => {
@@ -60,24 +75,26 @@ export const TouristMessages: React.FC = () => {
 
         const generatedMessages: TourMessage[] = [];
         deliveryOrders.forEach((order: DeliveryOrder) => {
-          if (order.status === 'Ready for Pickup' && order.verificationCode) {
+          // When delivery guy accepts (Shipped status) - show COMBINED message with verification code
+          if (order.status === 'Shipped' && order.deliveryGuyInfo && order.verificationCode) {
             generatedMessages.push({
-              _id: `msg-vc-${order._id}`,
-              type: 'verification_code',
-              title: 'Verification Code',
-              message: `Your verification code for order #${order._id?.slice(-6).toUpperCase()} is ${order.verificationCode}`,
+              _id: `msg-combined-${order._id}`,
+              type: 'delivery_assigned',
+              title: 'Delivery Accepted!',
+              message: `Your delivery person ${order.deliveryGuyInfo.name} (${order.deliveryGuyInfo.phone}) has accepted your delivery! Your verification code is ${order.verificationCode}. Give this code to them only when you receive your package.`,
               orderId: order._id,
               createdAt: order.createdAt,
               read: false,
             });
           }
 
-          if (order.status === 'Shipped' && order.deliveryGuyInfo) {
+          // For "Ready for Pickup" status - show waiting message (no code yet)
+          if (order.status === 'Ready for Pickup') {
             generatedMessages.push({
-              _id: `msg-dg-${order._id}`,
-              type: 'delivery_assigned',
-              title: 'Delivery Person Assigned',
-              message: `Your delivery person ${order.deliveryGuyInfo.name} is on the way! Phone: ${order.deliveryGuyInfo.phone}`,
+              _id: `msg-ready-${order._id}`,
+              type: 'order_update',
+              title: 'Ready for Pickup',
+              message: `Your order #${order._id?.slice(-6).toUpperCase()} is ready and waiting for delivery assignment.`,
               orderId: order._id,
               createdAt: order.createdAt,
               read: false,
@@ -187,35 +204,117 @@ export const TouristMessages: React.FC = () => {
                       Order #{order._id?.slice(-6).toUpperCase()}
                     </p>
 
-                    {order.verificationCode && (
-                      <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
-                        <div className="flex items-center gap-2 mb-1">
-                          <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                          <p className="text-xs font-bold text-emerald-600 uppercase">Your Verification Code</p>
-                        </div>
-                        <p className="text-2xl font-mono font-bold text-emerald-800 tracking-[0.3em]">
-                          {order.verificationCode}
-                        </p>
-                        <p className="text-xs text-emerald-600 mt-1">Share this code with the delivery person</p>
+                    <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                      <div className="flex items-center gap-2 mb-1">
+                        <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                        <p className="text-xs font-bold text-emerald-600 uppercase">Verification Code</p>
                       </div>
-                    )}
+                      {order.verificationCode ? (
+                        <>
+                          <p className="text-2xl font-mono font-bold text-emerald-800 tracking-[0.3em]">
+                            {order.verificationCode}
+                          </p>
+                          <p className="text-xs text-emerald-600 mt-1">Share this code with the delivery person</p>
+                        </>
+                      ) : (
+                        <p className="text-sm text-emerald-600 italic">Waiting for artisan to mark as ready...</p>
+                      )}
+                    </div>
 
                     {order.deliveryGuyInfo && (
-                      <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Truck className="w-4 h-4 text-blue-600" />
-                          <p className="text-xs font-bold text-blue-600 uppercase">Delivery Person</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4 text-blue-500" />
-                            <span className="text-sm font-medium text-blue-800">{order.deliveryGuyInfo.name}</span>
+                      <div className="mt-3 space-y-2">
+                        {/* Clickable header */}
+                        <div 
+                          className="p-3 bg-blue-50 rounded-lg border border-blue-100 cursor-pointer hover:bg-blue-100 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedDeliveryGuy(expandedDeliveryGuy === order._id ? null : order._id);
+                          }}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <Truck className="w-4 h-4 text-blue-600" />
+                              <p className="text-xs font-bold text-blue-600 uppercase">Delivery Person</p>
+                            </div>
+                            <ChevronRight 
+                              className={`w-4 h-4 text-blue-400 transition-transform ${expandedDeliveryGuy === order._id ? 'rotate-90' : ''}`} 
+                            />
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Phone className="w-4 h-4 text-blue-500" />
-                            <span className="text-sm text-blue-800">{order.deliveryGuyInfo.phone}</span>
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-blue-500" />
+                              <span className="text-sm font-medium text-blue-800">{order.deliveryGuyInfo.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Phone className="w-4 h-4 text-blue-500" />
+                              <span className="text-sm text-blue-800">{order.deliveryGuyInfo.phone}</span>
+                            </div>
                           </div>
                         </div>
+
+                        {/* Expandable Details */}
+                        {expandedDeliveryGuy === order._id && (
+                          <div className="p-4 bg-white border border-blue-100 rounded-lg space-y-4 animate-in slide-in-from-top-2 duration-200">
+                            {/* Profile Picture */}
+                            <div className="flex justify-center">
+                              <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden">
+                                {order.assignedDeliveryGuy?.deliveryProfile?.avatar ? (
+                                  <img src={order.assignedDeliveryGuy.deliveryProfile.avatar} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <User className="w-10 h-10 text-blue-400" />
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Details */}
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2 text-sm">
+                                <User className="w-4 h-4 text-gray-400" />
+                                <span className="text-gray-600">Name:</span>
+                                <span className="font-medium text-gray-800">{order.assignedDeliveryGuy?.name || order.deliveryGuyInfo.name}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm">
+                                <Phone className="w-4 h-4 text-gray-400" />
+                                <span className="text-gray-600">Phone:</span>
+                                <span className="font-medium text-gray-800">{order.assignedDeliveryGuy?.phone || order.deliveryGuyInfo.phone}</span>
+                              </div>
+                              {order.assignedDeliveryGuy?.deliveryProfile?.vehicleType && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Truck className="w-4 h-4 text-gray-400" />
+                                  <span className="text-gray-600">Vehicle:</span>
+                                  <span className="font-medium text-gray-800 capitalize">{order.assignedDeliveryGuy.deliveryProfile.vehicleType}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* 8-Digit Verification Code */}
+                            <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100 text-center">
+                              <ShieldCheck className="w-6 h-6 text-emerald-600 mx-auto mb-2" />
+                              <p className="text-xs font-bold text-emerald-600 uppercase mb-1">Verification Code</p>
+                              {order.verificationCode ? (
+                                <p className="text-2xl font-mono font-bold text-emerald-800 tracking-[0.3em]">
+                                  {order.verificationCode}
+                                </p>
+                              ) : (
+                                <p className="text-sm text-emerald-600 italic">Waiting for artisan to generate code...</p>
+                              )}
+                              <p className="text-xs text-emerald-600 mt-1">Share this code when delivery arrives</p>
+                            </div>
+
+                            {/* Close Button */}
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="w-full"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedDeliveryGuy(null);
+                              }}
+                            >
+                              Close Details
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

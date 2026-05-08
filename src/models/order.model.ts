@@ -12,7 +12,7 @@ export interface IOrder extends Document {
   artisanEarnings: number;
   commissionRate: number;
   currency: string;
-  status: 'Awaiting Payment' | 'Pending' | 'Paid' | 'Ready for Pickup' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned';
+   status: 'Pending' | 'Paid' | 'Ready for Pickup' | 'Assigned' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned' | 'Awaiting Payment';
   paymentStatus: 'pending' | 'paid' | 'refunded';
   paymentRef?: string;
   paymentReference?: string;
@@ -116,8 +116,8 @@ const OrderSchema: Schema = new Schema(
     },
     status: {
       type: String,
-      enum: ['Awaiting Payment', 'Pending', 'Paid', 'Ready for Pickup', 'Shipped', 'Delivered', 'Cancelled', 'Returned'],
-      default: 'Awaiting Payment',
+      enum: ['Pending', 'Paid', 'Ready for Pickup', 'Assigned', 'Shipped', 'Delivered', 'Cancelled', 'Returned'],
+      default: 'Pending',
     },
     paymentStatus: {
       type: String,

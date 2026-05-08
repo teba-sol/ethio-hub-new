@@ -40,7 +40,7 @@ export async function GET(req: Request) {
 
     const query: any = { artisan: user._id };
     
-    // For artisan view, map Awaiting Payment to Pending if needed, 
+    // For artisan view, map Paid to Pending if needed, 
     // or just filter by what's requested
     if (status && status !== 'All') {
       query.status = status;
@@ -58,8 +58,9 @@ export async function GET(req: Request) {
     // Auto-update status based on Delivery Time
     const now = new Date();
     const updatedOrders = await Promise.all(orders.map(async (order: any) => {
-      // If it's Pending or Shipped, check if it should be Delivered
-      if (['Pending', 'Shipped', 'Awaiting Payment'].includes(order.status) && order.product?.deliveryTime) {
+      // If it's Pending, Shipped, Paid, Ready for Pickup, or Assigned, check if it should be Delivered
+      // Note: Orders shouldn't be delivered if not paid
+      if (['Pending', 'Shipped', 'Paid', 'Ready for Pickup', 'Assigned'].includes(order.status) && order.product?.deliveryTime) {
         // Simple logic: if deliveryTime is "X-Y days", take Y. If "X days", take X.
         const timeStr = order.product.deliveryTime.toLowerCase();
         let days = 0;
@@ -90,7 +91,7 @@ export async function GET(req: Request) {
     // Calculate statistics for the artisan
     const [totalOrders, pendingOrders, deliveredOrders, returnedOrders] = await Promise.all([
       Order.countDocuments({ artisan: user._id }),
-      Order.countDocuments({ artisan: user._id, status: { $in: ['Pending', 'Awaiting Payment'] } }),
+      Order.countDocuments({ artisan: user._id, status: { $in: ['Pending', 'Paid', 'Ready for Pickup', 'Assigned', 'Shipped'] } }),
       Order.countDocuments({ artisan: user._id, status: 'Delivered' }),
       Order.countDocuments({ artisan: user._id, status: 'Returned' })
     ]);

@@ -26,10 +26,12 @@ const MAX_ATTEMPTS = 3;
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
+    
+    const { id: orderId } = await params;
     
     const deliveryGuy = await getAuthenticatedUser(req);
     if (!deliveryGuy || deliveryGuy.role !== 'delivery') {
@@ -38,7 +40,6 @@ export async function POST(
 
     const body = await req.json();
     const { verificationCode } = body;
-    const orderId = params.id;
 
     if (!verificationCode) {
       return NextResponse.json({ message: 'Verification code is required' }, { status: 400 });
@@ -92,12 +93,16 @@ export async function POST(
       const artisanEarnings = order.artisanEarnings || (order.totalPrice * 0.9);
       const adminCommission = order.adminCommission || (order.totalPrice * 0.1);
       const shippingFee = order.shippingFee || 0;
+      
+      // Split shipping fee: 80% to driver, 20% to admin commission
+      const driverShare = Math.round(shippingFee * 0.8 * 100) / 100;
+      const adminLogisticsShare = Math.round(shippingFee * 0.2 * 100) / 100;
 
       const artisanWallet = await Wallet.findOne({ userId: order.artisan });
       if (artisanWallet) {
         artisanWallet.pendingBalance = Math.max(0, artisanWallet.pendingBalance - artisanEarnings);
         artisanWallet.availableBalance += artisanEarnings;
-        artisanWallet.lifetimeEarned += artisanEarnings;
+        // artisanWallet.lifetimeEarned += artisanEarnings; // ALREADY UPDATED IN PAYMENT SERVICE
         await artisanWallet.save();
       }
 
@@ -106,8 +111,8 @@ export async function POST(
         const adminWallet = await Wallet.findOne({ userId: adminUser._id });
         if (adminWallet) {
           adminWallet.pendingBalance = Math.max(0, adminWallet.pendingBalance - adminCommission);
-          adminWallet.availableBalance += adminCommission;
-          adminWallet.lifetimeEarned += adminCommission;
+          adminWallet.availableBalance += (adminCommission + adminLogisticsShare);
+          // adminWallet.lifetimeEarned += adminCommission; // ALREADY UPDATED IN PAYMENT SERVICE
           adminWallet.shippingFeesReceived += shippingFee;
           await adminWallet.save();
         }
@@ -115,7 +120,7 @@ export async function POST(
 
       const deliveryGuyWallet = await Wallet.findOne({ userId: deliveryGuy._id });
       if (deliveryGuyWallet) {
-        deliveryGuyWallet.deliveryEarnings += shippingFee;
+        deliveryGuyWallet.deliveryEarnings += driverShare; // Only driver's 80% goes to his earnings
         deliveryGuyWallet.deliveryTripsCompleted += 1;
         await deliveryGuyWallet.save();
       }
@@ -123,7 +128,7 @@ export async function POST(
       await DeliveryLog.create({
         orderId: order._id,
         deliveryGuyId: deliveryGuy._id,
-        shippingFee,
+        shippingFee: shippingFee,
         deliveredAt: new Date(),
         customerVerified: true,
         customerName: order.tourist?.name || 'N/A',
@@ -139,7 +144,10 @@ export async function POST(
       });
 
       await User.findByIdAndUpdate(deliveryGuy._id, {
-        $inc: { 'deliveryProfile.totalDeliveries': 1 },
+        $inc: { 
+          'deliveryProfile.totalDeliveries': 1,
+          'deliveryProfile.totalEarnings': driverShare
+        },
       });
 
       await order.save();
@@ -186,17 +194,19 @@ export async function POST(
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
+    
+    const { id } = await params;
     
     const deliveryGuy = await getAuthenticatedUser(req);
     if (!deliveryGuy || deliveryGuy.role !== 'delivery') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const order = await Order.findById(params.id)
+    const order = await Order.findById(id)
       .populate('tourist', 'name email phone')
       .populate('product', 'name images price description');
 

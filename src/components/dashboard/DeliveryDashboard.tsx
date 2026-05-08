@@ -31,6 +31,15 @@ interface DeliveryOrder {
     email: string;
     phone: string;
   };
+  artisan: {
+    name: string;
+    phone: string;
+    businessName: string;
+    address: string;
+    city: string;
+    latitude?: number;
+    longitude?: number;
+  };
   shippingAddress?: {
     street: string;
     city: string;
@@ -96,8 +105,29 @@ export const DeliveryDashboard: React.FC = () => {
     }
   };
 
-  const activeOrders = orders.filter(o => ['Shipped', 'Ready for Pickup'].includes(o.status));
+  const activeOrders = orders.filter(o => ['Assigned', 'Shipped', 'Ready for Pickup'].includes(o.status));
   const shippedOrders = orders.filter(o => o.status === 'Shipped');
+
+  const handleAcceptOrder = async (orderId: string) => {
+    setVerifying(true);
+    try {
+      const res = await fetch(`/api/delivery/orders/${orderId}/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Order accepted successfully! Tourist has been notified.');
+        fetchDeliveryData();
+      } else {
+        alert(data.message || 'Failed to accept order');
+      }
+    } catch (err) {
+      alert('Error accepting order');
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const handleVerifyDelivery = async (orderId: string) => {
     if (!verificationCode || verificationCode.length !== 8) {
@@ -263,27 +293,60 @@ export const DeliveryDashboard: React.FC = () => {
                         <h3 className="font-bold text-primary">{order.product?.name || 'Product'}</h3>
                         <p className="text-xs text-gray-400 font-mono">Order #{order._id.slice(-6).toUpperCase()}</p>
                       </div>
-                      <Badge variant={order.status === 'Shipped' ? 'info' : 'warning'}>
-                        {order.status}
+                      <Badge variant={
+                        order.status === 'Assigned' ? 'warning' :
+                        order.status === 'Shipped' ? 'info' : 'secondary'
+                      }>
+                        {order.status === 'Assigned' ? 'Pending Acceptance' : order.status}
                       </Badge>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div className="flex items-start gap-2">
-                        <MapPin className="w-4 h-4 text-primary mt-1" />
+                        <Package className="w-4 h-4 text-primary mt-1" />
                         <div>
-                          <p className="text-xs font-bold text-gray-400 uppercase">Delivery Address</p>
-                          <p className="text-sm text-gray-700">
-                            {order.shippingAddress?.street}, {order.shippingAddress?.city}
-                          </p>
+                          <p className="text-xs font-bold text-gray-400 uppercase">Pickup Location (Artisan)</p>
+                          <p className="text-sm font-bold text-gray-800">{order.artisan?.businessName || order.artisan?.name}</p>
+                          <p className="text-xs text-gray-600">{order.artisan?.address}, {order.artisan?.city}</p>
+                          <button 
+                            className="text-[10px] text-blue-600 hover:underline font-bold mt-1 flex items-center gap-1"
+                            onClick={() => {
+                              const lat = order.artisan?.latitude;
+                              const lng = order.artisan?.longitude;
+                              if (lat && lng) {
+                                window.open(`https://www.google.com/maps?q=${lat},${lng}`);
+                              } else {
+                                alert('Exact coordinates not available. Searching by address...');
+                                window.open(`https://www.google.com/maps/search/${encodeURIComponent(`${order.artisan?.address}, ${order.artisan?.city}`)}`);
+                              }
+                            }}
+                          >
+                            <Navigation className="w-3 h-3" /> OPEN IN MAPS (PICKUP)
+                          </button>
                         </div>
                       </div>
 
                       <div className="flex items-start gap-2">
-                        <DollarSign className="w-4 h-4 text-emerald-500 mt-1" />
+                        <MapPin className="w-4 h-4 text-primary mt-1" />
                         <div>
-                          <p className="text-xs font-bold text-gray-400 uppercase">Shipping Fee</p>
-                          <p className="text-sm font-bold text-emerald-600">{formatCurrency(order.shippingFee)}</p>
+                          <p className="text-xs font-bold text-gray-400 uppercase">Drop-off Location (Customer)</p>
+                          <p className="text-sm text-gray-700">
+                            {order.shippingAddress?.street}, {order.shippingAddress?.city}
+                          </p>
+                          <button 
+                            className="text-[10px] text-blue-600 hover:underline font-bold mt-1 flex items-center gap-1"
+                            onClick={() => {
+                              const lat = (order as any).userLocation?.latitude;
+                              const lng = (order as any).userLocation?.longitude;
+                              if (lat && lng) {
+                                window.open(`https://www.google.com/maps?q=${lat},${lng}`);
+                              } else {
+                                window.open(`https://www.google.com/maps/search/${encodeURIComponent(`${order.shippingAddress?.street}, ${order.shippingAddress?.city}`)}`);
+                              }
+                            }}
+                          >
+                            <Navigation className="w-3 h-3" /> OPEN IN MAPS (DROP-OFF)
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -306,6 +369,17 @@ export const DeliveryDashboard: React.FC = () => {
                         >
                           Call Customer
                         </Button>
+                        {order.status === 'Assigned' && (
+                          <Button 
+                            size="sm"
+                            variant="primary"
+                            leftIcon={CheckCircle}
+                            onClick={() => handleAcceptOrder(order._id)}
+                            isLoading={verifying}
+                          >
+                            Accept Order
+                          </Button>
+                        )}
                         {order.status === 'Shipped' && !order.isLocked && (
                           <Button 
                             size="sm"
@@ -349,27 +423,37 @@ export const DeliveryDashboard: React.FC = () => {
               No delivery history yet
             </div>
           ) : (
-            <div className="divide-y divide-gray-50">
-              {recentDeliveries.map((delivery) => (
-                <div key={delivery._id} className="p-4 flex items-center justify-between hover:bg-gray-50">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-600" />
+            <>
+              <div className="divide-y divide-gray-50">
+                {recentDeliveries.map((delivery) => (
+                  <div key={delivery._id} className="p-4 flex items-center justify-between hover:bg-gray-50">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                        <CheckCircle className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-800">{delivery.productName}</p>
+                        <p className="text-xs text-gray-500">{delivery.customerName}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-800">{delivery.productName}</p>
-                      <p className="text-xs text-gray-500">{delivery.customerName}</p>
+                    <div className="text-right">
+                      <p className="font-bold text-emerald-600">{formatCurrency(delivery.shippingFee)}</p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(delivery.deliveredAt).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-emerald-600">{formatCurrency(delivery.shippingFee)}</p>
-                    <p className="text-xs text-gray-400">
-                      {new Date(delivery.deliveredAt).toLocaleDateString()}
-                    </p>
-                  </div>
+                ))}
+              </div>
+              <div className="p-6 bg-gray-50 border-t border-gray-100">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-bold text-gray-500 uppercase">Total for Month</span>
+                  <span className="text-xl font-bold text-primary">
+                    {stats ? `Total Deliveries: ${stats.monthlyTrips}` : ''}
+                  </span>
                 </div>
-              ))}
-            </div>
+              </div>
+            </>
           )}
         </div>
       )}
@@ -411,17 +495,34 @@ export const DeliveryDashboard: React.FC = () => {
                     <input
                       type="text"
                       value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
+                      onChange={(e) => setVerificationCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 8))}
                       placeholder="________"
                       maxLength={8}
-                      className="w-full text-center text-2xl font-mono tracking-[0.5em] py-4 px-6 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full text-center text-3xl font-mono tracking-[0.5em] py-4 px-6 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
 
+                  <div className="grid grid-cols-3 gap-2 max-w-[280px] mx-auto">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'C', 0, '⌫'].map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => {
+                          if (key === 'C') setVerificationCode('');
+                          else if (key === '⌫') setVerificationCode(prev => prev.slice(0, -1));
+                          else if (verificationCode.length < 8) setVerificationCode(prev => prev + key);
+                        }}
+                        className="h-14 rounded-xl bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-xl font-bold text-gray-700 transition-colors flex items-center justify-center"
+                      >
+                        {key}
+                      </button>
+                    ))}
+                  </div>
+
                   {verificationError && (
-                    <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-xl">
+                    <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-xl animate-shake">
                       <AlertCircle className="w-5 h-5 shrink-0" />
-                      <p className="text-sm">{verificationError}</p>
+                      <p className="text-sm">{verificationError} ({remainingAttempts} attempts left)</p>
                     </div>
                   )}
 
