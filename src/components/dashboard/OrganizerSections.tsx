@@ -160,6 +160,14 @@ const getImageUrl = (path: string | undefined | null) => {
 }, [eventId]);
 
    const handleSaveChanges = async () => {
+     // Show warning for pending events
+     if (editData?.verificationStatus === 'Pending Approval') {
+       const confirm = window.confirm(
+         "Your changes will be submitted for re-review. The admin will see your updated event. Continue?"
+       );
+       if (!confirm) return;
+     }
+
      setSaving(true);
      try {
        // Normalize data before saving
@@ -512,7 +520,7 @@ const getImageUrl = (path: string | undefined | null) => {
                   const isCompleted = currentData.status === 'Completed' || new Date(currentData.endDate) < new Date();
                   const isPublished = !isRejected && !isPending && !isDraft && !isCompleted;
 
-                  if (isPublished || isCompleted || isPending) return null;
+                  if (isPublished || isCompleted) return null;
 
                   return (
                     <>
