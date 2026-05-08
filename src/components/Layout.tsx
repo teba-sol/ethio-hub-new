@@ -19,6 +19,7 @@ import {
   Minus,
   ArrowRight,
   FileText,
+  Truck,
   CreditCard,
   MessageSquare,
   Settings,
@@ -440,9 +441,16 @@ const UserMenu: React.FC = () => {
               />
               <MenuLink
                 icon={FileText}
-                label={t("header.myOrders")}
+                label={user?.role === UserRole.TOURIST ? t("header.myOrder") : t("header.myOrders")}
                 to={getDashboardPath("orders")}
               />
+              {user?.role === UserRole.TOURIST && (
+                <MenuLink
+                  icon={Truck}
+                  label={t("header.orderTracking")}
+                  to={getDashboardPath("orders")}
+                />
+              )}
               <MenuLink
                 icon={Heart}
                 label={t("header.wishlist")}
