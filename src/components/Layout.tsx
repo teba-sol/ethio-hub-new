@@ -19,6 +19,7 @@ import {
   Minus,
   ArrowRight,
   FileText,
+
   CreditCard,
   MessageSquare,
   Settings,
@@ -32,7 +33,8 @@ import {
   Check,
   Moon,
   Sun,
-  FileQuestion
+  FileQuestion,
+  Truck
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
@@ -331,6 +333,7 @@ const UserMenu: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const { t } = useLanguage();
   const router = useRouter();
+  const pathname = usePathname();
 
   const getDashboardHomePath = () => {
     if (!user) return "/login";
@@ -340,6 +343,7 @@ const UserMenu: React.FC = () => {
       organizer: "/dashboard/organizer/overview",
       artisan: "/dashboard/artisan/overview",
       admin: "/dashboard/admin/overview",
+      delivery: "/dashboard/delivery",
     };
     return dashboardHomeByRole[role] || "/dashboard";
   };
@@ -359,7 +363,7 @@ const UserMenu: React.FC = () => {
         <div className="flex flex-col text-right items-end hidden lg:flex">
           <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none mb-0.5">{t("header.welcome")}</span>
           <span className="text-xs font-black text-primary leading-none truncate max-w-[100px]">
-            {isAuthenticated ? user?.name?.split(" ")[0] : t("header.signInRegister")}
+            {isAuthenticated ? (user?.name?.split(" ")[0] || "User") : t("header.signInRegister")}
           </span>
         </div>
         <div className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center text-primary shadow-sm group-hover/nav:border-primary/20 transition-colors">
@@ -407,13 +411,24 @@ const UserMenu: React.FC = () => {
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{user?.role}</p>
                 </div>
               </div>
-               <Button
-                 variant="outline"
-                 onClick={logout}
-                 className="rounded-xl w-full border-gray-200 h-11 text-[10px] font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all"
-               >
-                 {t("header.signOut")}
-               </Button>
+               <div className="flex flex-col gap-2">
+                 <Button
+                   variant="outline"
+                   onClick={logout}
+                   className="rounded-xl w-full border-gray-200 h-11 text-[10px] font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all"
+                 >
+                   {t("header.signOut")}
+                 </Button>
+                 {pathname === '/' && (
+                   <Button
+                     variant="ghost"
+                     onClick={() => router.push('/login')}
+                     className="w-full text-[9px] font-black uppercase text-gray-400 hover:text-primary"
+                   >
+                     Sign in as different user
+                   </Button>
+                 )}
+               </div>
             </div>
           )}
 
@@ -427,8 +442,18 @@ const UserMenu: React.FC = () => {
               />
               <MenuLink
                 icon={FileText}
-                label={t("header.myOrders")}
+                label={user?.role === UserRole.TOURIST ? t("header.myOrder") : t("header.myOrders")}
                 to={getDashboardPath("orders")}
+              />
+              <MenuLink
+                icon={Truck}
+                label={t("header.orderTracking")}
+                to={getDashboardPath("order-tracking")}
+              />
+              <MenuLink
+                icon={CreditCard}
+                label={t("header.payments")}
+                to={getDashboardPath("payments")}
               />
               <MenuLink
                 icon={Heart}

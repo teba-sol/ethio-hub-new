@@ -62,6 +62,20 @@ export async function GET(request: NextRequest) {
 
     const totalFestivals = festivals.length;
     const publishedFestivals = festivals.filter(f => f.status === 'Published').length;
+    
+    // Calculate Active and Completed events based on dates and status
+    const now = new Date();
+    const activeEvents = festivals.filter(f => {
+      const start = new Date(f.startDate);
+      const end = new Date(f.endDate);
+      return f.status === 'Published' && start <= now && end >= now;
+    }).length;
+    
+    const completedEvents = festivals.filter(f => {
+      const end = new Date(f.endDate);
+      return f.status === 'Completed' || end < now;
+    }).length;
+
     const totalBookings = bookings.length;
     const confirmedBookings = bookings.filter(b => b.status === 'confirmed').length;
     
@@ -74,6 +88,130 @@ export async function GET(request: NextRequest) {
     const avgRating = reviews.length > 0 
       ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length 
       : 0;
+
+    // Detailed Event Performance
+    const eventPerformance = festivals.map(f => {
+      const festivalBookings = bookings.filter(b => b.festival?.toString() === f._id.toString());
+      const festivalPaidBookings = festivalBookings.filter(b => b.paymentStatus === 'paid');
+      const festivalNetIncome = festivalPaidBookings.reduce((sum, b) => {
+        // Use organizerAmount if available, else calculate 90% of totalPrice (like booking page)
+        return sum + (b.organizerAmount || (b.totalPrice ? b.totalPrice * 0.9 : 0));
+      }, 0);
+      const festivalReviews = reviews.filter(r => r.festival?.toString() === f._id.toString());
+      const festivalAvgRating = festivalReviews.length > 0 
+        ? festivalReviews.reduce((sum, r) => sum + r.rating, 0) / festivalReviews.length 
+        : 0;
+
+      // Determine status - only Published and Completed
+      let displayStatus = f.status;
+      const start = new Date(f.startDate);
+      const end = new Date(f.endDate);
+      if (f.status === 'Published') {
+        if (end < now) displayStatus = 'Completed';
+      }
+
+      return {
+        id: f._id,
+        name: f.name || f.name_en,
+        status: displayStatus,
+        bookings: festivalBookings.length,
+        netIncome: festivalNetIncome,
+        rating: festivalAvgRating,
+      };
+    });
+
+    // Sort event performance by net income for "Top booked"
+    const topBookedEvents = [...eventPerformance].sort((a, b) => b.netIncome - a.netIncome);
+
+    // Ticket Type Breakdown
+    const ticketTypeBreakdown: Record<string, number> = {
+      'Standard': 0,
+      'VIP': 0,
+      'Early Bird': 0,
+    };
+    const ticketTypeMap: Record<string, string> = {
+      'standard': 'Standard',
+      'vip': 'VIP',
+      'earlyBird': 'Early Bird',
+    };
+    bookings.forEach(b => {
+      const rawType = b.ticketType || 'standard';
+      const type = ticketTypeMap[rawType] || 'Standard';
+      if (ticketTypeBreakdown[type] !== undefined) {
+        ticketTypeBreakdown[type] += b.quantity || 1;
+      } else {
+        ticketTypeBreakdown['Standard'] += b.quantity || 1;
+      }
+    });
+
+    // Ticket Type Breakdown by Event
+    const ticketTypeBreakdownByEvent: Record<string, Record<string, number>> = {};
+    bookings.forEach(b => {
+      const festival = festivals.find(f => f._id.toString() === b.festival?.toString());
+      const eventName = festival?.name || festival?.name_en || 'Unknown';
+      const rawType = b.ticketType || 'standard';
+      const type = ticketTypeMap[rawType] || 'Standard';
+      
+      if (!ticketTypeBreakdownByEvent[eventName]) {
+        ticketTypeBreakdownByEvent[eventName] = {
+          'Standard': 0,
+          'VIP': 0,
+          'Early Bird': 0,
+        };
+      }
+      ticketTypeBreakdownByEvent[eventName][type] += b.quantity || 1;
+    });
+
+    // Peak Booking Hour with per-event breakdown
+    const peakBookingHours: Record<number, number> = {};
+    const peakBookingHoursByEvent: Record<string, Record<number, number>> = {};
+    for (let i = 0; i < 24; i++) peakBookingHours[i] = 0;
+    
+    bookings.forEach(b => {
+      const hour = new Date(b.createdAt).getHours();
+      const festival = festivals.find(f => f._id.toString() === b.festival?.toString());
+      const eventName = festival?.name || festival?.name_en || 'Unknown';
+      
+      peakBookingHours[hour]++;
+      
+      if (!peakBookingHoursByEvent[eventName]) {
+        const hoursObj: Record<number, number> = {};
+        for (let h = 0; h < 24; h++) hoursObj[h] = 0;
+        peakBookingHoursByEvent[eventName] = hoursObj;
+      }
+      peakBookingHoursByEvent[eventName][hour]++;
+    });
+
+    // 30-Day and 90-Day Trends with Event Names
+    const getTrend = (days: number) => {
+      const dates: string[] = [];
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        dates.push(date.toISOString().slice(0, 10));
+      }
+      const trend: Record<string, { total: number, events: Record<string, number> }> = {};
+      dates.forEach(d => trend[d] = { total: 0, events: {} });
+      bookings.forEach(b => {
+        const d = new Date(b.createdAt).toISOString().slice(0, 10);
+        if (trend[d] !== undefined) {
+          const festival = festivals.find(f => f._id.toString() === b.festival?.toString());
+          const eventName = festival?.name || festival?.name_en || 'Unknown';
+          trend[d].total++;
+          trend[d].events[eventName] = (trend[d].events[eventName] || 0) + 1;
+        }
+      });
+      return trend;
+    };
+
+    const bookingsLast30Days = getTrend(30);
+    const bookingsLast90Days = getTrend(90);
+
+    // Get unique events for filter dropdown
+    const allEvents = festivals.map(f => ({
+      id: f._id,
+      name: f.name || f.name_en,
+    }));
 
     const recentBookings = await Booking.find({ 
       $or: [
@@ -229,6 +367,8 @@ export async function GET(request: NextRequest) {
           festivals: {
             total: totalFestivals,
             published: publishedFestivals,
+            active: activeEvents,
+            completed: completedEvents,
             draft: totalFestivals - publishedFestivals,
           },
           bookings: {
@@ -249,14 +389,23 @@ export async function GET(request: NextRequest) {
             approved: reviews.filter(r => r.isApproved).length,
             pending: reviews.filter(r => !r.isApproved).length,
           },
+          eventPerformance,
+          topBookedEvents,
           recentBookings: formattedRecentBookings,
           latestAlerts: latestAlerts.slice(0, 5),
           visitorLocations,
           mostBookedEvent,
+          allEvents,
           charts: {
             bookingsByMonth,
             revenueByMonth,
             bookingsByDay,
+            bookingsLast30Days,
+            bookingsLast90Days,
+            ticketTypeBreakdown,
+            ticketTypeBreakdownByEvent,
+            peakBookingHours,
+            peakBookingHoursByEvent,
           },
         },
       }),

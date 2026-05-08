@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  BarChart3, Users, Ticket, CalendarCheck, CalendarX, 
+  BarChart3, CalendarX, 
   Star, TrendingUp, TrendingDown, Download, ChevronDown,
-  Flame, AlertTriangle, Award, RefreshCw
+  Flame, AlertTriangle, Award, RefreshCw, Wallet, Clock, PieChart
 } from 'lucide-react';
 import { Button, Badge } from '../../components/UI';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Legend
+  BarChart, Bar, Legend, Cell, PieChart as RePieChart, Pie
 } from 'recharts';
 
 export const OrganizerAnalyticsPage: React.FC = () => {
@@ -18,25 +18,17 @@ export const OrganizerAnalyticsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [festivalsData, setFestivalsData] = useState<any[]>([]);
+  const [peakHourEvent, setPeakHourEvent] = useState('all');
+  const [ticketEvent, setTicketEvent] = useState('all');
 
   const fetchAnalyticsData = async () => {
     setLoading(true);
     try {
-      const [analyticsRes, festivalsRes, bookingsRes] = await Promise.all([
-        fetch('/api/organizer/analytics'),
-        fetch('/api/organizer/festivals'),
-        fetch('/api/organizer/bookings')
-      ]);
+      const res = await fetch('/api/organizer/analytics');
+      const json = await res.json();
 
-      const analyticsJson = await analyticsRes.json();
-      const festivalsJson = await festivalsRes.json();
-      const bookingsJson = await bookingsRes.json();
-
-      if (analyticsJson.success) {
-        setAnalyticsData(analyticsJson.analytics);
-      }
-      if (festivalsJson.success) {
-        setFestivalsData(festivalsJson.festivals || []);
+      if (json.success) {
+        setAnalyticsData(json.analytics);
       }
     } catch (err) {
       console.error('Error fetching analytics:', err);
@@ -49,48 +41,55 @@ export const OrganizerAnalyticsPage: React.FC = () => {
     fetchAnalyticsData();
   }, []);
 
-  const totalBookings = analyticsData?.bookings?.total || 0;
-  const totalAttendees = analyticsData?.bookings?.confirmed || 0;
-  const activeEvents = festivalsData.filter(f => {
-    const now = new Date();
-    const start = new Date(f.startDate);
-    const end = new Date(f.endDate);
-    return start <= now && end >= now;
-  }).length;
-  const completedEvents = festivalsData.filter(f => {
-    const now = new Date();
-    const end = new Date(f.endDate);
-    return end < now;
-  }).length;
+  const publishedEvents = analyticsData?.festivals?.published || 0;
+  const completedEvents = analyticsData?.festivals?.completed || 0;
   const averageRating = analyticsData?.reviews?.avgRating || 0;
   const totalReviews = analyticsData?.reviews?.total || 0;
+  const allEvents = analyticsData?.allEvents || [];
 
-  const bookingsData = analyticsData?.charts?.bookingsByMonth || {};
-  const BOOKING_TRENDS = [
-    { name: 'Week 1', bookings: 120, attendees: 350 },
-    { name: 'Week 2', bookings: 180, attendees: 520 },
-    { name: 'Week 3', bookings: 250, attendees: 780 },
-    { name: 'Week 4', bookings: 310, attendees: 950 },
-    { name: 'Week 5', bookings: 280, attendees: 840 },
-    { name: 'Week 6', bookings: 420, attendees: 1250 },
-  ];
+  // Process Booking Trend Data based on timeRange
+  const bookingTrends = useMemo(() => {
+    if (!analyticsData?.charts) return [];
+    
+    let sourceData = analyticsData.charts.bookingsByDay || {};
+    if (timeRange === 'Last 30 Days') sourceData = analyticsData.charts.bookingsLast30Days || {};
+    if (timeRange === 'Last 3 Months') sourceData = analyticsData.charts.bookingsLast90Days || {};
 
-  const getEventHealth = (bookings: number, rating: number) => {
-    if (bookings > 500 && rating >= 4.5) return 'high-demand';
-    if (rating >= 4.7) return 'top-rated';
-    if (bookings < 100) return 'low-booking';
-    return 'normal';
-  };
+    // Get all unique event names from the data
+    const allEventNames = new Set<string>();
+    Object.values(sourceData).forEach((item: any) => {
+      if (item?.events) {
+        Object.keys(item.events).forEach(name => allEventNames.add(name));
+      }
+    });
+    const eventNames = Array.from(allEventNames);
 
-  const EVENT_PERFORMANCE = festivalsData.map(f => {
-    const now = new Date();
-    const start = new Date(f.startDate);
-    const end = new Date(f.endDate);
+    return Object.entries(sourceData).map(([date, item]: [string, any]) => {
+      const entry: any = {
+        name: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        date: date,
+      };
+      // Add each event's booking count
+      eventNames.forEach(eventName => {
+        entry[eventName] = item?.events?.[eventName] || 0;
+      });
+      return entry;
+    });
+  }, [analyticsData, timeRange]);
 
-    let status = 'Upcoming';
-    if (end < now) status = 'Completed';
-    else if (start <= now) status = 'Live';
+  // Get event names for legend
+  const eventNames = useMemo(() => {
+    if (!bookingTrends.length) return [];
+    const names = new Set<string>();
+    bookingTrends.forEach((item: any) => {
+      Object.keys(item).forEach(key => {
+        if (key !== 'name' && key !== 'date') names.add(key);
+      });
+    });
+    return Array.from(names);
+  }, [bookingTrends]);
 
+<<<<<<< HEAD
     return {
       id: f._id,
       name: f.name,
@@ -101,25 +100,77 @@ export const OrganizerAnalyticsPage: React.FC = () => {
       health: getEventHealth(100, averageRating)
     };
   });
+=======
+  // Ticket Type Breakdown Data
+  const ticketTypeData = useMemo(() => {
+    if (!analyticsData?.charts?.ticketTypeBreakdown) return [];
+    
+    if (ticketEvent === 'all') {
+      return Object.entries(analyticsData.charts.ticketTypeBreakdown).map(([name, value]) => ({
+        name,
+        value
+      }));
+    } else {
+      const eventBreakdown = analyticsData.charts.ticketTypeBreakdownByEvent?.[ticketEvent];
+      if (!eventBreakdown) return [];
+      return Object.entries(eventBreakdown).map(([name, value]) => ({
+        name,
+        value
+      }));
+    }
+  }, [analyticsData, ticketEvent]);
+>>>>>>> origin/zeki
 
-  const sortedEvents = [...EVENT_PERFORMANCE].sort((a, b) => {
-    if (sortBy === 'Bookings') return b.bookings - a.bookings;
-    if (sortBy === 'Attendees') return b.attendees - a.attendees;
-    if (sortBy === 'Rating') return b.rating - a.rating;
-    return 0;
-  });
+  const COLORS = ['#3b82f6', '#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
+
+  // Peak Booking Hour Data
+  const peakHourData = useMemo(() => {
+    if (!analyticsData?.charts?.peakBookingHours) return [];
+    
+    if (peakHourEvent === 'all') {
+      return Object.entries(analyticsData.charts.peakBookingHours).map(([hour, count]) => ({
+        hour: `${hour}:00`,
+        bookings: count
+      }));
+    } else {
+      const eventPeakHours = analyticsData.charts.peakBookingHoursByEvent?.[peakHourEvent] || {};
+      const hourCounts: Record<number, number> = {};
+      for (let i = 0; i < 24; i++) hourCounts[i] = 0;
+      Object.entries(eventPeakHours).forEach(([hour, count]) => {
+        hourCounts[parseInt(hour, 10)] = count as number;
+      });
+      return Object.entries(hourCounts).map(([hour, count]) => ({
+        hour: `${hour}:00`,
+        bookings: count
+      }));
+    }
+  }, [analyticsData, peakHourEvent]);
+
+  const eventPerformance = analyticsData?.eventPerformance || [];
+  const topBookedEvents = analyticsData?.topBookedEvents || [];
+
+  const sortedEvents = useMemo(() => {
+    const filtered = eventPerformance.filter(e => 
+      e.status === 'Published' || e.status === 'Completed'
+    );
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'Bookings') return b.bookings - a.bookings;
+      if (sortBy === 'Income') return b.netIncome - a.netIncome;
+      if (sortBy === 'Rating') return b.rating - a.rating;
+      return 0;
+    });
+  }, [eventPerformance, sortBy]);
 
   const handleExportReport = () => {
-    const headers = ['Event Name', 'Status', 'Bookings', 'Attendees', 'Rating', 'Health'];
+    const headers = ['Event Name', 'Status', 'Bookings', 'Net Income', 'Rating'];
     const csvContent = [
       headers.join(','),
       ...sortedEvents.map(e => [
         `"${e.name}"`,
         e.status,
         e.bookings,
-        e.attendees,
-        e.rating,
-        e.health
+        e.netIncome,
+        e.rating
       ].join(','))
     ].join('\n');
 
@@ -152,46 +203,16 @@ export const OrganizerAnalyticsPage: React.FC = () => {
       </header>
 
       {/* Top KPI Section */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm flex flex-col justify-between h-32">
-          <div className="flex justify-between items-start">
-            <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
-              <Ticket className="w-5 h-5" />
-            </div>
-            <Badge className="bg-emerald-50 text-emerald-600 border-none flex items-center gap-1 text-[10px] px-1.5 py-0.5">
-              <TrendingUp className="w-3 h-3" /> +12%
-            </Badge>
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-0.5">Total Bookings</p>
-            <p className="text-2xl font-bold text-primary">{totalBookings.toLocaleString()}</p>
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm flex flex-col justify-between h-32">
           <div className="flex justify-between items-start">
             <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600">
-              <Users className="w-5 h-5" />
-            </div>
-            <Badge className="bg-emerald-50 text-emerald-600 border-none flex items-center gap-1 text-[10px] px-1.5 py-0.5">
-              <TrendingUp className="w-3 h-3" /> +18%
-            </Badge>
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-0.5">Total Attendees</p>
-            <p className="text-2xl font-bold text-primary">{totalAttendees.toLocaleString()}</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm flex flex-col justify-between h-32">
-          <div className="flex justify-between items-start">
-            <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600">
-              <CalendarCheck className="w-5 h-5" />
+              <BarChart3 className="w-5 h-5" />
             </div>
           </div>
           <div>
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-0.5">Active Events</p>
-            <p className="text-2xl font-bold text-primary">{activeEvents}</p>
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-0.5">Published Events</p>
+            <p className="text-2xl font-bold text-primary">{publishedEvents.toLocaleString()}</p>
           </div>
         </div>
 
@@ -203,7 +224,7 @@ export const OrganizerAnalyticsPage: React.FC = () => {
           </div>
           <div>
             <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-0.5">Completed Events</p>
-            <p className="text-2xl font-bold text-primary">{completedEvents}</p>
+            <p className="text-2xl font-bold text-primary">{completedEvents.toLocaleString()}</p>
           </div>
         </div>
 
@@ -241,25 +262,36 @@ export const OrganizerAnalyticsPage: React.FC = () => {
         </div>
         <div className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={BOOKING_TRENDS} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <AreaChart data={bookingTrends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
-                <linearGradient id="colorBookings" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                </linearGradient>
-                <linearGradient id="colorAttendees" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2}/>
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                </linearGradient>
+                {eventNames.map((eventName, idx) => (
+                  <linearGradient key={eventName} id={`color${idx}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={COLORS[idx % COLORS.length]} stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor={COLORS[idx % COLORS.length]} stopOpacity={0}/>
+                  </linearGradient>
+                ))}
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} dy={10} />
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} />
               <Tooltip 
                 contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' }}
+                formatter={(value: any, name: string) => [value, name]}
               />
-              <Area type="monotone" dataKey="attendees" name="Attendees" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#colorAttendees)" />
-              <Area type="monotone" dataKey="bookings" name="Bookings" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorBookings)" />
+              <Legend />
+              {eventNames.map((eventName, idx) => (
+                <Area 
+                  key={eventName}
+                  type="monotone" 
+                  dataKey={eventName} 
+                  name={eventName} 
+                  stroke={COLORS[idx % COLORS.length]} 
+                  strokeWidth={2} 
+                  fillOpacity={1} 
+                  fill={`url(#color${idx})`} 
+                  stackId="1"
+                />
+              ))}
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -280,7 +312,7 @@ export const OrganizerAnalyticsPage: React.FC = () => {
                 className="w-full appearance-none bg-gray-50 border-none rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer"
               >
                 <option value="Bookings">Sort by Bookings</option>
-                <option value="Attendees">Sort by Attendees</option>
+                <option value="Income">Sort by Income</option>
                 <option value="Rating">Sort by Rating</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -293,7 +325,7 @@ export const OrganizerAnalyticsPage: React.FC = () => {
                   <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Event Name</th>
                   <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Status</th>
                   <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-right">Bookings</th>
-                  <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-right">Attendees</th>
+                  <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-right">Net Income</th>
                   <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-right">Rating</th>
                 </tr>
               </thead>
@@ -302,29 +334,12 @@ export const OrganizerAnalyticsPage: React.FC = () => {
                   sortedEvents.map((event) => (
                     <tr key={event.id} className="hover:bg-ethio-bg/30 transition-colors cursor-pointer group">
                       <td className="px-8 py-6">
-                        <div className="flex items-center gap-3">
-                          <p className="text-sm font-bold text-primary group-hover:text-secondary transition-colors">{event.name}</p>
-                          {event.health === 'high-demand' && (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-orange-50 text-orange-600 rounded-lg text-[10px] font-bold">
-                              <Flame className="w-3 h-3" /> High Demand
-                            </div>
-                          )}
-                          {event.health === 'top-rated' && (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-600 rounded-lg text-[10px] font-bold">
-                              <Award className="w-3 h-3" /> Top Rated
-                            </div>
-                          )}
-                          {event.health === 'low-booking' && (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold">
-                              <AlertTriangle className="w-3 h-3" /> Low Booking
-                            </div>
-                          )}
-                        </div>
+                        <p className="text-sm font-bold text-primary group-hover:text-secondary transition-colors">{event.name}</p>
                       </td>
                       <td className="px-8 py-6">
                         <Badge className={`border-none ${
                           event.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
-                          event.status === 'Live' ? 'bg-blue-100 text-blue-700' :
+                          event.status === 'Active' ? 'bg-blue-100 text-blue-700' :
                           'bg-amber-100 text-amber-700'
                         }`}>
                           {event.status}
@@ -334,7 +349,7 @@ export const OrganizerAnalyticsPage: React.FC = () => {
                         <p className="text-sm font-bold text-primary">{event.bookings.toLocaleString()}</p>
                       </td>
                       <td className="px-8 py-6 text-right">
-                        <p className="text-sm font-bold text-indigo-600">{event.attendees.toLocaleString()}</p>
+                        <p className="text-sm font-bold text-emerald-600">ETB {event.netIncome.toLocaleString()}</p>
                       </td>
                       <td className="px-8 py-6 text-right">
                         <div className="flex items-center justify-end gap-1">
@@ -357,47 +372,162 @@ export const OrganizerAnalyticsPage: React.FC = () => {
         </div>
 
         {/* Rating & Review Summary */}
-        <div className="lg:col-span-1 bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex flex-col">
-          <h3 className="text-xl font-serif font-bold text-primary mb-6">Review Summary</h3>
-          <div className="flex items-center gap-4 mb-8">
-            <div className="text-5xl font-serif font-bold text-primary">{averageRating > 0 ? averageRating.toFixed(1) : '0.0'}</div>
-            <div>
-              <div className="flex text-amber-400 mb-1">
-                {[1, 2, 3, 4, 5].map(star => (
-                  <Star key={star} className={`w-5 h-5 ${star <= Math.round(averageRating) ? 'fill-current' : 'text-gray-200'}`} />
-                ))}
+        <div className="lg:col-span-1 space-y-8">
+          <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex flex-col">
+            <h3 className="text-xl font-serif font-bold text-primary mb-6">Review Summary</h3>
+            <div className="flex items-center gap-4 mb-8">
+              <div className="text-5xl font-serif font-bold text-primary">{averageRating > 0 ? averageRating.toFixed(1) : '0.0'}</div>
+              <div>
+                <div className="flex text-amber-400 mb-1">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <Star key={star} className={`w-5 h-5 ${star <= Math.round(averageRating) ? 'fill-current' : 'text-gray-200'}`} />
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 font-medium">Based on {totalReviews} reviews</p>
               </div>
-              <p className="text-xs text-gray-500 font-medium">Based on {totalReviews} reviews</p>
             </div>
+
+            <div className="space-y-4">
+              {[
+                { star: 5, label: 'Excellent' },
+                { star: 4, label: 'Good' },
+                { star: 3, label: 'Average' },
+                { star: 2, label: 'Poor' },
+                { star: 1, label: 'Very Poor' },
+              ].map((dist) => (
+                <div key={dist.star} className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 w-8 shrink-0">
+                    <span className="text-sm font-bold text-gray-700">{dist.star}</span>
+                    <Star className="w-3 h-3 text-amber-400 fill-current" />
+                  </div>
+                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-amber-400 rounded-full" 
+                      style={{ width: `${(averageRating / 5) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <Button variant="outline" className="w-full mt-8" onClick={() => router.push('/dashboard/organizer/reviews')}>View All Reviews</Button>
           </div>
 
-          <div className="space-y-4 flex-1">
-            {[
-              { star: 5, percent: 75 },
-              { star: 4, percent: 15 },
-              { star: 3, percent: 7 },
-              { star: 2, percent: 2 },
-              { star: 1, percent: 1 },
-            ].map((dist) => (
-              <div key={dist.star} className="flex items-center gap-3">
-                <div className="flex items-center gap-1 w-8 shrink-0">
-                  <span className="text-sm font-bold text-gray-700">{dist.star}</span>
-                  <Star className="w-3 h-3 text-amber-400 fill-current" />
+          {/* Wallet / Top Income Section */}
+          <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex flex-col">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-serif font-bold text-primary">Top Income</h3>
+              <Wallet className="w-5 h-5 text-emerald-500" />
+            </div>
+            <div className="space-y-6">
+              {topBookedEvents.slice(0, 3).map((event: any, idx: number) => (
+                <div key={event.id} className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm font-bold text-primary truncate max-w-[120px]">{event.name}</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-widest">{event.bookings} Bookings</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-emerald-600">ETB {event.netIncome.toLocaleString()}</p>
+                    <Badge className="text-[10px] bg-emerald-50 text-emerald-600 border-none">Top {idx + 1}</Badge>
+                  </div>
                 </div>
-                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-amber-400 rounded-full" 
-                    style={{ width: `${dist.percent}%` }}
-                  />
-                </div>
-                <div className="w-8 text-right shrink-0">
-                  <span className="text-xs text-gray-500">{dist.percent}%</span>
+              ))}
+              {topBookedEvents.length === 0 && (
+                <p className="text-sm text-gray-400 italic">No income data available yet.</p>
+              )}
+            </div>
+            <Button variant="outline" className="w-full mt-6" onClick={() => router.push('/dashboard/organizer/wallet')}>Manage Wallet</Button>
+          </div>
+        </div>
+      </div>
+
+      {/* New Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Ticket Type Breakdown */}
+        <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-xl font-serif font-bold text-primary">Ticket Breakdown</h3>
+              <p className="text-sm text-gray-500 mt-1">Analysis of ticket types sold across all events.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <select 
+                value={ticketEvent}
+                onChange={(e) => setTicketEvent(e.target.value)}
+                className="text-xs font-bold bg-gray-50 border-none rounded-lg py-1.5 px-3 text-primary focus:ring-2 focus:ring-primary/10 cursor-pointer"
+              >
+                <option value="all">All Events</option>
+                {allEvents.map((event: any) => (
+                  <option key={event.id} value={event.name}>{event.name}</option>
+                ))}
+              </select>
+              <PieChart className="w-5 h-5 text-primary" />
+            </div>
+          </div>
+          <div className="h-64">
+            {ticketTypeData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <RePieChart>
+                  <Pie
+                    data={ticketTypeData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {ticketTypeData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </RePieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <PieChart className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm text-gray-400">No ticket data available</p>
                 </div>
               </div>
-            ))}
+            )}
           </div>
-          
-          <Button variant="outline" className="w-full mt-8" onClick={() => router.push('/dashboard/organizer/reviews')}>View All Reviews</Button>
+        </div>
+
+        {/* Peak Booking Hours */}
+        <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-xl font-serif font-bold text-primary">Peak Booking Hours</h3>
+              <p className="text-sm text-gray-500 mt-1">When are your customers most likely to book?</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <select 
+                value={peakHourEvent}
+                onChange={(e) => setPeakHourEvent(e.target.value)}
+                className="text-xs font-bold bg-gray-50 border-none rounded-lg py-1.5 px-3 text-primary focus:ring-2 focus:ring-primary/10 cursor-pointer"
+              >
+                <option value="all">All Events</option>
+                {allEvents.map((event: any) => (
+                  <option key={event.id} value={event.name}>{event.name}</option>
+                ))}
+              </select>
+              <Clock className="w-5 h-5 text-primary" />
+            </div>
+          </div>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={peakHourData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                <Tooltip cursor={{ fill: '#f3f4f6' }} contentStyle={{ borderRadius: '12px', border: 'none' }} />
+                <Bar dataKey="bookings" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
     </div>

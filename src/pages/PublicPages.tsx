@@ -38,6 +38,9 @@ import { UserRole } from '../types';
 import apiClient from '../lib/apiClient';
 import { useContentLanguage } from '@/hooks/useContentLanguage';
 import { CLOUDINARY_CLOUD_NAME } from '@/lib/cloudinary';
+import dynamic from 'next/dynamic';
+
+const LocationPicker = dynamic(() => import('@/components/checkout/LocationPicker').then(mod => mod.LocationPicker), { ssr: false });
 
 const CLOUDINARY_BASE = `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
@@ -227,7 +230,7 @@ const withLocalProductFallbacks = (products: any[]) =>
   }));
 
 export const Homepage: React.FC = () => {
-  const { language, t } = useLanguage();
+  const { t } = useLanguage();
   const { getLocalizedField } = useContentLanguage();
   const [products, setProducts] = useState<any[]>([]);
   const [festivals, setFestivals] = useState<Festival[]>([]);
@@ -397,45 +400,32 @@ export const Homepage: React.FC = () => {
       <section className="py-16 md:py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
-            <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#D4AF37] mb-3">
-              {language === 'am' ? 'ዘላለማዊ መስህቦች' : 'TIMELESS ATTRACTIONS'}
-            </p>
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary mb-4">
-              {language === 'am' ? 'የዩኔስኮ የዓለም ቅርስ እና የባህል ፌስቲቫሎች' : 'UNESCO World Heritage & Festival Events'}
-            </h2>
-            <p className="text-gray-500 max-w-2xl mx-auto">
-              {language === 'am' 
-                ? 'ለዘመናት ተጓዦችን የሳቡትን የተቀደሱ በዓሎቻችንን እና ታዋቂ የቅርስ ቦታዎቻችንን በማየት የኢትዮጵያን የበለፀገ የባህል ታሪክ ይለማመዱ።'
-                : "Experience Ethiopia's rich cultural tapestry through our sacred festivals and legendary heritage sites that have captivated travelers for centuries."}
-            </p>
+            <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#D4AF37] mb-3">TIMELESS ATTRACTIONS</p>
+            <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary mb-4">UNESCO World Heritage & Festival Events</h2>
+            <p className="text-gray-500 max-w-2xl mx-auto">Experience Ethiopia's rich cultural tapestry through our sacred festivals and legendary heritage sites that have captivated travelers for centuries.</p>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Timket Card */}
             <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
               <div className="h-48 bg-gray-200 relative overflow-hidden">
+                {/* <!-- Replace with actual Timket festival image --> */}
                 <img 
-                  src="/uploads/festivals/timket.jpg" 
+                  src="https://images.unsplash.com/photo-1562962280-749b6e76a9d2?w=600&h=400&fit=crop" 
                   alt="Timket Festival" 
                   className="w-full h-full object-cover"
                 />
               </div>
               <div className="p-4">
-                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">
-                  {language === 'am' ? 'በዓል' : 'Festival'}
-                </span>
-                <h3 className="font-bold text-lg mt-2 text-primary">{language === 'am' ? 'ጥምቀት' : 'Timket'}</h3>
-                <p className="text-gray-600 text-sm mt-1">
-                  {language === 'am' 
-                    ? 'በቀለማት ያሸበረቁ ሰልፎች እና ባህላዊ የታቦት ስነ-ስርዓቶች የሚታዩበት የጥምቀት በዓል አከባበር።'
-                    : 'Epiphany celebration featuring colorful processions and traditional Tabot ceremonies.'}
-                </p>
+                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">Festival</span>
+                <h3 className="font-bold text-lg mt-2 text-primary">Timket</h3>
+                <p className="text-gray-600 text-sm mt-1">Epiphany celebration featuring colorful processions and traditional Tabot ceremonies.</p>
                 <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
                   <Calendar className="w-4 h-4" />
-                  <span>{language === 'am' ? 'ጥር 11' : 'January 19'}</span>
+                  <span>January 19</span>
                 </div>
                 <Link href="https://en.wikipedia.org/wiki/Timket" target="_blank" rel="noopener noreferrer" className="inline-flex items-center mt-3 text-sm font-medium text-[#D4AF37] hover:text-[#B8962E] transition-colors">
-                  {language === 'am' ? 'ተጨማሪ ይመልከቱ' : 'Discover More'} <ArrowRight className="w-4 h-4 ml-1" />
+                  Discover More <ArrowRight className="w-4 h-4 ml-1" />
                 </Link>
               </div>
             </div>
@@ -443,28 +433,23 @@ export const Homepage: React.FC = () => {
             {/* Meskel Card */}
             <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
               <div className="h-48 bg-gray-200 relative overflow-hidden">
+                {/* <!-- Replace with actual Meskel festival image --> */}
                 <img 
-                  src="/uploads/festivals/meskel.jpg" 
+                  src="https://images.unsplash.com/photo-1572252009286-268acec5ca0a8?w=600&h=400&fit=crop" 
                   alt="Meskel Festival" 
                   className="w-full h-full object-cover"
                 />
               </div>
               <div className="p-4">
-                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">
-                  {language === 'am' ? 'በዓል' : 'Festival'}
-                </span>
-                <h3 className="font-bold text-lg mt-2 text-primary">{language === 'am' ? 'መስቀል' : 'Meskel'}</h3>
-                <p className="text-gray-600 text-sm mt-1">
-                  {language === 'am' 
-                    ? 'በአዲስ አበባ ደማቅ የደመራ እሳት የሚከበርበት የእውነተኛው መስቀል መገኘት በዓል።'
-                    : 'Finding of the True Cross celebration with the iconic Demera bonfire in Addis Ababa.'}
-                </p>
+                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">Festival</span>
+                <h3 className="font-bold text-lg mt-2 text-primary">Meskel</h3>
+                <p className="text-gray-600 text-sm mt-1">Finding of the True Cross celebration with the iconic Demera bonfire in Addis Ababa.</p>
                 <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
                   <Calendar className="w-4 h-4" />
-                  <span>{language === 'am' ? 'መስከረም 17' : 'September 27'}</span>
+                  <span>September 27</span>
                 </div>
                 <Link href="https://en.wikipedia.org/wiki/Meskel" target="_blank" rel="noopener noreferrer" className="inline-flex items-center mt-3 text-sm font-medium text-[#D4AF37] hover:text-[#B8962E] transition-colors">
-                  {language === 'am' ? 'ተጨማሪ ይመልከቱ' : 'Discover More'} <ArrowRight className="w-4 h-4 ml-1" />
+                  Discover More <ArrowRight className="w-4 h-4 ml-1" />
                 </Link>
               </div>
             </div>
@@ -472,28 +457,23 @@ export const Homepage: React.FC = () => {
             {/* Lalibela Card */}
             <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
               <div className="h-48 bg-gray-200 relative overflow-hidden">
+                {/* <!-- Replace with actual Lalibela image --> */}
                 <img 
-                  src="/uploads/festivals/Lalibela,_san_giorgio,_esterno_24.jpg" 
+                  src="https://images.unsplash.com/photo-1563184572-339991b7e7fe?w=600&h=400&fit=crop" 
                   alt="Lalibela Rock-Hewn Churches" 
                   className="w-full h-full object-cover"
                 />
               </div>
               <div className="p-4">
-                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">
-                  {language === 'am' ? 'የዓለም ቅርስ' : 'World Heritage'}
-                </span>
-                <h3 className="font-bold text-lg mt-2 text-primary">{language === 'am' ? 'ላሊበላ' : 'Lalibela'}</h3>
-                <p className="text-gray-600 text-sm mt-1">
-                  {language === 'am' 
-                    ? '11 አሀዳዊ የውቅር አብያተ ክርስቲያናትን የያዘው የዩኔስኮ ቅርስ "ስምንተኛው የአለም ድንቅ" ተብሎ የሚታወቀው።'
-                    : 'UNESCO site featuring 11 monolithic rock-hewn churches, the "Eighth Wonder of the World."'}
-                </p>
+                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">World Heritage</span>
+                <h3 className="font-bold text-lg mt-2 text-primary">Lalibela</h3>
+                <p className="text-gray-600 text-sm mt-1">UNESCO site featuring 11 monolithic rock-hewn churches, the "Eighth Wonder of the World."</p>
                 <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
                   <MapPin className="w-4 h-4" />
-                  <span>{language === 'am' ? 'አማራ ክልል' : 'Amhara Region'}</span>
+                  <span>Amhara Region</span>
                 </div>
                 <Link href="https://en.wikipedia.org/wiki/Lalibela" target="_blank" rel="noopener noreferrer" className="inline-flex items-center mt-3 text-sm font-medium text-[#D4AF37] hover:text-[#B8962E] transition-colors">
-                  {language === 'am' ? 'ተጨማሪ ይመልከቱ' : 'Discover More'} <ArrowRight className="w-4 h-4 ml-1" />
+                  Discover More <ArrowRight className="w-4 h-4 ml-1" />
                 </Link>
               </div>
             </div>
@@ -501,28 +481,23 @@ export const Homepage: React.FC = () => {
             {/* Irreecha Card */}
             <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
               <div className="h-48 bg-gray-200 relative overflow-hidden">
+                {/* <!-- Replace with actual Irreecha festival image --> */}
                 <img 
-                  src="/uploads/festivals/irrecha.webp" 
+                  src="https://images.unsplash.com/photo-1545389336-cf090694435e?w=600&h=400&fit=crop" 
                   alt="Irreecha Festival" 
                   className="w-full h-full object-cover"
                 />
               </div>
               <div className="p-4">
-                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">
-                  {language === 'am' ? 'በዓል' : 'Festival'}
-                </span>
-                <h3 className="font-bold text-lg mt-2 text-primary">{language === 'am' ? 'ኢሬቻ' : 'Irreecha'}</h3>
-                <p className="text-gray-600 text-sm mt-1">
-                  {language === 'am' 
-                    ? 'በቱፖ ሐይቅ የሚከበር የምስጋና እና የእድሳት ምልክት የሆነው የኦሮሞ የምስጋና በዓል።'
-                    : 'Oromo thanksgiving celebration at Lake Tuppo, symbolizing gratitude and renewal.'}
-                </p>
+                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">Festival</span>
+                <h3 className="font-bold text-lg mt-2 text-primary">Irreecha</h3>
+                <p className="text-gray-600 text-sm mt-1">Oromo thanksgiving celebration at Lake Tuppo, symbolizing gratitude and renewal.</p>
                 <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
                   <Calendar className="w-4 h-4" />
-                  <span>{language === 'am' ? 'ጥቅምት' : 'October'}</span>
+                  <span>October</span>
                 </div>
-                <Link href="https://en.wikipedia.org/wiki/Irreechaa" target="_blank" rel="noopener noreferrer" className="inline-flex items-center mt-3 text-sm font-medium text-[#D4AF37] hover:text-[#B8962E] transition-colors">
-                  {language === 'am' ? 'ተጨማሪ ይመልከቱ' : 'Discover More'} <ArrowRight className="w-4 h-4 ml-1" />
+                <Link href="/festivals" className="inline-flex items-center text-[#D4AF37] font-medium hover:text-[#B8962E] transition-colors">
+                  Discover More <ArrowRight className="w-4 h-4 ml-1" />
                 </Link>
               </div>
             </div>
@@ -534,17 +509,9 @@ export const Homepage: React.FC = () => {
       <section className="py-16 md:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
-            <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#D4AF37] mb-3">
-              {language === 'am' ? 'ባህላዊ በዓላት' : 'CULTURAL CELEBRATIONS'}
-            </p>
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary mb-4">
-              {language === 'am' ? 'የኢትዮጵያ በዓላትን ይለማመዱ' : 'Experience Ethiopian Festivities'}
-            </h2>
-            <p className="text-gray-500 max-w-2xl mx-auto">
-              {language === 'am' 
-                ? 'ከጥንታዊ የሃይማኖት ወጎች እስከ ደማቅ የባህል በዓላት፣ የኢትዮጵያን ነፍስ በበዓላቶቿ አማካኝነት ያግኙ።'
-                : 'From ancient religious traditions to vibrant cultural celebrations, discover the soul of Ethiopia through its festivals.'}
-            </p>
+            <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#D4AF37] mb-3">CULTURAL CELEBRATIONS</p>
+            <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary mb-4">Experience Ethiopian Festivities</h2>
+            <p className="text-gray-500 max-w-2xl mx-auto">From ancient religious traditions to vibrant cultural celebrations, discover the soul of Ethiopia through its festivals.</p>
           </div>
 
           {celebrationLoading ? (
@@ -1688,7 +1655,7 @@ export const ProductDetailPage: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'select' | 'processing' | 'receipt'>('select');
   const [selectedMethod, setSelectedMethod] = useState<'chapa' | 'telebirr' | null>(null);
-   const [transactionRef, setTransactionRef] = useState("");
+const [transactionRef, setTransactionRef] = useState("");
    const [isBuying, setIsBuying] = useState(false);
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewStats, setReviewStats] = useState({ total: 0, distribution: [] as any[] });
@@ -1759,8 +1726,20 @@ export const ProductDetailPage: React.FC = () => {
     }
   };
  
+   const [showLocationModal, setShowLocationModal] = useState(false);
+   const [shippingLocation, setShippingLocation] = useState<{
+     street: string;
+     city: string;
+     state: string;
+     latitude?: number;
+     longitude?: number;
+   } | null>(null);
+   const [calculatedShippingFee, setCalculatedShippingFee] = useState<number | null>(null);
+   const [calculatingFee, setCalculatingFee] = useState(false);
+   const [locationCoords, setLocationCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  
    useEffect(() => {
-    const fetchProduct = async () => {
+     const fetchProduct = async () => {
       if (!id) return;
       try {
         const res = await fetch(`/api/public/products/${id}`);
@@ -1827,13 +1806,26 @@ export const ProductDetailPage: React.FC = () => {
   };
 
    const handleBuyNow = async () => {
-    if (isBuying) return;
     if (!isAuthenticated || user?.role?.toLowerCase() !== UserRole.TOURIST) {
       setShowLoginPrompt(true);
       return;
     }
 
+    setShowLocationModal(true);
+    setShippingLocation(null);
+    setCalculatedShippingFee(null);
+    setLocationCoords(null);
+  };
+
+  const handleLocationSubmit = async () => {
+    if (!locationCoords || !shippingLocation?.street || !shippingLocation?.city) {
+      alert('Please fill in your address and select a location on the map');
+      return;
+    }
+
+    if (isBuying) return;
     setIsBuying(true);
+
     try {
       const idempotencyKey = crypto.randomUUID();
       const response = await fetch('/api/chapa/initialize', {
@@ -1843,11 +1835,20 @@ export const ProductDetailPage: React.FC = () => {
           productId: id,
           quantity,
           idempotencyKey,
+          userLocation: locationCoords,
+          shippingFee: calculatedShippingFee,
+          shippingAddress: {
+            street: shippingLocation.street,
+            city: shippingLocation.city,
+            state: shippingLocation.state || 'Addis Ababa',
+            country: 'Ethiopia',
+          },
         }),
       });
 
       const data = await response.json();
       if (data.success && data.checkout_url) {
+        setShowLocationModal(false);
         window.location.href = data.checkout_url;
       } else {
         alert(data.message || 'Failed to initialize payment');
@@ -1857,6 +1858,35 @@ export const ProductDetailPage: React.FC = () => {
       alert('Payment failed. Please try again.');
     } finally {
       setIsBuying(false);
+    }
+  };
+
+  const calculateShippingFee = async (coords: { latitude: number; longitude: number }) => {
+    setCalculatingFee(true);
+    try {
+      const productRes = await fetch(`/api/public/products/${id}`);
+      const productData = await productRes.json();
+      const product = productData.product;
+
+      if (product?.artisanId?._id || product?.artisanId) {
+        const artisanId = product.artisanId._id || product.artisanId;
+        const res = await fetch('/api/routing/calculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            artisanId,
+            userLocation: coords,
+          }),
+        });
+        const feeData = await res.json();
+        if (feeData.success) {
+          setCalculatedShippingFee(feeData.shippingFee);
+        }
+      }
+    } catch (err) {
+      console.error('Error calculating shipping fee:', err);
+    } finally {
+      setCalculatingFee(false);
     }
   };
 
@@ -2385,6 +2415,109 @@ export const ProductDetailPage: React.FC = () => {
             </div>
         </div>
       )}
+
+      {/* Location Selection Modal */}
+      {showLocationModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 relative max-h-[90vh] flex flex-col">
+                <button 
+                    onClick={() => setShowLocationModal(false)} 
+                    className="absolute top-6 right-6 p-2 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors z-10 shadow-sm"
+                >
+                    <X className="w-5 h-5 text-gray-500" />
+                </button>
+
+                <div className="p-8 overflow-y-auto custom-scrollbar">
+                    <div className="text-center space-y-2 mb-8">
+                        <h2 className="text-2xl font-serif font-bold text-primary">Delivery Details</h2>
+                        <p className="text-gray-500 text-sm">Provide your address and select your location on the map</p>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Street Address</label>
+                                <input 
+                                    type="text"
+                                    placeholder="e.g. Bole Road, House 123"
+                                    value={shippingLocation?.street || ''}
+                                    onChange={(e) => setShippingLocation(prev => ({ ...prev!, street: e.target.value }))}
+                                    className="w-full px-5 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all outline-none text-sm"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">City</label>
+                                <input 
+                                    type="text"
+                                    placeholder="e.g. Addis Ababa"
+                                    value={shippingLocation?.city || ''}
+                                    onChange={(e) => setShippingLocation(prev => ({ ...prev!, city: e.target.value }))}
+                                    className="w-full px-5 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all outline-none text-sm"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Pin Location on Map</label>
+                            <div className="h-[250px] rounded-2xl overflow-hidden border border-gray-100 shadow-inner bg-gray-50">
+                                <LocationPicker 
+                                    value={locationCoords || undefined}
+                                    onChange={(coords) => {
+                                        setLocationCoords(coords);
+                                        calculateShippingFee(coords);
+                                    }}
+                                    height="250px"
+                                />
+                            </div>
+                        </div>
+
+                        {calculatingFee ? (
+                            <div className="flex items-center justify-center gap-3 py-6 text-primary animate-pulse bg-primary/5 rounded-2xl">
+                                <RefreshCw className="w-5 h-5 animate-spin" />
+                                <span className="text-xs font-bold uppercase tracking-widest">Calculating Shipping Distance...</span>
+                            </div>
+                        ) : calculatedShippingFee !== null && (
+                            <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-4 shadow-sm">
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-500">Product Price</span>
+                                        <span className="font-bold text-primary">{product.price} ETB</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-500">Quantity</span>
+                                        <span className="font-bold text-primary">{quantity}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-500">Subtotal</span>
+                                        <span className="font-bold text-primary">{product.price * quantity} ETB</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm text-emerald-600">
+                                        <span className="font-medium">Shipping Fee</span>
+                                        <span className="font-bold">{calculatedShippingFee} ETB</span>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex justify-between items-center border-t border-gray-200 pt-4">
+                                    <span className="text-base font-bold text-primary">Grand Total</span>
+                                    <span className="text-2xl font-black text-primary">
+                                        {(product.price * quantity) + calculatedShippingFee} ETB
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+
+                        <Button 
+                            className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20 text-sm font-bold uppercase tracking-widest"
+                            disabled={!locationCoords || !shippingLocation?.street || !shippingLocation?.city || calculatingFee || isBuying}
+                            onClick={handleLocationSubmit}
+                        >
+                            {isBuying ? 'Connecting to Chapa...' : 'Confirm & Pay Now'}
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -2591,7 +2724,7 @@ const getImageUrl = (path: string | undefined | null) => {
     }
     
     // Check if profile is complete
-    const touristProfile = (user as any)?.touristProfile;
+    const touristProfile = user?.touristProfile;
     if (!touristProfile?.phone || !touristProfile?.country || !touristProfile?.nationality) {
       alert('Please complete your profile before booking. Go to Settings to add your phone, country, and nationality.');
       router.push('/dashboard/tourist/settings');
@@ -3731,5 +3864,3 @@ const getImageUrl = (path: string | undefined | null) => {
     </div>
   );
 };
-
-export default Homepage;

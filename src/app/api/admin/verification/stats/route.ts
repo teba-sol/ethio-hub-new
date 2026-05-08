@@ -34,30 +34,55 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Single aggregation query instead of 4 separate countDocuments calls
-    const [result] = await User.aggregate([
-      { $match: { role: 'artisan' } },
-      {
-        $group: {
-          _id: '$artisanStatus',
-          count: { $sum: 1 },
+    // Correct aggregation to get counts for both artisan and organizer statuses
+    const [artisanStats, organizerStats] = await Promise.all([
+      User.aggregate([
+        { $match: { role: 'artisan' } },
+        {
+          $group: {
+            _id: '$artisanStatus',
+            count: { $sum: 1 },
+          },
         },
-      },
+      ]),
+      User.aggregate([
+        { $match: { role: 'organizer' } },
+        {
+          $group: {
+            _id: '$organizerStatus',
+            count: { $sum: 1 },
+          },
+        },
+      ])
     ]);
 
-    const statsMap: Record<string, number> = {};
-    if (result) {
-      statsMap[result._id] = result.count;
-    }
+    const statsMap: Record<string, number> = {
+      'Pending': 0,
+      'Under Review': 0,
+      'Approved': 0,
+      'Rejected': 0,
+    };
+
+    artisanStats.forEach((s: any) => {
+      if (statsMap[s._id] !== undefined) {
+        statsMap[s._id] += s.count;
+      }
+    });
+
+    organizerStats.forEach((s: any) => {
+      if (statsMap[s._id] !== undefined) {
+        statsMap[s._id] += s.count;
+      }
+    });
 
     return new NextResponse(
       JSON.stringify({
         success: true,
         stats: {
-          pending: statsMap['Pending'] || 0,
-          underReview: statsMap['Under Review'] || 0,
-          approved: statsMap['Approved'] || 0,
-          rejected: statsMap['Rejected'] || 0,
+          pending: statsMap['Pending'],
+          underReview: statsMap['Under Review'],
+          approved: statsMap['Approved'],
+          rejected: statsMap['Rejected'],
         },
       }),
       { status: 200, headers: { 'content-type': 'application/json' } }

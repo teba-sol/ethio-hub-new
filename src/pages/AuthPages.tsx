@@ -160,10 +160,51 @@ export const LoginPage: React.FC = () => {
       const res = await login({ email, password });
 
       if (res.success) {
-        if (res.showSuspensionModal) {
-          setPendingUser(res.user);
-          setShowSuspensionModal(true);
-          return;
+        const userRole = res.user.role?.toLowerCase();
+        const organizerStatus = res.user.organizerStatus;
+        const artisanStatus = res.user.artisanStatus;
+
+        if (userRole === "organizer") {
+          if (organizerStatus === "Not Submitted") {
+            router.push("/dashboard/organizer/onboarding");
+          } else if (
+            organizerStatus === "Pending" ||
+            organizerStatus === "Under Review"
+          ) {
+            router.push("/organizer/waiting");
+          } else if (
+            organizerStatus === "Rejected" ||
+            organizerStatus === "Modification Requested"
+          ) {
+            router.push("/dashboard/organizer/onboarding");
+          } else if (organizerStatus === "Approved") {
+            router.push("/dashboard/organizer/overview");
+          }
+        } else if (userRole === "artisan") {
+          if (artisanStatus === "Not Submitted") {
+            router.push("/dashboard/artisan/onboarding");
+          } else if (
+            artisanStatus === "Pending" ||
+            artisanStatus === "Under Review"
+          ) {
+            router.push("/artisan/waiting");
+          } else if (artisanStatus === "Approved") {
+            router.push("/dashboard/artisan/overview");
+          }
+        } else if (userRole === "delivery") {
+          const deliveryStatus = res.user.deliveryStatus;
+          if (!deliveryStatus || deliveryStatus === "Not Submitted") {
+            router.push("/dashboard/delivery/onboarding");
+          } else if (
+            deliveryStatus === "Pending" ||
+            deliveryStatus === "Under Review"
+          ) {
+            router.push("/delivery/waiting");
+          } else if (deliveryStatus === "Approved") {
+            router.push("/dashboard/delivery");
+          }
+        } else {
+          router.push(userRole === "admin" ? "/dashboard/admin/overview" : "/");
         }
         handleSuccessfulLogin(res.user);
       } else {

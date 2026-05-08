@@ -7,6 +7,7 @@ const roleRoutes = {
   admin: '/dashboard/admin',
   organizer: '/dashboard/organizer',
   artisan: '/dashboard/artisan',
+  delivery: '/dashboard/delivery',
   tourist: '/',
 };
 
@@ -15,9 +16,11 @@ const protectedRoutes: { [key: string]: string[] } = {
   '/dashboard/admin': ['admin'],
   '/dashboard/organizer': ['organizer'],
   '/dashboard/artisan': ['artisan'],
+  '/dashboard/delivery': ['delivery'],
   '/api/admin': ['admin'],
   '/api/organizer': ['organizer'],
   '/api/artisan': ['artisan'],
+  '/api/delivery': ['delivery'],
 };
 
 const getRequiredRoles = (pathname: string): string[] | null => {

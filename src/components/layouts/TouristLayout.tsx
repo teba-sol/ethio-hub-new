@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   ShoppingBag, CreditCard, 
-  Heart, Settings, HelpCircle, Ticket
+  Heart, Settings, HelpCircle, Ticket, Truck
 } from 'lucide-react';
 import { Header, Footer } from '../Layout';
 import { useLanguage } from '../../context/LanguageContext';
@@ -15,6 +15,7 @@ export const TouristLayout: React.FC<{ children?: React.ReactNode }> = ({ childr
 
   const menuItems = [
     { path: '/dashboard/tourist/orders', nameKey: 'dashboard.myOrders', icon: ShoppingBag },
+    { path: '/dashboard/tourist/order-tracking', nameKey: 'dashboard.orderTracking', icon: Truck },
     { path: '/dashboard/tourist/bookings', nameKey: 'dashboard.myBookings', icon: Ticket },
     { path: '/dashboard/tourist/payments', nameKey: 'dashboard.payments', icon: CreditCard },
     { path: '/dashboard/tourist/wishlist', nameKey: 'dashboard.wishlist', icon: Heart },

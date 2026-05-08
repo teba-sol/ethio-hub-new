@@ -2,11 +2,13 @@ export enum UserRole {
   TOURIST = 'tourist',
   ARTISAN = 'artisan',
   ORGANIZER = 'organizer',
-  ADMIN = 'admin'
+  ADMIN = 'admin',
+  DELIVERY = 'delivery'
 }
 
 export type ArtisanStatus = 'Not Submitted' | 'Pending' | 'Under Review' | 'Approved' | 'Rejected' | 'Modification Requested';
 export type OrganizerStatus = 'Not Submitted' | 'Pending' | 'Under Review' | 'Approved' | 'Rejected' | 'Modification Requested';
+export type DeliveryStatus = 'Not Submitted' | 'Pending' | 'Under Review' | 'Approved' | 'Rejected' | 'Modification Requested';
 
 export interface User {
   id: string;
@@ -20,6 +22,7 @@ export interface User {
   profileImage: string;
   artisanStatus?: ArtisanStatus;
   organizerStatus?: OrganizerStatus;
+  deliveryStatus?: DeliveryStatus;
   organizerProfile?: {
     companyName?: string;
     phone?: string;
@@ -52,6 +55,40 @@ export interface User {
       defaultLandingPage?: string;
       darkMode?: boolean;
     };
+  };
+  touristProfile?: {
+    phone?: string;
+    country?: string;
+    nationality?: string;
+    bio?: string;
+    profileImage?: string;
+    interests?: string[];
+    language?: string;
+    currency?: string;
+  };
+  artisanProfile?: {
+    companyName?: string;
+    phone?: string;
+    website?: string;
+    address?: string;
+    bio?: string;
+    avatar?: string;
+    specialties?: string[];
+    yearsOfExperience?: number;
+  };
+  deliveryProfile?: {
+    phone?: string;
+    vehicleType?: string;
+    licensePlate?: string;
+    bankName?: string;
+    accountNumber?: string;
+    telebirrNumber?: string;
+    profileImage?: string;
+    idDocument?: string;
+    availabilityStatus?: string;
+    totalDeliveries?: number;
+    rating?: number;
+    totalEarnings?: number;
   };
 }
 
@@ -204,6 +241,9 @@ export interface Festival {
     title_en?: string;
     title_am?: string;
     activities: string;
+    activities_en?: string;
+    activities_am?: string;
+    time?: string;
     performers?: string[];
   }>;
   mainActivities: string;
@@ -264,7 +304,7 @@ export interface Festival {
     address?: string;
     coordinates?: { lat?: number; lng?: number };
   };
-  organizerId: string;
+  organizerId: string | { name: string; email?: string; _id?: string };
   organizer?: {
     _id: string;
     name: string;

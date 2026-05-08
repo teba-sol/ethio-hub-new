@@ -16,7 +16,7 @@ interface BilingualInputProps {
 }
 
 interface DualLanguageFieldProps {
-  label: string;
+  label?: string;
   englishValue: string;
   amharicValue: string;
   onEnglishChange: (value: string) => void;

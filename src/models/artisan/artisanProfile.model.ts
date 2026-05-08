@@ -12,6 +12,8 @@ export interface IArtisanProfile extends Document {
   region: string;
   city: string;
   address: string;
+  latitude?: number;
+  longitude?: number;
   bankName: string;
   accountName: string;
   accountNumber: string;
@@ -76,6 +78,12 @@ const ArtisanProfileSchema = new Schema<IArtisanProfile>(
     address: {
       type: String,
       required: true,
+    },
+    latitude: {
+      type: Number,
+    },
+    longitude: {
+      type: Number,
     },
     bankName: {
       type: String,

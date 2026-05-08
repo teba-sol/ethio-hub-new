@@ -51,7 +51,7 @@ export async function GET(req: Request) {
 
     const query: any = { artisanId: user._id };
     
-    if (status && ['Draft', 'Published', 'Archived'].includes(status)) {
+    if (status && ['Draft', 'Pending', 'Published', 'Out of Stock', 'Dropped by Admin', 'Archived'].includes(status)) {
       query.status = status;
     }
 
@@ -136,7 +136,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const productStatus = status === 'Publish' ? 'Published' : 'Draft';
+    let productStatus = status;
+    if (status === 'Publish' || status === 'Published') {
+      productStatus = Number(stock) === 0 ? 'Out of Stock' : 'Pending';
+    } else if (!status) {
+      productStatus = 'Draft';
+    }
 
     const tagsArray = tags
       ? (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()) : tags)
@@ -179,7 +184,7 @@ export async function POST(req: Request) {
       shippingFee,
       status: productStatus,
       verificationStatus:
-        productStatus === 'Published' || shouldAutoPending ? 'Pending' : undefined,
+        ['Published', 'Pending', 'Out of Stock'].includes(productStatus) || shouldAutoPending ? 'Pending' : 'Pending',
     });
 
     if (product.verificationStatus === 'Pending') {

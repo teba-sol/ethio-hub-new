@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, ChevronLeft, ChevronRight, Image as ImageIcon, Camera, 
   MapPin, Search, RefreshCw, Plus, Minus, Ticket, Star, Hotel, Car,
@@ -21,6 +21,10 @@ const MapPickerModal = dynamic(() => import('../MapPickerModal'), {
 });
 
 import apiClient from '../../lib/apiClient';
+
+const ETBIcon = () => (
+  <span className="text-[10px] font-black text-gray-400">ETB</span>
+);
 
 const STEPS = [
   { id: 1, name: 'Core Information', icon: Info },
@@ -185,7 +189,8 @@ export const FestivalCreationWizard: React.FC<{
       basePrice: initialData?.pricing?.basePrice || initialData?.baseTicketPrice || 0, 
       vipPrice: initialData?.pricing?.vipPrice || initialData?.vipTicketPrice || 0, 
       currency: initialData?.pricing?.currency || initialData?.currency || 'ETB', 
-      earlyBird: initialData?.pricing?.earlyBird || initialData?.earlyBirdPrice || 0, 
+      earlyBird: initialData?.pricing?.earlyBird || 0, 
+      earlyBirdPrice: initialData?.pricing?.earlyBirdPrice || initialData?.earlyBirdPrice || 0,
       earlyBirdDeadline: initialData?.pricing?.earlyBirdDeadline || '',
       groupDiscount: initialData?.pricing?.groupDiscount || 0,
       vipIncludedHotels: initialData?.pricing?.vipIncludedHotels || [] as string[],
@@ -448,9 +453,11 @@ export const FestivalCreationWizard: React.FC<{
   };
 
   const updateTransport = (index: number, field: string, value: any) => {
-    const newTransport = [...formData.transportation];
-    newTransport[index] = { ...newTransport[index], [field]: value };
-    setFormData(prev => ({ ...prev, transportation: newTransport }));
+    setFormData(prev => {
+      const newTransport = [...prev.transportation];
+      newTransport[index] = { ...newTransport[index], [field]: value };
+      return { ...prev, transportation: newTransport };
+    });
   };
 
   const removeTransport = (index: number) => {
@@ -486,9 +493,11 @@ export const FestivalCreationWizard: React.FC<{
 
   const updateFoodPackageItems = (index: number, itemsString: string) => {
     const items = itemsString.split(',').map(item => item.trim()).filter(Boolean);
-    const newPackages = [...formData.services.foodPackages];
-    newPackages[index] = { ...newPackages[index], items };
-    setFormData(prev => ({ ...prev, services: { ...prev.services, foodPackages: newPackages } }));
+    setFormData(prev => {
+      const newPackages = [...prev.services.foodPackages];
+      newPackages[index] = { ...newPackages[index], items };
+      return { ...prev, services: { ...prev.services, foodPackages: newPackages } };
+    });
   };
 
   // Services list handlers (comma-separated arrays)
@@ -517,25 +526,19 @@ export const FestivalCreationWizard: React.FC<{
     setUploadingFile(true);
     setUploadError(null);
     
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('folder', 'festivals');
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', file);
+    formDataUpload.append('folder', 'festivals');
     
     try {
       const res = await fetch('/api/upload', {
         method: 'POST',
-        body: formData,
+        body: formDataUpload,
       });
       const data = await res.json();
       
       if (data.success) {
-        const imageUrl = data.url;
-        if (isCover) {
-          setFormData(prev => ({ ...prev, core: { ...prev.core, coverImage: imageUrl } }));
-        } else {
-          setFormData(prev => ({ ...prev, core: { ...prev.core, gallery: [...prev.core.gallery, imageUrl] } }));
-        }
-        return imageUrl;
+        return data.url;
       } else {
         throw new Error(data.message || 'Upload failed');
       }
@@ -544,16 +547,35 @@ export const FestivalCreationWizard: React.FC<{
       setUploadError(errorMsg);
       console.error('Upload failed:', error);
       
-      // Auto-retry logic (max 2 retries)
       if (retryCount < 2) {
         console.log(`Retrying upload... attempt ${retryCount + 1}`);
-        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
         return handleFileUpload(file, isCover, retryCount + 1);
       }
       
       return '';
     } finally {
       setUploadingFile(false);
+    }
+  };
+
+  const handleCoverUpload = async (file: File) => {
+    const imageUrl = await handleFileUpload(file, true);
+    if (imageUrl) {
+      setFormData(prev => ({ ...prev, core: { ...prev.core, coverImage: imageUrl } }));
+    }
+  };
+
+  const handleGalleryUpload = async (file: File) => {
+    const imageUrl = await handleFileUpload(file);
+    if (imageUrl) {
+      setFormData(prev => ({ 
+        ...prev, 
+        core: { 
+          ...prev.core, 
+          gallery: [...(prev.core.gallery || []), imageUrl].filter((val, index, self) => self.indexOf(val) === index)
+        } 
+      }));
     }
   };
 
@@ -571,7 +593,10 @@ export const FestivalCreationWizard: React.FC<{
     if (imageUrl) {
       setFormData(prev => {
         const newHotels = [...prev.hotels];
-        newHotels[hotelIdx].gallery = [...(newHotels[hotelIdx].gallery || []), imageUrl];
+        const currentGallery = newHotels[hotelIdx].gallery || [];
+        // Deduplicate hotel gallery
+        const uniqueGallery = [...currentGallery, imageUrl].filter((val, index, self) => self.indexOf(val) === index);
+        newHotels[hotelIdx].gallery = uniqueGallery;
         return { ...prev, hotels: newHotels };
       });
     }
@@ -1102,7 +1127,7 @@ export const FestivalCreationWizard: React.FC<{
                                 <span className="text-xs font-bold text-gray-400">Upload Cover Image</span>
                               </label>
                             )}
-                            <input type="file" className="hidden" id="cover-image-upload" onChange={e => e.target.files && handleFileUpload(e.target.files[0], true)} />
+                            <input type="file" className="hidden" id="cover-image-upload" onChange={e => e.target.files && handleCoverUpload(e.target.files[0])} />
                           </div>
                         </div>
 
@@ -1114,7 +1139,7 @@ export const FestivalCreationWizard: React.FC<{
                               <Plus className="w-3 h-3" /> Add Photos
                             </label>
                           </div>
-                          <input type="file" className="hidden" id="gallery-upload" multiple onChange={e => e.target.files && Array.from(e.target.files).forEach(file => handleFileUpload(file))} />
+                          <input type="file" className="hidden" id="gallery-upload" multiple onChange={e => e.target.files && Array.from(e.target.files).forEach(file => handleGalleryUpload(file))} />
                           
                           <div className="grid grid-cols-3 gap-2">
                             {formData.core.gallery.map((img: string, idx: number) => (
@@ -1197,14 +1222,18 @@ export const FestivalCreationWizard: React.FC<{
                               englishValue={day.title_en}
                               amharicValue={day.title_am}
                               onEnglishChange={(value) => {
-                                const newSchedule = [...formData.schedule];
-                                newSchedule[idx].title_en = value;
-                                setFormData({ ...formData, schedule: newSchedule });
+                                setFormData(prev => {
+                                  const newSchedule = [...prev.schedule];
+                                  newSchedule[idx] = { ...newSchedule[idx], title_en: value };
+                                  return { ...prev, schedule: newSchedule };
+                                });
                               }}
                               onAmharicChange={(value) => {
-                                const newSchedule = [...formData.schedule];
-                                newSchedule[idx].title_am = value;
-                                setFormData({ ...formData, schedule: newSchedule });
+                                setFormData(prev => {
+                                  const newSchedule = [...prev.schedule];
+                                  newSchedule[idx] = { ...newSchedule[idx], title_am: value };
+                                  return { ...prev, schedule: newSchedule };
+                                });
                               }}
                               showEnglish={languagePreference !== 'am'}
                               showAmharic={languagePreference !== 'en'}
@@ -1219,16 +1248,21 @@ export const FestivalCreationWizard: React.FC<{
                             <DualLanguageField
                               hideLabel
                               englishPlaceholder="Detailed activities, timings, and highlights for the day..."
-                              amharicValue={day.activities_am}
+                              englishValue={day.activities_en || ''}
+                              amharicValue={day.activities_am || ''}
                               onEnglishChange={(value) => {
-                                const newSchedule = [...formData.schedule];
-                                newSchedule[idx].activities_en = value;
-                                setFormData({ ...formData, schedule: newSchedule });
+                                setFormData(prev => {
+                                  const newSchedule = [...prev.schedule];
+                                  newSchedule[idx] = { ...newSchedule[idx], activities_en: value };
+                                  return { ...prev, schedule: newSchedule };
+                                });
                               }}
                               onAmharicChange={(value) => {
-                                const newSchedule = [...formData.schedule];
-                                newSchedule[idx].activities_am = value;
-                                setFormData({ ...formData, schedule: newSchedule });
+                                setFormData(prev => {
+                                  const newSchedule = [...prev.schedule];
+                                  newSchedule[idx] = { ...newSchedule[idx], activities_am: value };
+                                  return { ...prev, schedule: newSchedule };
+                                });
                               }}
                               textarea
                               rows={3}
@@ -1249,14 +1283,18 @@ export const FestivalCreationWizard: React.FC<{
                               englishValue={day.performers.join(', ')}
                               amharicValue={day.performers.join(', ')}
                               onEnglishChange={(value) => {
-                                const newSchedule = [...formData.schedule];
-                                newSchedule[idx].performers = value.split(',').map(p => p.trim());
-                                setFormData({ ...formData, schedule: newSchedule });
+                                setFormData(prev => {
+                                  const newSchedule = [...prev.schedule];
+                                  newSchedule[idx] = { ...newSchedule[idx], performers: value.split(',').map(p => p.trim()) };
+                                  return { ...prev, schedule: newSchedule };
+                                });
                               }}
                               onAmharicChange={(value) => {
-                                const newSchedule = [...formData.schedule];
-                                newSchedule[idx].performers = value.split(',').map(p => p.trim());
-                                setFormData({ ...formData, schedule: newSchedule });
+                                setFormData(prev => {
+                                  const newSchedule = [...prev.schedule];
+                                  newSchedule[idx] = { ...newSchedule[idx], performers: value.split(',').map(p => p.trim()) };
+                                  return { ...prev, schedule: newSchedule };
+                                });
                               }}
                               showEnglish={languagePreference !== 'am'}
                               showAmharic={languagePreference !== 'en'}
@@ -1377,9 +1415,11 @@ export const FestivalCreationWizard: React.FC<{
                                       <img src={img} className="w-full h-full object-cover" alt="" />
                                       <button 
                                         onClick={() => {
-                                          const newHotels = [...formData.hotels];
-                                          newHotels[hotelIdx].gallery = hotel.gallery.filter((_: any, i: number) => i !== gIdx);
-                                          setFormData({ ...formData, hotels: newHotels });
+                                          setFormData(prev => {
+                                            const newHotels = [...prev.hotels];
+                                            newHotels[hotelIdx].gallery = (prev.hotels[hotelIdx].gallery || []).filter((_: any, i: number) => i !== gIdx);
+                                            return { ...prev, hotels: newHotels };
+                                          });
                                         }}
                                         className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover/gallery:opacity-100 transition-opacity"
                                       >
@@ -1662,7 +1702,7 @@ export const FestivalCreationWizard: React.FC<{
                                         <div className="space-y-2">
                                           <label className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">VIP Pricing</label>
                                           <div className="px-4 py-3.5 bg-amber-50 rounded-xl border border-amber-100 flex items-center gap-2">
-                                            <VerifiedBadge className="w-4 h-4 text-amber-600" />
+                                            <CheckCircle2 width={16} height={16} className="text-amber-600" />
                                             <span className="text-[10px] text-amber-800 font-black uppercase">Included</span>
                                           </div>
                                         </div>
@@ -1793,7 +1833,7 @@ export const FestivalCreationWizard: React.FC<{
                                         min="0"
                                         value={pkg.pricePerPerson || ''}
                                         onChange={(e) => updateHotelFoodPackage(hotelIdx, pIdx, 'pricePerPerson', parseFloat(e.target.value) || 0)}
-                                        icon={() => <span className="text-[10px] font-black text-gray-400">ETB</span>}
+                                        icon={ETBIcon}
                                       />
                                     </div>
                                   </div>
@@ -1926,7 +1966,7 @@ export const FestivalCreationWizard: React.FC<{
                                          min="0"
                                          value={transport.price || ''}
                                          onChange={(e) => updateTransport(idx, 'price', parseFloat(e.target.value) || 0)}
-                                         icon={() => <span className="text-[10px] font-black text-gray-400">ETB</span>}
+                                         icon={ETBIcon}
                                          className={`pl-12 ${errors[`transport_${idx}_price`] ? 'border-red-500 bg-red-50' : ''}`}
                                        />
                                        {errors[`transport_${idx}_price`] && (
@@ -2133,6 +2173,7 @@ export const FestivalCreationWizard: React.FC<{
                           textarea
                           rows={4}
                           englishPlaceholder="Cancellation terms, refund policy, deadlines..."
+                          englishValue={formData.policies.cancellation_en || ''}
                           amharicValue={formData.policies.cancellation_am || ''}
                           onEnglishChange={(value) => setFormData(prev => ({ ...prev, policies: { ...prev.policies, cancellation_en: value } }))}
                           onAmharicChange={(value) => setFormData(prev => ({ ...prev, policies: { ...prev.policies, cancellation_am: value } }))}
@@ -2151,6 +2192,7 @@ export const FestivalCreationWizard: React.FC<{
                           textarea
                           rows={4}
                           englishPlaceholder="Booking conditions, payment terms, modifications..."
+                          englishValue={formData.policies.terms_en || ''}
                           amharicValue={formData.policies.terms_am || ''}
                           onEnglishChange={(value) => setFormData(prev => ({ ...prev, policies: { ...prev.policies, terms_en: value } }))}
                           onAmharicChange={(value) => setFormData(prev => ({ ...prev, policies: { ...prev.policies, terms_am: value } }))}
@@ -2172,9 +2214,10 @@ export const FestivalCreationWizard: React.FC<{
                           textarea
                           rows={4}
                           englishPlaceholder="Safety guidelines, emergency procedures, prohibited items..."
+                          englishValue={formData.policies.safety_en || ''}
                           amharicValue={formData.policies.safety_am || ''}
-                          onEnglishChange={(value) => setFormData({ ...formData, policies: { ...formData.policies, safety_en: value } })}
-                          onAmharicChange={(value) => setFormData({ ...formData, policies: { ...formData.policies, safety_am: value } })}
+                          onEnglishChange={(value) => setFormData(prev => ({ ...prev, policies: { ...prev.policies, safety_en: value } }))}
+                          onAmharicChange={(value) => setFormData(prev => ({ ...prev, policies: { ...prev.policies, safety_am: value } }))}
                           showEnglish={languagePreference !== 'am'}
                           showAmharic={languagePreference !== 'en'}
                         />
@@ -2185,7 +2228,7 @@ export const FestivalCreationWizard: React.FC<{
                           hideLabel
                           placeholder="e.g., 18+, All ages, Family-friendly"
                           value={formData.policies.ageRestriction || ''}
-                          onChange={(e) => setFormData({ ...formData, policies: { ...formData.policies, ageRestriction: e.target.value } })}
+                          onChange={(e) => setFormData(prev => ({ ...prev, policies: { ...prev.policies, ageRestriction: e.target.value } }))}
                           icon={Users}
                           className="pl-12"
                         />
@@ -2505,7 +2548,7 @@ export const FestivalCreationWizard: React.FC<{
                           <div className="space-y-3">
                             <label className="text-xs font-semibold text-amber-800 uppercase tracking-wider ml-1">Included VIP Hotels (User Chooses 1)</label>
                             <div className="flex flex-wrap gap-2">
-                              {formData.hotels.map((hotel: any, idx: number) => {
+                              {formData.hotels.map((hotel: HotelAccommodation, idx: number) => {
                                 const hotelId = hotel.id || `hotel-${idx}`;
                                 const isIncluded = (formData.pricing.vipIncludedHotels || []).includes(hotelId);
                                 return (
@@ -2535,7 +2578,7 @@ export const FestivalCreationWizard: React.FC<{
                           <div className="space-y-3">
                             <label className="text-xs font-semibold text-amber-800 uppercase tracking-wider ml-1">Included VIP Transport (User Chooses 1)</label>
                             <div className="flex flex-wrap gap-2">
-                              {formData.transportation.map((transport: any, idx: number) => {
+                              {formData.transportation.map((transport: TransportOption, idx: number) => {
                                 const transportId = transport.id || `transport-${idx}`;
                                 const isIncluded = (formData.pricing.vipIncludedTransport || []).includes(transportId);
                                 return (

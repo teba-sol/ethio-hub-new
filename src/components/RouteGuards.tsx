@@ -91,6 +91,25 @@ export function DashboardRedirect() {
         router.replace("/dashboard/tourist/orders");
         return;
       }
+      case UserRole.DELIVERY: {
+        if (!user.deliveryStatus || user.deliveryStatus === 'Not Submitted') {
+          router.replace('/dashboard/delivery/onboarding');
+          return;
+        }
+        if (user.deliveryStatus === 'Rejected' || user.deliveryStatus === 'Modification Requested') {
+          router.replace('/dashboard/delivery/onboarding');
+          return;
+        }
+        if (
+          user.deliveryStatus === 'Pending' ||
+          user.deliveryStatus === 'Under Review'
+        ) {
+          router.replace('/delivery/waiting');
+          return;
+        }
+        router.replace("/dashboard/delivery");
+        return;
+      }
       default: {
         router.replace("/");
       }

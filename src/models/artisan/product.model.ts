@@ -23,10 +23,12 @@ export interface IProduct extends Document {
   weight?: string;
   deliveryTime: string;
   shippingFee: string;
-  status: 'Draft' | 'Published' | 'Archived';
+  status: 'Draft' | 'Pending' | 'Published' | 'Out of Stock' | 'Dropped by Admin' | 'Archived';
   verificationStatus: 'Pending' | 'Approved' | 'Rejected';
   rejectionReason?: string;
   reportsCount: number;
+  rating: number;
+  numReviews: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -121,7 +123,7 @@ const ProductSchema = new Schema<IProduct>(
     },
     status: {
       type: String,
-      enum: ['Draft', 'Published', 'Archived'],
+      enum: ['Draft', 'Pending', 'Published', 'Out of Stock', 'Dropped by Admin', 'Archived'],
       default: 'Draft',
     },
     verificationStatus: {
@@ -136,6 +138,14 @@ const ProductSchema = new Schema<IProduct>(
       type: Number,
       default: 0,
     },
+    rating: {
+      type: Number,
+      default: 0,
+    },
+    numReviews: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );
@@ -144,6 +154,6 @@ ProductSchema.index({ artisanId: 1, status: 1 });
 ProductSchema.index({ category: 1 });
 
 const Product: Model<IProduct> =
-  mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema);
+  mongoose.models.ArtisanProduct || mongoose.model<IProduct>('ArtisanProduct', ProductSchema, 'products');
 
 export default Product;

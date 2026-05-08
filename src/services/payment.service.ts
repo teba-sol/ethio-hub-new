@@ -345,8 +345,14 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
 
       // 3. Update Order Status
       order.paymentStatus = 'paid';
-      order.status = 'confirmed';
+      order.status = 'Paid';
       order.paymentDate = new Date();
+      if (!order.timeline) order.timeline = [];
+      order.timeline.push({
+        status: 'Paid',
+        date: new Date(),
+        note: 'Payment confirmed via Chapa.'
+      });
       order.adminCommission = adminCommission;
       order.artisanEarnings = artisanEarnings;
       await order.save();
@@ -397,12 +403,8 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
       }
 
       const originalPendingBalance = artisanWallet.pendingBalance || 0;
-      if (originalPendingBalance >= artisanEarnings) {
-        artisanWallet.pendingBalance = originalPendingBalance - artisanEarnings;
-      } else {
-        artisanWallet.pendingBalance = 0;
-      }
-      artisanWallet.availableBalance = (artisanWallet.availableBalance || 0) + artisanEarnings;
+      artisanWallet.pendingBalance = originalPendingBalance + artisanEarnings;
+      // artisanWallet.availableBalance = (artisanWallet.availableBalance || 0) + artisanEarnings; // MOVED TO DELIVERY VERIFICATION
       artisanWallet.lifetimeEarned = (artisanWallet.lifetimeEarned || 0) + artisanEarnings;
       await artisanWallet.save();
       console.log(`[PaymentService] Artisan wallet updated: ${artisanWallet._id}`, { availableBalance: artisanWallet.availableBalance, pendingBalance: artisanWallet.pendingBalance, lifetimeEarned: artisanWallet.lifetimeEarned });
@@ -478,12 +480,8 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
 
         if (adminWallet) {
           const originalPendingAdmin = adminWallet.pendingBalance || 0;
-          if (originalPendingAdmin >= adminCommission) {
-            adminWallet.pendingBalance = originalPendingAdmin - adminCommission;
-          } else {
-            adminWallet.pendingBalance = 0;
-          }
-          adminWallet.availableBalance = (adminWallet.availableBalance || 0) + adminCommission;
+          adminWallet.pendingBalance = originalPendingAdmin + adminCommission;
+          // adminWallet.availableBalance = (adminWallet.availableBalance || 0) + adminCommission; // MOVED TO DELIVERY VERIFICATION
           adminWallet.lifetimeEarned = (adminWallet.lifetimeEarned || 0) + adminCommission;
           await adminWallet.save();
           console.log(`[PaymentService] Admin wallet updated: ${adminWallet._id}`, { availableBalance: adminWallet.availableBalance, pendingBalance: adminWallet.pendingBalance, lifetimeEarned: adminWallet.lifetimeEarned });
