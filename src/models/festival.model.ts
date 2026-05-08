@@ -85,16 +85,28 @@ export interface ITransportation extends Document {
 }
 
 export interface IServices {
-  foodPackages: string[];
+  foodPackages: any[];
   culturalServices: string[];
+  culturalServices_en: string[];
+  culturalServices_am: string[];
   specialAssistance: string[];
+  specialAssistance_en: string[];
+  specialAssistance_am: string[];
   extras: string[];
+  extras_en: string[];
+  extras_am: string[];
 }
 
 export interface IPolicies {
   cancellation: string;
+  cancellation_en: string;
+  cancellation_am: string;
   terms: string;
+  terms_en: string;
+  terms_am: string;
   safety: string;
+  safety_en: string;
+  safety_am: string;
   ageRestriction: string;
 }
 
@@ -254,14 +266,26 @@ const TransportationSchema: Schema = new Schema({
 const ServicesSchema: Schema = new Schema({
   foodPackages: [FoodPackageSchema],
   culturalServices: [{ type: String }],
+  culturalServices_en: [{ type: String }],
+  culturalServices_am: [{ type: String }],
   specialAssistance: [{ type: String }],
+  specialAssistance_en: [{ type: String }],
+  specialAssistance_am: [{ type: String }],
   extras: [{ type: String }],
+  extras_en: [{ type: String }],
+  extras_am: [{ type: String }],
 }, { _id: false });
 
 const PoliciesSchema: Schema = new Schema({
   cancellation: { type: String },
+  cancellation_en: { type: String },
+  cancellation_am: { type: String },
   terms: { type: String },
+  terms_en: { type: String },
+  terms_am: { type: String },
   safety: { type: String },
+  safety_en: { type: String },
+  safety_am: { type: String },
   ageRestriction: { type: String },
 }, { _id: false });
 
