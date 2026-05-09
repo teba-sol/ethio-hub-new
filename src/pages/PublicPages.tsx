@@ -1664,6 +1664,12 @@ const [transactionRef, setTransactionRef] = useState("");
   const [userRating, setUserRating] = useState(5);
   const [userComment, setUserComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+  const showNotify = (message: string, type: 'success' | 'error' = 'error') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 5000);
+  };
 
   useEffect(() => {
     const fetchReviews = async () => {
@@ -1707,7 +1713,7 @@ const [transactionRef, setTransactionRef] = useState("");
       });
       const data = await res.json();
       if (data.success) {
-        alert("Review submitted successfully!");
+        showNotify("Review submitted successfully!", 'success');
         setShowReviewForm(false);
         setUserComment("");
         // Refresh reviews
@@ -1716,11 +1722,11 @@ const [transactionRef, setTransactionRef] = useState("");
         setReviews(updatedData.reviews);
         setReviewStats({ total: updatedData.total, distribution: updatedData.distribution });
       } else {
-        alert(data.error || "Failed to submit review");
+        showNotify(data.error || "Failed to submit review");
       }
     } catch (error) {
       console.error("Review submission error:", error);
-      alert("An error occurred while submitting your review");
+      showNotify("An error occurred while submitting your review");
     } finally {
       setSubmittingReview(false);
     }
@@ -1819,7 +1825,7 @@ const [transactionRef, setTransactionRef] = useState("");
 
   const handleLocationSubmit = async () => {
     if (!locationCoords || !shippingLocation?.street || !shippingLocation?.city) {
-      alert('Please fill in your address and select a location on the map');
+      showNotify('Please fill in your address and select a location on the map');
       return;
     }
 
@@ -1828,34 +1834,29 @@ const [transactionRef, setTransactionRef] = useState("");
 
     try {
       const idempotencyKey = crypto.randomUUID();
-      const response = await fetch('/api/chapa/initialize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId: id,
-          quantity,
-          idempotencyKey,
-          userLocation: locationCoords,
-          shippingFee: calculatedShippingFee,
-          shippingAddress: {
-            street: shippingLocation.street,
-            city: shippingLocation.city,
-            state: shippingLocation.state || 'Addis Ababa',
-            country: 'Ethiopia',
-          },
-        }),
+      const response = await apiClient.post('/api/chapa/initialize', {
+        productId: id,
+        quantity,
+        idempotencyKey,
+        userLocation: locationCoords,
+        shippingFee: calculatedShippingFee,
+        shippingAddress: {
+          street: shippingLocation.street,
+          city: shippingLocation.city,
+          state: shippingLocation.state || 'Addis Ababa',
+          country: 'Ethiopia',
+        },
       });
 
-      const data = await response.json();
-      if (data.success && data.checkout_url) {
+      if (response.success && response.checkout_url) {
         setShowLocationModal(false);
-        window.location.href = data.checkout_url;
+        window.location.href = response.checkout_url;
       } else {
-        alert(data.message || 'Failed to initialize payment');
+        showNotify(response.message || 'Failed to initialize payment');
       }
     } catch (error) {
       console.error('Payment error:', error);
-      alert('Payment failed. Please try again.');
+      showNotify('Payment failed. Please try again.');
     } finally {
       setIsBuying(false);
     }
@@ -1897,50 +1898,41 @@ const [transactionRef, setTransactionRef] = useState("");
       setPaymentStep('processing');
       
       try {
-        const response = await fetch('/api/payment/chapa', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            bookingId: product._id,
-            amount: product.price * quantity,
-            currency: 'ETB',
-            email: user?.email || 'guest@email.com',
-            firstName: user?.name?.split(' ')[0] || 'Guest',
-            lastName: user?.name?.split(' ')[1] || 'User',
-            phone: '0912345678',
-            description: `Product: ${productName}`,
-          }),
+        const response = await apiClient.post('/api/payment/chapa', {
+          bookingId: product._id,
+          amount: product.price * quantity,
+          currency: 'ETB',
+          email: user?.email || 'guest@email.com',
+          firstName: user?.name?.split(' ')[0] || 'Guest',
+          lastName: user?.name?.split(' ')[1] || 'User',
+          phone: '0912345678',
+          description: `Product: ${productName}`,
         });
         
-        const data = await response.json();
-        if (data.success) {
+        if (response.success) {
           // Confirm booking as paid immediately
           if (product._id) {
             try {
-              await fetch('/api/tourist/bookings', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  bookingId: product._id,
-                  action: 'confirm',
-                  paymentMethod: 'chapa',
-                  paymentStatus: 'paid'
-                }),
+              await apiClient.put('/api/tourist/bookings', {
+                bookingId: product._id,
+                action: 'confirm',
+                paymentMethod: 'chapa',
+                paymentStatus: 'paid'
               });
             } catch (e) {}
           }
           
-          if (data.checkoutUrl) {
+          if (response.checkoutUrl) {
             // Redirect to Chapa hosted checkout page
-            window.location.href = data.checkoutUrl;
+            window.location.href = response.checkoutUrl;
           } else {
             // Show success
-            setTransactionRef(data.txRef || `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`);
+            setTransactionRef(response.txRef || `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`);
             setPaymentStep('receipt');
           }
         } else {
           // Fallback - simulate success
-          setTransactionRef(data.txRef || `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`);
+          setTransactionRef(response.txRef || `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`);
           setPaymentStep('receipt');
         }
       } catch (e) {
@@ -2518,6 +2510,64 @@ const [transactionRef, setTransactionRef] = useState("");
             </div>
         </div>
       )}
+
+      {/* Centered Notification */}
+      {notification && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/20 backdrop-blur-[2px]">
+          <div className={`bg-white border-2 p-8 rounded-[32px] shadow-2xl max-w-sm w-full text-center animate-in zoom-in-95 duration-200 ${
+            notification.type === 'error' ? 'border-red-100' : 'border-emerald-100'
+          }`}>
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+              notification.type === 'error' ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-600'
+            }`}>
+              {notification.type === 'error' ? <ShieldAlert className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
+            </div>
+            <h4 className="text-xl font-bold text-gray-800 mb-2">
+              {notification.type === 'error' ? 'Attention' : 'Success'}
+            </h4>
+            <p className="text-gray-600 font-medium leading-relaxed mb-6">
+              {notification.message}
+            </p>
+            <Button 
+              onClick={() => setNotification(null)}
+              className={`w-full py-3 rounded-xl font-bold uppercase tracking-widest text-xs ${
+                notification.type === 'error' ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-500 hover:bg-emerald-600'
+              }`}
+            >
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Centered Notification */}
+      {notification && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/20 backdrop-blur-[2px]">
+          <div className={`bg-white border-2 p-8 rounded-[32px] shadow-2xl max-w-sm w-full text-center animate-in zoom-in-95 duration-200 ${
+            notification.type === 'error' ? 'border-red-100' : 'border-emerald-100'
+          }`}>
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+              notification.type === 'error' ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-600'
+            }`}>
+              {notification.type === 'error' ? <ShieldAlert className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
+            </div>
+            <h4 className="text-xl font-bold text-gray-800 mb-2">
+              {notification.type === 'error' ? 'Attention' : 'Success'}
+            </h4>
+            <p className="text-gray-600 font-medium leading-relaxed mb-6">
+              {notification.message}
+            </p>
+            <Button 
+              onClick={() => setNotification(null)}
+              className={`w-full py-3 rounded-xl font-bold uppercase tracking-widest text-xs ${
+                notification.type === 'error' ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-500 hover:bg-emerald-600'
+              }`}
+            >
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -2545,6 +2595,12 @@ export const FestivalDetailPage: React.FC = () => {
   const [transactionRef, setTransactionRef] = useState('');
   const [currentBooking, setCurrentBooking] = useState<any>(null);
   const [contactInfo, setContactInfo] = useState({ fullName: '', email: '', phone: '' });
+  const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+  const showNotify = (message: string, type: 'success' | 'error' = 'error') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 5000);
+  };
 
 const getImageUrl = (path: string | undefined | null) => {
     if (!path || path === '') return '';
@@ -2726,13 +2782,13 @@ const getImageUrl = (path: string | undefined | null) => {
     // Check if profile is complete
     const touristProfile = user?.touristProfile;
     if (!touristProfile?.phone || !touristProfile?.country || !touristProfile?.nationality) {
-      alert('Please complete your profile before booking. Go to Settings to add your phone, country, and nationality.');
+      showNotify('Please complete your profile before booking. Go to Settings to add your phone, country, and nationality.');
       router.push('/dashboard/tourist/settings');
       return;
     }
     
     if (!contactInfo.fullName || !contactInfo.email) {
-      alert('Please ensure your contact information is complete.');
+      showNotify('Please ensure your contact information is complete.');
       router.push('/dashboard/tourist/settings');
       return;
     }
@@ -2772,11 +2828,11 @@ const getImageUrl = (path: string | undefined | null) => {
         setShowPaymentModal(true);
         setPaymentStep('select');
       } else {
-        alert(response.message || 'Failed to create booking');
+        showNotify(response.message || 'Failed to create booking');
       }
     } catch (error: any) {
       console.error('Booking error:', error);
-      alert(error.message || 'Failed to create booking');
+      showNotify(error.message || 'Failed to create booking');
     } finally {
       setIsProcessing(false);
     }
@@ -2784,7 +2840,7 @@ const getImageUrl = (path: string | undefined | null) => {
 
   const processPayment = async (method: 'chapa' | 'telebirr') => {
     if (!currentBooking?._id) {
-      alert('No active booking found');
+      showNotify('No active booking found');
       return;
     }
 
@@ -2794,49 +2850,40 @@ const getImageUrl = (path: string | undefined | null) => {
     if (method === 'chapa') {
       // Call Chapa payment API
       try {
-        const response = await fetch('/api/payment/chapa', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            bookingId: currentBooking._id,
-            amount: totalPrice,
-            currency: festival?.currency || 'ETB',
-            email: contactInfo?.email || 'guest@email.com',
-            firstName: contactInfo?.fullName?.split(' ')[0] || 'Guest',
-            lastName: contactInfo?.fullName?.split(' ').slice(1).join(' ') || 'User',
-            phone: contactInfo?.phone || '0912345678',
-            description: `Festival: ${festivalName}`,
-          }),
+        const response = await apiClient.post('/api/payment/chapa', {
+          bookingId: currentBooking._id,
+          amount: totalPrice,
+          currency: festival?.currency || 'ETB',
+          email: contactInfo?.email || 'guest@email.com',
+          firstName: contactInfo?.fullName?.split(' ')[0] || 'Guest',
+          lastName: contactInfo?.fullName?.split(' ').slice(1).join(' ') || 'User',
+          phone: contactInfo?.phone || '0912345678',
+          description: `Festival: ${festivalName}`,
         });
         
-        const data = await response.json();
-        if (data.success) {
+        if (response.success) {
           // Confirm booking as paid immediately
           try {
-            await fetch('/api/tourist/bookings', {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                bookingId: currentBooking._id,
-                action: 'confirm',
-                paymentMethod: 'chapa',
-                paymentStatus: 'paid'
-              }),
+            await apiClient.put('/api/tourist/bookings', {
+              bookingId: currentBooking._id,
+              action: 'confirm',
+              paymentMethod: 'chapa',
+              paymentStatus: 'paid'
             });
           } catch (e) {}
           
-          if (data.checkoutUrl) {
+          if (response.checkoutUrl) {
             // Redirect to Chapa hosted checkout page
-            window.location.href = data.checkoutUrl;
+            window.location.href = response.checkoutUrl;
             return;
           } else {
             // Show success
-            setTransactionRef(data.txRef || `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`);
+            setTransactionRef(response.txRef || `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`);
             setPaymentStep('receipt');
           }
         } else {
           // Fallback - simulate success
-          setTransactionRef(data.txRef || `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`);
+          setTransactionRef(response.txRef || `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`);
           setPaymentStep('receipt');
         }
       } catch (error: any) {
@@ -3859,6 +3906,35 @@ const getImageUrl = (path: string | undefined | null) => {
                     )}
                 </div>
             </div>
+        </div>
+      )}
+
+      {/* Centered Notification */}
+      {notification && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/20 backdrop-blur-[2px]">
+          <div className={`bg-white border-2 p-8 rounded-[32px] shadow-2xl max-w-sm w-full text-center animate-in zoom-in-95 duration-200 ${
+            notification.type === 'error' ? 'border-red-100' : 'border-emerald-100'
+          }`}>
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+              notification.type === 'error' ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-600'
+            }`}>
+              {notification.type === 'error' ? <ShieldAlert className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
+            </div>
+            <h4 className="text-xl font-bold text-gray-800 mb-2">
+              {notification.type === 'error' ? 'Attention' : 'Success'}
+            </h4>
+            <p className="text-gray-600 font-medium leading-relaxed mb-6">
+              {notification.message}
+            </p>
+            <Button 
+              onClick={() => setNotification(null)}
+              className={`w-full py-3 rounded-xl font-bold uppercase tracking-widest text-xs ${
+                notification.type === 'error' ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-500 hover:bg-emerald-600'
+              }`}
+            >
+              Dismiss
+            </Button>
+          </div>
         </div>
       )}
     </div>

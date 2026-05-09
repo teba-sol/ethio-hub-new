@@ -406,7 +406,7 @@ export const ArtisanProductManager: React.FC = () => {
     }
 
     if (filterStatus !== 'All') {
-      result = result.filter(p => p.status === filterStatus);
+      result = result.filter(p => p.status.toLowerCase() === filterStatus.toLowerCase());
     }
 
     const now = new Date();
@@ -511,9 +511,6 @@ export const ArtisanProductManager: React.FC = () => {
               <>
                 {product.status === 'Draft' && (
                   <Button variant="primary" onClick={() => handlePublish(product._id)}>Publish Artifact</Button>
-                )}
-                {product.status !== 'Dropped by Admin' && (
-                  <Button leftIcon={Edit3} onClick={() => { setIsEditing(true); setEditData(product); }}>Edit</Button>
                 )}
               </>
             )}

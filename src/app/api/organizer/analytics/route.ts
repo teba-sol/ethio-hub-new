@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
         // Use organizerAmount if available, else calculate 90% of totalPrice (like booking page)
         return sum + (b.organizerAmount || (b.totalPrice ? b.totalPrice * 0.9 : 0));
       }, 0);
-      const festivalReviews = reviews.filter(r => r.festival?.toString() === f._id.toString());
+      const festivalReviews = reviews.filter(r => r.targetId?.toString() === f._id.toString());
       const festivalAvgRating = festivalReviews.length > 0 
         ? festivalReviews.reduce((sum, r) => sum + r.rating, 0) / festivalReviews.length 
         : 0;

@@ -33,6 +33,8 @@ interface RefundRequest {
   telebirrNumber?: string;
   amount: number;
   shippingFee: number;
+  artisanEarnings: number;
+  adminCommission: number;
   status: 'pending' | 'processing' | 'completed';
   createdAt: string;
   adminNotes?: string;
@@ -278,6 +280,41 @@ export const AdminRefundRequestsPage: React.FC = () => {
                 <p className="text-sm text-gray-700">{selectedRequest.reason}</p>
               </div>
 
+              {selectedRequest.imageUrl && (
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <p className="text-xs font-bold text-gray-400 uppercase mb-2">Proof Image</p>
+                  <img
+                    src={selectedRequest.imageUrl}
+                    alt="Refund proof"
+                    className="w-full max-h-48 object-cover rounded-lg border border-gray-200"
+                  />
+                </div>
+              )}
+
+              <div className="p-4 bg-red-50 rounded-xl border border-red-100">
+                <p className="text-xs font-bold text-red-500 uppercase mb-3">Financial Split</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Artisan Cut (90%)</span>
+                    <span className="text-sm font-bold text-gray-800">
+                      ETB {selectedRequest.artisanEarnings?.toLocaleString() || '0'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Admin Commission (10%)</span>
+                    <span className="text-sm font-bold text-gray-800">
+                      ETB {selectedRequest.adminCommission?.toLocaleString() || '0'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-red-100">
+                    <span className="text-sm font-bold text-red-700">Return to Tourist</span>
+                    <span className="text-sm font-bold text-red-700">
+                      ETB {selectedRequest.amount?.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
                 <p className="text-xs font-bold text-emerald-600 uppercase mb-2">Refund Method</p>
                 <p className="font-medium text-emerald-800 capitalize">
@@ -335,7 +372,7 @@ export const AdminRefundRequestsPage: React.FC = () => {
                     disabled={processing === selectedRequest._id}
                     isLoading={processing === selectedRequest._id && action === 'complete'}
                   >
-                    Confirm Disbursed
+                    Send to User
                   </Button>
                 </div>
               )}

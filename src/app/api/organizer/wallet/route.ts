@@ -17,15 +17,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const tokenResult = await verifyToken(token);
-    if (!tokenResult.valid || !tokenResult.payload?.userId) {
+    const tokenResult: any = await verifyToken(token);
+    if (!tokenResult || !tokenResult.userId) {
       return NextResponse.json(
         { success: false, message: 'Invalid token' },
         { status: 401 }
       );
     }
 
-    const userId = tokenResult.payload.userId as string;
+    const userId = tokenResult.userId as string;
     const userObjectId = new mongoose.Types.ObjectId(userId);
     
     const { searchParams } = new URL(request.url);

@@ -30,7 +30,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json();
+    const contentType = req.headers.get('content-type') || '';
+    let body: Record<string, any> = {};
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await req.formData();
+      formData.forEach((value, key) => {
+        body[key] = value;
+      });
+    } else {
+      const text = await req.text();
+      try {
+        body = JSON.parse(text);
+      } catch {
+        return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
+      }
+    }
+
     const { orderId, reason, imageUrl, refundMethod, bankName, accountNumber, telebirrNumber } = body;
 
     if (!orderId || !reason || !refundMethod) {
@@ -58,10 +74,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Not authorized to request refund for this order' }, { status: 403 });
     }
 
-    if (order.paymentStatus !== 'paid') {
-      return NextResponse.json({ message: 'Order must be paid before requesting refund' }, { status: 400 });
-    }
-
     if (order.status === 'Refunded' || order.status === 'Cancelled') {
       return NextResponse.json({ message: 'Order is already refunded or cancelled' }, { status: 400 });
     }
@@ -71,9 +83,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'A refund request is already pending for this order' }, { status: 400 });
     }
 
-    const refundableAmount = order.totalPrice - (order.shippingFee || 0);
-    const artisanEarnings = order.artisanEarnings || (order.totalPrice * 0.9);
-    const adminCommission = order.adminCommission || (order.totalPrice * 0.1);
+    const refundableAmount = Math.max(0, order.totalPrice - (order.shippingFee || 0));
+    const artisanEarnings = Math.max(0, order.artisanEarnings || (order.totalPrice * 0.9));
+    const adminCommission = Math.max(0, order.adminCommission || (order.totalPrice * 0.1));
 
     const refundReq = new RefundRequest({
       orderId,

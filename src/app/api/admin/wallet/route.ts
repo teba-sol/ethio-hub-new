@@ -8,6 +8,7 @@ import '@/models/order.model';
 import '@/models/booking.model';
 import '@/models/festival.model';
 import Transaction from '@/models/transaction.model';
+import RefundRequest from '@/models/RefundRequest';
 import mongoose from 'mongoose';
 
 Product; // Ensure Product model is registered
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get separate totals for artisan and organizer (COMPLETED only = Total Earned)
-    const [artisanTotal, organizerTotal] = await Promise.all([
+    const [artisanTotal, organizerTotal, refundInReviewTotal] = await Promise.all([
       Transaction.aggregate([
         { $match: { type: 'ADMIN_COMMISSION', 'metadata.role': 'artisan', status: 'COMPLETED' } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
@@ -70,7 +71,11 @@ export async function GET(request: NextRequest) {
       Transaction.aggregate([
         { $match: { type: 'ADMIN_COMMISSION', 'metadata.role': 'organizer', status: 'COMPLETED' } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
-      ])
+      ]),
+      RefundRequest.aggregate([
+        { $match: { status: { $in: ['pending', 'processing'] } } },
+        { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+      ]),
     ]);
 
     // Get transactions (all admin commission transactions)
@@ -152,6 +157,8 @@ export async function GET(request: NextRequest) {
           currency: adminWallet.currency || 'ETB',
           artisanTotalEarned: artisanTotal[0]?.total || 0,
           organizerTotalEarned: organizerTotal[0]?.total || 0,
+          refundInReview: refundInReviewTotal[0]?.total || 0,
+          refundInReviewCount: refundInReviewTotal[0]?.count || 0,
         },
         transactions: transactions.map((tx: any) => {
           const order = getOrder(tx);

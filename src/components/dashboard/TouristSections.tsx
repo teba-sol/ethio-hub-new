@@ -297,6 +297,15 @@ export const TouristOrdersView: React.FC = () => {
   const [timeFilter, setTimeFilter] = useState('All Time');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [trackingOrder, setTrackingOrder] = useState<any>(null);
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundReason, setRefundReason] = useState('');
+  const [refundMethod, setRefundMethod] = useState<'bank' | 'telebirr'>('telebirr');
+  const [bankName, setBankName] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [telebirrNumber, setTelebirrNumber] = useState('');
+  const [refundProof, setRefundProof] = useState<File | null>(null);
+  const [submittingRefund, setSubmittingRefund] = useState(false);
+  const [refundError, setRefundError] = useState('');
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [highlightOrderId, setHighlightOrderId] = useState<string | null>(null);
@@ -525,17 +534,239 @@ export const TouristOrdersView: React.FC = () => {
                 </div>
               </div>
 
+              {selectedOrder?.status === 'Returned' && (
+                <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
+                  <h4 className="font-bold text-sm text-amber-700 mb-1">Refund Status</h4>
+                  <p className="text-sm text-amber-600">
+                    Refund request submitted — awaiting admin review.
+                  </p>
+                </div>
+              )}
+
               <div className="flex gap-3 pt-2">
-                {selectedOrder.paymentStatus === 'paid' && selectedOrder.status !== 'Returned' && (
-                  <Button 
-                    variant="outline" 
+                {selectedOrder?.status === 'Returned' ? (
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-amber-200 text-amber-600 bg-amber-50 cursor-not-allowed"
+                    disabled
+                  >
+                    Refund Requested
+                  </Button>
+                ) : selectedOrder?.status !== 'Delivered' ? (
+                  <Button
+                    variant="outline"
                     className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
-                    onClick={() => alert('Refund request feature coming soon! Please contact support.')}
+                    onClick={() => {
+                      setShowRefundModal(true);
+                      setRefundReason('');
+                      setRefundMethod('telebirr');
+                      setBankName('');
+                      setAccountNumber('');
+                      setTelebirrNumber('');
+                      setRefundProof(null);
+                      setRefundError('');
+                    }}
                   >
                     Request Refund
                   </Button>
-                )}
+                ) : null}
                 <Button variant="outline" className="flex-1" onClick={() => window.print()}>Download Receipt</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Refund Request Modal */}
+      {showRefundModal && selectedOrder && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowRefundModal(false); }}
+        >
+          <div className="bg-white rounded-[32px] p-8 max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-2xl font-serif font-bold text-primary">Request Refund</h3>
+                <p className="text-sm text-gray-500">Order #{selectedOrder._id?.slice(-8).toUpperCase()}</p>
+              </div>
+              <button
+                onClick={() => setShowRefundModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <Plus className="w-6 h-6 rotate-45 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              <div className="p-4 bg-gray-50 rounded-2xl">
+                <p className="font-bold text-gray-800">{selectedOrder.product?.name}</p>
+                <p className="text-sm text-gray-500">Amount: <span className="font-bold text-primary">ETB {selectedOrder.totalPrice?.toLocaleString()}</span></p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Reason for Refund</label>
+                <select
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/10"
+                >
+                  <option value="">Select a reason...</option>
+                  <option value="Item not as described">Item not as described</option>
+                  <option value="Item damaged or broken">Item damaged or broken</option>
+                  <option value="Delivery took too long">Delivery took too long</option>
+                  <option value="Wrong item received">Wrong item received</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Refund Payment Method</label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRefundMethod('telebirr')}
+                    className={`flex-1 py-3 rounded-xl border-2 text-sm font-bold transition-all ${
+                      refundMethod === 'telebirr'
+                        ? 'border-primary bg-primary/5 text-primary'
+                        : 'border-gray-200 text-gray-500'
+                    }`}
+                  >
+                    Telebirr
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRefundMethod('bank')}
+                    className={`flex-1 py-3 rounded-xl border-2 text-sm font-bold transition-all ${
+                      refundMethod === 'bank'
+                        ? 'border-primary bg-primary/5 text-primary'
+                        : 'border-gray-200 text-gray-500'
+                    }`}
+                  >
+                    Bank Transfer
+                  </button>
+                </div>
+              </div>
+
+              {refundMethod === 'telebirr' && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Telebirr Number</label>
+                  <input
+                    type="tel"
+                    value={telebirrNumber}
+                    onChange={(e) => setTelebirrNumber(e.target.value)}
+                    placeholder="09xxxxxxxx"
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/10"
+                  />
+                </div>
+              )}
+
+              {refundMethod === 'bank' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Bank Name</label>
+                    <input
+                      type="text"
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      placeholder="Commercial Bank of Ethiopia"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/10"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Account Number</label>
+                    <input
+                      type="text"
+                      value={accountNumber}
+                      onChange={(e) => setAccountNumber(e.target.value)}
+                      placeholder="xxxxxxxxxxxx"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/10"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Upload Proof (optional)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setRefundProof(e.target.files?.[0] || null)}
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/10"
+                />
+                <p className="text-xs text-gray-400 mt-1">Screenshot of what you received vs what you ordered</p>
+              </div>
+
+              {refundError && (
+                <p className="text-sm text-red-500 bg-red-50 p-3 rounded-xl">{refundError}</p>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowRefundModal(false)}
+                  disabled={submittingRefund}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-red-600 hover:bg-red-700 border-red-600"
+                  onClick={async () => {
+                    if (!refundReason) {
+                      setRefundError('Please select a reason for the refund.');
+                      return;
+                    }
+                    if (refundMethod === 'telebirr' && !telebirrNumber) {
+                      setRefundError('Please enter your Telebirr number.');
+                      return;
+                    }
+                    if (refundMethod === 'bank' && (!bankName || !accountNumber)) {
+                      setRefundError('Please enter your bank details.');
+                      return;
+                    }
+                    setSubmittingRefund(true);
+                    setRefundError('');
+                    try {
+                      const formData = new FormData();
+                      formData.append('orderId', selectedOrder._id);
+                      formData.append('reason', refundReason);
+                      formData.append('refundMethod', refundMethod);
+                      if (refundMethod === 'telebirr') {
+                        formData.append('telebirrNumber', telebirrNumber);
+                      } else {
+                        formData.append('bankName', bankName);
+                        formData.append('accountNumber', accountNumber);
+                      }
+                      if (refundProof) {
+                        formData.append('image', refundProof);
+                      }
+
+                      const res = await fetch('/api/tourist/refund', {
+                        method: 'POST',
+                        credentials: 'include',
+                        body: formData,
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        setShowRefundModal(false);
+                        setSelectedOrder({ ...selectedOrder, status: 'Returned' });
+                        const updatedOrders = orders.map(o =>
+                          o._id === selectedOrder._id ? { ...o, status: 'Returned' } : o
+                        );
+                        setOrders(updatedOrders);
+                      } else {
+                        setRefundError(data.message || 'Failed to submit refund request.');
+                      }
+                    } catch (err: any) {
+                      setRefundError(err?.message || 'Error submitting refund request.');
+                    } finally {
+                      setSubmittingRefund(false);
+                    }
+                  }}
+                  isLoading={submittingRefund}
+                >
+                  Submit Refund Request
+                </Button>
               </div>
             </div>
           </div>

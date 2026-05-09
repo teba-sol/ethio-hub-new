@@ -20,6 +20,8 @@ interface WalletData {
     artisanTotalEarned?: number;
     organizerTotalEarned?: number;
     shippingFeesReceived?: number;
+    refundInReview?: number;
+    refundInReviewCount?: number;
   };
   transactions: Transaction[];
   pagination: {
@@ -99,6 +101,7 @@ const transactionTypeLabels: Record<string, string> = {
   ESCROW_HOLD: 'Escrow Hold',
   ESCROW_RELEASE: 'Escrow Release',
   RENTAL_FEE: 'Rental Fee',
+  SHIPPING_FEE: 'Shipping Fee',
 };
 
 const transactionTypeVariants: Record<string, 'success' | 'warning' | 'error' | 'info' | 'secondary'> = {
@@ -109,6 +112,7 @@ const transactionTypeVariants: Record<string, 'success' | 'warning' | 'error' | 
   ESCROW_HOLD: 'warning',
   ESCROW_RELEASE: 'success',
   RENTAL_FEE: 'success',
+  SHIPPING_FEE: 'info',
 };
 
 export const WalletPanel: React.FC<WalletPanelProps> = ({
@@ -341,6 +345,22 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
           <p className="text-2xl font-bold text-primary">{formatCurrency(wallet.lifetimeEarned)}</p>
           <p className="text-xs text-gray-400 mt-1">{userType === 'admin' ? 'Total cleared commission' : 'Lifetime platform earnings'}</p>
         </div>
+
+        {userType === 'admin' && (wallet.refundInReview || 0) > 0 && (
+          <div
+            onClick={() => router.push('/dashboard/admin/refund-requests')}
+            className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-red-200"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <RefreshCw className="w-5 h-5 text-red-600" />
+              </div>
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Refunds in Review</span>
+            </div>
+            <p className="text-2xl font-bold text-red-600">{formatCurrency(wallet.refundInReview || 0)}</p>
+            <p className="text-xs text-gray-400 mt-1">{(wallet.refundInReviewCount || 0)} pending request{(wallet.refundInReviewCount || 0) !== 1 ? 's' : ''}</p>
+          </div>
+        )}
       </div>
 
       {userType === 'admin' && showCommissionBreakdown && (
@@ -382,12 +402,17 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
 
       {userType === 'admin' && (
         <div className="flex justify-end mt-4">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             leftIcon={RefreshCw}
             onClick={() => router.push('/dashboard/admin/refund-requests')}
           >
             Refund Requests
+            {(wallet.refundInReviewCount || 0) > 0 && (
+              <span className="ml-2 bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                {wallet.refundInReviewCount}
+              </span>
+            )}
           </Button>
         </div>
       )}
@@ -588,6 +613,14 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                               {tx.quantity && tx.unitPrice ? ` • ${tx.quantity} x ${formatCurrency(tx.unitPrice)}` : ''}
                             </p>
                           )}
+                          {tx.type === 'SHIPPING_FEE' && (
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              <span className="font-medium text-primary">Tourist</span>
+                              {tx.artisanName && (
+                                <span className="text-gray-400 ml-1">({tx.artisanName})</span>
+                              )}
+                            </p>
+                          )}
                           {tx.paymentRef && (
                             <p className="text-[10px] text-gray-400 font-mono mt-1">{tx.paymentRef}</p>
                           )}
@@ -671,40 +704,52 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 relative">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">
-                    {userType === 'admin' ? 'Admin Commission' : (userType === 'organizer' || selectedTransaction.role === 'organizer') ? 'Organizer Earning' : 'Artisan Earning'}
-                  </p>
-                  <p className="text-xl font-bold text-emerald-800 mt-1">
-                    {formatCurrency(
-                      userType === 'admin'
-                        ? selectedTransaction.details?.adminCommission || selectedTransaction.amount
-                        : selectedTransaction.amount
-                    )}
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-700">{selectedTransaction.bookingId ? 'Tourist Paid' : 'Customer Paid'}</p>
-                  <p className="text-xl font-bold text-blue-800 mt-1">
-                    {selectedTransaction.details?.totalPrice
-                      ? formatCurrency(selectedTransaction.details.totalPrice)
-                      : 'N/A'}
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl bg-amber-50 border border-amber-100">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">
-                    {(userType === 'organizer' || (userType === 'artisan' && selectedTransaction.role !== 'artisan')) ? 'Admin Commission' : selectedTransaction.role === 'organizer' ? 'Organizer Got' : 'Artisan Got'}
-                  </p>
-                  <p className="text-xl font-bold text-amber-800 mt-1">
-                    {formatCurrency(
-                      (userType === 'organizer' || userType === 'artisan')
-                        ? selectedTransaction.details?.adminCommission || 0
-                        : selectedTransaction.details?.artisanEarnings || (selectedTransaction.details?.totalPrice ? (selectedTransaction.details.totalPrice - selectedTransaction.amount) : 0)
-                    )}
-                  </p>
-                </div>
+                {selectedTransaction.type === 'SHIPPING_FEE' ? (
+                  <div className="md:col-span-2 p-6 rounded-xl bg-blue-50 border border-blue-100 flex flex-col justify-center">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-blue-700 mb-1">Total paid for shipment fee</p>
+                    <p className="text-3xl font-black text-blue-900">
+                      {formatCurrency(selectedTransaction.amount)}
+                    </p>
+                    <p className="text-xs text-blue-500 mt-2 italic">Paid by tourist for delivery service</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">
+                        {userType === 'admin' ? 'Admin Commission' : (userType === 'organizer' || selectedTransaction.role === 'organizer') ? 'Organizer Earning' : 'Artisan Earning'}
+                      </p>
+                      <p className="text-xl font-bold text-emerald-800 mt-1">
+                        {formatCurrency(
+                          userType === 'admin'
+                            ? selectedTransaction.details?.adminCommission || selectedTransaction.amount
+                            : selectedTransaction.amount
+                        )}
+                      </p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-blue-700">{selectedTransaction.bookingId ? 'Tourist Paid' : 'Customer Paid'}</p>
+                      <p className="text-xl font-bold text-blue-800 mt-1">
+                        {selectedTransaction.details?.totalPrice
+                          ? formatCurrency(selectedTransaction.details.totalPrice)
+                          : 'N/A'}
+                      </p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-amber-50 border border-amber-100">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">
+                        {(userType === 'organizer' || (userType === 'artisan' && selectedTransaction.role !== 'artisan')) ? 'Admin Commission' : selectedTransaction.role === 'organizer' ? 'Organizer Got' : 'Artisan Got'}
+                      </p>
+                      <p className="text-xl font-bold text-amber-800 mt-1">
+                        {formatCurrency(
+                          (userType === 'organizer' || userType === 'artisan')
+                            ? selectedTransaction.details?.adminCommission || 0
+                            : selectedTransaction.details?.artisanEarnings || (selectedTransaction.details?.totalPrice ? (selectedTransaction.details.totalPrice - selectedTransaction.amount) : 0)
+                        )}
+                      </p>
+                    </div>
+                  </>
+                )}
                 <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Transaction Status</p>
                   <div className="mt-2">
@@ -800,6 +845,21 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* Download Receipt Button */}
+              <div className="flex justify-end pt-4 border-t border-gray-100">
+                <Button
+                  variant="outline"
+                  leftIcon={Download}
+                  onClick={() => {
+                    // Logic to download receipt (can be a simple window.print() or a specific PDF generation)
+                    window.print();
+                  }}
+                  className="bg-primary/5 hover:bg-primary/10 text-primary border-primary/20"
+                >
+                  Download Receipt
+                </Button>
+              </div>
             </div>
           </div>
         </div>
