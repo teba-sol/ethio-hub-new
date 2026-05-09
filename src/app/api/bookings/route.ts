@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb';
 import Booking from '@/models/booking.model';
 import Festival from '@/models/festival.model';
 import * as jose from 'jose';
+import { BookingCheckoutSchema } from '@/lib/validations/booking.schema';
 
 const EARLY_BIRD_WINDOW_HOURS = Number(process.env.EARLY_BIRD_WINDOW_HOURS || 5);
 
@@ -44,15 +45,31 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { festivalId, ticketType, quantity, contactInfo, specialRequests, selectedRoom, selectedTransport } = body;
+    
+    // --- Schema Validation ---
+    const validationResult = BookingCheckoutSchema.safeParse(body);
 
-    if (!festivalId || !ticketType || !quantity || !contactInfo) {
+    if (!validationResult.success) {
       await session.abortTransaction();
       return new NextResponse(
-        JSON.stringify({ success: false, message: 'Missing required fields' }),
+        JSON.stringify({ 
+          success: false, 
+          message: 'Validation failed', 
+          errors: validationResult.error.flatten().fieldErrors 
+        }),
         { status: 400, headers: { 'content-type': 'application/json' } }
       );
     }
+
+    const { 
+      festivalId, 
+      ticketType, 
+      quantity, 
+      contactInfo, 
+      specialRequests, 
+      selectedRoom, 
+      selectedTransport 
+    } = validationResult.data;
 
     const festival = await Festival.findById(festivalId).session(session);
     if (!festival) {

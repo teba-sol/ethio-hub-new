@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb';
 import User from '@/models/User';
 import VerificationRecord from '@/models/admin/verificationRecord.model';
 import { jwtVerify } from 'jose';
+import { AdminRejectionSchema } from '@/lib/validations/admin.schema';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,14 +36,22 @@ export async function POST(
 
     const { id } = await params;
     const body = await request.json();
-    const { reason, role } = body;
+    
+    // --- Schema Validation ---
+    const validationResult = AdminRejectionSchema.safeParse(body);
 
-    if (!reason || !reason.trim()) {
+    if (!validationResult.success) {
       return new NextResponse(
-        JSON.stringify({ success: false, message: 'Rejection reason is required' }),
+        JSON.stringify({ 
+          success: false, 
+          message: 'Validation failed', 
+          errors: validationResult.error.flatten().fieldErrors 
+        }),
         { status: 400, headers: { 'content-type': 'application/json' } }
       );
     }
+
+    const { reason, role } = validationResult.data;
 
     const trimmedReason = reason.trim();
     const userRole = role || 'artisan';

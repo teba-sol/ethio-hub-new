@@ -31,19 +31,21 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [wishlist, isLoaded]);
 
-  const addToWishlist = (product: Product) => {
+  const addToWishlist = (product: Product | any) => {
     setWishlist(prev => {
-      if (prev.some(item => item.id === product.id)) return prev;
-      return [...prev, product];
+      const pId = product.id || product._id;
+      if (prev.some(item => (item.id || (item as any)._id) === pId)) return prev;
+      return [...prev, { ...product, id: pId }]; // Ensure 'id' is set for consistency
     });
   };
 
   const removeFromWishlist = (productId: string) => {
-    setWishlist(prev => prev.filter(item => item.id !== productId));
+    setWishlist(prev => prev.filter(item => (item.id || (item as any)._id) !== productId));
   };
 
   const isInWishlist = (productId: string) => {
-    return wishlist.some(item => item.id === productId);
+    if (!productId) return false;
+    return wishlist.some(item => (item.id || (item as any)._id) === productId);
   };
 
   const clearWishlist = () => {

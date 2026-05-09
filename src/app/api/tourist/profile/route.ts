@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '../../../../lib/mongodb';
 import User from '../../../../models/User';
 import * as jose from 'jose';
+import { CommonProfileSchema } from '../../../../lib/validations/profile.schema';
 
 export async function GET(request: NextRequest) {
   try {
@@ -77,7 +78,22 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, phone, country, nationality, dateOfBirth, profileImage } = body;
+
+    // --- Schema Validation ---
+    const validationResult = CommonProfileSchema.safeParse(body);
+
+    if (!validationResult.success) {
+      return new NextResponse(
+        JSON.stringify({ 
+          success: false, 
+          message: 'Validation failed', 
+          errors: validationResult.error.flatten().fieldErrors 
+        }),
+        { status: 400, headers: { 'content-type': 'application/json' } }
+      );
+    }
+
+    const { name, phone, country, nationality, dateOfBirth, profileImage } = validationResult.data;
 
     console.log('PUT profile body:', body);
 

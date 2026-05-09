@@ -156,13 +156,9 @@ export const ArtisanOrderManager: React.FC = () => {
       if (data.success) {
         setOrders(prev => prev.map(o => o._id === orderId ? data.order : o));
         if (data.verificationCode) {
-<<<<<<< HEAD
-          alert(`Order marked as ready!\nVerification Code: ${data.verificationCode}\n\nShare this code with the customer via message center.`);
-=======
           showNotification(`Order marked as ready! Verification Code: ${data.verificationCode}`, 'success');
         } else {
           showNotification('Order status updated successfully', 'success');
->>>>>>> origin/aman
         }
       } else {
         showNotification(data.message || 'Failed to update order status', 'error');

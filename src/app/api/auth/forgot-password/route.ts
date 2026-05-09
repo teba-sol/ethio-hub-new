@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
     // But only proceed if user exists
     if (!user) {
       return new NextResponse(
-        JSON.stringify({ success: true, message: 'If an account exists with this email, a password reset code has been sent.' }),
-        { status: 200, headers: { 'content-type': 'application/json' } }
+        JSON.stringify({ success: false, message: 'Email not found or incorrect' }),
+        { status: 404, headers: { 'content-type': 'application/json' } }
       );
     }
 

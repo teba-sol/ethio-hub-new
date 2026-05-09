@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Briefcase,
   MapPin,
@@ -9,6 +9,7 @@ import {
   Calendar as CalIcon,
   ShieldAlert,
   X,
+  Lock,
 } from "lucide-react";
 import { Button, Input, Modal, SuspensionModal } from "../components/UI";
 import { useAuth } from "../context/AuthContext";
@@ -16,7 +17,6 @@ import { useNotification } from "../context/NotificationContext";
 
 import { UserRole } from "../types";
 import { useLanguage } from "../context/LanguageContext";
-import { useGoogleLogin } from "@react-oauth/google";
 
 const readJsonSafely = async (response: Response) => {
   const rawBody = await response.text();
@@ -38,90 +38,19 @@ export const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showSuspensionModal, setShowSuspensionModal] = useState(false);
   const [pendingUser, setPendingUser] = useState<any>(null);
-  const [showRoleModal, setShowRoleModal] = useState(false);
-  const [pendingGoogleUser, setPendingGoogleUser] = useState<{ email: string; name: string } | null>(null);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { login } = useAuth();
-  const { showNotification } = useNotification();
-  const router = useRouter();
+   const router = useRouter();
+   const searchParams = useSearchParams();
+   const redirectPath = searchParams?.get("redirect");
 
-  const googleLogin = useGoogleLogin({
-    flow: 'implicit',
-    onSuccess: async (tokenResponse) => {
-      try {
-        setGoogleLoading(true);
-        const credential = (tokenResponse as any).credential;
-        if (!credential) {
-          throw new Error('No credential received');
-        }
-        const decoded = JSON.parse(atob(credential.split('.')[1]));
-        const googleUser = {
-          googleId: decoded.sub,
-          email: decoded.email,
-          name: decoded.name,
-        };
+   const handleSuccessfulLogin = (user: any) => {
+     if (redirectPath) {
+       router.push(redirectPath);
+       return;
+     }
 
-        const res = await fetch('/api/auth/google', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(googleUser),
-        });
-        const data = await res.json();
-
-        if (data.needsRole) {
-          setPendingGoogleUser({ email: data.email, name: data.name });
-          setShowRoleModal(true);
-        } else if (data.success) {
-          handleSuccessfulLogin(data.user);
-        } else {
-          showNotification(data.message || 'Google login failed', 'error');
-        }
-      } catch (error: any) {
-        console.error('Google login error:', error);
-        showNotification(error.message || 'Google login failed', 'error');
-      } finally {
-        setGoogleLoading(false);
-      }
-    },
-    onError: () => {
-      console.error('Google login failed');
-      showNotification('Google login failed. Please try again.', 'error');
-    },
-  });
-
-  const handleGoogleRegister = async (selectedRole: UserRole) => {
-    if (!pendingGoogleUser) return;
-    
-    try {
-      setGoogleLoading(true);
-      const res = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          googleId: '',
-          email: pendingGoogleUser.email,
-          name: pendingGoogleUser.name,
-          role: selectedRole.toLowerCase(),
-        }),
-      });
-      const data = await res.json();
-      
-      if (data.success) {
-        setShowRoleModal(false);
-        handleSuccessfulLogin(data.user);
-      } else {
-        showNotification(data.message || 'Registration failed', 'error');
-      }
-    } catch (error: any) {
-      console.error('Google register error:', error);
-      showNotification(error.message || 'Registration failed', 'error');
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
-
-  const handleSuccessfulLogin = (user: any) => {
-    const userRole = user.role?.toLowerCase();
+     const userRole = user.role?.toLowerCase();
     const organizerStatus = user.organizerStatus;
     const artisanStatus = user.artisanStatus;
 
@@ -170,6 +99,7 @@ export const LoginPage: React.FC = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     try {
       const res = await login({ email, password });
 
@@ -222,54 +152,70 @@ export const LoginPage: React.FC = () => {
         }
         handleSuccessfulLogin(res.user);
       } else {
-        showNotification(res.message || t("auth.loginFailed"), 'error');
+        setError(res.message || t("auth.loginFailed"));
       }
-    } catch (error: any) {
-      console.error("Login error:", error);
-      showNotification(error.message || t("auth.unexpectedError"), 'error');
+    } catch (err: any) {
+      console.error("Login error:", err);
+      setError(err.message || t("auth.unexpectedError"));
     }
   };
 
   return (
-    <>
-      <div className="min-h-[80vh] flex items-center justify-center p-4 bg-ethio-bg">
-        <div className="bg-white p-8 md:p-12 rounded-3xl shadow-xl max-w-md w-full border border-gray-100">
-          <div className="text-center mb-10">
-            <h1 className="text-3xl font-serif font-bold text-primary mb-2">
-              {t("auth.loginTitle")}
-            </h1>
-            <p className="text-gray-500">{t("auth.loginSubtitle")}</p>
+    <div className="min-h-screen flex items-center justify-center p-6 bg-gray-50/50">
+      <div className="bg-white p-10 md:p-16 rounded-[48px] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] max-w-lg w-full border border-gray-100 animate-in zoom-in-95 duration-500">
+        <div className="text-center mb-12">
+          <div className="w-20 h-20 bg-primary/5 rounded-[28px] flex items-center justify-center mx-auto mb-6">
+            <Lock className="w-10 h-10 text-primary" />
           </div>
+          <h1 className="text-4xl font-serif font-black text-primary mb-3 tracking-tight">
+            {t("auth.loginTitle")}
+          </h1>
+          <p className="text-gray-400 text-sm leading-relaxed max-w-[280px] mx-auto">
+            {t("auth.loginSubtitle") || "Welcome back! Enter your credentials to access your account."}
+          </p>
+        </div>
 
-          <SuspensionModal
-            isOpen={showSuspensionModal}
-            onClose={handleSuspensionModalClose}
-            reason={pendingUser?.suspensionReason}
-          />
+        <SuspensionModal
+          isOpen={showSuspensionModal}
+          onClose={handleSuspensionModalClose}
+          reason={pendingUser?.suspensionReason}
+        />
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <Input
-              label={t("auth.email")}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+            <ShieldAlert className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
+
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Email Address</label>
+            <input
               type="email"
               placeholder="name@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl focus:border-primary/20 focus:bg-white focus:ring-0 outline-none transition-all text-sm font-medium"
             />
+          </div>
 
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Password</label>
             <div className="relative">
-              <Input
-                label={t("auth.password")}
+              <input
                 type={showPassword ? "text" : "password"}
                 placeholder="********"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl focus:border-primary/20 focus:bg-white focus:ring-0 outline-none transition-all text-sm font-medium"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 bottom-3 p-1 text-gray-400 hover:text-primary"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 hover:text-primary transition-colors"
               >
                 {showPassword ? (
                   <EyeOff className="w-5 h-5" />
@@ -278,99 +224,31 @@ export const LoginPage: React.FC = () => {
                 )}
               </button>
             </div>
-
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center space-x-2 text-gray-600">
-                <input type="checkbox" className="rounded text-primary focus:ring-primary" />
-                <span>{t("auth.rememberMe")}</span>
-              </label>
-              <a href="/auth/forgot-password" className="text-primary font-semibold hover:underline">
-                {t("auth.forgotPassword")}
-              </a>
-            </div>
-
-            <Button type="submit" className="w-full" size="lg">
-              {t("auth.loginButton")}
-            </Button>
-          </form>
-
-          <div className="my-8 flex items-center">
-            <div className="flex-grow border-t border-gray-200"></div>
-            <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">or</span>
-            <div className="flex-grow border-t border-gray-200"></div>
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="w-full flex items-center justify-center gap-3"
-            onClick={() => googleLogin()}
-            disabled={googleLoading}
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.96 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.96 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-            </svg>
-            <span>{googleLoading ? "Processing..." : "Sign in with Google"}</span>
+          <div className="flex items-center justify-between text-sm">
+            <label className="flex items-center space-x-2 text-gray-600">
+              <input type="checkbox" className="rounded text-primary focus:ring-primary" />
+              <span>{t("auth.rememberMe")}</span>
+            </label>
+            <a href="/auth/forgot-password" className="text-primary font-semibold hover:underline">
+              {t("auth.forgotPassword")}
+            </a>
+          </div>
+
+          <Button type="submit" className="w-full py-8 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-primary/10 hover:shadow-primary/20 transition-all">
+            {t("auth.loginButton")}
           </Button>
+        </form>
 
-          <div className="mt-8 pt-8 border-t border-gray-100 text-center text-sm text-gray-500">
-            {t("auth.noAccount")}{" "}
-            <Link href="/register" className="text-primary font-bold hover:underline">
-              {t("auth.register")}
-            </Link>
-          </div>
+        <div className="mt-12 pt-8 border-t border-gray-50 text-center text-xs font-medium text-gray-400">
+          {t("auth.noAccount")}{" "}
+          <Link href="/register" className="text-primary font-black uppercase tracking-widest text-[10px] hover:underline ml-1">
+            {t("auth.register")}
+          </Link>
         </div>
       </div>
-
-      {showRoleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white p-8 md:p-12 rounded-3xl shadow-2xl max-w-lg w-full mx-4">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-serif font-bold text-primary mb-2">
-                Choose Your Role
-              </h2>
-              <p className="text-gray-500">
-                Welcome! Please select how you want to use Ethio Craft Hub
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 mb-8">
-              {[
-                { id: UserRole.TOURIST, titleKey: "tourist", descKey: "browseDesc", icon: MapPin },
-                { id: UserRole.ARTISAN, titleKey: "artisan", descKey: "sellDesc", icon: Briefcase },
-                { id: UserRole.ORGANIZER, titleKey: "organizer", descKey: "listDesc", icon: CalIcon },
-              ].map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => handleGoogleRegister(r.id as UserRole)}
-                  className="p-6 rounded-2xl text-left border-2 transition-all hover:border-primary bg-ethio-bg"
-                  disabled={googleLoading}
-                >
-                  <r.icon className="w-8 h-8 mb-4 text-secondary" />
-                  <h3 className="font-bold text-primary">{t(`auth.roles.${r.titleKey}`)}</h3>
-                  <p className="text-xs text-gray-500">{t(`auth.descriptions.${r.descKey}`)}</p>
-                </button>
-              ))}
-            </div>
-
-            <Button
-              variant="ghost"
-              className="w-full"
-              onClick={() => {
-                setShowRoleModal(false);
-                setPendingGoogleUser(null);
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      )}
-    </>
+    </div>
   );
 };
 
@@ -382,14 +260,15 @@ export const RegisterPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<UserRole>(UserRole.TOURIST);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { showNotification } = useNotification();
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     if (password !== confirmPassword) {
-      showNotification(t("auth.passwordsDontMatch"), 'error');
+      setError(t("auth.passwordsDontMatch") || "Passwords do not match");
       return;
     }
 
@@ -427,8 +306,8 @@ export const RegisterPage: React.FC = () => {
         role: role.toLowerCase(),
       }).toString();
       router.push(`/register/verify?${query}`);
-    } catch (error: any) {
-      showNotification(error.message || t("auth.unexpectedError"), 'error');
+    } catch (err: any) {
+      setError(err.message || t("auth.unexpectedError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -465,6 +344,13 @@ export const RegisterPage: React.FC = () => {
             </button>
           ))}
         </div>
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+            <ShieldAlert className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
 
         <form className="grid grid-cols-1 md:grid-cols-2 gap-6" onSubmit={handleRegister}>
           <Input

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { 
   ArrowLeft, Check, Hotel, Car, Star, Info, ChevronRight, 
   ShoppingCart, Plus, Bed, Bus, Plane, Building, Sparkles,
@@ -22,7 +23,7 @@ export default function TicketsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const eventId = params?.id as string;
-  const initialType = searchParams.get('type');
+  const initialType = searchParams?.get('type');
   
   const { 
     setEvent, 
@@ -188,7 +189,7 @@ export default function TicketsPage() {
   const selectedTicketInfo = TICKET_TYPES.find(t => t.type === ticketSelection?.type);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0a1411] transition-colors duration-500">
+    <div className="min-h-screen transition-colors duration-500">
       {/* Header */}
       <div className="bg-white/80 dark:bg-[#0a1411]/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/5 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -200,17 +201,15 @@ export default function TicketsPage() {
             <span className="hidden sm:inline">Event Details</span>
           </button>
           
-          <div className="flex items-center gap-8">
-             <div className="h-4 w-px bg-gray-200 dark:bg-white/10 hidden md:block" />
-             <div className="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-white">
-                <Ticket className="w-4 h-4 text-secondary" />
-                <span>{festival?.name}</span>
-             </div>
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-secondary/10 border border-secondary/20 flex items-center justify-center">
+              <Ticket className="w-5 h-5 text-secondary" />
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-12 md:py-20">
+      <div className="max-w-7xl mx-auto px-6 py-8 md:py-12">
         <AnimatePresence mode="wait">
           {showGrid ? (
             <motion.div 
@@ -220,14 +219,11 @@ export default function TicketsPage() {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-12"
             >
-              <div className="text-center space-y-4 max-w-2xl mx-auto">
-                <span className="text-xs font-black uppercase tracking-[0.4em] text-secondary">Step One</span>
-                <h1 className="text-5xl md:text-7xl font-serif font-black text-gray-900 dark:text-white leading-tight">
-                  Choose Your <br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-primary italic">Passage</span>
+              <div className="text-center space-y-4 max-w-2xl mx-auto mb-10">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-secondary">Passage Selection</span>
+                <h1 className="text-4xl md:text-6xl font-serif font-black text-gray-900 dark:text-white leading-tight">
+                  Choose Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-primary italic">Tier</span>
                 </h1>
-                <p className="text-gray-500 dark:text-gray-400 font-medium text-lg leading-relaxed">
-                  Select the tier that best suits your journey into the soul of Ethiopia.
-                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
@@ -330,53 +326,101 @@ export default function TicketsPage() {
                         </div>
                       </div>
 
-                      {ticketSelection?.type !== 'vip' && (
-                        <div className="space-y-6">
-                          <h4 className="text-xs font-black uppercase tracking-[0.3em] text-secondary">Enhance Experience</h4>
-                          <div className="grid grid-cols-1 gap-4">
-                            <button
-                              onClick={handleViewHotels}
-                              className="flex items-center gap-4 p-5 rounded-3xl border-2 border-dashed border-gray-200 dark:border-white/10 hover:border-secondary hover:bg-secondary/5 transition-all group"
-                            >
-                              <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-white/10 flex items-center justify-center group-hover:bg-secondary group-hover:text-primary transition-all">
-                                <Bed className="w-6 h-6" />
-                              </div>
-                              <div className="flex-1 text-left">
-                                <h5 className="text-sm font-black text-gray-800 dark:text-white">Accommodation</h5>
-                                <p className="text-[10px] text-gray-400 uppercase tracking-widest">
-                                  Add Luxury Lodging
-                                </p>
-                              </div>
-                              <Plus className="w-5 h-5 text-secondary group-hover:scale-125 transition-transform" />
-                            </button>
-
-                            <button
-                              onClick={handleViewTransport}
-                              className="flex items-center gap-4 p-5 rounded-3xl border-2 border-dashed border-gray-200 dark:border-white/10 hover:border-secondary hover:bg-secondary/5 transition-all group"
-                            >
-                              <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-white/10 flex items-center justify-center group-hover:bg-secondary group-hover:text-primary transition-all">
-                                <Bus className="w-6 h-6" />
-                              </div>
-                              <div className="flex-1 text-left">
-                                <h5 className="text-sm font-black text-gray-800 dark:text-white">Transportation</h5>
-                                <p className="text-[10px] text-gray-400 uppercase tracking-widest">
-                                  Add Secure Transport
-                                </p>
-                              </div>
-                              <Plus className="w-5 h-5 text-secondary group-hover:scale-125 transition-transform" />
-                            </button>
-                          </div>
-
-                          <div className="p-6 bg-emerald-500/5 border border-emerald-500/20 rounded-3xl flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                              <Sparkles className="w-6 h-6 text-emerald-500" />
+                      <div className="space-y-6">
+                        {ticketSelection?.type === 'vip' ? (
+                          <>
+                            <h4 className="text-xs font-black uppercase tracking-[0.3em] text-secondary">VIP Package Details</h4>
+                            <div className="space-y-4">
+                              {festival?.hotels?.[0] && (
+                                <Link href={`/event/${festival._id}/hotels`} className="block group">
+                                  <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-[32px] border border-gray-100 dark:border-white/10 space-y-4 hover:border-secondary transition-all">
+                                    <div className="h-32 w-full rounded-[24px] overflow-hidden">
+                                      <img src={festival.hotels[0].image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Hotel" />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2 text-secondary">
+                                        <Hotel className="w-3.5 h-3.5" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Included Stay</span>
+                                      </div>
+                                      <p className="font-bold text-gray-900 dark:text-white">{festival.hotels[0].name}</p>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-[10px] text-gray-400 font-bold uppercase">{festival.hotels[0].rooms?.[0]?.name || 'Premium Suite'}</span>
+                                        <span className="text-[10px] font-black uppercase text-secondary">View Details</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </Link>
+                              )}
+                              {festival?.transportation?.[0] && (
+                                <Link href={`/event/${festival._id}/transport`} className="block group">
+                                  <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-[32px] border border-gray-100 dark:border-white/10 space-y-4 hover:border-secondary transition-all">
+                                    <div className="h-32 w-full rounded-[24px] overflow-hidden">
+                                      <img src={festival.transportation[0].image || 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=2069&auto=format&fit=crop'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Transport" />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2 text-secondary">
+                                        <Car className="w-3.5 h-3.5" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">VIP Transport</span>
+                                      </div>
+                                      <p className="font-bold text-gray-900 dark:text-white">{festival.transportation[0].type}</p>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-[10px] text-gray-400 font-bold uppercase">Dedicated Professional Driver</span>
+                                        <span className="text-[10px] font-black uppercase text-secondary">View Details</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </Link>
+                              )}
                             </div>
-                            <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 leading-relaxed">
-                              <strong>Early Bird Privilege:</strong> You're currently viewing restricted rates. Prices may increase as the event date approaches.
-                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <h4 className="text-xs font-black uppercase tracking-[0.3em] text-secondary">Enhance Experience</h4>
+                            <div className="grid grid-cols-1 gap-4">
+                              <button
+                                onClick={handleViewHotels}
+                                className="flex items-center gap-4 p-5 rounded-3xl border-2 border-dashed border-gray-200 dark:border-white/10 hover:border-secondary hover:bg-secondary/5 transition-all group"
+                              >
+                                <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-white/10 flex items-center justify-center group-hover:bg-secondary group-hover:text-primary transition-all">
+                                  <Bed className="w-6 h-6" />
+                                </div>
+                                <div className="flex-1 text-left">
+                                  <h5 className="text-sm font-black text-gray-800 dark:text-white">Accommodation</h5>
+                                  <p className="text-[10px] text-gray-400 uppercase tracking-widest">
+                                    Add Luxury Lodging
+                                  </p>
+                                </div>
+                                <Plus className="w-5 h-5 text-secondary group-hover:scale-125 transition-transform" />
+                              </button>
+
+                              <button
+                                onClick={handleViewTransport}
+                                className="flex items-center gap-4 p-5 rounded-3xl border-2 border-dashed border-gray-200 dark:border-white/10 hover:border-secondary hover:bg-secondary/5 transition-all group"
+                              >
+                                <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-white/10 flex items-center justify-center group-hover:bg-secondary group-hover:text-primary transition-all">
+                                  <Bus className="w-6 h-6" />
+                                </div>
+                                <div className="flex-1 text-left">
+                                  <h5 className="text-sm font-black text-gray-800 dark:text-white">Transportation</h5>
+                                  <p className="text-[10px] text-gray-400 uppercase tracking-widest">
+                                    Add Secure Transport
+                                  </p>
+                                </div>
+                                <Plus className="w-5 h-5 text-secondary group-hover:scale-125 transition-transform" />
+                              </button>
+                            </div>
+                          </>
+                        )}
+
+                        <div className="p-6 bg-emerald-500/5 border border-emerald-500/20 rounded-3xl flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                            <Sparkles className="w-6 h-6 text-emerald-500" />
                           </div>
+                          <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 leading-relaxed">
+                            <strong>Early Bird Privilege:</strong> You're currently viewing restricted rates. Prices may increase as the event date approaches.
+                          </p>
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                   

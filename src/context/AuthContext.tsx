@@ -78,16 +78,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // If not JSON, use the raw text if it's short
           if (errorText.length < 100) errorMessage = errorText;
         }
-        throw new Error(errorMessage);
+        return { success: false, message: errorMessage };
       }
 
       const data = await response.json();
       if (data.success) {
         setUser(data.user);
       } else {
-        throw new Error(data.message || 'Login failed');
+        return { success: false, message: data.message || 'Login failed' };
       }
       return data;
+    } catch (error: any) {
+      return { success: false, message: error.message || 'Login failed' };
     } finally {
       setLoading(false);
     }
@@ -129,11 +131,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } catch (e) {
           if (errorText.length < 100) errorMessage = errorText;
         }
-        throw new Error(errorMessage);
+        return { success: false, message: errorMessage };
       }
 
       const data = await response.json();
       return data;
+    } catch (error: any) {
+      return { success: false, message: error.message || 'Registration failed' };
     } finally {
       setLoading(false);
     }

@@ -11,8 +11,8 @@ const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3
 
 async function getUserFromToken(token: string) {
   const result = await verifyToken(token);
-  if (!result) return null;
-  return result;
+  if (result.valid) return result.payload;
+  return null;
 }
 
 export async function POST(request: NextRequest) {

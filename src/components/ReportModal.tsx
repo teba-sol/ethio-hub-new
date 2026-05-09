@@ -7,7 +7,7 @@ import { useLanguage } from '@/context/LanguageContext';
 
 interface ReportModalProps {
   targetId: string;
-  targetType: 'Event' | 'Product' | 'User';
+  targetType: 'Event' | 'Product' | 'User' | 'Review';
   targetName: string;
   onClose: () => void;
   onSuccess?: () => void;
@@ -24,10 +24,19 @@ const EVENT_REASONS = [
 ];
 
 const PRODUCT_REASONS = [
+  'Fake Image',
   'Counterfeit/Fake',
   'Overpriced',
   'Wrong Category',
   'Stolen Images',
+  'Other'
+];
+
+const REVIEW_REASONS = [
+  'Spam',
+  'Inappropriate Language',
+  'Fake/Paid Review',
+  'Harassment',
   'Other'
 ];
 
@@ -58,6 +67,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
   const reasons = targetType === 'Event' ? EVENT_REASONS :
                  targetType === 'Product' ? PRODUCT_REASONS :
+                 targetType === 'Review' ? REVIEW_REASONS :
                  USER_REASONS;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -16,14 +16,18 @@ export async function GET() {
 
     let payload = null;
     if (sessionToken) {
-      payload = await verifyToken(sessionToken);
+      const result = await verifyToken(sessionToken);
+      if (result.valid) {
+        payload = result.payload;
+      }
     }
 
     // If session token is invalid/expired but refresh token exists, try to refresh
     if (!payload && refreshToken) {
-      const refreshPayload = await verifyToken(refreshToken);
-      if (refreshPayload) {
+      const result = await verifyToken(refreshToken);
+      if (result.valid) {
         // Refresh token is valid, generate new access token
+        const refreshPayload: any = result.payload;
         const newAccessToken = await generateAccessToken({
           userId: refreshPayload.userId,
           email: refreshPayload.email,

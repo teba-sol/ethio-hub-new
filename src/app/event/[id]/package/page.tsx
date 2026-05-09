@@ -91,7 +91,7 @@ export default function PackagePage() {
   };
 
   return (
-    <div className="bg-white text-gray-900 dark:bg-[#0a1411] dark:text-white min-h-screen font-sans selection:bg-secondary selection:text-primary transition-colors duration-500">
+    <div className="text-gray-900 dark:text-white min-h-screen font-sans selection:bg-secondary selection:text-primary transition-colors duration-500">
       
       {/* Hero Section */}
       <section className="relative h-[60vh] overflow-hidden">

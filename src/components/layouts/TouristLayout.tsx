@@ -27,7 +27,7 @@ export const TouristLayout: React.FC<{ children?: React.ReactNode }> = ({ childr
     <div className="flex flex-col min-h-screen bg-gray-50">
       <Header />
       <main className="flex-grow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12">
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Sidebar Navigation */}
             <aside className="w-full lg:w-64 shrink-0">

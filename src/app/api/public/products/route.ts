@@ -32,6 +32,12 @@ export async function GET(req: Request) {
     }
 
     if (search) {
+      const matchingArtisans = await User.find({
+        name: { $regex: search, $options: 'i' },
+        status: { $ne: 'Suspended' }
+      }).select('_id');
+      const searchArtisanIds = matchingArtisans.map(a => a._id);
+
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
         { name_en: { $regex: search, $options: 'i' } },
@@ -41,6 +47,10 @@ export async function GET(req: Request) {
         { description_en: { $regex: search, $options: 'i' } },
         { description_am: { $regex: search, $options: 'i' } },
       ];
+
+      if (searchArtisanIds.length > 0) {
+        query.$or.push({ artisanId: { $in: searchArtisanIds } });
+      }
     }
 
     const activeUsers = await User.find({

@@ -178,7 +178,13 @@ export default function CheckoutPage() {
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <button 
-            onClick={() => router.back()}
+            onClick={() => {
+              if (selectedHotel) {
+                router.push(`/event/${eventId}/hotels/${selectedHotel._id || selectedHotel.id}`);
+              } else {
+                router.push(`/event/${eventId}`);
+              }
+            }}
             className="flex items-center gap-2 text-gray-500 hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />

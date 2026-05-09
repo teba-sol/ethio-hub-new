@@ -155,10 +155,10 @@ export const EthiopiaMap: React.FC = () => {
             <MapPin className="h-4 w-4" />
             {language === 'am' ? 'ኢትዮጵያን ይመርምሩ' : 'Explore Ethiopia'}
           </div>
-          <h2 className="text-3xl md:text-5xl font-serif font-bold text-primary mb-4">
+          <h2 className="text-3xl md:text-5xl font-serif font-bold text-primary dark:text-white mb-4">
             {language === 'am' ? 'በክልል የጥበብ ሥራዎችን ያግኙ' : 'Discover Crafts by Region'}
           </h2>
-          <p className="text-gray-500 max-w-2xl mx-auto text-lg">
+          <p className="text-gray-500 dark:text-gray-300 max-w-2xl mx-auto text-lg">
             {language === 'am' 
               ? 'ኢትዮጵያ በእያንዳንዱ ክልል ልዩ የሆነ የጥበብ ባህል አላት። ክልሉን ጠቅ ለማድረግ እና ልዩ ሥራዎቹን ለመድረስ።'
               : 'Each region of Ethiopia has its own unique craft heritage. Click on a region to explore its traditional crafts and cultural events.'}
@@ -292,16 +292,16 @@ export const EthiopiaMap: React.FC = () => {
 
           {/* Region Info Panel */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-[24px] p-6 shadow-xl border border-gray-100 min-h-[400px]">
+            <div className="bg-white dark:bg-ethio-dark rounded-[24px] p-6 shadow-xl border border-gray-100 dark:border-white/10 min-h-[400px]">
               {!activeRegion ? (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                     <MapPin className="w-8 h-8 text-primary" />
                   </div>
-                  <h3 className="font-serif text-xl font-bold text-primary mb-2">
+                  <h3 className="font-serif text-xl font-bold text-primary dark:text-white mb-2">
                     {language === 'am' ? 'ክልል ይምረጡ' : 'Select a Region'}
                   </h3>
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-gray-500 dark:text-gray-300 text-sm">
                     {language === 'am' 
                       ? 'ከላይ ያለውን ካርታ ጠቅ በማድረግ ክልሉን ይምረጡ'
                       : 'Click on a region on the map to explore its crafts and events'}
@@ -333,7 +333,7 @@ export const EthiopiaMap: React.FC = () => {
                     </button>
                   </div>
 
-                  <p className="text-gray-500 text-sm leading-relaxed font-light">
+                  <p className="text-gray-500 dark:text-gray-300 text-sm leading-relaxed font-light">
                     {language === 'am' ? activeRegion.descriptionAm : activeRegion.description}
                   </p>
 
@@ -371,13 +371,13 @@ export const EthiopiaMap: React.FC = () => {
                           <Link 
                             key={idx}
                             href={`/event/${fest.id || fest._id}`}
-                            className="flex items-center gap-4 p-3 bg-gray-50 rounded-2xl hover:bg-white hover:shadow-lg hover:shadow-black/5 border border-transparent hover:border-gray-100 transition-all group"
+                            className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-white/5 rounded-2xl hover:bg-white dark:hover:bg-white/10 hover:shadow-lg hover:shadow-black/5 border border-transparent hover:border-gray-100 dark:hover:border-white/10 transition-all group"
                           >
                             <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-200 flex-shrink-0">
                               <img src={fest.coverImage || (fest.gallery?.[0])} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-primary truncate group-hover:text-secondary transition-colors">
+                              <p className="text-xs font-bold text-primary dark:text-white truncate group-hover:text-secondary transition-colors">
                                 {language === 'am' ? (fest.name_am || fest.name) : (fest.name_en || fest.name)}
                               </p>
                               <div className="flex items-center gap-2 mt-1">
@@ -392,12 +392,12 @@ export const EthiopiaMap: React.FC = () => {
                         activeRegion.events.map((event, idx) => (
                           <div 
                             key={idx}
-                            className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl border border-transparent hover:border-gray-100 transition-all"
+                            className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-white/5 rounded-2xl border border-transparent hover:border-gray-100 dark:hover:border-white/10 transition-all"
                           >
-                            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-secondary shadow-sm">
+                            <div className="w-10 h-10 rounded-xl bg-white dark:bg-white/10 flex items-center justify-center text-secondary shadow-sm">
                               {getEventIcon(event)}
                             </div>
-                            <span className="text-xs font-bold text-gray-700">{event}</span>
+                            <span className="text-xs font-bold text-gray-700 dark:text-gray-200">{event}</span>
                           </div>
                         ))
                       )}
@@ -427,7 +427,7 @@ export const EthiopiaMap: React.FC = () => {
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
                 activeRegion?.id === region.id
                   ? 'bg-primary text-white'
-                  : 'bg-white text-gray-600 hover:bg-primary/10 hover:text-primary border border-gray-200'
+                  : 'bg-white dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:bg-primary/10 hover:text-primary border border-gray-200 dark:border-white/10'
               }`}
             >
               {region.name}

@@ -7,7 +7,7 @@ export const TouristWishlistPage: React.FC = () => {
   const { wishlist } = useWishlist();
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="pt-10 pb-12 space-y-8 animate-in fade-in duration-500">
       <h2 className="text-3xl font-serif font-bold text-primary">My Wishlist</h2>
       
       {wishlist.length === 0 ? (

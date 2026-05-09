@@ -244,8 +244,8 @@ export default function HotelDetailPage() {
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-500 hover:text-primary"
+            onClick={() => router.push(`/event/${eventId}/hotels`)}
+            className="flex items-center gap-2 text-gray-500 hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>{t('common.backToHotels')}</span>
@@ -794,8 +794,7 @@ export default function HotelDetailPage() {
 
           {/* Sidebar - Booking Widget */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 p-8 sticky top-28">
-              {ticketSelection?.type === 'vip' ? (
+            <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 p-8 sticky top-28">              {ticketSelection?.type === 'vip' ? (
                 <div className="space-y-6">
                   <div className="bg-amber-50 rounded-2xl p-6 border border-amber-100">
                     <div className="flex items-center gap-3 mb-4">
@@ -812,152 +811,155 @@ export default function HotelDetailPage() {
                     </div>
                   </div>
 
-                  <div className="pt-6 border-t border-gray-100">
+                  <div className="pt-6 border-t border-gray-100 space-y-3">
                     <Button
                       className="w-full py-6 rounded-2xl shadow-lg shadow-primary/20"
                       onClick={() => handleContinue('transport')}
                     >
                       Continue to Transport
                     </Button>
+                    <button
+                      onClick={() => router.push(`/event/${eventId}/hotels`)}
+                      className="w-full py-3 text-center text-gray-400 text-xs font-bold uppercase tracking-wider hover:text-primary transition-colors border border-gray-100 rounded-xl"
+                    >
+                      Go Back
+                    </button>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Check In</span>
-                    <button
-                      onClick={() => { setShowDatePicker(!showDatePicker); setShowGuestSelector(false); }}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                    >
-                      <Calendar className="w-4 h-4 text-gray-500" />
-                      <span className="font-medium text-sm">{formatShortDate(checkIn)}</span>
-                      <ChevronDown className="w-4 h-4 text-gray-400" />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Check Out</span>
-                    <button
-                      onClick={() => { setShowDatePicker(!showDatePicker); }}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                    >
-                      <Calendar className="w-4 h-4 text-gray-500" />
-                      <span className="font-medium text-sm">{formatShortDate(checkOut)}</span>
-                      <ChevronDown className="w-4 h-4 text-gray-400" />
-                    </button>
-                  </div>
-
-                  {showDatePicker && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-xl">
-                      <p className="text-sm text-gray-500 mb-2">Select dates</p>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Check In</p>
-                          <input
-                            type="date"
-                            className="w-full p-2 border rounded-lg text-sm"
-                            min={new Date().toISOString().split('T')[0]}
-                            onChange={(e) => setCheckIn(e.target.value ? new Date(e.target.value) : null)}
-                          />
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Check Out</p>
-                          <input
-                            type="date"
-                            className="w-full p-2 border rounded-lg text-sm"
-                            min={checkIn ? new Date(checkIn).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
-                            onChange={(e) => setCheckOut(e.target.value ? new Date(e.target.value) : null)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <Button className="w-full py-3" onClick={() => {
-                    document.getElementById('select-room')?.scrollIntoView({ behavior: 'smooth' });
-                  }}>
-                    Check Availability
-                  </Button>
-                </div>
-              )}
-
-              {ticketSelection?.type !== 'vip' && (
-                <div className="mt-6 pt-6 border-t border-gray-100">
-                  {selectedRoom ? (
-                    <div className="bg-primary/5 rounded-xl p-4 mb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="text-xs text-gray-500 uppercase tracking-wider">Room</p>
-                          <p className="font-bold text-primary">{selectedRoom.name}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold text-primary">
-                            {festival?.pricing?.currency || festival?.currency || 'ETB'} {selectedRoom.pricePerNight}
-                          </p>
-                          <p className="text-xs text-gray-500">/night</p>
-                        </div>
-                      </div>
-                      {selectedFoodPackages.length > 0 && (
-                        <div className="border-t border-primary/10 pt-2 mt-2">
-                          <p className="text-xs text-gray-500">Food Packages:</p>
-                          {selectedFoodPackages.map((pkg, idx) => (
-                            <div key={idx} className="flex justify-between text-sm">
-                              <span className="text-gray-600">{pkg.name}</span>
-                              <span className="font-medium">{festival?.pricing?.currency || festival?.currency || 'ETB'} {pkg.pricePerPerson * guests}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="bg-gray-50 rounded-xl p-4 mb-4 text-center">
-                      <p className="text-sm text-gray-500">Select a room below to book</p>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-2xl font-bold text-primary">
-                        {`${festival?.pricing?.currency || festival?.currency || 'ETB'} ${selectedRoom?.pricePerNight || hotel.rooms?.[0]?.pricePerNight || 0}`}
-                      </span>
-                      <span className="text-gray-500 text-sm"> /night</span>
-                    </div>
-                    <div className="text-right text-sm text-gray-500">
-                      {selectedRoom?.remaining ?? selectedRoom?.availability ?? hotel.rooms?.[0]?.remaining ?? hotel.rooms?.[0]?.availability ?? 0} rooms left
-                    </div>
-                  </div>
-                </div>
-              )}
-
-                  <div className="space-y-3">
-                    {renderValidationNotice()}
-                    <Button
-                      className={`w-full py-4 shadow-lg shadow-primary/25 ${validationErrors.length > 0 ? 'mt-4' : ''}`}
-                      onClick={() => handleContinue('transport')}
-                      disabled={!selectedRoom}
-                    >
-                      {selectedRoom ? 'Continue to Transport' : 'Select a Room'}
-                    </Button>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        className="w-full py-3"
-                        onClick={() => handleContinue('checkout')}
-                        disabled={!selectedRoom}
-                        variant="outline"
-                      >
-                        To Checkout
-                      </Button>
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Check In</span>
                       <button
-                        onClick={() => {
-                          setSelectedHotel(null);
-                          setSelectedRoom(null);
-                          router.push(`/event/${eventId}/transport`);
-                        }}
-                        className="w-full py-3 text-center text-gray-400 text-xs font-bold uppercase tracking-wider hover:text-primary transition-colors border border-gray-100 rounded-xl"
+                        onClick={() => { setShowDatePicker(!showDatePicker); }}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                       >
-                        Skip Hotel
+                        <Calendar className="w-4 h-4 text-gray-500" />
+                        <span className="font-medium text-sm">{formatShortDate(checkIn)}</span>
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
                       </button>
                     </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Check Out</span>
+                      <button
+                        onClick={() => { setShowDatePicker(!showDatePicker); }}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                      >
+                        <Calendar className="w-4 h-4 text-gray-500" />
+                        <span className="font-medium text-sm">{formatShortDate(checkOut)}</span>
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                      </button>
+                    </div>
+
+                    {showDatePicker && (
+                      <div className="mt-4 p-4 bg-gray-50 rounded-xl">
+                        <p className="text-sm text-gray-500 mb-2">Select dates</p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Check In</p>
+                            <input
+                              type="date"
+                              className="w-full p-2 border rounded-lg text-sm"
+                              min={new Date().toISOString().split('T')[0]}
+                              onChange={(e) => setCheckIn(e.target.value ? new Date(e.target.value) : null)}
+                            />
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Check Out</p>
+                            <input
+                              type="date"
+                              className="w-full p-2 border rounded-lg text-sm"
+                              min={checkIn ? new Date(checkIn).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                              onChange={(e) => setCheckOut(e.target.value ? new Date(e.target.value) : null)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  <div className="pt-6 border-t border-gray-100">
+                    {selectedRoom ? (
+                      <div className="bg-primary/5 rounded-xl p-4 mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase tracking-wider">Room</p>
+                            <p className="font-bold text-primary">{selectedRoom.name}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xl font-bold text-primary">
+                              {festival?.pricing?.currency || festival?.currency || 'ETB'} {selectedRoom.pricePerNight * (guests || 1)}
+                            </p>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase">
+                              {guests || 1} × {selectedRoom.pricePerNight} / night
+                            </p>
+                          </div>
+                        </div>
+                        {selectedFoodPackages.length > 0 && (
+                          <div className="border-t border-primary/10 pt-2 mt-2">
+                            <p className="text-xs text-gray-500">Food Packages:</p>
+                            {selectedFoodPackages.map((pkg, idx) => (
+                              <div key={idx} className="flex justify-between text-sm">
+                                <span className="text-gray-600">{pkg.name}</span>
+                                <span className="font-medium">{festival?.pricing?.currency || festival?.currency || 'ETB'} {pkg.pricePerPerson * guests}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-xl p-4 mb-4 text-center">
+                        <p className="text-sm text-gray-500">Select a room below to book</p>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <span className="text-2xl font-bold text-primary">
+                          {`${festival?.pricing?.currency || festival?.currency || 'ETB'} ${selectedRoom?.pricePerNight || hotel.rooms?.[0]?.pricePerNight || 0}`}
+                        </span>
+                        <span className="text-gray-500 text-sm"> /night</span>
+                      </div>
+                      <div className="text-right text-sm text-gray-500">
+                        {selectedRoom?.remaining ?? selectedRoom?.availability ?? hotel.rooms?.[0]?.remaining ?? hotel.rooms?.[0]?.availability ?? 0} rooms left
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {renderValidationNotice()}
+                      <Button
+                        className={`w-full py-4 shadow-lg shadow-primary/25 ${validationErrors.length > 0 ? 'mt-4' : ''}`}
+                        onClick={() => handleContinue('transport')}
+                        disabled={!selectedRoom}
+                      >
+                        {selectedRoom ? 'Continue to Transport' : 'Select a Room'}
+                      </Button>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button
+                          className="w-full py-3"
+                          onClick={() => handleContinue('checkout')}
+                          disabled={!selectedRoom}
+                          variant="outline"
+                        >
+                          To Checkout
+                        </Button>
+                        <button
+                          onClick={() => {
+                            setSelectedHotel(null);
+                            setSelectedRoom(null);
+                            router.push(`/event/${eventId}/transport`);
+                          }}
+                          className="w-full py-3 text-center text-gray-400 text-xs font-bold uppercase tracking-wider hover:text-primary transition-colors border border-gray-100 rounded-xl"
+                        >
+                          Skip Hotel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
         </div>

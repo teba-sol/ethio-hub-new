@@ -103,7 +103,7 @@ export const HeroVideo: React.FC = () => {
       <div className="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-primary/10 rounded-full blur-[120px]" />
 
       {/* Main Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 w-full pt-20 md:pt-28 lg:pt-32 pb-12">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 w-full pt-20 md:pt-28 lg:pt-32 pb-24 md:pb-36">
         <div className={`max-w-4xl transition-all duration-1000 ease-out ${isLoaded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-12'}`}>
           
           {/* Animated Badge */}

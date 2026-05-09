@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '../../../../lib/mongodb';
 import User from '../../../../models/User';
 import { jwtVerify } from 'jose';
+import { OrganizerProfileSchema } from '../../../../lib/validations/profile.schema';
 
 async function getAuthenticatedUser(request: NextRequest) {
   const token = request.cookies.get('sessionToken')?.value;
@@ -89,22 +90,40 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
+
+    // --- Schema Validation ---
+    // Merge top-level fields with profile fields for validation
+    const validationResult = OrganizerProfileSchema.safeParse({
+      ...body,
+      ...(body.organizerProfile || {})
+    });
+
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Validation failed', 
+          errors: validationResult.error.flatten().fieldErrors 
+        },
+        { status: 400 }
+      );
+    }
+
     const {
       name,
-      email,
       companyName,
       phone,
       website,
       address,
       bio,
-      avatar,
       payoutMethod,
       bankName,
       accountHolderName,
       accountNumber,
-      notifications,
-      preferences,
-    } = body;
+    } = validationResult.data;
+
+    // Use original body for non-validated/optional fields
+    const { email, notifications, preferences, avatar } = body;
 
     const $set: any = {};
     const $unset: any = {};

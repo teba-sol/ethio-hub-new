@@ -14,8 +14,10 @@ const CHAPA_API_URL = 'https://api.chapa.co';
 
 async function getUserFromToken(token: string) {
   const result = await verifyToken(token);
-  if (!result) return null;
-  return result as JWTPayload & { userId: string; role: string; name: string; email: string; phone?: string; avatar?: string };
+  if (result.valid) {
+    return result.payload as JWTPayload & { userId: string; role: string; name: string; email: string; phone?: string; avatar?: string };
+  }
+  return null;
 }
 
 function generateTxRef(): string {

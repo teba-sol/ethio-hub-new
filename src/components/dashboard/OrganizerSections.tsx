@@ -2549,6 +2549,7 @@ export const OrganizerOverview: React.FC<{
   const onManageEvent = handleManageEvent;
   const onCreate = propOnCreate || handleCreate;
   const { user } = useAuth();
+  const { t } = useLanguage();
   const navigate = (to: string) => router.push(to);
   
   const [analytics, setAnalytics] = useState<any>(null);
@@ -2558,22 +2559,25 @@ export const OrganizerOverview: React.FC<{
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [analyticsRes, festivalsRes] = await Promise.all([
-          fetch('/api/organizer/analytics'),
-          fetch('/api/organizer/festivals')
+        const [analyticsData, festivalsData] = await Promise.all([
+          apiClient.get('/api/organizer/analytics'),
+          apiClient.get('/api/organizer/festivals')
         ]);
         
-        const analyticsData = await analyticsRes.json();
-        const festivalsData = await festivalsRes.json();
-        
         console.log('Analytics response:', analyticsData);
+        console.log('Festivals response:', festivalsData);
         
         if (analyticsData.success) {
           setAnalytics(analyticsData.analytics);
           console.log('Revenue from API:', analyticsData.analytics?.revenue?.total);
+        } else {
+          console.error('Analytics fetch failed:', analyticsData.message);
         }
+        
         if (festivalsData.success) {
           setFestivals(festivalsData.festivals || []);
+        } else {
+          console.error('Festivals fetch failed:', festivalsData.message);
         }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -2667,11 +2671,11 @@ export const OrganizerOverview: React.FC<{
        {/* Header with Notifications */}
        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
          <div>
-           <h1 className="text-4xl font-serif font-bold text-primary">Welcome, <span className="text-secondary italic">{user?.name}</span></h1>
-           <p className="text-gray-500 text-sm">Manage your cultural celebrations.</p>
+           <h1 className="text-4xl font-serif font-bold text-primary">{t('dashboard.welcomeName', { name: user?.name })}</h1>
+           <p className="text-gray-500 text-sm">{t('dashboard.manageCelebrations')}</p>
          </div>
          <div className="flex items-center gap-4">
-            <Button onClick={onCreate} leftIcon={Plus} disabled={disableCreate}>Create Festival</Button>
+            <Button onClick={onCreate} leftIcon={Plus} disabled={disableCreate}>{t('organizer.createFestival.createNewFestival')}</Button>
          </div>
        </header>
 
@@ -2679,24 +2683,24 @@ export const OrganizerOverview: React.FC<{
        <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
           <button onClick={() => navigate('/dashboard/organizer/bookings')} className="flex items-center gap-3 px-6 py-3 bg-white border border-gray-100 rounded-2xl hover:shadow-md transition-all whitespace-nowrap group">
             <div className="p-2 bg-blue-50 text-blue-600 rounded-xl group-hover:scale-110 transition-transform"><FileText className="w-4 h-4" /></div>
-            <span className="text-sm font-bold text-primary">View Bookings</span>
+            <span className="text-sm font-bold text-primary">{t('dashboard.viewBookings')}</span>
           </button>
           <button onClick={() => navigate('/dashboard/organizer/reviews')} className="flex items-center gap-3 px-6 py-3 bg-white border border-gray-100 rounded-2xl hover:shadow-md transition-all whitespace-nowrap group">
             <div className="p-2 bg-amber-50 text-amber-600 rounded-xl group-hover:scale-110 transition-transform"><Star className="w-4 h-4" /></div>
-            <span className="text-sm font-bold text-primary">Check Reviews</span>
+            <span className="text-sm font-bold text-primary">{t('dashboard.checkReviews')}</span>
           </button>
           <button onClick={() => navigate('/dashboard/organizer/analytics')} className="flex items-center gap-3 px-6 py-3 bg-white border border-gray-100 rounded-2xl hover:shadow-md transition-all whitespace-nowrap group">
             <div className="p-2 bg-purple-50 text-purple-600 rounded-xl group-hover:scale-110 transition-transform"><BarChart className="w-4 h-4" /></div>
-            <span className="text-sm font-bold text-primary">Analytics Snapshot</span>
+            <span className="text-sm font-bold text-primary">{t('dashboard.analyticsSnapshot')}</span>
           </button>
        </div>
 
 {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
          {[
-          { label: 'Active Listings', val: activeListings.toString(), icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Total Capacity', val: formatNumber(totalCapacity), icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Recent Event Bookings', val: formatNumber(recentEventBookings), icon: FileText, color: 'text-purple-600', bg: 'bg-purple-50' },
+          { label: t('dashboard.activeListings'), val: activeListings.toString(), icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: t('dashboard.totalCapacity'), val: formatNumber(totalCapacity), icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: t('dashboard.recentEventBookings'), val: formatNumber(recentEventBookings), icon: FileText, color: 'text-purple-600', bg: 'bg-purple-50' },
         ].map((stat: any, i) => (
           <div key={`stat-${i}`} className="bg-white p-8 rounded-3xl border border-gray-100 flex items-center justify-between shadow-sm relative group">
             <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{stat.label}</p><p className="text-2xl font-bold text-primary">{stat.val}</p></div>
@@ -2710,7 +2714,7 @@ export const OrganizerOverview: React.FC<{
           <div className="lg:col-span-2 space-y-8">
              {/* Upcoming Events Timeline */}
              <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
-                <h3 className="text-lg font-serif font-bold text-primary mb-6 flex items-center gap-2"><CalendarClock className="w-5 h-5 text-secondary" /> Upcoming Timeline</h3>
+                <h3 className="text-lg font-serif font-bold text-primary mb-6 flex items-center gap-2"><CalendarClock className="w-5 h-5 text-secondary" /> {t('dashboard.upcomingTimeline')}</h3>
                 <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
                    {myEvents.slice(0, 5).map((ev: any, i: number) => (
                       <div key={ev._id || i} className="min-w-[200px] p-4 bg-ethio-bg/30 rounded-2xl border border-gray-50 flex gap-4 items-center cursor-pointer hover:bg-ethio-bg/50 transition-colors" onClick={() => onManageEvent(ev._id || ev.id)}>
@@ -2724,7 +2728,7 @@ export const OrganizerOverview: React.FC<{
                          </div>
                       </div>
                    ))}
-                   {myEvents.length === 0 && <p className="text-sm text-gray-400 italic">No upcoming events. Create your first festival!</p>}
+                   {myEvents.length === 0 && <p className="text-sm text-gray-400 italic">{t('dashboard.noUpcomingEvents')}</p>}
                 </div>
              </section>
 
@@ -2733,11 +2737,11 @@ export const OrganizerOverview: React.FC<{
                 <div className="flex justify-between items-center mb-6">
                    <h3 className="text-lg font-serif font-bold text-primary flex items-center gap-2">
                      <TrendingUp className="w-5 h-5 text-blue-600" /> 
-                     {recentPublishedEvent ? `7-Day Booking Trend: ${recentPublishedEvent.name}` : '7-Day Booking Trend'}
+                     {recentPublishedEvent ? `${t('dashboard.sevenDayBookingTrend')}: ${recentPublishedEvent.name}` : t('dashboard.sevenDayBookingTrend')}
                    </h3>
                    {bookingTrendData.length > 0 && (
                      <Badge variant="outline" className="text-blue-600 bg-blue-50 border-blue-100">
-                       Real-time Data
+                       {t('dashboard.realTimeData')}
                      </Badge>
                    )}
                 </div>
@@ -2759,7 +2763,7 @@ export const OrganizerOverview: React.FC<{
                     </ResponsiveContainer>
                   ) : (
                     <div className="h-full w-full flex items-center justify-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                      <p className="text-sm text-gray-400">No booking data yet</p>
+                      <p className="text-sm text-gray-400">{t('dashboard.noBookingData')}</p>
                     </div>
                   )}
                 </div>
@@ -2768,7 +2772,7 @@ export const OrganizerOverview: React.FC<{
              {/* Engagement Metrics */}
              <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
-                   <h4 className="font-bold text-primary mb-4 flex items-center gap-2"><Globe className="w-4 h-4 text-emerald-600" /> Top Visitor Locations</h4>
+                   <h4 className="font-bold text-primary mb-4 flex items-center gap-2"><Globe className="w-4 h-4 text-emerald-600" /> {t('dashboard.topVisitorLocations')}</h4>
                    <div className="space-y-3">
                       {visitorLocations.length > 0 ? (
                         visitorLocations.map((loc, i) => (
@@ -2783,7 +2787,7 @@ export const OrganizerOverview: React.FC<{
                            </div>
                         ))
                       ) : (
-                        <p className="text-sm text-gray-400 italic py-4">No location data available yet.</p>
+                        <p className="text-sm text-gray-400 italic py-4">{t('dashboard.noLocationData')}</p>
                       )}
                    </div>
                 </div>
@@ -2791,7 +2795,7 @@ export const OrganizerOverview: React.FC<{
                   className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm cursor-pointer hover:shadow-md transition-all group"
                   onClick={() => analytics?.mostBookedEvent && onManageEvent(analytics.mostBookedEvent.id)}
                 >
-                   <h4 className="font-bold text-primary mb-4 flex items-center gap-2"><Ticket className="w-4 h-4 text-purple-600" /> Most Booked Event</h4>
+                   <h4 className="font-bold text-primary mb-4 flex items-center gap-2"><Ticket className="w-4 h-4 text-purple-600" /> {t('dashboard.mostBookedEvent')}</h4>
                    {analytics?.mostBookedEvent ? (
                      <div className="space-y-4">
                         <div className="h-32 rounded-2xl overflow-hidden relative">
@@ -2800,7 +2804,7 @@ export const OrganizerOverview: React.FC<{
                         </div>
                         <div>
                            <p className="font-bold text-primary group-hover:text-secondary transition-colors">{analytics.mostBookedEvent.name}</p>
-                           <p className="text-xs text-gray-500 mt-1">{analytics.mostBookedEvent.bookings} tourists booked this event</p>
+                           <p className="text-xs text-gray-500 mt-1">{t('dashboard.touristsBooked', { count: analytics.mostBookedEvent.bookings })}</p>
                         </div>
                      </div>
                    ) : <p className="text-sm text-gray-400 italic py-4">No booking data yet.</p>}
@@ -2812,7 +2816,7 @@ export const OrganizerOverview: React.FC<{
                 <section className="bg-white p-12 rounded-[48px] border border-gray-100 text-center space-y-8"><div className="w-24 h-24 bg-ethio-bg rounded-[32px] flex items-center justify-center mx-auto"><Briefcase className="w-10 h-10 text-gray-300" /></div><h3 className="text-3xl font-serif font-bold text-primary">Ready to showcase your heritage?</h3><Button size="lg" onClick={onCreate}>List Your First Festival</Button></section>
               ) : (
                 <div className="space-y-6">
-                  <h3 className="text-xl font-serif font-bold text-primary">Your Active Events</h3>
+                  <h3 className="text-xl font-serif font-bold text-primary">{t('dashboard.yourActiveEvents')}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {activePublishedEvents.slice(0, 2).map((fest, index) => (
                        <div key={fest.id || `fest-${index}`} onClick={() => onManageEvent(fest.id)} className="bg-white rounded-[32px] overflow-hidden border border-gray-100 shadow-sm cursor-pointer group hover:shadow-md transition-all">
@@ -2838,8 +2842,8 @@ export const OrganizerOverview: React.FC<{
              {/* Notifications Panel */}
              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-center mb-6">
-                   <h3 className="text-lg font-serif font-bold text-primary">Latest Alerts</h3>
-                   <button onClick={() => navigate('/dashboard/organizer/bookings')} className="text-xs font-bold text-secondary hover:underline">View All</button>
+                   <h3 className="text-lg font-serif font-bold text-primary">{t('dashboard.latestAlerts')}</h3>
+                   <button onClick={() => navigate('/dashboard/organizer/bookings')} className="text-xs font-bold text-secondary hover:underline">{t('common.viewAll')}</button>
                 </div>
                 <div className="space-y-4">
                    {latestAlerts.length > 0 ? (
@@ -2859,25 +2863,25 @@ export const OrganizerOverview: React.FC<{
              </div>
 
              {/* Existing Mission Control */}
-             <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8"><h3 className="text-xl font-serif font-bold text-primary">Mission Control</h3><div className="space-y-3">{[{ id: 'create', label: 'Launch New Listing', icon: Plus, action: onCreate }].map(action => (<button key={action.id} onClick={action.action} disabled={disableCreate} className="w-full flex items-center justify-between p-4 bg-ethio-bg rounded-2xl transition-all group disabled:cursor-not-allowed disabled:opacity-60"><div className="flex items-center gap-4"><div className="p-2 bg-white rounded-xl group-hover:bg-primary group-hover:text-white"><action.icon className="w-4 h-4" /></div><span className="text-[11px] font-bold text-primary uppercase">{action.label}</span></div><ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-primary" /></button>))}</div></div>
+             <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8"><h3 className="text-xl font-serif font-bold text-primary">{t('dashboard.missionControl')}</h3><div className="space-y-3">{[{ id: 'create', label: t('dashboard.launchNewListing'), icon: Plus, action: onCreate }].map(action => (<button key={action.id} onClick={action.action} disabled={disableCreate} className="w-full flex items-center justify-between p-4 bg-ethio-bg rounded-2xl transition-all group disabled:cursor-not-allowed disabled:opacity-60"><div className="flex items-center gap-4"><div className="p-2 bg-white rounded-xl group-hover:bg-primary group-hover:text-white"><action.icon className="w-4 h-4" /></div><span className="text-[11px] font-bold text-primary uppercase">{action.label}</span></div><ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-primary" /></button>))}</div></div>
 
              {/* Community / Support */}
              <div className="bg-gradient-to-br from-primary to-ethio-black p-8 rounded-[40px] text-white shadow-lg relative overflow-hidden">
                 <div className="relative z-10 space-y-6">
-                   <h3 className="text-xl font-serif font-bold">Need Help?</h3>
-                   <p className="text-sm text-white/80">Check our organizer guide for tips on maximizing your event success.</p>
+                   <h3 className="text-xl font-serif font-bold">{t('dashboard.needHelp')}</h3>
+                   <p className="text-sm text-white/80">{t('dashboard.organizerGuideTips')}</p>
                    <div className="space-y-3">
                       <button 
                         onClick={() => setShowSupport(true)}
                         className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors backdrop-blur-sm"
                       >
-                         <HelpCircle className="w-4 h-4" /> Contact Support
+                         <HelpCircle className="w-4 h-4" /> {t('dashboard.contactSupport')}
                       </button>
                       <button 
                         onClick={() => setShowTips(true)}
                         className="w-full py-3 bg-white text-primary rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors"
                       >
-                         <Lightbulb className="w-4 h-4" /> Organizer Tips
+                         <Lightbulb className="w-4 h-4" /> {t('dashboard.organizerTips')}
                       </button>
                    </div>
                 </div>
@@ -2891,7 +2895,7 @@ export const OrganizerOverview: React.FC<{
          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowSupport(false)}>
            <div className="bg-white w-full max-w-md rounded-3xl p-8 space-y-6 animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
              <div className="flex justify-between items-center">
-               <h3 className="text-2xl font-serif font-bold text-primary">Contact Support</h3>
+               <h3 className="text-2xl font-serif font-bold text-primary">{t('dashboard.contactSupport')}</h3>
                <button onClick={() => setShowSupport(false)} className="p-2 hover:bg-gray-100 rounded-full"><X className="w-5 h-5 text-gray-500" /></button>
              </div>
              <SupportForm onSuccess={() => setShowSupport(false)} />
@@ -2904,7 +2908,7 @@ export const OrganizerOverview: React.FC<{
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowTips(false)}>
           <div className="bg-white w-full max-w-lg rounded-3xl p-8 space-y-6 animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center">
-              <h3 className="text-2xl font-serif font-bold text-primary">Organizer Tips</h3>
+              <h3 className="text-2xl font-serif font-bold text-primary">{t('dashboard.organizerTips')}</h3>
               <button onClick={() => setShowTips(false)} className="p-2 hover:bg-gray-100 rounded-full"><X className="w-5 h-5 text-gray-500" /></button>
             </div>
             <div className="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
