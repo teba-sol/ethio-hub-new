@@ -219,9 +219,9 @@ html {
   text-wrap: balance;
 }
 
-/* Gold accent gradient */
-.gold-gradient {
-  background: linear-gradient(135deg, #D4AF37 0%, #c89b2c 50%, #b8962e 100%);
+/* Gold accent solid */
+.gold-solid {
+  background-color: #c89b2c;
 }
 
 /* Subtle pattern overlay */
@@ -239,7 +239,7 @@ html {
 
 /* Mode Global Overrides */
 body {
-  background-color: #ffffff;
+  background-color: #f8f9fa;
   color: #111827;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
@@ -249,13 +249,13 @@ html.dark body {
   color: #ffffff !important;
 }
 
-/* Ensure white background in light mode and blue-black in dark mode for key components */
+/* Ensure solid backgrounds */
 .bg-white {
   background-color: #ffffff;
 }
 
 html.dark .bg-white {
-  background-color: #0d1f1a !important; /* Slightly lighter blue-black for cards */
+  background-color: #0d1f1a !important; 
 }
 
 html.dark .text-gray-900 {

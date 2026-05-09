@@ -613,10 +613,10 @@ export const Header: React.FC = () => {
     <header 
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 ${
         isScrolled 
-          ? "bg-white/80 backdrop-blur-xl shadow-2xl shadow-black/5 py-3 border-b border-gray-100/50" 
+          ? "bg-white/80 dark:bg-[#0a1411]/80 backdrop-blur-xl shadow-2xl shadow-black/5 py-3 border-b border-gray-100/50 dark:border-white/5" 
           : isHomePage
             ? "bg-transparent py-6"
-            : "bg-white py-5 border-b border-gray-50"
+            : "bg-white dark:bg-[#0a1411] py-5 border-b border-gray-50 dark:border-white/5"
       }`}
     >
       <CartDrawer />

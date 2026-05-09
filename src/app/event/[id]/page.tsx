@@ -7,7 +7,7 @@ import {
   ArrowLeft, MapPin, Calendar, Ticket, Star,
   Clock, Flag, ChevronLeft, ChevronRight, X,
   Heart, Share2, CheckCircle, Award,
-  Coffee, Camera, Music, Shield, Wifi, ParkingCircle,
+  Coffee, Camera, Music, Shield, ShieldCheck, Wifi, ParkingCircle,
   Info, AlertCircle, Sparkles, Utensils, CalendarDays,
   Banknote, Users, Building2, Car, Map as MapIcon,
   ChevronDown, ExternalLink, Globe
@@ -68,6 +68,20 @@ export default function EventPage() {
 
     fetchData();
   }, [eventId, setEvent]);
+
+  // Early Bird Pricing logic
+  const pricing = festival?.pricing;
+  const earlyBirdDeadline = pricing?.earlyBirdDeadline ? new Date(pricing.earlyBirdDeadline) : null;
+  const postedAtRaw = festival?.reviewedAt || festival?.updatedAt || festival?.createdAt;
+  const postedAt = postedAtRaw ? new Date(postedAtRaw) : null;
+  const earlyBirdDays = pricing?.earlyBirdDays || 0;
+  
+  const earlyBirdExpiresAt = earlyBirdDeadline || (postedAt && earlyBirdDays > 0
+    ? new Date(postedAt.getTime() + earlyBirdDays * 24 * 60 * 60 * 1000)
+    : null);
+    
+  const isEarlyBirdAvailable = !!earlyBirdExpiresAt && new Date() <= earlyBirdExpiresAt;
+  const earlyBirdPercent = pricing?.earlyBird || 0;
 
   useEffect(() => {
     if (festival) {
@@ -165,7 +179,10 @@ export default function EventPage() {
     );
   }
 
-  const eventPrice = festival.pricing?.basePrice || festival.baseTicketPrice || 0;
+  const basePrice = festival.pricing?.basePrice || festival.baseTicketPrice || 0;
+  const eventPrice = isEarlyBirdAvailable && earlyBirdPercent > 0 
+    ? Math.round(basePrice * (1 - earlyBirdPercent / 100)) 
+    : basePrice;
   const eventCurrency = festival.pricing?.currency || festival.currency || 'ETB';
 
   const sectionVariants: any = {
@@ -242,8 +259,8 @@ export default function EventPage() {
                   {festival.type || 'Cultural Experience'}
                 </span>
                 {festival.isVerified && (
-                  <span className="bg-emerald-500/20 backdrop-blur-md text-emerald-400 border border-emerald-500/30 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-full flex items-center gap-2">
-                    <Shield className="w-3.5 h-3.5" /> {language === 'am' ? 'የተረጋገጠ' : 'Verified'}
+                  <span className="bg-emerald-500/10 dark:bg-emerald-500/20 backdrop-blur-md text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-full flex items-center gap-2">
+                    <ShieldCheck className="w-3.5 h-3.5" /> {language === 'am' ? 'የተረጋገጠ' : 'Verified'}
                   </span>
                 )}
               </div>
@@ -275,9 +292,9 @@ export default function EventPage() {
         <motion.div
           animate={{ y: [0, 10, 0] }}
           transition={{ duration: 2, repeat: Infinity }}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-50"
+          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-70 text-gray-900 dark:text-white"
         >
-          <span className="text-[10px] uppercase tracking-[0.4em] font-bold">Scroll</span>
+          <span className="text-[10px] uppercase tracking-[0.4em] font-black">Scroll</span>
           <ChevronDown className="w-4 h-4" />
         </motion.div>
       </section>
@@ -358,9 +375,16 @@ export default function EventPage() {
               {/* Price Callout */}
               <div className="bg-gray-50 dark:bg-gradient-to-br dark:from-secondary/10 dark:to-primary/10 border border-gray-100 dark:border-secondary/20 rounded-[32px] p-8 backdrop-blur-xl transition-all">
                 <p className="text-xs font-bold text-secondary uppercase tracking-[0.3em] mb-4">{language === 'am' ? 'ጀምሮ' : 'Starting From'}</p>
-                <div className="flex items-baseline gap-2 mb-8">
-                  <span className="text-5xl font-serif font-bold text-gray-900 dark:text-white transition-colors">{eventPrice}</span>
-                  <span className="text-xl font-light text-gray-500 dark:text-white/60 transition-colors">{eventCurrency}</span>
+                <div className="flex flex-col gap-1 mb-8">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-5xl font-serif font-bold text-gray-900 dark:text-white transition-colors">{eventPrice}</span>
+                    <span className="text-xl font-light text-gray-500 dark:text-white/60 transition-colors">{eventCurrency}</span>
+                  </div>
+                  {eventPrice < basePrice && (
+                    <span className="text-sm font-bold text-red-500 line-through opacity-80">
+                      Was {basePrice} {eventCurrency}
+                    </span>
+                  )}
                 </div>
                 <Link href={`/event/${festival._id}/tickets`}>
                   <motion.button
@@ -368,7 +392,7 @@ export default function EventPage() {
                     whileTap={{ scale: 0.98 }}
                     className="w-full py-4 bg-secondary text-primary font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-secondary/10"
                   >
-                    {language === 'am' ? 'ቲኬት ይቁረጡ' : 'Book Your Passage'}
+                    {language === 'am' ? 'ቦታዎን ያስይዙ' : 'Proceed to Booking'}
                   </motion.button>
                 </Link>
               </div>
@@ -603,7 +627,7 @@ export default function EventPage() {
           >
             <div className="text-center mb-24 space-y-4">
               <span className="text-xs font-bold uppercase tracking-[0.5em] text-secondary">The Full Experience</span>
-              <h2 className="text-5xl md:text-7xl font-serif font-bold text-white leading-tight">
+              <h2 className="text-5xl md:text-7xl font-serif font-bold text-gray-900 dark:text-white leading-tight">
                 {language === 'am' ? 'ልዩ አገልግሎቶች' : 'Curated Services'}
               </h2>
             </div>
@@ -695,7 +719,68 @@ export default function EventPage() {
           </motion.section>
         )}
 
-        {/* Tickets & Reservation Section */}
+        {/* Policies & Rules Section */}
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={sectionVariants}
+          className="max-w-7xl mx-auto"
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+            <div className="lg:col-span-1 space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="h-px w-12 bg-secondary" />
+                <span className="text-xs font-bold uppercase tracking-[0.4em] text-secondary">Policies</span>
+              </div>
+              <h2 className="text-4xl font-serif font-bold text-gray-900 dark:text-white leading-tight">
+                Rules of the Journey
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400 font-light leading-relaxed">
+                Important information regarding your participation in this cultural experience.
+              </p>
+            </div>
+
+            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
+              {[
+                { 
+                  title: language === 'am' ? 'የስረዛ ፖሊሲ' : 'Cancellation Policy', 
+                  content: getLocalizedText(festival.policies as any, 'cancellation', language) || festival.cancellationPolicy || 'Standard cancellation policies apply.',
+                  icon: AlertCircle 
+                },
+                { 
+                  title: language === 'am' ? 'የደህንነት ደንቦች' : 'Safety & Health', 
+                  content: getLocalizedText(festival.policies as any, 'safety', language) || festival.safetyRules || 'All guests must follow on-site safety protocols.',
+                  icon: Shield 
+                },
+                { 
+                  title: language === 'am' ? 'የዕድሜ ገደብ' : 'Age Guidelines', 
+                  content: getLocalizedText(festival.policies as any, 'ageRestriction', language) || festival.ageRestriction || 'Please check specific age requirements for this event.',
+                  icon: Users 
+                },
+                { 
+                  title: language === 'am' ? 'የቦታ አጠቃቀም ደንቦች' : 'Booking Terms', 
+                  content: getLocalizedText(festival.policies as any, 'terms', language) || festival.bookingTerms || 'By booking, you agree to the event terms and conditions.',
+                  icon: Info 
+                }
+              ].map((policy, pi) => (
+                <div key={pi} className="p-8 bg-gray-50 dark:bg-white/5 rounded-[32px] border border-gray-100 dark:border-white/10 space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-secondary/10 rounded-xl">
+                      <policy.icon className="w-5 h-5 text-secondary" />
+                    </div>
+                    <h4 className="font-bold text-gray-900 dark:text-white">{policy.title}</h4>
+                  </div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed font-light">
+                    {policy.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.section>
+
+        {/* Final CTA Section */}
         <motion.section
           id="tickets"
           initial="hidden"
@@ -704,76 +789,49 @@ export default function EventPage() {
           variants={sectionVariants}
           className="max-w-4xl mx-auto"
         >
-          <div className="bg-gradient-to-br from-primary via-primary/80 to-[#0a3d2e] rounded-[56px] p-12 md:p-20 text-center relative overflow-hidden shadow-2xl shadow-primary/40 border border-white/10">
+          <div className="bg-primary rounded-[56px] p-12 md:p-20 text-center relative overflow-hidden shadow-2xl shadow-primary/40 border border-white/10">
             {/* Background Texture */}
             <div className="absolute inset-0 opacity-10 mix-blend-overlay">
               <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
             </div>
-            <div className="absolute -top-24 -left-24 w-64 h-64 bg-secondary/20 rounded-full blur-[100px]" />
-            <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-primary/20 rounded-full blur-[100px]" />
-
-            <div className="relative z-10 space-y-12">
+            
+            <div className="relative z-10 space-y-10">
               <div className="space-y-6">
                 <div className="inline-flex items-center gap-3 px-6 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full text-white text-[10px] font-black uppercase tracking-[0.3em]">
-                  <Ticket className="w-4 h-4 text-secondary" />
-                  {language === 'am' ? 'ቦታዎን ይያዙ' : 'Reserve Your Place'}
+                  <Sparkles className="w-4 h-4 text-secondary" />
+                  {language === 'am' ? 'ጉዞዎን ይጀምሩ' : 'Begin Your Journey'}
                 </div>
                 <h2 className="text-5xl md:text-7xl font-serif font-bold text-white leading-tight">
-                  {language === 'am' ? 'የቲኬት ዓይነቶች' : 'Choose Your Passage'}
+                  {language === 'am' ? 'ለመሳተፍ ተዘጋጅተዋል?' : 'Ready to Experience the Magic?'}
                 </h2>
                 <p className="text-white/60 text-xl font-light max-w-2xl mx-auto">
-                  Secure your entry to Ethiopia's most prestigious cultural gathering. Select the tier that best suits your journey.
+                  Step into the vibrant heart of Ethiopian culture. Secure your passage and create memories that will last a lifetime.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-6">
-                {festival.ticketTypes?.map((ticket: any, idx: number) => (
-                  <motion.div
-                    key={idx}
-                    whileHover={{ scale: 1.02 }}
-                    className="flex flex-col md:flex-row items-center justify-between p-8 bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[32px] gap-8 hover:bg-white/10 transition-all"
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+                <Link href={`/event/${festival._id}/tickets`} className="w-full sm:w-auto">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-full sm:px-12 py-5 bg-secondary text-primary font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-secondary/30"
                   >
-                    <div className="flex flex-col md:items-start gap-2">
-                      <h3 className="text-3xl font-serif font-bold text-white">{getLocalizedText(ticket, 'name', language)}</h3>
-                      <p className="text-white/40 text-sm font-medium uppercase tracking-widest">
-                        {ticket.available} Spots Remaining
-                      </p>
-                    </div>
-
-                    <div className="flex flex-col md:flex-row items-center gap-8">
-                      <div className="text-center md:text-right">
-                        <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block mb-1">Price</span>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-4xl font-serif font-bold text-white">{ticket.price}</span>
-                          <span className="text-sm font-light text-white/60">{eventCurrency}</span>
-                        </div>
-                      </div>
-                      <Link href={`/event/${festival._id}/tickets?type=${ticket.name}`} className="w-full md:w-auto">
-                        <motion.button
-                          whileTap={{ scale: 0.95 }}
-                          className="w-full md:px-12 py-5 bg-secondary text-primary font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-secondary/20"
-                        >
-                          Select Tier
-                        </motion.button>
-                      </Link>
-                    </div>
-                  </motion.div>
-                ))}
+                    {language === 'am' ? 'አሁኑኑ ይቁረጡ' : 'Book Your Passage Now'}
+                  </motion.button>
+                </Link>
               </div>
 
               <div className="flex flex-wrap items-center justify-center gap-8 text-white/40 pt-12 border-t border-white/5">
-                <div className="flex items-center gap-3">
-                  <Shield className="w-5 h-5 text-secondary" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Secure Payments</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-secondary" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Instant Confirmation</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Award className="w-5 h-5 text-secondary" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Verified Event</span>
-                </div>
+                {[
+                  { icon: Shield, text: language === 'am' ? 'አስተማማኝ ክፍያ' : 'Secure Payments' },
+                  { icon: CheckCircle, text: language === 'am' ? 'ፈጣን ማረጋገጫ' : 'Instant Confirmation' },
+                  { icon: Award, text: language === 'am' ? 'የተረጋገጠ ዝግጅት' : 'Verified Event' }
+                ].map((badge, bi) => (
+                  <div key={bi} className="flex items-center gap-3">
+                    <badge.icon className="w-5 h-5 text-secondary" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">{badge.text}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
