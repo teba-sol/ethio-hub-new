@@ -503,3 +503,53 @@ export const sendUserWelcomeEmail = async (input: UserWelcomeEmailInput) => {
     buildUserWelcomeHtml(input)
   );
 };
+
+type RefundStatusEmailInput = {
+  to: string;
+  name: string;
+  orderId: string;
+  status: 'processing' | 'rejected' | 'completed';
+  amount: number;
+  reason?: string;
+  adminNotes?: string;
+};
+
+const buildRefundStatusHtml = (input: RefundStatusEmailInput) => {
+  const statusColors = {
+    processing: '#3b82f6',
+    rejected: '#ef4444',
+    completed: '#10b981'
+  };
+  const statusText = {
+    processing: 'Being Processed',
+    rejected: 'Rejected',
+    completed: 'Completed'
+  };
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1f2937;">
+      <h2 style="margin-bottom: 16px; color: #0f172a;">Refund Request Update</h2>
+      <p style="margin-bottom: 16px;">Hello ${input.name},</p>
+      <p style="margin-bottom: 16px;">Your refund request for order <strong>#${input.orderId.slice(-6).toUpperCase()}</strong> has been updated.</p>
+      
+      <div style="margin: 24px 0; padding: 20px 24px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px;">
+        <p style="margin-bottom: 8px;"><strong>Status:</strong> <span style="color: ${statusColors[input.status]}; font-weight: 700;">${statusText[input.status]}</span></p>
+        <p style="margin-bottom: 8px;"><strong>Amount:</strong> ETB ${input.amount.toLocaleString()}</p>
+        ${input.adminNotes ? `<p style="margin-top: 12px; font-style: italic; color: #64748b;"><strong>Admin Note:</strong> ${input.adminNotes}</p>` : ''}
+      </div>
+
+      ${input.status === 'completed' ? '<p style="color: #10b981; font-weight: 600;">The funds have been transferred to your account.</p>' : ''}
+      ${input.status === 'rejected' ? '<p style="color: #ef4444;">Please contact support if you have any questions regarding this decision.</p>' : ''}
+      
+      <p style="margin-top: 32px; color: #64748b; font-size: 13px;">Thank you for using Ethio Craft Hub.</p>
+    </div>
+  `;
+};
+
+export const sendRefundStatusEmail = async (input: RefundStatusEmailInput) => {
+  await sendMail(
+    input.to,
+    `Refund Request Update - Order #${input.orderId.slice(-6).toUpperCase()}`,
+    buildRefundStatusHtml(input)
+  );
+};

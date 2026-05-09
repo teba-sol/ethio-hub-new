@@ -57,6 +57,10 @@ export const AdminRefundRequestsPage: React.FC = () => {
   const [action, setAction] = useState<string>('');
   const [adminNotes, setAdminNotes] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'processing'; message: string } | null>(null);
+  const [showPayoutModal, setShowPayoutModal] = useState(false);
+  const [payoutAmount, setPayoutAmount] = useState('');
+  const [payoutPhone, setPayoutPhone] = useState('');
 
   useEffect(() => {
     fetchRefundRequests();
@@ -81,6 +85,14 @@ export const AdminRefundRequestsPage: React.FC = () => {
   const handleProcessRefund = async (requestId: string, actionType: 'process' | 'complete' | 'reject') => {
     setProcessing(requestId);
     setAction(actionType);
+    
+    // Show processing notification
+    setNotification({
+      type: 'processing',
+      message: actionType === 'process' ? 'Initializing refund process...' : 
+               actionType === 'reject' ? 'Rejecting request...' : 'Completing disbursement...'
+    });
+
     try {
       const res = await fetch('/api/admin/refund', {
         method: 'PUT',
@@ -88,23 +100,42 @@ export const AdminRefundRequestsPage: React.FC = () => {
         body: JSON.stringify({ 
           refundRequestId: requestId, 
           action: actionType,
-          adminNotes 
+          adminNotes,
+          payoutAmount: actionType === 'complete' ? payoutAmount : undefined,
+          payoutPhone: actionType === 'complete' ? payoutPhone : undefined
         }),
       });
       const data = await res.json();
       if (data.success) {
-        alert(`Refund ${actionType} successful`);
+        setNotification({
+          type: 'success',
+          message: actionType === 'process' ? 'Refund process started successfully' : 
+                   actionType === 'reject' ? 'Refund request rejected' : 'Refund disbursement completed'
+        });
         setSelectedRequest(null);
+        setShowPayoutModal(false);
         setAdminNotes('');
+        setPayoutAmount('');
+        setPayoutPhone('');
         fetchRefundRequests();
       } else {
-        alert(data.message || 'Failed to process refund');
+        setNotification({
+          type: 'error',
+          message: data.message || 'Failed to process refund'
+        });
       }
     } catch (err) {
-      alert('Error processing refund');
+      setNotification({
+        type: 'error',
+        message: 'An error occurred during processing'
+      });
     } finally {
       setProcessing(null);
       setAction('');
+      // Dismiss notification after 3 seconds if not an error or processing
+      setTimeout(() => {
+        setNotification(prev => (prev?.type !== 'error' && prev?.type !== 'processing') ? null : prev);
+      }, 3000);
     }
   };
 
@@ -368,9 +399,12 @@ export const AdminRefundRequestsPage: React.FC = () => {
                 <div className="flex gap-3 pt-4">
                   <Button 
                     className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                    onClick={() => handleProcessRefund(selectedRequest._id, 'complete')}
+                    onClick={() => {
+                      setPayoutAmount(selectedRequest.amount.toString());
+                      setPayoutPhone(selectedRequest.touristId?.phone || '');
+                      setShowPayoutModal(true);
+                    }}
                     disabled={processing === selectedRequest._id}
-                    isLoading={processing === selectedRequest._id && action === 'complete'}
                   >
                     Send to User
                   </Button>
@@ -383,6 +417,100 @@ export const AdminRefundRequestsPage: React.FC = () => {
                   <p className="font-bold text-emerald-800">Refund Completed</p>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Notification Modal */}
+      {notification && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-300">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${
+              notification.type === 'processing' ? 'bg-blue-50 text-blue-600' :
+              notification.type === 'success' ? 'bg-emerald-50 text-emerald-600' :
+              'bg-red-50 text-red-600'
+            }`}>
+              {notification.type === 'processing' && <RefreshCw className="w-8 h-8 animate-spin" />}
+              {notification.type === 'success' && <CheckCircle className="w-8 h-8" />}
+              {notification.type === 'error' && <AlertCircle className="w-8 h-8" />}
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">
+                {notification.type === 'processing' ? 'Processing' : 
+                 notification.type === 'success' ? 'Success' : 'Attention'}
+              </h3>
+              <p className="text-gray-500 mt-2">{notification.message}</p>
+            </div>
+            {notification.type !== 'processing' && (
+              <Button 
+                fullWidth 
+                onClick={() => setNotification(null)}
+                variant={notification.type === 'error' ? 'outline' : 'solid'}
+              >
+                Dismiss
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Payout Modal */}
+      {showPayoutModal && selectedRequest && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-6 bg-emerald-600 text-white">
+              <h3 className="text-xl font-bold">Process Refund Payment</h3>
+              <p className="text-sm text-white/80">Disburse funds to {selectedRequest.touristId?.name}</p>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Refund Amount (ETB)</label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input 
+                      type="number"
+                      value={payoutAmount}
+                      onChange={(e) => setPayoutAmount(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none font-bold text-lg"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Transfer To (Phone Number)</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input 
+                      type="text"
+                      value={payoutPhone}
+                      onChange={(e) => setPayoutPhone(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-emerald-700">Disbursement Method</span>
+                  <Badge className="bg-white text-emerald-700 border-emerald-200">
+                    {selectedRequest.refundMethod === 'bank' ? 'Bank Transfer' : 'Telebirr'}
+                  </Badge>
+                </div>
+                <p className="text-xs text-emerald-600">The amount will be deducted from the pending refund total.</p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" className="flex-1" onClick={() => setShowPayoutModal(false)}>Cancel</Button>
+                <Button 
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                  onClick={() => handleProcessRefund(selectedRequest._id, 'complete')}
+                  disabled={!payoutAmount || !payoutPhone || processing !== null}
+                  isLoading={processing === selectedRequest._id}
+                >
+                  Send Refund
+                </Button>
+              </div>
             </div>
           </div>
         </div>

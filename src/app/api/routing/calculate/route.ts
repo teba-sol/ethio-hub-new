@@ -11,13 +11,8 @@ interface RoutingResult {
 }
 
 function calculateShippingFee(distanceKm: number): number {
-  if (distanceKm < 5) {
-    return 100;
-  } else if (distanceKm <= 15) {
-    return 250;
-  } else {
-    return 450;
-  }
+  // 50 birr per KM, minimum 50 birr
+  return Math.max(50, Math.round(distanceKm * 50));
 }
 
 export async function POST(request: NextRequest) {

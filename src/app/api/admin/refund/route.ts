@@ -52,7 +52,9 @@ export async function GET(req: Request) {
       pending: refundRequests.filter(r => r.status === 'pending').length,
       processing: refundRequests.filter(r => r.status === 'processing').length,
       completed: refundRequests.filter(r => r.status === 'completed').length,
-      totalAmount: refundRequests.reduce((sum, r) => sum + r.amount, 0),
+      totalAmount: refundRequests
+        .filter(r => r.status !== 'completed')
+        .reduce((sum, r) => sum + r.amount, 0),
     };
 
     return NextResponse.json({
@@ -82,15 +84,33 @@ export async function PUT(req: Request) {
       return NextResponse.json({ message: 'Refund request ID and action are required' }, { status: 400 });
     }
 
-    const refundReq = await RefundRequest.findById(refundRequestId);
+    const refundReq = await RefundRequest.findById(refundRequestId).populate('touristId', 'name email');
     if (!refundReq) {
       return NextResponse.json({ message: 'Refund request not found' }, { status: 404 });
     }
+
+    const { sendRefundStatusEmail } = await import('@/lib/email');
 
     if (action === 'process') {
       refundReq.status = 'processing';
       refundReq.adminNotes = adminNotes || '';
       await refundReq.save();
+
+      // Send email to tourist
+      if (refundReq.touristId && (refundReq.touristId as any).email) {
+        try {
+          await sendRefundStatusEmail({
+            to: (refundReq.touristId as any).email,
+            name: (refundReq.touristId as any).name,
+            orderId: refundReq.orderId.toString(),
+            status: 'processing',
+            amount: refundReq.amount,
+            adminNotes: refundReq.adminNotes
+          });
+        } catch (e) {
+          console.error('Failed to send processing email:', e);
+        }
+      }
 
       return NextResponse.json({
         success: true,
@@ -145,6 +165,22 @@ export async function PUT(req: Request) {
 
       await Promise.all([order.save(), refundReq.save()]);
 
+      // Send email to tourist
+      if (refundReq.touristId && (refundReq.touristId as any).email) {
+        try {
+          await sendRefundStatusEmail({
+            to: (refundReq.touristId as any).email,
+            name: (refundReq.touristId as any).name,
+            orderId: refundReq.orderId.toString(),
+            status: 'completed',
+            amount: refundReq.amount,
+            adminNotes: refundReq.adminNotes
+          });
+        } catch (e) {
+          console.error('Failed to send completion email:', e);
+        }
+      }
+
       return NextResponse.json({
         success: true,
         message: 'Refund completed successfully',
@@ -159,7 +195,8 @@ export async function PUT(req: Request) {
     }
 
     if (action === 'reject') {
-      refundReq.status = 'pending';
+      refundReq.status = 'rejected';
+      
       refundReq.adminNotes = adminNotes || 'Refund request rejected';
 
       const order = await Order.findById(refundReq.orderId);
@@ -174,6 +211,22 @@ export async function PUT(req: Request) {
       }
 
       await refundReq.save();
+
+      // Send email to tourist
+      if (refundReq.touristId && (refundReq.touristId as any).email) {
+        try {
+          await sendRefundStatusEmail({
+            to: (refundReq.touristId as any).email,
+            name: (refundReq.touristId as any).name,
+            orderId: refundReq.orderId.toString(),
+            status: 'rejected',
+            amount: refundReq.amount,
+            adminNotes: refundReq.adminNotes
+          });
+        } catch (e) {
+          console.error('Failed to send rejection email:', e);
+        }
+      }
 
       return NextResponse.json({
         success: true,

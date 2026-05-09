@@ -1741,6 +1741,7 @@ const [transactionRef, setTransactionRef] = useState("");
      longitude?: number;
    } | null>(null);
    const [calculatedShippingFee, setCalculatedShippingFee] = useState<number | null>(null);
+   const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
    const [calculatingFee, setCalculatingFee] = useState(false);
    const [locationCoords, setLocationCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   
@@ -1820,6 +1821,7 @@ const [transactionRef, setTransactionRef] = useState("");
     setShowLocationModal(true);
     setShippingLocation(null);
     setCalculatedShippingFee(null);
+    setCalculatedDistance(null);
     setLocationCoords(null);
   };
 
@@ -1882,6 +1884,7 @@ const [transactionRef, setTransactionRef] = useState("");
         const feeData = await res.json();
         if (feeData.success) {
           setCalculatedShippingFee(feeData.shippingFee);
+          setCalculatedDistance(feeData.distanceKm);
         }
       }
     } catch (err) {
@@ -2484,7 +2487,14 @@ const [transactionRef, setTransactionRef] = useState("");
                                         <span className="font-bold text-primary">{product.price * quantity} ETB</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm text-emerald-600">
-                                        <span className="font-medium">Shipping Fee</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium">Shipping Fee</span>
+                                            {calculatedDistance !== null && (
+                                                <span className="text-[10px] bg-emerald-50 px-2 py-0.5 rounded-full">
+                                                    {calculatedDistance.toFixed(1)} KM
+                                                </span>
+                                            )}
+                                        </div>
                                         <span className="font-bold">{calculatedShippingFee} ETB</span>
                                     </div>
                                 </div>

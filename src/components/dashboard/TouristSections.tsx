@@ -350,7 +350,18 @@ export const TouristOrdersView: React.FC = () => {
     return matchesSearch;
   });
 
-  const getOrderStatusBadge = (status: string, paymentStatus: string) => {
+  const getOrderStatusBadge = (status: string, paymentStatus: string, refundRequest?: any) => {
+    if (refundRequest) {
+      const styles: Record<string, { variant: string; label: string }> = {
+        'pending': { variant: 'warning', label: 'Refund Requested' },
+        'processing': { variant: 'info', label: 'Refund Processing' },
+        'completed': { variant: 'success', label: 'Refund Completed' },
+        'rejected': { variant: 'error', label: 'Refund Rejected' },
+      };
+      const style = styles[refundRequest.status] || { variant: 'secondary', label: 'Refund Update' };
+      return <Badge variant={style.variant as any} className="capitalize">{style.label}</Badge>;
+    }
+
     const statusStyles: Record<string, { variant: string; label: string }> = {
       'Awaiting Payment': { variant: 'info', label: 'Paid' },
       'Pending': { variant: 'warning', label: 'Pending' },
@@ -420,7 +431,7 @@ export const TouristOrdersView: React.FC = () => {
                     <h3 className="font-bold text-primary text-lg">#{order._id?.slice(-8).toUpperCase()}</h3>
                     <p className="text-sm text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
                   </div>
-                  {getOrderStatusBadge(order.status, order.paymentStatus)}
+                  {getOrderStatusBadge(order.status, order.paymentStatus, order.refundRequest)}
                 </div>
                 <p className="text-gray-600 text-sm mb-4">{order.product?.name || 'Product'}</p>
                 <div className="flex justify-between items-center pt-4 border-t border-gray-50">
@@ -459,7 +470,7 @@ export const TouristOrdersView: React.FC = () => {
                 <div>
                   <p className="font-bold text-primary">#{selectedOrder._id?.slice(-8).toUpperCase()}</p>
                   <p className="text-sm text-gray-500">{new Date(selectedOrder.createdAt).toLocaleString('en-ET', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                  {getOrderStatusBadge(selectedOrder.status, selectedOrder.paymentStatus)}
+                  {getOrderStatusBadge(selectedOrder.status, selectedOrder.paymentStatus, selectedOrder.refundRequest)}
                 </div>
               </div>
 
@@ -534,23 +545,51 @@ export const TouristOrdersView: React.FC = () => {
                 </div>
               </div>
 
-              {selectedOrder?.status === 'Returned' && (
-                <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
-                  <h4 className="font-bold text-sm text-amber-700 mb-1">Refund Status</h4>
-                  <p className="text-sm text-amber-600">
-                    Refund request submitted — awaiting admin review.
-                  </p>
-                </div>
-              )}
+                {selectedOrder.refundRequest && (
+                  <div className={`p-4 rounded-xl border ${
+                    selectedOrder.refundRequest.status === 'completed' ? 'bg-emerald-50 border-emerald-100' :
+                    selectedOrder.refundRequest.status === 'rejected' ? 'bg-red-50 border-red-100' :
+                    selectedOrder.refundRequest.status === 'processing' ? 'bg-blue-50 border-blue-100' :
+                    'bg-amber-50 border-amber-100'
+                  }`}>
+                    <h4 className={`font-bold text-sm mb-1 ${
+                      selectedOrder.refundRequest.status === 'completed' ? 'text-emerald-800' :
+                      selectedOrder.refundRequest.status === 'rejected' ? 'text-red-800' :
+                      selectedOrder.refundRequest.status === 'processing' ? 'text-blue-800' :
+                      'text-amber-800'
+                    }`}>Refund Status: {selectedOrder.refundRequest.status.charAt(0).toUpperCase() + selectedOrder.refundRequest.status.slice(1)}</h4>
+                    <p className={`text-sm ${
+                      selectedOrder.refundRequest.status === 'completed' ? 'text-emerald-600' :
+                      selectedOrder.refundRequest.status === 'rejected' ? 'text-red-600' :
+                      selectedOrder.refundRequest.status === 'processing' ? 'text-blue-600' :
+                      'text-amber-600'
+                    }`}>
+                      {selectedOrder.refundRequest.status === 'completed' ? 'The refund has been successfully disbursed to your account.' :
+                       selectedOrder.refundRequest.status === 'rejected' ? 'Your refund request was rejected by the admin.' :
+                       selectedOrder.refundRequest.status === 'processing' ? 'Admin is currently processing your refund payment.' :
+                       'Your refund request has been received and is awaiting review.'}
+                    </p>
+                    {selectedOrder.refundRequest.adminNotes && (
+                      <div className="mt-2 pt-2 border-t border-black/5">
+                        <p className="text-xs font-bold opacity-50 uppercase">Admin Note</p>
+                        <p className="text-sm italic">{selectedOrder.refundRequest.adminNotes}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
               <div className="flex gap-3 pt-2">
-                {selectedOrder?.status === 'Returned' ? (
+                {selectedOrder?.refundRequest ? (
                   <Button
                     variant="outline"
-                    className="flex-1 border-amber-200 text-amber-600 bg-amber-50 cursor-not-allowed"
+                    className={`flex-1 cursor-not-allowed ${
+                      selectedOrder.refundRequest.status === 'completed' ? 'border-emerald-200 text-emerald-600 bg-emerald-50' :
+                      selectedOrder.refundRequest.status === 'rejected' ? 'border-red-200 text-red-600 bg-red-50' :
+                      'border-amber-200 text-amber-600 bg-amber-50'
+                    }`}
                     disabled
                   >
-                    Refund Requested
+                    Refund {selectedOrder.refundRequest.status.charAt(0).toUpperCase() + selectedOrder.refundRequest.status.slice(1)}
                   </Button>
                 ) : selectedOrder?.status !== 'Delivered' ? (
                   <Button
