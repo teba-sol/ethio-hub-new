@@ -120,12 +120,14 @@ export async function POST(
     // Mock payment - in real scenario, this would integrate with telebirr or bank API
     console.log(`Mock payment: Sending ${amount} ETB to phone ${phone} for delivery guy ${deliveryGuyId}`);
     
-    // Update wallet - deduct from deliveryEarnings (mock)
+    // Update wallet - deduct from availableBalance
     const wallet = await Wallet.findOne({ userId: deliveryGuyId });
     if (wallet) {
-      const deductAmount = Math.min(amount, wallet.deliveryEarnings);
-      wallet.deliveryEarnings = Math.max(0, wallet.deliveryEarnings - deductAmount);
-      wallet.lifetimePaidOut = (wallet.lifetimePaidOut || 0) + deductAmount;
+      if (wallet.availableBalance < amount) {
+        return NextResponse.json({ success: false, message: 'Insufficient balance' }, { status: 400 });
+      }
+      wallet.availableBalance -= amount;
+      wallet.lifetimePaidOut = (wallet.lifetimePaidOut || 0) + amount;
       await wallet.save();
     }
     

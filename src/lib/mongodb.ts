@@ -21,8 +21,18 @@ export async function connectDB() {
   }
 
   if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGO_URI, {
-      dbName: "ethio-craft-hub"
+    const opts = {
+      dbName: "ethio-craft-hub",
+      bufferCommands: false,
+    };
+
+    cached.promise = mongoose.connect(MONGO_URI, opts).then((mongoose) => {
+      console.log('MongoDB: Connected successfully');
+      return mongoose;
+    }).catch((error) => {
+      console.error('MongoDB: Connection error:', error);
+      cached.promise = null;
+      throw error;
     });
   }
 
