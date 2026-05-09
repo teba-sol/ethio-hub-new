@@ -5,7 +5,8 @@ import { Festival, HotelAccommodation, RoomType, TransportOption, FoodPackage } 
 
 interface TicketSelection {
   type: 'vip' | 'standard' | 'earlyBird';
-  price: number;
+  price: number; // Discounted price
+  originalPrice?: number; // Base price before discount
   quantity: number;
 }
 
@@ -107,32 +108,15 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   // Pricing calculations
-  const isEarlyBirdValid = () => {
-    if (!event?.startDate || !event?.pricing?.earlyBird || !event?.pricing?.earlyBirdDays) return false;
-    const eventStart = new Date(event.startDate);
-    const validUntil = new Date(eventStart);
-    validUntil.setDate(validUntil.getDate() + event.pricing.earlyBirdDays);
-    return new Date() <= validUntil;
-  };
-
-  const getEarlyBirdDiscount = () => {
-    if (!isEarlyBirdValid()) return 0;
-    return event?.pricing?.earlyBird || 0;
-  };
-
   const getTicketTotal = () => {
     if (!ticketSelection) return 0;
-    const basePrice = ticketSelection.price * ticketSelection.quantity;
-    const discount = getEarlyBirdDiscount();
-    if (discount > 0) {
-      return Math.round(basePrice * (1 - discount / 100) * 100) / 100;
-    }
-    return basePrice;
+    return ticketSelection.price * ticketSelection.quantity;
   };
   
   const getTicketTotalWithoutDiscount = () => {
     if (!ticketSelection) return 0;
-    return ticketSelection.price * ticketSelection.quantity;
+    const base = ticketSelection.originalPrice || ticketSelection.price;
+    return base * ticketSelection.quantity;
   };
   
   const getEarlyBirdSavings = () => {

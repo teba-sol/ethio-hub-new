@@ -88,7 +88,8 @@ export default function TicketsPage() {
 
    const handleSelect = (type: 'vip' | 'standard') => {
     const price = type === 'vip' ? vipPrice : standardPrice;
-    setTicketSelection({ type, price, quantity: 1 });
+    const originalPrice = type === 'vip' ? vipPriceBase : basePrice;
+    setTicketSelection({ type, price, originalPrice, quantity: 1 });
   };
 
   const handleCheckoutDirectly = () => {

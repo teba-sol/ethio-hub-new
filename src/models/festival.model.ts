@@ -46,6 +46,7 @@ export interface IHotel extends Document {
   name_am: string;
   starRating: number;
   address: string;
+  coordinates?: { lat?: number; lng?: number };
   description: string; // for backward compatibility
   description_en?: string;
   description_am?: string;
@@ -226,6 +227,10 @@ const HotelSchema: Schema = new Schema({
   name_am: { type: String },
   starRating: { type: Number },
   address: { type: String },
+  coordinates: {
+    lat: { type: Number },
+    lng: { type: Number }
+  },
   description: { type: String },
   description_en: { type: String },
   description_am: { type: String },
@@ -244,6 +249,9 @@ const HotelSchema: Schema = new Schema({
     price: { type: Number },
     description: { type: String }
   }],
+  foodAndDrink: [{ type: String }],
+  hotelRules: [{ type: String }],
+  propertyType: { type: String },
 });
 
 const TransportationSchema: Schema = new Schema({

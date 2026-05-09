@@ -61,6 +61,12 @@ export const EventDetailPanel: React.FC<{ eventId: string; onBack: () => void }>
   const [uploadingImage, setUploadingImage] = useState(false);
 const [imageUploadType, setImageUploadType] = useState<'cover' | 'gallery'>('cover');
 const [imageIndex, setImageIndex] = useState<number | null>(null);
+const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 5000);
+};
 
 const getImageUrl = (path: string | undefined | null) => {
     if (!path || path === '') return 'https://images.unsplash.com/photo-1533174072545-7a4b6dad2cf7?w=800&h=400&fit=crop';
@@ -123,7 +129,7 @@ const getImageUrl = (path: string | undefined | null) => {
       }
     } catch (error) {
       console.error('Upload failed:', error);
-      alert('Failed to upload image');
+      showNotification('Failed to upload image', 'error');
     } finally {
       setUploadingImage(false);
     }
@@ -197,12 +203,12 @@ const getImageUrl = (path: string | undefined | null) => {
          setFestival(updatedFestival);
          setEditData(JSON.parse(JSON.stringify(updatedFestival)));
          setIsEditing(false);
-         alert('Event updated successfully!');
+         showNotification('Event updated successfully!', 'success');
        } else {
-         alert(response.message || 'Failed to update event');
+         showNotification(response.message || 'Failed to update event', 'error');
        }
      } catch (err: any) {
-       alert(err.message || 'An error occurred while saving');
+       showNotification(err.message || 'An error occurred while saving', 'error');
      } finally {
        setSaving(false);
      }
@@ -327,7 +333,7 @@ const getImageUrl = (path: string | undefined | null) => {
   const handleWizardSave = async (updatedFestival: any) => {
     setFestival(updatedFestival);
     setIsEditing(false);
-    alert('Event updated successfully!');
+    showNotification('Event updated successfully!', 'success');
   };
 
   if (isEditing) {
@@ -343,7 +349,35 @@ const getImageUrl = (path: string | undefined | null) => {
    const currentData = (isEditing ? editData : festival) as any;
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20 relative">
+      {/* Modern Notification System */}
+      <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 pointer-events-none">
+        {notification && (
+          <div
+            className={`
+              p-5 rounded-[24px] shadow-2xl backdrop-blur-xl border flex items-center gap-4 pointer-events-auto animate-in fade-in slide-in-from-top-4
+              ${notification.type === 'success' ? 'bg-emerald-50/90 border-emerald-100 text-emerald-800' : 
+                notification.type === 'error' ? 'bg-red-50/90 border-red-100 text-red-800' : 
+                'bg-white/90 border-gray-100 text-gray-800'}
+            `}
+          >
+            <div className={`
+              w-10 h-10 rounded-xl flex items-center justify-center shrink-0
+              ${notification.type === 'success' ? 'bg-emerald-100' : 
+                notification.type === 'error' ? 'bg-red-100' : 
+                'bg-gray-100'}
+            `}>
+              {notification.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : 
+               notification.type === 'error' ? <AlertCircle className="w-5 h-5" /> : 
+               <Info className="w-5 h-5" />}
+            </div>
+            <p className="text-sm font-bold leading-tight">{notification.message}</p>
+            <button onClick={() => setNotification(null)} className="ml-auto p-1 hover:bg-black/5 rounded-lg transition-colors">
+              <X className="w-4 h-4 opacity-40" />
+            </button>
+          </div>
+        )}
+      </div>
       {/* Top Section */}
       <header className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm">
         <div className="flex flex-col lg:flex-row gap-10 items-start lg:items-center">
@@ -380,7 +414,8 @@ const getImageUrl = (path: string | undefined | null) => {
                </button>
                <Badge variant="secondary" className="bg-secondary/10 text-secondary border-none">
                  {currentData.status === 'Completed' || (currentData.endDate && new Date(currentData.endDate) < new Date()) ? 'Completed' : 
-                  currentData.status === 'Published' ? 'Published' : 'Draft'}
+                  currentData.status === 'Published' ? 'Published' : 
+                  (currentData.verificationStatus === 'Pending Approval' || currentData.verificationStatus === 'Under Review') ? 'Under Review' : 'Draft'}
                </Badge>
                {currentData.isVerified && <VerifiedBadge />}
                {/* Verification Status Badge */}
@@ -535,12 +570,12 @@ const getImageUrl = (path: string | undefined | null) => {
                               if (data.success) {
                                 setFestival({ ...festival!, verificationStatus: 'Pending Approval', submittedAt: new Date().toISOString() });
                                 setEditData({ ...editData!, verificationStatus: 'Pending Approval', submittedAt: new Date().toISOString() });
-                                alert('Event resubmitted for review');
+                                showNotification('Event resubmitted for review', 'success');
                               } else {
-                                alert(data.message || 'Failed to resubmit');
+                                showNotification(data.message || 'Failed to resubmit', 'error');
                               }
                             } catch (err) {
-                              alert('Error resubmitting event');
+                              showNotification('Error resubmitting event', 'error');
                             }
                           }}
                         >
@@ -2122,12 +2157,12 @@ const getImageUrl = (path: string | undefined | null) => {
           {isEditing ? (
             <input
               type="number"
-              value={currentData.capacity || 1000}
-              onChange={(e) => handleInputChange('capacity', parseNumberInput(e.target.value))}
+              value={currentData.totalCapacity || 0}
+              onChange={(e) => handleInputChange('totalCapacity', parseNumberInput(e.target.value))}
               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
             />
           ) : (
-            <p className="text-sm font-bold text-primary">{currentData.capacity?.toLocaleString() || '0'}</p>
+            <p className="text-sm font-bold text-primary">{currentData.totalCapacity?.toLocaleString() || '0'}</p>
           )}
         </div>
       </div>
@@ -2151,14 +2186,14 @@ const getImageUrl = (path: string | undefined | null) => {
               <span className="text-xl font-bold text-primary">{currentData.pricing?.currency || 'ETB'}</span>
               <input
                 type="number"
-                value={currentData.pricing?.standardPrice || 0}
-                onChange={(e) => handleNestedChange('pricing', 'standardPrice', parseNumberInput(e.target.value))}
+                value={currentData.pricing?.basePrice || 0}
+                onChange={(e) => handleNestedChange('pricing', 'basePrice', parseNumberInput(e.target.value))}
                 className="flex-1 text-2xl font-bold text-primary bg-transparent border-0 outline-none min-w-0"
               />
             </div>
           ) : (
             <p className="text-3xl font-bold text-primary">
-              {currentData.pricing?.currency || 'ETB'} {(currentData.ticketTypes?.find((t: any) => !t.name?.toLowerCase().includes('vip'))?.price || currentData.pricing?.standardPrice || 0)?.toLocaleString()}
+              {currentData.pricing?.currency || 'ETB'} {(currentData.ticketTypes?.find((t: any) => !t.name?.toLowerCase().includes('vip'))?.price || currentData.pricing?.basePrice || 0)?.toLocaleString()}
             </p>
           )}
         </div>
@@ -2373,38 +2408,75 @@ const getImageUrl = (path: string | undefined | null) => {
     </div>
 
     {/* Early Bird Settings */}
-    <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-      <h4 className="font-bold text-primary mb-4 flex items-center gap-2">
-        <Clock className="w-4 h-4 text-secondary" />
-        Early Bird Discount
-      </h4>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Standard Early Bird (%)</p>
-          {isEditing ? (
-            <input
-              type="number"
-              value={currentData.pricing?.standardEarlyBird || 0}
-              onChange={(e) => handleNestedChange('pricing', 'standardEarlyBird', parseNumberInput(e.target.value))}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
-            />
-          ) : (
-            <p className="text-sm font-bold text-primary">{currentData.pricing?.standardEarlyBird || 0}% off</p>
-          )}
+    <div className="bg-white p-8 rounded-[32px] border border-emerald-100 shadow-sm relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full -mr-16 -mt-16" />
+      <div className="relative">
+        <h4 className="font-bold text-primary mb-6 flex items-center gap-2">
+          <Clock className="w-5 h-5 text-emerald-600" />
+          Early Bird Offer
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Discount Percentage</p>
+            {isEditing ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={currentData.pricing?.earlyBird || 0}
+                  onChange={(e) => handleNestedChange('pricing', 'earlyBird', parseNumberInput(e.target.value))}
+                  className="w-full p-3 bg-gray-50 border border-emerald-200 rounded-xl text-sm"
+                />
+                <span className="text-emerald-700 font-bold">%</span>
+              </div>
+            ) : (
+              <p className="text-2xl font-bold text-emerald-600">{currentData.pricing?.earlyBird || 0}% OFF</p>
+            )}
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Valid For (Days)</p>
+            {isEditing ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={currentData.pricing?.earlyBirdDays || 0}
+                  onChange={(e) => handleNestedChange('pricing', 'earlyBirdDays', parseNumberInput(e.target.value))}
+                  className="w-full p-3 bg-gray-50 border border-emerald-200 rounded-xl text-sm"
+                />
+                <span className="text-gray-500 font-bold">days</span>
+              </div>
+            ) : (
+              <p className="text-2xl font-bold text-gray-800">{currentData.pricing?.earlyBirdDays || 0} <span className="text-sm font-normal text-gray-500">days prior</span></p>
+            )}
+          </div>
         </div>
-        <div>
-          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">VIP Early Bird (%)</p>
-          {isEditing ? (
-            <input
-              type="number"
-              value={currentData.pricing?.vipEarlyBird || 0}
-              onChange={(e) => handleNestedChange('pricing', 'vipEarlyBird', parseNumberInput(e.target.value))}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
-            />
-          ) : (
-            <p className="text-sm font-bold text-primary">{currentData.pricing?.vipEarlyBird || 0}% off</p>
-          )}
-        </div>
+        
+        {/* Discount Previews */}
+        {!isEditing && (currentData.pricing?.earlyBird || 0) > 0 && (() => {
+          const stdPrice = currentData.ticketTypes?.find((t: any) => !t.name?.toLowerCase().includes('vip'))?.price || currentData.pricing?.basePrice || 0;
+          const vipPrice = currentData.ticketTypes?.find((t: any) => t.name?.toLowerCase().includes('vip'))?.price || currentData.pricing?.vipPrice || 0;
+          return (
+            <div className="mt-8 pt-6 border-t border-emerald-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-emerald-50/50 p-4 rounded-xl">
+                <p className="text-xs font-bold text-emerald-800 mb-1">Standard Early Bird</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-lg font-black text-emerald-600">
+                    {currentData.pricing?.currency || 'ETB'} {(stdPrice * (1 - (currentData.pricing?.earlyBird || 0)/100)).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-400 line-through">{stdPrice.toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="bg-emerald-50/50 p-4 rounded-xl">
+                <p className="text-xs font-bold text-emerald-800 mb-1">VIP Early Bird</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-lg font-black text-emerald-600">
+                    {currentData.pricing?.currency || 'ETB'} {(vipPrice * (1 - (currentData.pricing?.earlyBird || 0)/100)).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-400 line-through">{vipPrice.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   </div>
@@ -3845,6 +3917,12 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [eventIdToDelete, setEventIdToDelete] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+      setNotification({ message, type });
+      setTimeout(() => setNotification(null), 5000);
+  };
 
   const tabs = ['All', 'Pending', 'Published', 'Completed', 'Draft', 'Rejected'];
 
@@ -3883,13 +3961,16 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
       if (response.success) {
         setFestivals(prev => prev.filter(f => f._id !== eventIdToDelete));
         setShowDeleteConfirm(false);
+        showNotification('Event deleted successfully', 'success');
       } else {
         setError(response.message || 'Failed to delete event');
         setShowDeleteConfirm(false);
+        showNotification(response.message || 'Failed to delete event', 'error');
       }
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred');
       setShowDeleteConfirm(false);
+      showNotification('An unexpected error occurred', 'error');
     } finally {
       setDeleting(false);
       setEventIdToDelete(null);
@@ -3961,7 +4042,35 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
   }
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20 relative">
+      {/* Modern Notification System */}
+      <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 pointer-events-none">
+        {notification && (
+          <div
+            className={`
+              p-5 rounded-[24px] shadow-2xl backdrop-blur-xl border flex items-center gap-4 pointer-events-auto animate-in fade-in slide-in-from-top-4
+              ${notification.type === 'success' ? 'bg-emerald-50/90 border-emerald-100 text-emerald-800' : 
+                notification.type === 'error' ? 'bg-red-50/90 border-red-100 text-red-800' : 
+                'bg-white/90 border-gray-100 text-gray-800'}
+            `}
+          >
+            <div className={`
+              w-10 h-10 rounded-xl flex items-center justify-center shrink-0
+              ${notification.type === 'success' ? 'bg-emerald-100' : 
+                notification.type === 'error' ? 'bg-red-100' : 
+                'bg-gray-100'}
+            `}>
+              {notification.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : 
+               notification.type === 'error' ? <AlertCircle className="w-5 h-5" /> : 
+               <Info className="w-5 h-5" />}
+            </div>
+            <p className="text-sm font-bold leading-tight">{notification.message}</p>
+            <button onClick={() => setNotification(null)} className="ml-auto p-1 hover:bg-black/5 rounded-lg transition-colors">
+              <X className="w-4 h-4 opacity-40" />
+            </button>
+          </div>
+        )}
+      </div>
       {/* Top Section */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
@@ -4114,7 +4223,7 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
                     }>
                       {
                         festival.verificationStatus === 'Rejected' ? 'Rejected' : 
-                        (festival.verificationStatus === 'Pending Approval' || festival.verificationStatus === 'Pending Review') ? 'Pending' :
+                        (festival.verificationStatus === 'Pending Approval' || festival.verificationStatus === 'Pending Review') ? 'Pending Review' :
                         festival.status === 'Draft' ? 'Draft' : 
                         (festival.status === 'Completed' || new Date(festival.endDate) < new Date() ? 'Completed' : 'Published')
                       }
@@ -4175,12 +4284,12 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
                                const data = await res.json();
                                if (data.success) {
                                  setFestivals(prev => prev.map(f => f._id === festival._id ? { ...f, verificationStatus: 'Pending Approval', submittedAt: new Date().toISOString() } : f));
-                                 alert('Event resubmitted for review');
+                                 showNotification('Event resubmitted for review', 'success');
                                } else {
-                                 alert(data.message || 'Failed to resubmit');
+                                 showNotification(data.message || 'Failed to resubmit', 'error');
                                }
                              } catch (err) {
-                               alert('Error resubmitting event');
+                               showNotification('Error resubmitting event', 'error');
                              }
                            }}
                          >
@@ -4201,12 +4310,12 @@ export const OrganizerMyEventsView: React.FC<{ onManageEvent: (id: string) => vo
                              const data = await res.json();
                              if (data.success) {
                                setFestivals(prev => prev.map(f => f._id === festival._id ? { ...f, verificationStatus: 'Pending Approval', submittedAt: new Date().toISOString() } : f));
-                               alert('Event submitted for review');
+                               showNotification('Event submitted for review', 'success');
                              } else {
-                               alert(data.message || 'Failed to submit');
+                               showNotification(data.message || 'Failed to submit', 'error');
                              }
                            } catch (err) {
-                             alert('Error submitting event');
+                             showNotification('Error submitting event', 'error');
                            }
                          }}
                        >

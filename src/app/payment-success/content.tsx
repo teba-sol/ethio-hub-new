@@ -38,27 +38,52 @@ export default function PaymentSuccessContent() {
     // If we only got bookingId and status (e.g. from Chapa return_url), fetch the rest
     if (bookingId && !searchParams.get("totalAmount")) {
       setLoading(true);
-      fetch('/api/tourist/bookings')
-        .then(res => res.json())
+      fetch(`/api/tourist/bookings/${bookingId}`, { credentials: 'include' })
+        .then(res => res.ok ? res.json() : Promise.reject(res.status))
         .then(data => {
-          if (data.success && data.bookings) {
-            const b = data.bookings.find((b: any) => b._id === bookingId);
-            if (b) {
-              setBookingData({
-                eventName: b.festival?.name || b.festival?.name_en || "EthioHub Event",
-                ticketType: b.ticketType || "Standard",
-                totalAmount: b.totalPrice?.toString() || "0",
-                hotelName: b.hotelName || "",
-                roomName: b.roomName || "",
-                transportType: b.transportType || "",
-                transportPrice: b.transportPrice?.toString() || "0",
-                guestName: b.contactInfo?.fullName || "Guest",
-                guestEmail: b.contactInfo?.email || "guest@email.com",
-                guestPhone: b.contactInfo?.phone || "",
-                txRef: b.paymentRef || searchParams.get("tx_ref") || ""
-              });
-            }
+          const b = data.booking || (data.bookings ? data.bookings.find((b: any) => b._id === bookingId) : null);
+          if (b) {
+            setBookingData({
+              eventName: b.festival?.name || b.festival?.name_en || b.receipt?.eventName || "EthioHub Event",
+              ticketType: b.ticketType || b.ticketTypeName || "Standard",
+              totalAmount: (b.totalPrice || b.receipt?.totalPaid || 0).toString(),
+              hotelName: b.bookingDetails?.room?.hotelName || b.receipt?.hotel?.name || "",
+              roomName: b.bookingDetails?.room?.roomName || b.receipt?.hotel?.roomType || "",
+              transportType: b.bookingDetails?.transport?.type || b.receipt?.transport?.type || "",
+              transportPrice: (b.bookingDetails?.transport?.price || b.receipt?.transport?.price || 0).toString(),
+              guestName: b.contactInfo?.fullName || b.receipt?.userInfo?.fullName || "Guest",
+              guestEmail: b.contactInfo?.email || b.receipt?.userInfo?.email || "guest@email.com",
+              guestPhone: b.contactInfo?.phone || b.receipt?.userInfo?.phone || "",
+              txRef: b.paymentRef || searchParams.get("tx_ref") || ""
+            });
           }
+        })
+        .catch(() => {
+          // Fallback: try fetching all bookings list
+          fetch('/api/tourist/bookings', { credentials: 'include' })
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+              if (data?.success && data.bookings) {
+                const b = data.bookings.find((b: any) => b._id === bookingId);
+                if (b) {
+                  setBookingData({
+                    eventName: b.festival?.name || b.festival?.name_en || "EthioHub Event",
+                    ticketType: b.ticketType || "Standard",
+                    totalAmount: b.totalPrice?.toString() || "0",
+                    hotelName: b.hotelName || "",
+                    roomName: b.roomName || "",
+                    transportType: b.transportType || "",
+                    transportPrice: b.transportPrice?.toString() || "0",
+                    guestName: b.contactInfo?.fullName || "Guest",
+                    guestEmail: b.contactInfo?.email || "guest@email.com",
+                    guestPhone: b.contactInfo?.phone || "",
+                    txRef: b.paymentRef || searchParams.get("tx_ref") || ""
+                  });
+                }
+              }
+            })
+            .finally(() => setLoading(false));
+          return;
         })
         .finally(() => setLoading(false));
     }

@@ -2,14 +2,26 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Button } from './UI';
 import { useLanguage } from '@/context/LanguageContext';
+import { Play, ArrowRight, Sparkles } from 'lucide-react';
 
 const videoSources = [
-  'https://res.cloudinary.com/dmhu32ya9/video/upload/v1778191200/ethio-hub/hero-videos/3967184-uhd_4096_2160_24fps.mp4',
-  'https://res.cloudinary.com/dmhu32ya9/video/upload/v1778191200/ethio-hub/hero-videos/20719516-uhd_3840_2160_25fps.mp4',
-  'https://res.cloudinary.com/dmhu32ya9/video/upload/v1778191200/ethio-hub/hero-videos/14742585_1080_1920_24fps.mp4',
+  {
+    cloudinary: 'https://res.cloudinary.com/dmhu32ya9/video/upload/f_auto:video,q_auto/ethio-hub/hero-videos/dnrxyisv6b9idtmqycct',
+    local: '/uploads/videos/3967184-uhd_4096_2160_24fps.mp4'
+  },
+  {
+    cloudinary: 'https://res.cloudinary.com/dmhu32ya9/video/upload/f_auto:video,q_auto/ethio-hub/hero-videos/20719516-uhd_3840_2160_25fps.mp4',
+    local: '/uploads/videos/20719516-uhd_3840_2160_25fps.mp4'
+  },
+  {
+    cloudinary: 'https://res.cloudinary.com/dmhu32ya9/video/upload/f_auto:video,q_auto/ethio-hub/hero-videos/14742585_1080_1920_24fps.mp4',
+    local: '/uploads/videos/14742585_1080_1920_24fps.mp4'
+  }
 ];
 
-const posterImage = 'https://res.cloudinary.com/dmhu32ya9/image/upload/w_1920,h_1080,c_fill/v1777798803/ethio-hub/avatars/festivalandproductimage/fzfj0bverugasrobafk0.webp';
+const posterImage = 'https://res.cloudinary.com/dmhu32ya9/image/upload/f_auto,q_auto,w_1920,h_1080,c_fill/v1777798803/ethio-hub/avatars/festivalandproductimage/fzfj0bverugasrobafk0.webp';
+const localPoster = '/uploads/festivals/hero-poster.jpg';
+
 
 export const HeroVideo: React.FC = () => {
   const { t, language } = useLanguage();
@@ -35,7 +47,7 @@ export const HeroVideo: React.FC = () => {
     if (isMobile) return;
     const interval = setInterval(() => {
       setCurrentVideoIndex((prev) => (prev + 1) % videoSources.length);
-    }, 6000);
+    }, 8000);
     return () => clearInterval(interval);
   }, [isMobile]);
 
@@ -47,120 +59,115 @@ export const HeroVideo: React.FC = () => {
   }, [currentVideoIndex, isMobile]);
 
   const heroTitle = language === 'am' 
-    ? 'በኢትዮጵያ የእጅ ጥበብና የባህል ተሞክሮዎች ያግኙ'
-    : 'Discover Ethiopia Through Handmade Art & Cultural Experiences';
+    ? 'የኢትዮጵያን ጥበብና ባህል በአዲስ መልክ ያግኙ'
+    : 'Discover Ethiopia Through a Modern Lens of Heritage';
 
   const heroSubtitle = language === 'am'
-    ? 'እውነተኛ ጥበቦች፣ ያልታረሱ ዝግጅቶች እና የኢትዮጵያ ባህላዊ ውቅር ውበት በአንድ ቦታ።'
-    : 'Authentic crafts, unforgettable events, and the beauty of Ethiopian heritage in one place.';
+    ? 'እውነተኛ ጥበቦች፣ የማይረሱ በዓላት እና የኢትዮጵያ አስደናቂ ታሪክ በአንድ የተራቀቀ መድረክ።'
+    : 'Where ancient traditions meet modern luxury. Experience authentic crafts, sacred festivals, and the timeless beauty of Ethiopia.';
 
   return (
-    <section className="relative min-h-[90vh] flex items-center overflow-hidden bg-ethio-dark">
-      {/* Video Background */}
-      {!isMobile ? (
-        <div className="absolute inset-0 z-0">
-          <video
-            ref={videoRef}
-            key={currentVideoIndex}
-            className="w-full h-full object-cover opacity-60 scale-105 transition-opacity duration-1000"
-            autoPlay
-            muted
-            loop
-            playsInline
-            poster={posterImage}
-          >
-            <source src={videoSources[currentVideoIndex]} type="video/mp4" />
-          </video>
-          <div className="absolute inset-0 bg-black/40" />
-          <div className="absolute inset-0 bg-gradient-to-b from-ethio-dark/60 via-transparent to-ethio-dark/70" />
-        </div>
-      ) : (
-        <div className="absolute inset-0 z-0">
+    <section className="relative min-h-[95vh] flex items-center overflow-hidden bg-ethio-dark">
+      {/* Optimized Video/Image Background */}
+      <div className="absolute inset-0 z-0">
+        {!isMobile ? (
+          <>
+            <video
+              ref={videoRef}
+              key={currentVideoIndex}
+              className="w-full h-full object-cover opacity-50 scale-105 transition-opacity duration-1500"
+              autoPlay
+              muted
+              loop
+              playsInline
+              poster={posterImage}
+            >
+              {/* Using local fallback primarily until Cloudinary upload is complete */}
+              <source src={videoSources[currentVideoIndex].cloudinary} type="video/mp4" />
+              <source src={videoSources[currentVideoIndex].local} type="video/mp4" />
+            </video>
+            <div className="absolute inset-0 bg-gradient-to-r from-ethio-dark via-ethio-dark/40 to-transparent" />
+          </>
+        ) : (
           <img
             src={posterImage}
             alt="Ethiopian Heritage"
-            className="w-full h-full object-cover opacity-60 scale-105"
+            className="w-full h-full object-cover opacity-50"
           />
-          <div className="absolute inset-0 bg-black/40" />
-          <div className="absolute inset-0 bg-gradient-to-b from-ethio-dark/60 via-transparent to-ethio-dark/70" />
-        </div>
-      )}
+        )}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-ethio-dark" />
+      </div>
 
-      {/* Decorative Elements - Ethiopian Pattern Motifs */}
-      <div className="absolute top-20 right-20 w-96 h-96 bg-secondary/20 rounded-full blur-[120px] z-0" />
-      <div className="absolute bottom-20 left-20 w-64 h-64 bg-primary/20 rounded-full blur-[100px] z-0" />
-      <div className="absolute top-1/4 left-10 w-32 h-32 border border-secondary/20 rounded-full opacity-30 animate-pulse" />
-      <div className="absolute bottom-1/4 right-10 w-24 h-24 border border-gold/20 rounded-full opacity-30" />
+      {/* Modern Glassmorphism Decorative Elements */}
+      <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-secondary/10 rounded-full blur-[150px] animate-pulse" />
+      <div className="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-primary/10 rounded-full blur-[120px]" />
 
-      {/* Content Overlay */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 text-white w-full text-center">
-        <div className={`max-w-5xl mx-auto space-y-12 transition-all duration-1000 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          {/* Badge */}
-          <div className="flex items-center justify-center gap-6 mb-8">
-            <div className="w-24 h-px bg-gradient-to-r from-transparent to-secondary" />
-            <span className="text-xs md:text-sm font-bold uppercase tracking-[0.3em] text-secondary bg-secondary/10 py-2 px-6 rounded-full border border-secondary/20">
+      {/* Main Content */}
+      <div className="relative z-10 max-w-7xl mx-auto px-6 w-full pt-20 md:pt-28 lg:pt-32 pb-12">
+        <div className={`max-w-4xl transition-all duration-1000 ease-out ${isLoaded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-12'}`}>
+          
+          {/* Animated Badge */}
+          <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-8 animate-in fade-in slide-in-from-left-4 duration-1000">
+            <Sparkles className="w-4 h-4 text-secondary" />
+            <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.4em] text-secondary">
               {t('home.unifiedPlatform')}
             </span>
-            <div className="w-24 h-px bg-gradient-to-l from-transparent to-secondary" />
           </div>
 
-          {/* Main Title - Large Luxury Typography */}
-          <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-serif font-bold leading-[1.05] tracking-tight text-white drop-shadow-2xl">
-            {heroTitle}
+          {/* Premium Typography */}
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white leading-[1.1] mb-6 tracking-tight">
+            {heroTitle.split(' ').map((word, i) => (
+              <span key={i} className="inline-block mr-4 hover:text-secondary transition-colors duration-300">
+                {word}
+              </span>
+            ))}
           </h1>
 
-          {/* Subtitle */}
-          <p className="text-lg md:text-xl lg:text-2xl text-gray-200 leading-relaxed font-light max-w-3xl mx-auto text-balance">
+          <p className="text-base md:text-lg text-gray-300 font-light leading-relaxed max-w-2xl mb-10 text-balance border-l-2 border-secondary/30 pl-6">
             {heroSubtitle}
           </p>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-6 justify-center pt-8">
+          {/* Luxury Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-5">
             <Link href="/festivals">
               <Button
                 variant="secondary"
-                size="lg"
-                className="rounded-full px-10 py-5 font-bold uppercase tracking-widest text-sm shadow-2xl shadow-secondary/30 hover:shadow-secondary/50 hover:scale-105 transition-all duration-300"
+                className="group h-16 px-10 rounded-full font-bold uppercase tracking-widest text-xs shadow-xl shadow-secondary/20 hover:shadow-secondary/40 hover:-translate-y-1 transition-all duration-300"
               >
-                {t('home.exploreFestivals')}
+                <span>{t('home.exploreFestivals')}</span>
+                <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
             <Link href="/products">
               <Button
                 variant="outline"
-                size="lg"
-                className="rounded-full px-10 py-5 font-bold uppercase tracking-widest text-sm border-2 border-white/40 text-white hover:bg-white/20 hover:border-white/60 backdrop-blur-sm transition-all duration-300"
+                className="h-16 px-10 rounded-full font-bold uppercase tracking-widest text-xs border-white/20 text-white backdrop-blur-md hover:bg-white hover:text-primary transition-all duration-300"
               >
                 {t('home.browseArtisans')}
               </Button>
             </Link>
           </div>
-        </div>
-      </div>
 
-      {/* Scroll Indicator */}
-      <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-20">
-        <div className="flex flex-col items-center gap-2 text-white/60">
-          <span className="text-[10px] uppercase tracking-[0.2em]">Scroll to explore</span>
-          <div className="w-6 h-10 rounded-full border-2 border-white/30 flex justify-center pt-2">
-            <div className="w-1.5 h-3 bg-secondary rounded-full animate-bounce" />
+          {/* Social Proof / Stats Lite */}
+          <div className="mt-12 flex items-center gap-6 opacity-60">
+            <div className="flex -space-x-3">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="w-10 h-10 rounded-full border-2 border-ethio-dark bg-gray-800 overflow-hidden">
+                  <img src={`https://i.pravatar.cc/100?img=${i+10}`} alt="User" />
+                </div>
+              ))}
+            </div>
+            <p className="text-xs font-medium tracking-wide text-white/80">
+              <span className="text-secondary font-bold">4.9/5</span> from 2,000+ happy travelers
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Diagonal Inclined Divider - Gold Line */}
-      <div className="absolute -bottom-px left-0 right-0 z-20 overflow-hidden">
-        <svg
-          className="w-full h-16 md:h-24"
-          viewBox="0 0 1440 120"
-          preserveAspectRatio="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M0,0 L1440,80 L1440,120 L0,120 Z"
-            fill="#D4AF37"
-          />
-        </svg>
+      {/* Floating Scroll Indicator */}
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-3">
+        <div className="w-px h-12 bg-gradient-to-b from-secondary to-transparent" />
+        <span className="text-[10px] uppercase tracking-[0.4em] text-white/40 vertical-text font-bold">Scroll</span>
       </div>
     </section>
   );

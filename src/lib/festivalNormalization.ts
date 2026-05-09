@@ -16,8 +16,8 @@ export const normalizeSchedule = (schedule: any[] = [], isDraft: boolean) => {
       const activitiesEn = textValue(item?.activities_en, item?.activities);
       const activitiesAm = textValue(item?.activities_am, item?.activities);
       
-      if (!isDraft && (!titleEn || !titleAm)) return null;
-
+      const hasData = titleEn || titleAm || activitiesEn || activitiesAm || (Array.isArray(item?.performers) && item.performers.length > 0);
+      if (!hasData) return null;
       const fallbackTitle = `Day ${index + 1}`;
       const finalTitle = titleEn || titleAm || fallbackTitle;
       return {
@@ -93,9 +93,11 @@ export const normalizeHotels = (hotels: any[] = [], isDraft: boolean) => {
         facilities: Array.isArray(hotel?.facilities) ? hotel.facilities : [],
         foodAndDrink: Array.isArray(hotel?.foodAndDrink) ? hotel.foodAndDrink : [],
         hotelRules: Array.isArray(hotel?.hotelRules) ? hotel.hotelRules : [],
+        hotelServices: Array.isArray(hotel?.hotelServices) ? hotel.hotelServices : [],
         propertyType: hotel?.propertyType || 'Hotel',
         checkInTime: hotel?.checkInTime || '14:00',
         checkOutTime: hotel?.checkOutTime || '12:00',
+        coordinates: hotel?.coordinates,
         rooms,
       };
     })

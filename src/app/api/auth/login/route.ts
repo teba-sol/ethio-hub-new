@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     response.cookies.set('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',  // 'strict' blocks cookie on Chapa redirect (cross-site nav)
       maxAge: 7 * 24 * 3600, // 7 days
       path: '/',
     });

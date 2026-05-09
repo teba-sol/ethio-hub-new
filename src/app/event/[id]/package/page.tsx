@@ -314,9 +314,9 @@ export default function PackagePage() {
                                     </div>
                                   )}
                                   {room.pricePerNight && (
-                                    <div className="flex items-center gap-1.5 text-amber-600 font-bold">
-                                      <span>{currency} {room.pricePerNight}</span>
-                                      <span className="text-xs font-normal text-gray-400">/night</span>
+                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 rounded-full">
+                                      <Check className="w-3 h-3 text-green-600 stroke-[3]" />
+                                      <span className="text-xs font-bold text-green-700 uppercase tracking-wider">Included</span>
                                     </div>
                                   )}
                                 </div>

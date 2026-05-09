@@ -19,80 +19,80 @@ const regions: RegionData[] = [
     id: 'addis-ababa',
     name: 'Addis Ababa',
     nameAm: 'አዲስ አበባ',
-    crafts: ['Handwoven textiles', 'Contemporary art', 'Jewelry', 'Leather goods'],
-    events: ['Meskel Festival', 'Ethiopian New Year', 'Art exhibitions'],
-    description: 'The vibrant capital city and hub of Ethiopian craftsmanship',
-    descriptionAm: 'የኢትዮጵያ የጥበብ ማዕከል የሆነው የአዲስ አበባ ከተማ',
+    crafts: ['Shiro Meda Textiles', 'Contemporary Jewelry', 'Leather Art', 'Modern Ceramics'],
+    events: ['Meskel (Square)', 'Timkat (Jan Meda)', 'Great Ethiopian Run', 'African Union Summits'],
+    description: 'The heartbeat of Ethiopia where ancient traditions blend with modern luxury and Pan-African diplomacy.',
+    descriptionAm: 'ጥንታዊ ወጎች ከዘመናዊ የቅንጦት ኑሮ ጋር የሚገናኙባት የኢትዮጵያ የልብ ትርታ።',
     color: '#D4AF37',
-  },
-  {
-    id: 'sidama',
-    name: 'Sidama',
-    nameAm: 'ስዳማ',
-    crafts: ['Coffee ceremony sets', 'Baskets', 'Woven cloths', 'Pottery'],
-    events: ['Irreecha', 'Coffee ceremonies', 'Traditional dances'],
-    description: 'Famous for premium coffee and intricate basket weaving',
-    descriptionAm: 'ለታወቀው ቅንጭፍና የተለያዩ የጥበብ ሥራዎች የሚታወቅ',
-    color: '#0f4c3a',
   },
   {
     id: 'oromia',
     name: 'Oromia',
     nameAm: 'ኦሮሚያ',
-    crafts: ['Gabi shawls', 'Oromo leather', 'Wood carvings', 'Jewelry'],
-    events: ['Irreecha Festival', 'Traditional sports', 'Cultural gatherings'],
-    description: 'Rich heritage of Oromo traditions and handwoven textiles',
-    descriptionAm: 'የኦሮሞ ባህል እና የእጅ ጥበብ ባህላዊ ሀብት',
+    crafts: ['Leather Craftsmanship', 'Jimma Woodwork', 'Coffee Artifacts', 'Oromo Jewelry'],
+    events: ['Irreecha (Bishoftu)', 'Gadaa Ceremonies', 'Horse Racing Festivals', 'Harvest Festivals'],
+    description: 'Home to the Irreecha thanksgiving and the ancient Gadaa system, Oromia is a cradle of democratic heritage.',
+    descriptionAm: 'የምስጋናው የኢሬቻ በዓል እና የጥንታዊው የገዳ ስርዓት መገኛ የሆነው ኦሮሚያ።',
     color: '#c65d3b',
   },
   {
     id: 'amhara',
     name: 'Amhara',
     nameAm: 'አማራ',
-    crafts: ['Church artifacts', 'Cross jewelry', 'Woven cloths', 'Pottery'],
-    events: ['Timket', 'Ethiopian Christmas', 'Meskel'],
-    description: 'Ancient religious traditions and intricate artwork',
-    descriptionAm: 'ያስገነዘቡ የሃይማኖት ባህሎችና ዝርዝር የጥበብ ሥራዎች',
+    crafts: ['Religious Bookbinding', 'Lalibela Stone Art', 'Fine Weaving', 'Metal Crosses'],
+    events: ['Timkat (Gondar)', 'Genna (Lalibela)', 'Shadey/Ashenda', 'Meskel'],
+    description: 'A land of monolithic wonders and medieval castles, where history is carved into every stone.',
+    descriptionAm: 'ታሪክ በእያንዳንዱ ድንጋይ ላይ የተቀረጸበት የድንቅ አብያተ ክርስቲያናት እና የጥንታዊ ቤተ-መንግስታት ምድር።',
     color: '#0f4c3a',
   },
   {
     id: 'tigray',
     name: 'Tigray',
     nameAm: 'ትግራይ',
-    crafts: ['Silver crosses', 'Weavings', 'Pottery', 'Stone art'],
-    events: ['Timket', 'Ethiopian Easter', 'Historical tours'],
-    description: 'Ancient Axumite heritage and traditional crafts',
-    descriptionAm: 'የአክሱም ዓለም ባህልና የተራዘመ የጥበብ ቅርስ',
+    crafts: ['Axumite Silver Crosses', 'Traditional Pottery', 'Intricate Weaving', 'Parchment Art'],
+    events: ['Ashenda Festival', 'Axum Tsion', 'Timkat', 'Romanat Falls Festival'],
+    description: 'The ancient Axumite Empire legacy lives on through sacred art and the vibrant Ashenda celebration.',
+    descriptionAm: 'ጥንታዊው የአክሱም ስርወ-መንግስት አሻራ በቅዱስ ጥበባት እና በአሸንዳ በዓል ህያው ሆኖ ይኖራል።',
     color: '#c89b2c',
+  },
+  {
+    id: 'sidama',
+    name: 'Sidama',
+    nameAm: 'ሲዳማ',
+    crafts: ['Bamboo Basketry', 'Sidama Pottery', 'Tubba Skin Clothing', 'Enset Products'],
+    events: ['Fichee-Chambalaalla', 'Coffee Harvest', 'Sidama Cultural Week', 'Bamboo Festivals'],
+    description: 'Celebrated for the UNESCO-recognized Fichee-Chambalaalla New Year and the world\'s finest coffee.',
+    descriptionAm: 'በዩኔስኮ በተመዘገበው የፊቼ ጨምበላላ የአዲስ አመት በዓል እና በአለም ምርጥ ቡና የሚታወቅ።',
+    color: '#0f4c3a',
   },
   {
     id: 'harari',
     name: 'Harar',
     nameAm: 'ሐረር',
-    crafts: ['Harari baskets', 'Mensive weaving', 'Silver jewelry', 'Coffee sets'],
-    events: ['Ashura', 'Holiday celebrations', 'Cultural festivals'],
-    description: 'UNESCO heritage city known for unique weaving traditions',
-    descriptionAm: 'ለዩኔስኮ የሚጠቀስ ከተማ ለተለየ የጥበብ ሥራዎች የሚታወቅ',
+    crafts: ['Harari Baskets (Mesob)', 'Silver Jewelry', 'Bookbinding', 'Adere Textiles'],
+    events: ['Shuwalid Festival', 'Ashura', 'Hyena Feeding Ritual', 'Cultural Pilgrimages'],
+    description: 'The walled city of Jugol is a living museum of Islamic heritage and world-class basketry.',
+    descriptionAm: 'የጀጎል ግንብ የኢስላማዊ ቅርስ እና የአለም ደረጃ የቅርጫት ጥበብ ህያው ሙዚየም ነው።',
     color: '#D4AF37',
   },
   {
     id: 'snnpr',
     name: 'SNNPR',
     nameAm: 'ደቡብ ብሔር ሕዝቦች',
-    crafts: ['Dorze baskets', 'Coffee utensils', 'Wood carvings', 'Beadwork'],
-    events: ['Cultural dances', 'Harvest festivals', 'Coffee ceremonies'],
-    description: 'Diverse ethnic groups with unique weaving and pottery',
-    descriptionAm: 'ተለያዩ ወራጀቶች ልዩ የጥበብ ሥራዎች',
+    crafts: ['Dorze Weaving', 'Konso Terraces', 'Beadwork', 'Wood Carvings'],
+    events: ['Meskel (Gurage)', 'Hamer Bull Jumping', 'Omotic Dance Festivals', 'Tribal Gatherings'],
+    description: 'A mosaic of over 50 ethnic groups, each offering a unique tapestry of crafts and ancient rituals.',
+    descriptionAm: 'ከ50 በላይ ብሔረሰቦች የሚገኙባት፣ እያንዳንዳቸው ልዩ ጥበብ እና ጥንታዊ ስነ-ስርዓት የሚታዩባት ምድር።',
     color: '#c65d3b',
   },
   {
     id: 'afar',
     name: 'Afar',
     nameAm: 'አፋር',
-    crafts: ['Salt containers', 'Leather goods', 'Traditional jewelry', 'Weavings'],
-    events: ['Afar New Year', 'Camel trading festivals', 'Cultural exhibitions'],
-    description: 'Ancient salt trade traditions and nomadic crafts',
-    descriptionAm: 'ጥንታዊ የጨው ንግድ ባህልና የተሻለ የጥበብ ሥራዎች',
+    crafts: ['Afar Leatherwork', 'Salt Carving', 'Weaponry (Jile)', 'Woven Mats'],
+    events: ['Afar Cultural Festival', 'Nomadic Gatherings', 'Asaita Pilgrimages', 'Desert Festivals'],
+    description: 'Resilient nomadic traditions in the Danakil Depression, where life revolves around salt and sacred rites.',
+    descriptionAm: 'ህይወት በጨው እና በቅዱስ ስነ-ስርዓቶች ዙሪያ በሚሽከረከርበት በዳናኪል በረሃ የሚገኝ የዘላን ባህል መገኛ።',
     color: '#0f4c3a',
   },
 ];
@@ -309,42 +309,47 @@ export const EthiopiaMap: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Region Header */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                        {language === 'am' ? 'ክልል' : 'Region'}
-                      </span>
-                      <h3 className="font-serif text-2xl font-bold text-primary flex items-center gap-2">
+                  {/* Region Image */}
+                  <div className="relative h-48 rounded-2xl overflow-hidden shadow-lg group/img">
+                    <img 
+                      src={`https://res.cloudinary.com/dmhu32ya9/image/upload/f_auto,q_auto,w_800,h_500,c_fill/ethio-hub/regions/${activeRegion.id}.jpg`} 
+                      alt={activeRegion.name}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=800&q=80';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    <div className="absolute bottom-4 left-4">
+                       <h3 className="font-serif text-2xl font-bold text-white drop-shadow-md">
                         {language === 'am' ? activeRegion.nameAm : activeRegion.name}
-                        <span 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: activeRegion.color }}
-                        />
                       </h3>
                     </div>
                     <button
                       onClick={() => setActiveRegion(null)}
-                      className="text-gray-400 hover:text-gray-600"
+                      className="absolute top-4 right-4 w-8 h-8 bg-black/20 backdrop-blur-md text-white rounded-full flex items-center justify-center hover:bg-black/40 transition-colors"
                     >
                       ✕
                     </button>
                   </div>
 
-                  <p className="text-gray-500 text-sm leading-relaxed">
+                  <p className="text-gray-500 text-sm leading-relaxed font-light">
                     {language === 'am' ? activeRegion.descriptionAm : activeRegion.description}
                   </p>
 
-                  {/* Crafts */}
-                  <div>
-                    <h4 className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-3">
-                      {language === 'am' ? 'ጥበቦች' : 'Traditional Crafts'}
-                    </h4>
+                  {/* Crafts Grid */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                       <Package className="w-4 h-4 text-secondary" />
+                       <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">
+                        {language === 'am' ? 'ባህላዊ ጥበቦች' : 'Signature Crafts'}
+                      </h4>
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       {activeRegion.crafts.map((craft, idx) => (
                         <span 
                           key={idx}
-                          className="text-[11px] font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-full"
+                          className="text-[10px] font-bold text-primary bg-primary/5 border border-primary/10 px-3 py-1.5 rounded-full hover:bg-primary hover:text-white transition-all cursor-default"
                         >
                           {craft}
                         </span>
@@ -352,77 +357,60 @@ export const EthiopiaMap: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Events */}
-                  <div>
-                    <h4 className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-3">
-                      {language === 'am' ? 'ዝግጅቶች' : 'Events & Festivals'}
-                    </h4>
-                    <div className="space-y-2">
+                  {/* Festivals & Events */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                       <Music className="w-4 h-4 text-secondary" />
+                       <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">
+                        {language === 'am' ? 'ታዋቂ በዓላት' : 'Cultural Events'}
+                      </h4>
+                    </div>
+                    <div className="space-y-3">
                       {regionFestivals.length > 0 ? (
                         regionFestivals.map((fest, idx) => (
                           <Link 
                             key={idx}
-                            href={`/festivals/${fest.slug || fest._id}`}
-                            className="flex items-center gap-3 p-2 bg-gray-50 rounded-xl hover:bg-primary/5 transition-colors group"
+                            href={`/event/${fest.id || fest._id}`}
+                            className="flex items-center gap-4 p-3 bg-gray-50 rounded-2xl hover:bg-white hover:shadow-lg hover:shadow-black/5 border border-transparent hover:border-gray-100 transition-all group"
                           >
-                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
-                              <img src={fest.coverImage || (fest.gallery?.[0])} alt="" className="w-full h-full object-cover" />
+                            <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-200 flex-shrink-0">
+                              <img src={fest.coverImage || (fest.gallery?.[0])} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-primary truncate">{language === 'am' ? fest.name_am : fest.name_en}</p>
-                              <p className="text-[10px] text-gray-400">{new Date(fest.startDate).toLocaleDateString()}</p>
+                              <p className="text-xs font-bold text-primary truncate group-hover:text-secondary transition-colors">
+                                {language === 'am' ? (fest.name_am || fest.name) : (fest.name_en || fest.name)}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Star className="w-3 h-3 text-secondary fill-secondary" />
+                                <span className="text-[10px] text-gray-400 font-medium">Featured Festival</span>
+                              </div>
                             </div>
-                            <ArrowRight className="w-3 h-3 text-gray-300 group-hover:text-primary transition-colors" />
+                            <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-secondary group-hover:translate-x-1 transition-all" />
                           </Link>
                         ))
                       ) : (
-                        activeRegion.events.slice(0, 2).map((event, idx) => (
+                        activeRegion.events.map((event, idx) => (
                           <div 
                             key={idx}
-                            className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg"
+                            className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl border border-transparent hover:border-gray-100 transition-all"
                           >
-                            <span className="text-secondary">{getEventIcon(event)}</span>
-                            {event}
+                            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-secondary shadow-sm">
+                              {getEventIcon(event)}
+                            </div>
+                            <span className="text-xs font-bold text-gray-700">{event}</span>
                           </div>
                         ))
                       )}
                     </div>
                   </div>
 
-                  {/* Real Products from this Region */}
-                  {regionProducts.length > 0 && (
-                    <div>
-                      <h4 className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-3">
-                        {language === 'am' ? 'የክልሉ የጥበብ ውጤቶች' : 'Featured Regional Crafts'}
-                      </h4>
-                      <div className="grid grid-cols-3 gap-2">
-                        {regionProducts.map((product, idx) => (
-                          <Link 
-                            key={idx}
-                            href={`/products/${product._id}`}
-                            className="group relative aspect-square rounded-xl overflow-hidden bg-gray-100"
-                          >
-                            <img 
-                              src={product.images?.[0]} 
-                              alt="" 
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                            />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
-                              <p className="text-[8px] font-bold text-white truncate w-full">ETB {product.price}</p>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   {/* CTA Button */}
                   <Link
                     href={`/products?region=${activeRegion.id}`}
-                    className="flex items-center justify-center gap-2 w-full bg-primary text-white py-3 rounded-full font-bold text-sm uppercase tracking-wider hover:bg-primary/90 transition-colors"
+                    className="flex items-center justify-center gap-3 w-full bg-primary text-white py-4 rounded-2xl font-bold text-[11px] uppercase tracking-[0.2em] hover:bg-secondary hover:shadow-xl hover:shadow-secondary/20 transition-all group"
                   >
-                    {language === 'am' ? 'ጥበቦችን ይመልከቱ' : 'View Crafts'}
-                    <ArrowRight className="w-4 h-4" />
+                    {language === 'am' ? 'ጥበቦችን ይግዙ' : 'Shop Regional Crafts'}
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </div>
               )}

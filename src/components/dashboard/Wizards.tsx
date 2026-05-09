@@ -54,37 +54,40 @@ const NumberStepperInput: React.FC<{
   required?: boolean;
   iconPosition?: 'left' | 'right';
   className?: string;
-}> = ({ label, value, onChange, icon: Icon, min = 0, max, step = 1, placeholder, required, className = '' }) => {
+  disabled?: boolean;
+}> = ({ label, value, onChange, icon: Icon, min = 0, max, step = 1, placeholder, required, disabled, className = '' }) => {
   const handleDecrement = () => {
+    if (disabled) return;
     const newValue = value - step;
     if (min !== undefined && newValue < min) return;
     onChange(newValue);
   };
 
   const handleIncrement = () => {
+    if (disabled) return;
     const newValue = value + step;
     if (max !== undefined && newValue > max) return;
     onChange(newValue);
   };
 
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className={`space-y-2 ${className} ${disabled ? 'opacity-60 grayscale-[0.5]' : ''}`}>
       {label && <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">{label}</label>}
       <div className="relative flex items-center">
         {Icon && Icon !== DollarSign && (
           <div className="absolute left-4 z-10 pointer-events-none">
-            <Icon className="w-5 h-5 text-gray-300" />
+            <Icon className={`w-5 h-5 ${disabled ? 'text-gray-200' : 'text-gray-300'}`} />
           </div>
         )}
         {Icon === DollarSign && (
           <div className="absolute left-4 z-10 pointer-events-none">
-            <span className="text-xs font-black text-gray-300">ETB</span>
+            <span className={`text-xs font-black ${disabled ? 'text-gray-200' : 'text-gray-300'}`}>ETB</span>
           </div>
         )}
         <button
           type="button"
           onClick={handleDecrement}
-          disabled={min !== undefined && value <= min}
+          disabled={disabled || (min !== undefined && value <= min)}
           className="absolute left-12 p-1.5 rounded-l-xl bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
         >
           <Minus className="w-4 h-4" />
@@ -92,6 +95,7 @@ const NumberStepperInput: React.FC<{
         <input
           type="number"
           value={value || ''}
+          disabled={disabled}
           onChange={(e) => {
             const val = parseInt(e.target.value) || min;
             if (min !== undefined && val < min) return;
@@ -101,13 +105,13 @@ const NumberStepperInput: React.FC<{
           placeholder={placeholder}
           min={min}
           max={max}
-          className={`w-full pl-24 pr-12 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all duration-200 text-sm font-bold text-gray-700 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 ${Icon ? 'pl-28' : ''}`}
+          className={`w-full pl-24 pr-12 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all duration-200 text-sm font-bold text-gray-700 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-gray-300 disabled:bg-gray-100/50 disabled:cursor-not-allowed ${Icon ? 'pl-28' : ''}`}
           required={required}
         />
         <button
           type="button"
           onClick={handleIncrement}
-          disabled={max !== undefined && value >= max}
+          disabled={disabled || (max !== undefined && value >= max)}
           className="absolute right-1 top-1 bottom-1 px-2.5 rounded-r-xl bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
         >
           <Plus className="w-4 h-4" />
@@ -124,10 +128,16 @@ export const FestivalCreationWizard: React.FC<{
 }> = ({ onCancel, initialData, onSave }) => {
   const router = useRouter();
   const [step, setStep] = useState(1);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 5000);
+  };
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [hotelMapTarget, setHotelMapTarget] = useState<{ hotelIdx: number } | null>(null);
-  const [coreLocationSelected, setCoreLocationSelected] = useState(!!initialData?.location?.coordinates);
+  const [coreLocationSelected, setCoreLocationSelected] = useState(!!(initialData?.location?.coordinates?.lat || initialData?.coordinates?.lat));
   const [languagePreference, setLanguagePreference] = useState<'both' | 'en' | 'am'>('both');
   const [formData, setFormData] = useState({
     core: {
@@ -165,7 +175,7 @@ export const FestivalCreationWizard: React.FC<{
       activities_am: '', 
       performers: [] as string[] 
     }],
-    hotels: initialData?.hotels || [] as any[],
+    hotels: (initialData?.hotels || []).map((h: any) => ({ ...h, locationSelected: !!h?.coordinates?.lat })) as any[],
     transportation: initialData?.transportation || [] as any[],
     services: { 
       foodPackages: initialData?.services?.foodPackages || [] as any[], 
@@ -681,18 +691,18 @@ export const FestivalCreationWizard: React.FC<{
       }
 
       if (response.success) {
-        alert('Festival saved as draft successfully!');
+        showNotification('Festival saved as draft successfully!', 'success');
         if (onSave) {
           await onSave(response.festival);
         } else {
           router.push('/dashboard/organizer/festivals');
         }
       } else {
-        alert(`Failed to save draft: ${response.message}`);
+        showNotification(`Failed to save draft: ${response.message}`, 'error');
       }
     } catch (error) {
       console.error('Error saving draft:', error);
-      alert('An error occurred while saving the draft.');
+      showNotification('An error occurred while saving the draft.', 'error');
     }
   };
 
@@ -714,7 +724,7 @@ export const FestivalCreationWizard: React.FC<{
     }
 
     if (allMissing.length > 0) {
-      alert(`Please fill out all required fields:\n- ${allMissing.join('\n- ')}`);
+      showNotification(`Missing: ${allMissing.join(', ')}`, 'error');
       return;
     }
 
@@ -753,18 +763,18 @@ export const FestivalCreationWizard: React.FC<{
       }
 
        if (response.success) {
-        alert(initialData ? 'Festival updated successfully!' : 'Festival submitted for verification successfully!');
+        showNotification(initialData ? 'Festival updated successfully!' : 'Festival submitted for verification successfully!', 'success');
         if (onSave) {
           await onSave(response.festival);
         } else {
           router.push('/dashboard/organizer/festivals');
         }
       } else {
-        alert(`Failed to publish festival: ${response.message}`);
+        showNotification(`Failed to publish festival: ${response.message}`, 'error');
       }
     } catch (error) {
       console.error('Error publishing festival:', error);
-      alert('An error occurred while publishing the festival.');
+      showNotification('An error occurred while publishing the festival.', 'error');
     }
   };
 
@@ -799,7 +809,39 @@ export const FestivalCreationWizard: React.FC<{
   );
 
    return (
-    <div className="max-w-[1400px] mx-auto pb-20">
+    <div className="max-w-[1400px] mx-auto pb-20 relative">
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -50, scale: 0.9 }}
+            className="fixed top-12 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4"
+          >
+            <div className={`
+              p-5 rounded-[24px] shadow-2xl backdrop-blur-xl border flex items-center gap-4
+              ${notification.type === 'success' ? 'bg-emerald-50/90 border-emerald-100 text-emerald-800' : 
+                notification.type === 'error' ? 'bg-red-50/90 border-red-100 text-red-800' : 
+                'bg-white/90 border-gray-100 text-gray-800'}
+            `}>
+              <div className={`
+                w-10 h-10 rounded-xl flex items-center justify-center shrink-0
+                ${notification.type === 'success' ? 'bg-emerald-100' : 
+                  notification.type === 'error' ? 'bg-red-100' : 
+                  'bg-gray-100'}
+              `}>
+                {notification.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : 
+                 notification.type === 'error' ? <AlertCircle className="w-5 h-5" /> : 
+                 <Info className="w-5 h-5" />}
+              </div>
+              <p className="text-sm font-bold leading-tight">{notification.message}</p>
+              <button onClick={() => setNotification(null)} className="ml-auto p-1 hover:bg-black/5 rounded-lg transition-colors">
+                <X className="w-4 h-4 opacity-40" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <MapPickerModal 
         isOpen={isMapModalOpen}
         onClose={() => {
@@ -1956,38 +1998,26 @@ export const FestivalCreationWizard: React.FC<{
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                    {transport.vipIncluded !== true && (
-                                     <div className="space-y-2">
-                                       <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Price *</label>
-                                       <Input
-                                         placeholder="e.g., 30"
-                                         hideLabel
-                                         type="number"
-                                         min="0"
-                                         value={transport.price || ''}
-                                         onChange={(e) => updateTransport(idx, 'price', parseFloat(e.target.value) || 0)}
-                                         icon={ETBIcon}
-                                         className={`pl-12 ${errors[`transport_${idx}_price`] ? 'border-red-500 bg-red-50' : ''}`}
-                                       />
-                                       {errors[`transport_${idx}_price`] && (
-                                         <p className="text-xs text-red-500 ml-1 mt-1">{errors[`transport_${idx}_price`]}</p>
-                                       )}
-                                     </div>
+                                     <NumberStepperInput
+                                       label="Price *"
+                                       placeholder="e.g., 150"
+                                       value={transport.price || 0}
+                                       onChange={(value) => updateTransport(idx, 'price', value)}
+                                       icon={DollarSign}
+                                       className={errors[`transport_${idx}_price`] ? 'ring-1 ring-red-500' : ''}
+                                     />
                                    )}
                                    <div className="space-y-2">
                                      {transport.vipIncluded === true && (
                                        <p className="text-xs font-semibold text-amber-600 ml-1 mb-1">VIP Transport</p>
                                      )}
-                                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Capacity</label>
-                                     <Input
-                                       placeholder={transport.vipIncluded === true ? "Auto-set to VIP ticket count" : "e.g., 15"}
-                                       hideLabel
-                                       type="number"
-                                       min="0"
-                                       value={transport.capacity || ''}
-                                       onChange={(e) => updateTransport(idx, 'capacity', parseInt(e.target.value) || 0)}
+                                     <NumberStepperInput
+                                       label="Capacity"
+                                       placeholder={transport.vipIncluded === true ? "Auto-set" : "e.g., 15"}
+                                       value={transport.capacity || 0}
+                                       onChange={(value) => updateTransport(idx, 'capacity', value)}
                                        icon={Users}
                                        disabled={transport.vipIncluded === true}
-                                       className="pl-12"
                                      />
                                      {transport.vipIncluded === true && (
                                        <p className="text-xs text-amber-600/60 ml-1 mt-1">Capacity auto-set to VIP ticket count (shared among VIP holders)</p>
@@ -2223,14 +2253,26 @@ export const FestivalCreationWizard: React.FC<{
                       </div>
                       <div className="bg-gray-50/30 p-6 rounded-[32px] border border-gray-100 hover:bg-white transition-all">
                         <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1 mb-2 block">Age Restriction</label>
-                        <Input
-                          hideLabel
-                          placeholder="e.g., 18+, All ages, Family-friendly"
+                        <select
                           value={formData.policies.ageRestriction || ''}
                           onChange={(e) => setFormData(prev => ({ ...prev, policies: { ...prev.policies, ageRestriction: e.target.value } }))}
-                          icon={Users}
-                          className="pl-12"
-                        />
+                          className="w-full px-4 py-3.5 bg-white border border-gray-100 rounded-2xl focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all text-sm font-bold text-gray-700 shadow-sm"
+                        >
+                          <option value="">All Ages</option>
+                          <option value="12+">12+</option>
+                          <option value="18+">18+</option>
+                          <option value="21+">21+</option>
+                          <option value="Adults Only">Adults Only</option>
+                          <option value="Family Friendly">Family Friendly</option>
+                        </select>
+
+
+
+
+
+
+
+
                       </div>
                     </div>
                   </div>
@@ -2258,8 +2300,8 @@ export const FestivalCreationWizard: React.FC<{
 
                     <div className="flex-1 flex items-center gap-2 px-8">
                       {(() => {
-                        const stdQty = formData.ticketTypes?.find((t: any) => t.name_en === 'Standard' || t.name === 'Standard')?.quantity || 0;
-                        const vipQty = formData.ticketTypes?.find((t: any) => t.name_en === 'VIP' || t.name === 'VIP')?.quantity || 0;
+                        const stdQty = formData.ticketTypes?.find((t: any) => t.name_en?.toLowerCase().includes('standard') || t.name?.toLowerCase().includes('standard'))?.quantity || 0;
+                        const vipQty = formData.ticketTypes?.find((t: any) => t.name_en?.toLowerCase().includes('vip') || t.name?.toLowerCase().includes('vip'))?.quantity || 0;
                         const total = formData.core.totalCapacity || 0;
                         const allocated = stdQty + vipQty;
                         const stdPercent = total > 0 ? (stdQty / total) * 100 : 0;
@@ -2363,19 +2405,19 @@ export const FestivalCreationWizard: React.FC<{
                               min="0"
                               max={formData.core.totalCapacity || 0}
                               value={(() => {
-                                const stdTicket = formData.ticketTypes?.find((t: any) => t.name_en === 'Standard' || t.name === 'Standard');
+                                const stdTicket = formData.ticketTypes?.find((t: any) => t.name_en?.toLowerCase().includes('standard') || t.name?.toLowerCase().includes('standard'));
                                 return stdTicket?.quantity || 0;
                               })()}
                               onChange={(e) => {
                                 const newQty = parseInt(e.target.value) || 0;
                                 const total = formData.core.totalCapacity || 0;
-                                const vipQty = formData.ticketTypes?.find((t: any) => t.name_en === 'VIP' || t.name === 'VIP')?.quantity || 0;
+                                const vipQty = formData.ticketTypes?.find((t: any) => t.name_en?.toLowerCase().includes('vip') || t.name?.toLowerCase().includes('vip'))?.quantity || 0;
                                 
                                 const cappedQty = Math.min(newQty, total - vipQty);
                                 
                                 let found = false;
                                 const newTicketTypes = formData.ticketTypes?.map((t: any) => {
-                                  if (t.name_en === 'Standard' || t.name === 'Standard') {
+                                  if (t.name_en?.toLowerCase().includes('standard') || t.name?.toLowerCase().includes('standard')) {
                                     found = true;
                                     return { ...t, quantity: cappedQty, available: cappedQty };
                                   }
@@ -2413,7 +2455,7 @@ export const FestivalCreationWizard: React.FC<{
                               onChange={(e) => {
                                 const newPrice = parseFloat(e.target.value) || 0;
                                 const newTicketTypes = formData.ticketTypes?.map((t: any) => 
-                                  (t.name_en === 'Standard' || t.name === 'Standard')
+                                  (t.name_en?.toLowerCase().includes('standard') || t.name?.toLowerCase().includes('standard'))
                                     ? { ...t, price: newPrice }
                                     : t
                                 ) || [];
@@ -2455,19 +2497,19 @@ export const FestivalCreationWizard: React.FC<{
                               min="0"
                               max={formData.core.totalCapacity || 0}
                               value={(() => {
-                                const vipTicket = formData.ticketTypes?.find((t: any) => t.name_en === 'VIP' || t.name === 'VIP');
+                                const vipTicket = formData.ticketTypes?.find((t: any) => t.name_en?.toLowerCase().includes('vip') || t.name?.toLowerCase().includes('vip'));
                                 return vipTicket?.quantity || 0;
                               })()}
                               onChange={(e) => {
                                 const newQty = parseInt(e.target.value) || 0;
                                 const total = formData.core.totalCapacity || 0;
-                                const stdQty = formData.ticketTypes?.find((t: any) => t.name_en === 'Standard' || t.name === 'Standard')?.quantity || 0;
+                                const stdQty = formData.ticketTypes?.find((t: any) => t.name_en?.toLowerCase().includes('standard') || t.name?.toLowerCase().includes('standard'))?.quantity || 0;
                                 
                                 const cappedQty = Math.min(newQty, total - stdQty);
 
                                 let found = false;
                                 const newTicketTypes = formData.ticketTypes?.map((t: any) => {
-                                  if (t.name_en === 'VIP' || t.name === 'VIP') {
+                                  if (t.name_en?.toLowerCase().includes('vip') || t.name?.toLowerCase().includes('vip')) {
                                     found = true;
                                     return { ...t, quantity: cappedQty, available: cappedQty };
                                   }
@@ -2527,7 +2569,7 @@ export const FestivalCreationWizard: React.FC<{
                               onChange={(e) => {
                                 const newPrice = parseFloat(e.target.value) || 0;
                                 const newTicketTypes = formData.ticketTypes?.map((t: any) => 
-                                  (t.name_en === 'VIP' || t.name === 'VIP')
+                                  (t.name_en?.toLowerCase().includes('vip') || t.name?.toLowerCase().includes('vip'))
                                     ? { ...t, price: newPrice }
                                     : t
                                 ) || [];
