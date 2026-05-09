@@ -16,79 +16,74 @@ const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3
 
 const EARLY_BIRD_WINDOW_HOURS = Number(process.env.EARLY_BIRD_WINDOW_HOURS || 5);
 
+export async function GET(request: NextRequest) {
+  try {
+    await connectDB();
+    
+    const token = request.cookies.get('sessionToken')?.value;
+    if (!token) {
+      return NextResponse.json({ success: false, message: 'Authentication required' }, { status: 401 });
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET || 'ethio-hub-secret-key-2025';
+    const { payload, valid } = await import('jose').then(jose => 
+      jose.jwtVerify(token, new TextEncoder().encode(JWT_SECRET))
+        .then(res => ({ valid: true, payload: res.payload }))
+        .catch(() => ({ valid: false, payload: null }))
+    );
+    
+    if (!valid || !payload?.userId) {
+      return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 401 });
+    }
+
+    const touristId = payload.userId as string;
+    
+    const bookings = await Booking.find({ tourist: new mongoose.Types.ObjectId(touristId) })
+      .populate('festival', 'name name_en name_am startDate endDate coverImage locationName')
+      .populate('organizer', 'name email')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Transform bookings to include all needed details
+    const transformedBookings = bookings.map((booking: any) => ({
+      ...booking,
+      // Ensure bookingDetails is included
+      hotelName: booking.bookingDetails?.room?.hotelName,
+      roomName: booking.bookingDetails?.room?.roomName,
+      roomPrice: (booking.bookingDetails?.room?.roomPrice || 0) * (booking.bookingDetails?.room?.nights || 1),
+      hotelRefCode: booking.bookingDetails?.room?.hotelRefCode,
+      transportType: booking.bookingDetails?.transport?.type,
+      transportPrice: (booking.bookingDetails?.transport?.price || 0) * (booking.bookingDetails?.transport?.days || 1),
+      transportRefCode: booking.bookingDetails?.transport?.transportRefCode,
+    }));
+
+    return NextResponse.json({ success: true, bookings: transformedBookings });
+  } catch (error: any) {
+    console.error('Error fetching bookings:', error);
+    return NextResponse.json({ success: false, message: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
 function generateTxRef(): string {
   return 'TXN-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase();
 }
 
+function generate4DigitCode(): string {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
 const getEarlyBirdExpiry = (festival: any) => {
-  const postedAtRaw = festival?.createdAt || festival?.submittedAt;
-  if (!postedAtRaw) return null;
+  // Use reviewedAt (time admin verified the event)
+  const publishedAtRaw = festival?.reviewedAt || festival?.updatedAt;
+  if (!publishedAtRaw) return null;
 
-  const postedAt = new Date(postedAtRaw);
-  if (Number.isNaN(postedAt.getTime())) return null;
+  const publishedAt = new Date(publishedAtRaw);
+  if (Number.isNaN(publishedAt.getTime())) return null;
 
-  return new Date(postedAt.getTime() + EARLY_BIRD_WINDOW_HOURS * 60 * 60 * 1000);
-};
+  const days = festival?.pricing?.earlyBirdDays || 0;
+  if (days <= 0) return null;
 
-export async function GET(request: NextRequest) {
-  try {
-    await connectDB();
-
-    const token = request.cookies.get('sessionToken')?.value;
-    if (!token) {
-      return new NextResponse(
-        JSON.stringify({ success: false, message: 'Authentication required' }),
-        { status: 401, headers: { 'content-type': 'application/json' } }
-      );
-    }
-
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'ethio-hub-secret-key-2025');
-    const { payload } = await jose.jwtVerify(token, secret);
-    const touristId = payload.userId as string;
-
-    if (!touristId) {
-      return new NextResponse(
-        JSON.stringify({ success: false, message: 'Tourist ID not found in token' }),
-        { status: 401, headers: { 'content-type': 'application/json' } }
-      );
-    }
-
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-
-    let touristObjectId;
-    try {
-      touristObjectId = new mongoose.Types.ObjectId(touristId);
-    } catch (e) {
-      touristObjectId = touristId;
-    }
-
-    const query: any = { tourist: touristObjectId };
-    if (status) query.status = status;
-
-    const bookings = await Booking.find(query)
-      .populate('festival', 'name startDate endDate coverImage locationName')
-      .populate('organizer', 'name')
-      .sort({ createdAt: -1 });
-
-    return new NextResponse(
-      JSON.stringify({ success: true, bookings }),
-      { status: 200, headers: { 'content-type': 'application/json' } }
-    );
-
-  } catch (error: any) {
-    if (error.code === 'ERR_JWT_EXPIRED' || error.code === 'ERR_JWS_INVALID') {
-      return new NextResponse(
-        JSON.stringify({ success: false, message: 'Authentication failed: Invalid token' }),
-        { status: 401, headers: { 'content-type': 'application/json' } }
-      );
-    }
-    console.error('Error fetching bookings:', error);
-    return new NextResponse(
-      JSON.stringify({ success: false, message: 'Internal Server Error' }),
-      { status: 500, headers: { 'content-type': 'application/json' } }
-    );
-  }
+  return new Date(publishedAt.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
 export async function PUT(request: NextRequest) {
@@ -243,23 +238,56 @@ export async function PUT(request: NextRequest) {
         booking.paymentDate = new Date();
       }
 
-      // Calculate split payment
+      // Calculate split payment - ticket gets 10% admin commission, hotel/transport get 5% organizer fee
       const hasHotel = booking.bookingDetails?.room?.hotelName ? true : false;
+      const hasTransport = booking.bookingDetails?.transport?.transportId ? true : false;
       booking.hasHotelBooking = hasHotel;
+      booking.hasTransportBooking = hasTransport;
 
-      if (hasHotel) {
-        booking.platformFee = 0;
-        booking.organizerAmount = booking.totalPrice;
-        booking.commissionPercent = 0;
-        booking.touristServiceFee = 0;
-        booking.touristFeePercent = 0;
-      } else {
-        booking.touristFeePercent = 5;
-        booking.touristServiceFee = Math.round(booking.totalPrice * 0.05 * 100) / 100;
-        booking.commissionPercent = 10;
-        booking.platformFee = Math.round(booking.totalPrice * 0.10 * 100) / 100;
-        booking.organizerAmount = Math.round(booking.totalPrice * 0.90 * 100) / 100;
-      }
+      // Get room and transport prices
+      const roomTotal = (booking.bookingDetails?.room?.roomPrice || 0) * (booking.bookingDetails?.room?.nights || 1);
+      const transportTotal = (booking.bookingDetails?.transport?.price || 0) * (booking.bookingDetails?.transport?.days || 1);
+      const ticketPrice = Math.max(0, booking.totalPrice - roomTotal - transportTotal);
+
+      // Calculate hotel fee (5% of room total)
+      const hotelFee = hasHotel ? Math.round(roomTotal * 0.05 * 100) / 100 : 0;
+      // Calculate transport fee (5% of transport total)
+      const transportFee = hasTransport ? Math.round(transportTotal * 0.05 * 100) / 100 : 0;
+      // Calculate admin commission (10% of ticket total)
+      const adminCommission = ticketPrice > 0 ? Math.round(ticketPrice * 0.10 * 100) / 100 : 0;
+      // Calculate organizer earnings from ticket (90% of ticket)
+      const ticketOrganizerAmount = ticketPrice > 0 ? Math.round(ticketPrice * 0.90 * 100) / 100 : 0;
+
+      booking.platformFee = adminCommission;
+      booking.commissionPercent = 10;
+      booking.touristFeePercent = 5;
+      booking.touristServiceFee = 0;
+      // Organizer gets: 90% of ticket + 5% of hotel + 5% of transport
+      booking.organizerAmount = ticketOrganizerAmount + hotelFee + transportFee;
+      booking.hotelFee = hotelFee;
+      booking.transportFee = transportFee;
+
+      // Generate receipt
+      booking.receipt = {
+        eventName: festival?.name || 'Event',
+        eventDate: festival?.startDate,
+        ticketType: booking.ticketType,
+        ticketPrice: ticketPrice,
+        hotel: hasHotel ? {
+          name: booking.bookingDetails?.room?.hotelName || '',
+          roomType: booking.bookingDetails?.room?.roomName || '',
+          roomPrice: roomTotal,
+          checkIn: booking.checkInDate,
+          checkOut: booking.checkOutDate,
+        } : null,
+        transport: hasTransport ? {
+          type: booking.bookingDetails?.transport?.type || '',
+          price: transportTotal,
+        } : null,
+        userInfo: booking.contactInfo,
+        totalPaid: booking.totalPrice,
+        paymentMethod: booking.paymentMethod,
+      };
 
       // Update Wallets and Transactions
       const organizerId = booking.organizer;
@@ -300,6 +328,30 @@ export async function PUT(request: NextRequest) {
       }
 
       await booking.save({ session });
+
+      // Update organizer's wallet with earnings
+      await Wallet.findOneAndUpdate(
+        { userId: booking.organizer, userRole: 'organizer' },
+        {
+          $inc: {
+            availableBalance: booking.organizerAmount,
+            lifetimeEarned: booking.organizerAmount,
+          }
+        },
+        { upsert: true, session }
+      );
+
+      // Create transaction record
+      await Transaction.create([{
+        userId: booking.organizer,
+        type: 'earning',
+        amount: booking.organizerAmount,
+        currency: booking.currency || 'ETB',
+        status: 'completed',
+        description: `Booking payment for ${festival?.name || 'Event'}`,
+        reference: booking._id,
+        referenceType: 'booking',
+      }], { session });
     }
 
     await session.commitTransaction();
@@ -466,20 +518,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 2. Decrement room availability (atomic)
+    // 2. Room availability check & decrement (for non-VIP)
     const selectedRoom = bookingDetails?.room;
-    if (selectedRoom && selectedRoom.roomId) {
-      const roomDecrementResult = await Festival.updateOne(
-        {
-          _id: festivalId,
-          'hotels.rooms._id': selectedRoom.roomId,
-          'hotels.rooms.available': { $gte: 1 }
-        },
-        { $inc: { 'hotels.rooms.$.available': -1 } },
-        { arrayFilters: [{ 'elem._id': selectedRoom.roomId }], session }
+    if (selectedRoom && selectedRoom.roomId && ticketType !== 'vip') {
+      const roomUpdateResult = await Festival.updateOne(
+        { _id: festivalId },
+        { $inc: { "hotels.$[h].rooms.$[r].available": -1 } },
+        { 
+          arrayFilters: [
+            { "h.rooms._id": selectedRoom.roomId },
+            { "r._id": selectedRoom.roomId, "r.available": { $gt: 0 } }
+          ],
+          session 
+        }
       );
 
-      if (!roomDecrementResult || roomDecrementResult.matchedCount === 0) {
+      if (!roomUpdateResult || roomUpdateResult.modifiedCount === 0) {
         await session.abortTransaction();
         return new NextResponse(
           JSON.stringify({ success: false, message: 'Room no longer available' }),
@@ -488,20 +542,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 3. Decrement transport availability (atomic)
+    // 3. Transport availability check & decrement (for non-VIP)
     const selectedTransport = bookingDetails?.transport;
-    if (selectedTransport && selectedTransport.transportId) {
-      const transportDecrementResult = await Festival.updateOne(
-        {
-          _id: festivalId,
+    if (selectedTransport && selectedTransport.transportId && ticketType !== 'vip') {
+      const transportUpdateResult = await Festival.updateOne(
+        { 
+          _id: festivalId, 
           'transportation._id': selectedTransport.transportId,
-          'transportation.available': { $gte: 1 }
+          'transportation.available': { $gt: 0 }
         },
         { $inc: { 'transportation.$.available': -1 } },
-        { arrayFilters: [{ 'elem._id': selectedTransport.transportId }], session }
+        { session }
       );
 
-      if (!transportDecrementResult || transportDecrementResult.matchedCount === 0) {
+      if (!transportUpdateResult || transportUpdateResult.matchedCount === 0) {
         await session.abortTransaction();
         return new NextResponse(
           JSON.stringify({ success: false, message: 'Transportation no longer available' }),
@@ -510,26 +564,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Calculate total price
-    unitPrice = unitPrice || (festival.pricing?.basePrice || 0);
+    // Calculate total price with dynamic Early Bird check
+    const earlyBirdExpiry = getEarlyBirdExpiry(festival);
+    const isEarlyBirdValid = earlyBirdExpiry && new Date() < earlyBirdExpiry;
+    const discount = isEarlyBirdValid ? (festival.pricing?.earlyBird || 0) / 100 : 0;
 
     if (ticketType === 'vip') {
-      unitPrice = festival.pricing?.vipPrice || festival.pricing?.basePrice * 2 || 0;
-    } else if (ticketType === 'earlyBird') {
-      unitPrice = (festival.pricing?.basePrice || 0) * (1 - (festival.pricing?.earlyBird || 0) / 100);
+      const baseVipPrice = festival.pricing?.vipPrice || 0;
+      unitPrice = baseVipPrice * (1 - discount);
+    } else {
+      const baseStandardPrice = festival.pricing?.basePrice || 0;
+      unitPrice = baseStandardPrice * (1 - discount);
     }
 
     let calculatedTotalPrice = unitPrice * quantity;
 
     if (selectedRoom && selectedRoom.roomPrice) {
-      calculatedTotalPrice += selectedRoom.roomPrice;
+      calculatedTotalPrice += selectedRoom.roomPrice * (selectedRoom.nights || 1);
     }
 
     if (selectedTransport && selectedTransport.price) {
-      calculatedTotalPrice += selectedTransport.price;
+      calculatedTotalPrice += selectedTransport.price * (selectedTransport.days || 1);
     }
 
     const txRef = generateTxRef();
+
+    // Generate ref codes for services
+    const hotelRefCode = selectedRoom ? generate4DigitCode() : undefined;
+    const transportRefCode = selectedTransport ? generate4DigitCode() : undefined;
 
     // Create booking
     const bookingData: any = {
@@ -541,8 +603,8 @@ export async function POST(request: NextRequest) {
       quantity,
       totalPrice: calculatedTotalPrice,
       currency: currency || festival.pricing?.currency || 'ETB',
-      status: 'pending',
-      paymentStatus: 'pending',
+      status: 'confirmed', // Changed from pending as per user request
+      paymentStatus: 'paid', // Changed from pending as per user request
       paymentRef: txRef,
       contactInfo: {
         fullName: contactInfo.fullName,
@@ -551,8 +613,23 @@ export async function POST(request: NextRequest) {
       },
       specialRequests,
       bookingDetails: selectedRoom || selectedTransport ? {
-        room: selectedRoom,
-        transport: selectedTransport,
+        room: selectedRoom ? { 
+          hotelId: selectedRoom.hotelId,
+          roomId: selectedRoom.roomId,
+          hotelName: selectedRoom.hotelName,
+          roomName: selectedRoom.roomName,
+          roomPrice: selectedRoom.roomPrice,
+          nights: selectedRoom.nights,
+          guests: selectedRoom.guests,
+          hotelRefCode 
+        } : undefined,
+        transport: selectedTransport ? {
+          transportId: selectedTransport.transportId,
+          type: selectedTransport.type,
+          price: selectedTransport.price,
+          days: selectedTransport.days,
+          transportRefCode
+        } : undefined,
       } : undefined,
     };
 

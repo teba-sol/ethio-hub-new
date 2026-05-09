@@ -40,11 +40,15 @@ export async function GET(request: NextRequest) {
     const status = url.searchParams.get('status');
     const search = url.searchParams.get('search');
     const role = url.searchParams.get('role') || 'all';
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const limit = parseInt(url.searchParams.get('limit') || '20');
+    const skip = (page - 1) * limit;
 
-    let statusFilter: string[] = ['Pending', 'Under Review', 'Approved', 'Rejected', 'Modification Requested'];
+    let statusFilter: string[] | null = null;
 
     if (status && status !== 'All') {
       const statusMap: Record<string, string> = {
+        'Not Submitted': 'Not Submitted',
         'Pending': 'Pending',
         'Under Review': 'Under Review',
         'Approved': 'Approved',
@@ -56,18 +60,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const requests: any[] = [];
-
-    // Parallelize artisan and organizer data fetching
     const [artisanData, organizerData, deliveryData] = await Promise.all([
       // Artisan block
       (async () => {
-        if (role === 'all' || role === 'artisan') {
-          const artisanQuery: any = {
-            role: 'artisan',
-            artisanStatus: { $in: statusFilter },
-          };
+        try {
+          if (role !== 'all' && role !== 'artisan') return [];
 
+          const artisanQuery: any = { role: 'artisan' };
+          if (statusFilter) {
+            artisanQuery.artisanStatus = { $in: statusFilter };
+          }
           if (search) {
             artisanQuery.$or = [
               { name: { $regex: search, $options: 'i' } },
@@ -78,6 +80,8 @@ export async function GET(request: NextRequest) {
           const artisanUsers = await User.find(artisanQuery)
             .select('-password')
             .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
             .lean();
 
           if (artisanUsers.length > 0) {
@@ -113,18 +117,22 @@ export async function GET(request: NextRequest) {
               };
             });
           }
+          return [];
+        } catch (error) {
+          console.error("Artisan fetch error:", error);
+          return [];
         }
-        return [];
       })(),
 
       // Organizer block
       (async () => {
-        if (role === 'all' || role === 'organizer') {
-          const organizerQuery: any = {
-            role: 'organizer',
-            organizerStatus: { $in: statusFilter },
-          };
+        try {
+          if (role !== 'all' && role !== 'organizer') return [];
 
+          const organizerQuery: any = { role: 'organizer' };
+          if (statusFilter) {
+            organizerQuery.organizerStatus = { $in: statusFilter };
+          }
           if (search) {
             organizerQuery.$or = [
               { name: { $regex: search, $options: 'i' } },
@@ -135,6 +143,8 @@ export async function GET(request: NextRequest) {
           const organizerUsers = await User.find(organizerQuery)
             .select('-password')
             .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
             .lean();
 
           if (organizerUsers.length > 0) {
@@ -169,18 +179,22 @@ export async function GET(request: NextRequest) {
               };
             });
           }
+          return [];
+        } catch (error) {
+          console.error("Organizer fetch error:", error);
+          return [];
         }
-        return [];
       })(),
 
       // Delivery block
       (async () => {
-        if (role === 'all' || role === 'delivery') {
-          const deliveryQuery: any = {
-            role: 'delivery',
-            deliveryStatus: { $in: statusFilter },
-          };
+        try {
+          if (role !== 'all' && role !== 'delivery') return [];
 
+          const deliveryQuery: any = { role: 'delivery' };
+          if (statusFilter) {
+            deliveryQuery.deliveryStatus = { $in: statusFilter };
+          }
           if (search) {
             deliveryQuery.$or = [
               { name: { $regex: search, $options: 'i' } },
@@ -191,6 +205,8 @@ export async function GET(request: NextRequest) {
           const deliveryUsers = await User.find(deliveryQuery)
             .select('-password')
             .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
             .lean();
 
           return deliveryUsers.map((user: any) => {
@@ -213,17 +229,29 @@ export async function GET(request: NextRequest) {
               licensePlate: user.deliveryProfile?.licensePlate || '',
             };
           });
+        } catch (error) {
+          console.error("Delivery fetch error:", error);
+          return [];
         }
-        return [];
       })()
     ]);
 
-    requests.push(...artisanData, ...organizerData, ...deliveryData);
+    const requests = [...artisanData, ...organizerData, ...deliveryData];
+    requests.sort((a, b) => new Date(b.registrationDate || 0).getTime() - new Date(a.registrationDate || 0).getTime());
 
-    requests.sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime());
+    // We only take the top 'limit' items for the current page
+    const paginatedRequests = requests.slice(0, limit);
 
     return new NextResponse(
-      JSON.stringify({ success: true, requests }),
+      JSON.stringify({ 
+        success: true, 
+        requests: paginatedRequests,
+        pagination: {
+          page,
+          limit,
+          hasMore: artisanData.length === limit || organizerData.length === limit || deliveryData.length === limit
+        }
+      }),
       { status: 200, headers: { 'content-type': 'application/json' } }
     );
   } catch (error: any) {
@@ -242,7 +270,7 @@ function calculateArtisanProfileCompletion(profile: any): number {
     'accountNumber', 'profileImage', 'idDocument', 'workshopPhoto',
     'craftProcessPhoto',
   ];
-  const filled = fields.filter((f) => profile[f] && profile[f] !== '').length;
+  const filled = fields.filter((f) => profile?.[f] && profile[f] !== '').length;
   return Math.round((filled / fields.length) * 100);
 }
 
@@ -252,17 +280,17 @@ function calculateOrganizerProfileCompletion(profile: any): number {
     'payoutMethod', 'bankName', 'accountHolderName', 'accountNumber',
     'logo', 'businessLicense',
   ];
-  const filled = fields.filter((f) => profile[f] && profile[f] !== '').length;
+  const filled = fields.filter((f) => profile?.[f] && profile[f] !== '').length;
   return Math.round((filled / fields.length) * 100);
 }
 
 function calculateDeliveryProfileCompletion(user: any): number {
-  const profile = user.deliveryProfile || {};
+  const profile = user?.deliveryProfile || {};
   const fields = [
     'phone', 'vehicleType', 'licensePlate', 'idDocument'
   ];
-  const profileFilled = fields.filter((f) => profile[f] && profile[f] !== '').length;
-  const avatarFilled = user.profileImage ? 1 : 0;
+  const profileFilled = fields.filter((f) => profile?.[f] && profile[f] !== '').length;
+  const avatarFilled = user?.profileImage ? 1 : 0;
   return Math.round(((profileFilled + avatarFilled) / (fields.length + 1)) * 100);
 }
 
@@ -286,7 +314,7 @@ function mapStatus(status: string): string {
 
 function buildArtisanDocuments(profile: any): any[] {
   const docs: any[] = [];
-  if (profile.idDocument) {
+  if (profile?.idDocument) {
     docs.push({
       id: 'id_document',
       name: 'ID Document',
@@ -295,7 +323,7 @@ function buildArtisanDocuments(profile: any): any[] {
       uploadedAt: formatDate(profile.createdAt),
     });
   }
-  if (profile.workshopPhoto) {
+  if (profile?.workshopPhoto) {
     docs.push({
       id: 'workshop_photo',
       name: 'Workshop Photo',
@@ -304,7 +332,7 @@ function buildArtisanDocuments(profile: any): any[] {
       uploadedAt: formatDate(profile.createdAt),
     });
   }
-  if (profile.craftProcessPhoto) {
+  if (profile?.craftProcessPhoto) {
     docs.push({
       id: 'craft_process',
       name: 'Craft Process Photo',
@@ -313,23 +341,29 @@ function buildArtisanDocuments(profile: any): any[] {
       uploadedAt: formatDate(profile.createdAt),
     });
   }
-  if (profile.productSamplePhotos && profile.productSamplePhotos.length > 0) {
-    profile.productSamplePhotos.forEach((photo: string, index: number) => {
-      docs.push({
-        id: `product_sample_${index}`,
-        name: `Product Sample ${index + 1}`,
-        type: 'image',
-        url: photo,
-        uploadedAt: formatDate(profile.createdAt),
+  if (profile?.productSamplePhotos) {
+    let photos = profile.productSamplePhotos;
+    if (typeof photos === 'string') {
+      try { photos = JSON.parse(photos); } catch (e) { photos = [photos]; }
+    }
+    if (Array.isArray(photos)) {
+      photos.forEach((photo: string, index: number) => {
+        docs.push({
+          id: `product_sample_${index}`,
+          name: `Product Sample ${index + 1}`,
+          type: 'image',
+          url: photo,
+          uploadedAt: formatDate(profile.createdAt),
+        });
       });
-    });
+    }
   }
   return docs;
 }
 
 function buildOrganizerDocuments(profile: any): any[] {
   const docs: any[] = [];
-  if (profile.businessLicense) {
+  if (profile?.businessLicense) {
     docs.push({
       id: 'business_license',
       name: 'Business License',
@@ -338,7 +372,7 @@ function buildOrganizerDocuments(profile: any): any[] {
       uploadedAt: formatDate(profile.createdAt),
     });
   }
-  if (profile.logo) {
+  if (profile?.logo) {
     docs.push({
       id: 'company_logo',
       name: 'Company Logo',
@@ -352,8 +386,8 @@ function buildOrganizerDocuments(profile: any): any[] {
 
 function buildDeliveryDocuments(user: any): any[] {
   const docs: any[] = [];
-  const profile = user.deliveryProfile || {};
-  if (profile.idDocument) {
+  const profile = user?.deliveryProfile || {};
+  if (profile?.idDocument) {
     docs.push({
       id: 'id_document',
       name: 'National ID / Passport',

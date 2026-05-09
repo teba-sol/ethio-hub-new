@@ -16,8 +16,8 @@ export const normalizeSchedule = (schedule: any[] = [], isDraft: boolean) => {
       const activitiesEn = textValue(item?.activities_en, item?.activities);
       const activitiesAm = textValue(item?.activities_am, item?.activities);
       
-      if (!isDraft && (!titleEn || !titleAm)) return null;
-
+      const hasData = titleEn || titleAm || activitiesEn || activitiesAm || (Array.isArray(item?.performers) && item.performers.length > 0);
+      if (!hasData) return null;
       const fallbackTitle = `Day ${index + 1}`;
       const finalTitle = titleEn || titleAm || fallbackTitle;
       return {
@@ -57,7 +57,7 @@ export const normalizeHotels = (hotels: any[] = [], isDraft: boolean) => {
       const hasHotelDetails = nameEn || nameAm || hotel?.address || hotel?.image || (Array.isArray(hotel?.rooms) && hotel.rooms.length > 0);
       if (isDraft && !hasHotelDetails) return null;
 
-      const fallbackName = `Draft hotel ${index + 1}`;
+      const fallbackName = `Hotel ${index + 1}`;
       const rooms = (Array.isArray(hotel?.rooms) ? hotel.rooms : [])
         .map((room: any, roomIndex: number) => {
           const roomNameEn = textValue(room?.name_en, room?.name);
@@ -65,11 +65,12 @@ export const normalizeHotels = (hotels: any[] = [], isDraft: boolean) => {
           const hasRoomDetails = roomNameEn || roomNameAm || room?.image || room?.availability || room?.pricePerNight;
           if (isDraft && !hasRoomDetails) return null;
 
-          const fallbackRoomName = `Draft room ${roomIndex + 1}`;
+          const fallbackRoomName = `Room ${roomIndex + 1}`;
           const availability = Number(room?.availability) || (isDraft ? 1 : 0);
           
           return {
             ...room,
+            name: roomNameEn || roomNameAm || fallbackRoomName,
             name_en: roomNameEn || roomNameAm || fallbackRoomName,
             name_am: roomNameAm || roomNameEn || fallbackRoomName,
             description_en: room?.description_en || room?.description || '',
@@ -82,6 +83,7 @@ export const normalizeHotels = (hotels: any[] = [], isDraft: boolean) => {
 
       return {
         ...hotel,
+        name: nameEn || nameAm || fallbackName,
         name_en: nameEn || nameAm || fallbackName,
         name_am: nameAm || nameEn || fallbackName,
         description_en: hotel?.description_en || hotel?.description || '',
@@ -91,9 +93,11 @@ export const normalizeHotels = (hotels: any[] = [], isDraft: boolean) => {
         facilities: Array.isArray(hotel?.facilities) ? hotel.facilities : [],
         foodAndDrink: Array.isArray(hotel?.foodAndDrink) ? hotel.foodAndDrink : [],
         hotelRules: Array.isArray(hotel?.hotelRules) ? hotel.hotelRules : [],
+        hotelServices: Array.isArray(hotel?.hotelServices) ? hotel.hotelServices : [],
         propertyType: hotel?.propertyType || 'Hotel',
         checkInTime: hotel?.checkInTime || '14:00',
         checkOutTime: hotel?.checkOutTime || '12:00',
+        coordinates: hotel?.coordinates,
         rooms,
       };
     })
@@ -115,6 +119,7 @@ export const normalizeTransportation = (transportation: any[] = [], isDraft: boo
 
       return {
         ...transport,
+        type: typeEn || typeAm || fallbackType,
         type_en: typeEn || typeAm || fallbackType,
         type_am: typeAm || typeEn || fallbackType,
         description_en: transport?.description_en || transport?.description || '',
@@ -203,8 +208,9 @@ export const normalizeTicketTypes = (ticketTypes: any[] = [], isDraft: boolean) 
 
       return {
         ...ticket,
-        name_en: nameEn || nameAm || 'General Admission',
-        name_am: nameAm || nameEn || 'ጠቅላላ መግቢያ',
+        name: nameEn || nameAm || 'Standard Ticket',
+        name_en: nameEn || nameAm || 'Standard Ticket',
+        name_am: nameAm || nameEn || 'መደብ ትኬይ',
         price: price,
         quantity: quantity,
         available: Number(ticket?.available) || quantity,

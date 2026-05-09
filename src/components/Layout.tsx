@@ -329,7 +329,7 @@ const MenuLink = ({ icon: Icon, label, to }: any) => (
   </Link>
 );
 
-const UserMenu: React.FC = () => {
+const UserMenu: React.FC<{ isScrolled: boolean, isHomePage: boolean }> = ({ isScrolled, isHomePage }) => {
   const { user, isAuthenticated, logout } = useAuth();
   const { t } = useLanguage();
   const router = useRouter();
@@ -356,24 +356,46 @@ const UserMenu: React.FC = () => {
 
   return (
     <div className="relative group z-50">
-      <Link
-        href={isAuthenticated ? getDashboardHomePath() : "/login"}
-        className="flex items-center gap-3 pl-3 pr-1 py-1 rounded-full border border-gray-100 bg-gray-50/50 hover:bg-white hover:shadow-md transition-all duration-300 group/nav"
-      >
-        <div className="flex flex-col text-right items-end hidden lg:flex">
-          <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none mb-0.5">{t("header.welcome")}</span>
-          <span className="text-xs font-black text-primary leading-none truncate max-w-[100px]">
-            {isAuthenticated ? (user?.name?.split(" ")[0] || "User") : t("header.signInRegister")}
-          </span>
-        </div>
-        <div className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center text-primary shadow-sm group-hover/nav:border-primary/20 transition-colors">
-          {isAuthenticated && user?.touristProfile?.profileImage ? (
-            <img src={user.touristProfile.profileImage} alt="" className="w-full h-full rounded-full object-cover" />
-          ) : (
-            <UserIcon className="w-5 h-5" />
-          )}
-        </div>
-      </Link>
+      {isAuthenticated ? (
+        <Link
+          href={getDashboardHomePath()}
+          className={`flex items-center gap-3 p-1 pr-4 rounded-full border transition-all duration-500 group/nav ${
+            isScrolled || !isHomePage
+              ? "border-gray-200/50 bg-gray-50 hover:bg-white hover:shadow-xl"
+              : "border-white/20 bg-white/10 backdrop-blur-md hover:bg-white hover:shadow-2xl hover:shadow-black/20"
+          }`}
+        >
+          <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary overflow-hidden shadow-inner">
+            {user?.touristProfile?.profileImage ? (
+              <img src={user.touristProfile.profileImage} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="font-bold text-sm">{user?.name?.charAt(0).toUpperCase()}</span>
+            )}
+          </div>
+          <div className="flex flex-col text-left">
+            <span className={`text-[9px] font-bold uppercase tracking-widest leading-none mb-0.5 transition-colors duration-500 ${
+              isScrolled || !isHomePage ? "text-gray-400" : "text-white/60"
+            }`}>{t("header.welcome")}</span>
+            <span className={`text-[11px] font-black leading-none truncate max-w-[80px] transition-colors duration-500 ${
+              isScrolled || !isHomePage ? "text-primary" : "text-white"
+            }`}>
+              {user?.name?.split(" ")[0]}
+            </span>
+          </div>
+        </Link>
+      ) : (
+        <Link
+          href="/login"
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-bold text-[10px] uppercase tracking-[0.2em] transition-all duration-500 ${
+            isScrolled || !isHomePage
+              ? "bg-primary text-white hover:bg-secondary hover:shadow-lg hover:shadow-secondary/20"
+              : "bg-white text-primary hover:bg-secondary hover:text-white hover:shadow-xl hover:shadow-white/20"
+          }`}
+        >
+          <UserIcon className="w-3.5 h-3.5" />
+          {t("auth.signIn")}
+        </Link>
+      )}
 
       <div className="absolute top-full right-0 pt-3 w-72 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-right scale-95 group-hover:scale-100">
         <div className="bg-white rounded-[24px] shadow-2xl border border-gray-100 overflow-hidden">
@@ -484,14 +506,15 @@ const UserMenu: React.FC = () => {
   );
 };
 
-const SearchBar = () => {
+const SearchBar = ({ isScrolled, isHomePage }: { isScrolled: boolean, isHomePage: boolean }) => {
   const [query, setQuery] = useState("");
   const router = useRouter();
+  const { t } = useLanguage();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
-      console.log("Searching for:", query);
+      router.push(`/products?search=${encodeURIComponent(query.trim())}`);
     }
   };
 
@@ -500,8 +523,12 @@ const SearchBar = () => {
       <div className="relative">
         <input
           type="text"
-          placeholder="Search..."
-          className="pl-4 pr-10 py-2.5 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-sm w-64 transition-all"
+          placeholder={t("header.searchPlaceholder") || "Search cultural treasures..."}
+          className={`pl-4 pr-10 py-2.5 rounded-full border outline-none text-xs w-64 transition-all duration-500 ${
+            isScrolled || !isHomePage
+              ? "bg-gray-100/50 border-gray-200/50 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10"
+              : "bg-white/10 backdrop-blur-md border-white/20 text-white placeholder:text-white/50 focus:bg-white/20 focus:border-white focus:ring-4 focus:ring-white/10"
+          }`}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -516,7 +543,7 @@ const SearchBar = () => {
   );
 };
 
-const ThemeToggle = () => {
+const ThemeToggle = ({ isScrolled, isHomePage }: { isScrolled: boolean, isHomePage: boolean }) => {
   const [isDark, setIsDark] = React.useState(false);
 
   React.useEffect(() => {
@@ -542,7 +569,9 @@ const ThemeToggle = () => {
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 text-gray-400 hover:text-primary transition-colors relative ml-2 group"
+      className={`p-2 transition-colors relative ml-2 group ${
+        isScrolled || !isHomePage ? "text-gray-400 hover:text-primary" : "text-white/80 hover:text-white"
+      }`}
       aria-label="Toggle Theme"
     >
       {isDark ? (
@@ -578,36 +607,51 @@ export const Header: React.FC = () => {
 
   const isActive = (path: string) => pathname === path;
 
+  const isHomePage = pathname === "/";
+
   return (
     <header 
-      className={`sticky top-0 z-50 transition-all duration-500 ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 ${
         isScrolled 
-          ? "bg-white/80 backdrop-blur-xl shadow-lg shadow-primary/5 py-3" 
-          : "bg-white py-5"
+          ? "bg-white/80 backdrop-blur-xl shadow-2xl shadow-black/5 py-3 border-b border-gray-100/50" 
+          : isHomePage
+            ? "bg-transparent py-6"
+            : "bg-white py-5 border-b border-gray-50"
       }`}
     >
       <CartDrawer />
-      <nav className="max-w-7xl mx-auto px-6">
-        <div className="flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center rotate-3 group-hover:rotate-0 transition-transform duration-300 shadow-lg shadow-primary/20">
-              <span className="text-white font-black text-xl">E</span>
+      <nav className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center w-full">
+          <Link href="/" className="flex items-center group flex-shrink-0 -ml-2 md:ml-0">
+            <div className={`relative h-12 w-12 md:h-16 md:w-16 rounded-full overflow-hidden flex items-center justify-center border-2 transition-all duration-500 shadow-xl group-hover:scale-110 ${
+              isScrolled || !isHomePage ? "border-primary/20 shadow-primary/5" : "border-white/30 shadow-black/20"
+            }`}>
+              <img 
+                src="/uploads/avatars/logo.png" 
+                alt="Ethio Craft Hub" 
+                className="w-full h-full object-cover"
+              />
             </div>
-            <span className="text-xl font-black font-serif text-primary tracking-tighter hidden sm:block">
-              Ethio<span className="text-secondary">Hub</span>
-            </span>
           </Link>
 
           {/* Desktop Nav */}
-          <div className="hidden md:flex items-center bg-gray-50/50 border border-gray-100 p-1 rounded-full">
+          <div className={`hidden md:flex items-center p-1 rounded-full transition-all duration-500 ${
+            isScrolled || !isHomePage 
+              ? "bg-gray-100/50 border border-gray-200/50" 
+              : "bg-white/10 backdrop-blur-md border border-white/20"
+          }`}>
             {navLinks.map((link) => (
               <Link
                 key={link.path}
                 href={link.path}
                 className={`px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] rounded-full transition-all duration-300 ${
                   isActive(link.path)
-                    ? "bg-white text-primary shadow-sm"
-                    : "text-gray-400 hover:text-primary"
+                    ? isScrolled || !isHomePage
+                      ? "bg-white text-primary shadow-sm"
+                      : "bg-white text-primary shadow-lg shadow-black/10"
+                    : isScrolled || !isHomePage
+                      ? "text-gray-400 hover:text-primary"
+                      : "text-white/70 hover:text-white"
                 }`}
               >
                 {link.name}
@@ -617,16 +661,18 @@ export const Header: React.FC = () => {
 
           {/* Actions */}
           <div className="hidden md:flex items-center gap-2">
-            <SearchBar />
+            <SearchBar isScrolled={isScrolled} isHomePage={isHomePage} />
 
             <div className="h-8 w-px bg-gray-100 mx-2" />
 
-            <LanguageToggle />
-            <ThemeToggle />
+            <LanguageToggle isScrolled={isScrolled} isHomePage={isHomePage} />
+            <ThemeToggle isScrolled={isScrolled} isHomePage={isHomePage} />
 
             <button
               onClick={toggleCart}
-              className="p-3 text-gray-400 hover:text-primary transition-all relative group"
+              className={`p-3 transition-all relative group ${
+                isScrolled || !isHomePage ? "text-gray-400 hover:text-primary" : "text-white/80 hover:text-white"
+              }`}
               aria-label="Shopping Cart"
             >
               <div className="relative">
@@ -639,7 +685,7 @@ export const Header: React.FC = () => {
               </div>
             </button>
 
-            <UserMenu />
+            <UserMenu isScrolled={isScrolled} isHomePage={isHomePage} />
           </div>
 
           {/* Mobile menu button */}
@@ -732,8 +778,8 @@ export const Header: React.FC = () => {
               </div>
               
               <div className="pt-6 flex justify-center gap-6 border-t border-gray-50 mt-4 pt-8">
-                 <LanguageToggle />
-                 <ThemeToggle />
+                 <LanguageToggle isScrolled={isScrolled} isHomePage={isHomePage} />
+                 <ThemeToggle isScrolled={isScrolled} isHomePage={isHomePage} />
               </div>
             </div>
           </motion.div>

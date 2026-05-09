@@ -181,9 +181,12 @@ export const register = async (userData: { email: string; password: string; name
 export async function verifyToken(token: string) {
   try {
     const { payload } = await jwtVerify(token, new TextEncoder().encode(JWT_SECRET));
-    return payload;
+    if (payload) {
+      return { valid: true, payload };
+    }
+    return { valid: false, payload: null };
   } catch (error) {
-    return null;
+    return { valid: false, payload: null };
   }
 }
 

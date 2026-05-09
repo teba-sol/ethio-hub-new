@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search, Filter, CheckCircle2, XCircle, Eye, AlertCircle,
   Tag, DollarSign, Image as ImageIcon, Edit, Shield,
   AlertTriangle, MoreVertical, ChevronDown, Package,
-  Truck, Scale, History, Flag, Check, Ban, FileText, Download, Calendar
+  Truck, Scale, History, Flag, Check, Ban, FileText, Download, Calendar, Loader2
 } from 'lucide-react';
 import { Button, Badge, Input } from '../../components/UI';
 import { useLanguage } from '@/context/LanguageContext';
@@ -23,6 +23,15 @@ const getString = (val: any, language?: string): string => {
     return '';
   }
   return String(val || '');
+};
+
+const formatDate = (date: any) => {
+  if (!date) return 'N/A';
+  return new Date(date).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
 };
 
 // --- Types ---
@@ -72,25 +81,39 @@ export const AdminProductsPage: React.FC = () => {
   const [actionReason, setActionReason] = useState('');
   const [rejectionType, setRejectionType] = useState('Poor image quality');
   const [submitting, setSubmitting] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const ITEMS_PER_PAGE = 15;
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/products');
+      const params = new URLSearchParams();
+      if (filterStatus !== 'All') params.set('verificationStatus', filterStatus);
+      if (searchQuery) params.set('search', searchQuery);
+      params.set('page', page.toString());
+      params.set('limit', ITEMS_PER_PAGE.toString());
+
+      const response = await fetch(`/api/admin/products?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         setProducts(data.products || []);
+        setHasMore(data.pagination?.hasMore || false);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterStatus, searchQuery, page]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filterStatus, searchQuery]);
 
   const handleApprove = async (productId: string) => {
     try {
@@ -150,15 +173,7 @@ export const AdminProductsPage: React.FC = () => {
     }
   };
 
-  const filteredProducts = products.filter(product => {
-    const matchesStatus = filterStatus === 'All' || product.verificationStatus === filterStatus;
-    const artisanName = product.artisanId?.name || '';
-    const artisanEmail = product.artisanId?.email || '';
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          artisanName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          artisanEmail.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
+  const filteredProducts = products;
 
   const toggleSelectProduct = (id: string) => {
     if (selectedProductIds.includes(id)) {
@@ -309,10 +324,10 @@ export const AdminProductsPage: React.FC = () => {
               <div className="lg:col-span-4 space-y-6">
                 <div className="space-y-4">
                   <div className="relative group">
-                    <img src={product.images[0] || 'https://via.placeholder.com/400'} className="w-full aspect-square object-cover rounded-2xl shadow-sm border border-gray-100" alt="Main" />
+                    <img src={product.images?.[0] || 'https://via.placeholder.com/400'} className="w-full aspect-square object-cover rounded-2xl shadow-sm border border-gray-100" alt="Main" />
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    {product.images.slice(1, 4).map((img, i) => (
+                    {product.images?.slice(1, 4).map((img, i) => (
                       <img key={i} src={img} className="w-full aspect-square object-cover rounded-xl border border-gray-100" alt={`Thumb ${i}`} />
                     ))}
                   </div>
@@ -497,120 +512,176 @@ export const AdminProductsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                <th className="px-6 py-4 w-10">
-                  <input
-                    type="checkbox"
-                    className="rounded border-gray-300 text-primary focus:ring-primary"
-                    checked={selectedProductIds.length === filteredProducts.length && filteredProducts.length > 0}
-                    onChange={(e) => {
-                      if (e.target.checked) setSelectedProductIds(filteredProducts.map(p => p._id));
-                      else setSelectedProductIds([]);
-                    }}
-                  />
-                </th>
-                <th className="px-6 py-4">{t('admin.product')}</th>
-                <th className="px-6 py-4">{t('admin.artisan')}</th>
-                <th className="px-6 py-4">{t('admin.category')}</th>
-                <th className="px-6 py-4">{t('admin.price')}</th>
-                <th className="px-6 py-4">{t('admin.stock')}</th>
-                <th className="px-6 py-4">{t('admin.status')}</th>
-                <th className="px-6 py-4 text-right">{t('admin.actions')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {loading ? (
-                <tr><td colSpan={8} className="px-6 py-12 text-center text-gray-500">{t('admin.loadingProducts')}</td></tr>
-              ) : filteredProducts.length === 0 ? (
-                <tr><td colSpan={8} className="px-6 py-12 text-center text-gray-500">{t('admin.noProductsFound')}</td></tr>
-              ) : filteredProducts.map((product) => (
-                <tr key={product._id} className={`hover:bg-gray-50 transition-colors group ${selectedProductIds.includes(product._id) ? 'bg-indigo-50/30' : ''}`}>
-                  <td className="px-6 py-4">
+      <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden">
+        {loading ? (
+          <ProductTableSkeleton />
+        ) : filteredProducts.length === 0 ? (
+          <div className="p-12 text-center text-gray-500">{t('admin.noProductsFound')}</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-4 w-10">
                     <input
                       type="checkbox"
-                      className="rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
-                      checked={selectedProductIds.includes(product._id)}
-                      onChange={() => toggleSelectProduct(product._id)}
+                      className="rounded border-gray-300 text-primary focus:ring-primary"
+                      checked={selectedProductIds.length === filteredProducts.length && filteredProducts.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedProductIds(filteredProducts.map(p => p._id));
+                        else setSelectedProductIds([]);
+                      }}
                     />
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <img src={product.images[0] || 'https://via.placeholder.com/48'} className="w-12 h-12 rounded-lg object-cover bg-gray-200 border border-gray-100" alt="" />
-                      <div>
-                        <p className="font-bold text-gray-800 line-clamp-1">{product.name}</p>
-                        <p className="text-xs text-gray-500">{t('admin.sku')}: {product.sku || 'N/A'}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 font-medium text-gray-700">
-                    <div className="flex items-center gap-2">
-                       <div className="w-6 h-6 bg-indigo-50 rounded-full flex items-center justify-center text-[10px] font-bold text-indigo-600">
-                          {getString(product.artisanId?.name)?.charAt(0) || '?'}
-                        </div>
-                        <div>
-                          <p className="font-bold text-gray-800">{getString(product.artisanId?.name || 'Unknown')}</p>
-                          <p className="text-[10px] text-gray-400">{product.artisanId?.email || ''}</p>
-                        </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <Badge variant="info">{product.category}</Badge>
-                  </td>
-                  <td className="px-6 py-4 font-bold text-gray-800">ETB {product.price.toLocaleString()}</td>
-                  <td className="px-6 py-4 text-gray-600">{product.stock}</td>
-                  <td className="px-6 py-4">
-                    <Badge
-                      variant={
-                        product.verificationStatus === 'Approved' ? 'success' :
-                        product.verificationStatus === 'Pending' ? 'warning' :
-                        'error'
-                      }
-                    >
-                      {product.verificationStatus}
-                    </Badge>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setViewProduct(product)}
-                      >
-                        {t('admin.review')}
-                      </Button>
-                      <div className="relative group/actions">
-                        <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400">
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-20 hidden group-hover/actions:block animate-in fade-in slide-in-from-top-1">
-                          <button
-                            className="w-full text-left px-4 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 flex items-center gap-2"
-                            onClick={() => handleApprove(product._id)}
-                          >
-                            <Check className="w-3.5 h-3.5" /> {t('admin.approveProduct')}
-                          </button>
-                          <button
-                            className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2"
-                            onClick={() => setRejectProduct(product)}
-                          >
-                            <Ban className="w-3.5 h-3.5" /> {t('admin.rejectProduct')}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </td>
+                  </th>
+                  <th className="px-6 py-4">{t('admin.product')}</th>
+                  <th className="px-6 py-4">{t('admin.artisan')}</th>
+                  <th className="px-6 py-4">{t('admin.category')}</th>
+                  <th className="px-6 py-4">{t('admin.price')}</th>
+                  <th className="px-6 py-4">{t('admin.stock')}</th>
+                  <th className="px-6 py-4">{t('admin.status')}</th>
+                  <th className="px-6 py-4 text-right">{t('admin.actions')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filteredProducts.map((product) => (
+                  <tr key={product._id} className={`hover:bg-gray-50 transition-colors group ${selectedProductIds.includes(product._id) ? 'bg-indigo-50/30' : ''}`}>
+                    <td className="px-6 py-4">
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                        checked={selectedProductIds.includes(product._id)}
+                        onChange={() => toggleSelectProduct(product._id)}
+                      />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <img 
+                          src={product.images?.[0] || 'https://via.placeholder.com/48'} 
+                          className="w-12 h-12 rounded-lg object-cover bg-gray-200 border border-gray-100" 
+                          alt="" 
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48';
+                          }}
+                        />
+                        <div>
+                          <p className="font-bold text-gray-800 line-clamp-1">{product.name}</p>
+                          <p className="text-xs text-gray-500">{t('admin.sku')}: {product.sku || 'N/A'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 font-medium text-gray-700">
+                      <div className="flex items-center gap-2">
+                         <div className="w-6 h-6 bg-indigo-50 rounded-full flex items-center justify-center text-[10px] font-bold text-indigo-600">
+                            {getString(product.artisanId?.name)?.charAt(0) || '?'}
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-800">{getString(product.artisanId?.name || 'Unknown')}</p>
+                            <p className="text-[10px] text-gray-400">{product.artisanId?.email || ''}</p>
+                          </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant="info">{product.category}</Badge>
+                    </td>
+                    <td className="px-6 py-4 font-bold text-gray-800">ETB {product.price.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-gray-600">{product.stock}</td>
+                    <td className="px-6 py-4">
+                      <Badge
+                        variant={
+                          product.verificationStatus === 'Approved' ? 'success' :
+                          product.verificationStatus === 'Pending' ? 'warning' :
+                          'error'
+                        }
+                      >
+                        {product.verificationStatus}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setViewProduct(product)}
+                        >
+                          {t('admin.review')}
+                        </Button>
+                        <div className="relative group/actions">
+                          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400">
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                          <div className="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-20 hidden group-hover/actions:block animate-in fade-in slide-in-from-top-1">
+                            <button
+                              className="w-full text-left px-4 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 flex items-center gap-2"
+                              onClick={() => handleApprove(product._id)}
+                            >
+                              <Check className="w-3.5 h-3.5" /> {t('admin.approveProduct')}
+                            </button>
+                            <button
+                              className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2"
+                              onClick={() => setRejectProduct(product)}
+                            >
+                              <Ban className="w-3.5 h-3.5" /> {t('admin.rejectProduct')}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Pagination Controls */}
+            {!loading && filteredProducts.length > 0 && (
+              <div className="px-6 py-4 border-t border-gray-50 flex items-center justify-between bg-gray-50/30">
+                <p className="text-xs text-gray-500 font-medium">
+                  Showing <span className="font-bold text-gray-800">{filteredProducts.length}</span> results
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={page === 1}
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    className="text-[10px] font-bold"
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-xs font-bold text-gray-600 px-3">Page {page}</span>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={!hasMore}
+                    onClick={() => setPage(p => p + 1)}
+                    className="text-[10px] font-bold"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
+const ProductTableSkeleton = () => (
+  <div className="w-full animate-pulse">
+    {[...Array(6)].map((_, i) => (
+      <div key={i} className="flex items-center gap-4 px-6 py-4 border-b border-gray-50">
+        <div className="w-12 h-12 bg-gray-100 rounded-xl shrink-0"></div>
+        <div className="flex-1 space-y-2">
+          <div className="h-3 bg-gray-100 rounded w-1/3"></div>
+          <div className="h-2 bg-gray-50 rounded w-1/2"></div>
+        </div>
+        <div className="h-3 bg-gray-100 rounded w-16"></div>
+        <div className="h-3 bg-gray-100 rounded w-20"></div>
+        <div className="h-8 bg-gray-50 rounded w-24"></div>
+      </div>
+    ))}
+  </div>
+);
 
 export default AdminProductsPage;

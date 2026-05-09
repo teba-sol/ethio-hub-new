@@ -30,11 +30,13 @@ export interface IBooking extends Document {
       hotelName: string;
       roomName: string;
       roomPrice: number;
+      hotelRefCode?: string;
     };
     transport?: {
       transportId?: string;
       type: string;
       price: number;
+      transportRefCode?: string;
     };
   };
   // Split payment fields
@@ -131,11 +133,13 @@ const BookingSchema: Schema = new Schema(
         hotelName: { type: String },
         roomName: { type: String },
         roomPrice: { type: Number },
+        hotelRefCode: { type: String },
       },
       transport: {
         transportId: { type: String },
         type: { type: String },
         price: { type: Number },
+        transportRefCode: { type: String },
       },
     },
     // Split payment fields
@@ -162,6 +166,56 @@ const BookingSchema: Schema = new Schema(
     hasHotelBooking: {
       type: Boolean,
       default: false,
+    },
+    hasTransportBooking: {
+      type: Boolean,
+      default: false,
+    },
+    settlementStatus: {
+      type: String,
+      enum: ['pending', 'paid'],
+      default: 'pending',
+    },
+    paidAt: {
+      type: Date,
+    },
+    providerAmount: {
+      type: Number,
+      default: 0,
+    },
+    // Hotel and transport fees for organizer (5% each)
+    hotelFee: {
+      type: Number,
+      default: 0,
+    },
+    transportFee: {
+      type: Number,
+      default: 0,
+    },
+    // Receipt information
+    receipt: {
+      eventName: { type: String },
+      eventDate: { type: Date },
+      ticketType: { type: String },
+      ticketPrice: { type: Number },
+      hotel: {
+        name: { type: String },
+        roomType: { type: String },
+        roomPrice: { type: Number },
+        checkIn: { type: Date },
+        checkOut: { type: Date },
+      },
+      transport: {
+        type: { type: String },
+        price: { type: Number },
+      },
+      userInfo: {
+        fullName: { type: String },
+        email: { type: String },
+        phone: { type: String },
+      },
+      totalPaid: { type: Number },
+      paymentMethod: { type: String },
     },
   },
   {

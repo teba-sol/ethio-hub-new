@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Package, MapPin, Phone, User, CheckCircle, 
+import {
+  Package, MapPin, Phone, User, CheckCircle,
   Clock, DollarSign, RefreshCw, AlertCircle, Truck, X, CheckCircle2
 } from 'lucide-react';
 import { Button, Badge } from '../UI';
+import { useNotification } from '../../context/NotificationContext';
 
 interface Order {
   _id: string;
@@ -69,28 +70,29 @@ export const AdminOrderManager: React.FC = () => {
   const [selectedDeliveryGuy, setSelectedDeliveryGuy] = useState<string | null>(null);
   const [deliveryPersonDetails, setDeliveryPersonDetails] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
-  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-  
+
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [payAmount, setPayAmount] = useState<string>('');
   const [payPhone, setPayPhone] = useState<string>('');
   const [processingPayment, setProcessingPayment] = useState(false);
-  
+
   // Receipt state
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastPaymentData, setLastPaymentData] = useState<any>(null);
+  const { showNotification: showGlobalNotification } = useNotification();
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning' } | null>(null);
 
   useEffect(() => {
     fetchOrders();
   }, []);
 
-  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+  const showNotification = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
     setNotification({ message, type });
-    // Auto-hide after 5 seconds if it's a success or info
     if (type !== 'error') {
       setTimeout(() => setNotification(null), 5000);
     }
   };
+
 
   const fetchOrders = async () => {
     try {
@@ -109,7 +111,7 @@ export const AdminOrderManager: React.FC = () => {
 
   const handleAssignDelivery = async (orderId: string) => {
     if (!assigningTo) {
-      showNotification('Please select a delivery person', 'error');
+      showNotification('Please select a delivery person', 'warning');
       return;
     }
 
@@ -218,14 +220,31 @@ export const AdminOrderManager: React.FC = () => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none">
           <div className={`
             max-w-md w-full bg-white rounded-2xl shadow-2xl border-2 p-6 flex items-center gap-4 animate-in zoom-in-95 duration-300 pointer-events-auto
-            ${notification.type === 'success' ? 'border-emerald-500 bg-emerald-50' : notification.type === 'error' ? 'border-red-500 bg-red-50' : 'border-blue-500 bg-blue-50'}
+            ${notification.type === 'success' ? 'border-emerald-500 bg-emerald-50' : 
+              notification.type === 'error' ? 'border-red-500 bg-red-50' : 
+              notification.type === 'warning' ? 'border-amber-500 bg-amber-50' :
+              'border-blue-500 bg-blue-50'}
           `}>
-            <div className={`p-3 rounded-full ${notification.type === 'success' ? 'bg-emerald-100 text-emerald-600' : notification.type === 'error' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
-              {notification.type === 'success' ? <CheckCircle className="w-6 h-6" /> : notification.type === 'error' ? <AlertCircle className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
+            <div className={`p-3 rounded-full ${
+              notification.type === 'success' ? 'bg-emerald-100 text-emerald-600' : 
+              notification.type === 'error' ? 'bg-red-100 text-red-600' : 
+              notification.type === 'warning' ? 'bg-amber-100 text-amber-600' :
+              'bg-blue-100 text-blue-600'}`}>
+              {notification.type === 'success' ? <CheckCircle className="w-6 h-6" /> : 
+               notification.type === 'error' ? <AlertCircle className="w-6 h-6" /> : 
+               notification.type === 'warning' ? <AlertCircle className="w-6 h-6" /> :
+               <Clock className="w-6 h-6" />}
             </div>
             <div className="flex-1">
-              <p className={`font-bold ${notification.type === 'success' ? 'text-emerald-800' : notification.type === 'error' ? 'text-red-800' : 'text-blue-800'}`}>
-                {notification.type === 'success' ? 'Success!' : notification.type === 'error' ? 'Error' : 'Notification'}
+              <p className={`font-bold ${
+                notification.type === 'success' ? 'text-emerald-800' : 
+                notification.type === 'error' ? 'text-red-800' : 
+                notification.type === 'warning' ? 'text-amber-800' :
+                'text-blue-800'}`}>
+                {notification.type === 'success' ? 'Success!' : 
+                 notification.type === 'error' ? 'Error' : 
+                 notification.type === 'warning' ? 'Warning' :
+                 'Notification'}
               </p>
               <p className="text-sm text-gray-600">{notification.message}</p>
             </div>
@@ -312,7 +331,7 @@ export const AdminOrderManager: React.FC = () => {
                       </div>
                     </div>
 
-                    <Button 
+                    <Button
                       size="sm"
                       leftIcon={Truck}
                       onClick={() => {
@@ -383,7 +402,7 @@ export const AdminOrderManager: React.FC = () => {
                       <p className="text-xs text-gray-400">{order.tourist?.name}</p>
                     </div>
 
-                    <Button 
+                    <Button
                       size="sm"
                       variant="outline"
                       onClick={() => {
@@ -483,9 +502,9 @@ export const AdminOrderManager: React.FC = () => {
                     {formatCurrency(guy.wallet?.availableBalance || 0)}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => {
                         setSelectedDeliveryGuy(guy._id);
                         fetchDeliveryPersonDetails(guy._id);
@@ -502,11 +521,11 @@ export const AdminOrderManager: React.FC = () => {
       </div>
 
       {selectedOrder && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
           onClick={() => setSelectedOrder(null)}
         >
-          <div 
+          <div
             className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
@@ -550,14 +569,14 @@ export const AdminOrderManager: React.FC = () => {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="flex-1"
                   onClick={() => setSelectedOrder(null)}
                 >
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   className="flex-1"
                   onClick={() => handleAssignDelivery(selectedOrder._id)}
                   disabled={!assigningTo || assigning}
@@ -572,12 +591,12 @@ export const AdminOrderManager: React.FC = () => {
       )}
 
       {selectedDeliveryGuy && deliveryPersonDetails && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md" 
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
           onClick={() => { setSelectedDeliveryGuy(null); setDeliveryPersonDetails(null); }}
         >
-          <div 
-            className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col" 
+          <div
+            className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6 bg-primary text-white">
@@ -597,8 +616,8 @@ export const AdminOrderManager: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => { setSelectedDeliveryGuy(null); setDeliveryPersonDetails(null); }} 
+                <button
+                  onClick={() => { setSelectedDeliveryGuy(null); setDeliveryPersonDetails(null); }}
                   className="p-2 hover:bg-white/20 rounded-full transition-colors"
                 >
                   <X className="w-6 h-6" />
@@ -758,7 +777,7 @@ export const AdminOrderManager: React.FC = () => {
                         <p className="text-sm font-bold text-gray-800">Available Balance</p>
                         <p className="text-2xl font-black text-emerald-600">{formatCurrency(deliveryPersonDetails.wallet?.availableBalance || 0)}</p>
                       </div>
-                      <Button 
+                      <Button
                         size="lg"
                         className="rounded-2xl shadow-xl shadow-primary/20"
                         onClick={() => {
@@ -784,17 +803,17 @@ export const AdminOrderManager: React.FC = () => {
 
       {/* Payment Modal */}
       {isPayModalOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
           onClick={() => setIsPayModalOpen(false)}
         >
-          <div 
+          <div
             className="bg-white rounded-[40px] w-full max-w-md shadow-3xl overflow-hidden animate-in zoom-in-95 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-8 bg-emerald-600 text-white text-center relative">
-              <button 
-                onClick={() => setIsPayModalOpen(false)} 
+              <button
+                onClick={() => setIsPayModalOpen(false)}
                 className="absolute top-6 right-6 p-2 hover:bg-white/20 rounded-full transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -840,14 +859,14 @@ export const AdminOrderManager: React.FC = () => {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="flex-1 rounded-2xl border-gray-200 text-gray-500 hover:bg-gray-50"
                   onClick={() => setIsPayModalOpen(false)}
                 >
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   className="flex-1 rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-600/20"
                   onClick={handleProcessPayment}
                   disabled={!payAmount || !payPhone || processingPayment}

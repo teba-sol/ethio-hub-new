@@ -292,6 +292,7 @@ export interface Festival {
     vipPrice?: number;
     currency?: string;
     earlyBird?: number;
+    earlyBirdDays?: number;
     earlyBirdDeadline?: string;
     groupDiscount?: number;
     vipIncludedHotels?: string[];
@@ -338,6 +339,7 @@ export interface Festival {
   isEditedAfterApproval?: boolean;
   reverificationRequested?: boolean;
   lastEditedAt?: string;
+  type?: string;
 }
 
 export interface Booking {

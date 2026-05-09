@@ -27,14 +27,14 @@ export async function GET(request: NextRequest) {
 
     const userId = tokenResult.userId as string;
     const userObjectId = new mongoose.Types.ObjectId(userId);
-    
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const skip = (page - 1) * limit;
 
     const wallet = await Wallet.findOne({ userId: userObjectId, userRole: 'organizer' }).lean();
-    
+
     if (!wallet) {
       return NextResponse.json({
         success: true,
@@ -133,15 +133,15 @@ export async function GET(request: NextRequest) {
           const order = getOrder(tx);
           const booking = getBooking(tx);
           const product = getProduct(tx);
-          
+
           const tourist = (order?.tourist || booking?.tourist) && typeof (order?.tourist || booking?.tourist) === 'object' ? (order?.tourist || booking?.tourist) : null;
-          
+
           const artisanFromOrder = order?.artisan && typeof order.artisan === 'object' ? order.artisan : null;
           const artisanFromProduct = product?.artisanId && typeof product.artisanId === 'object' ? product.artisanId : null;
           const artisan = artisanFromOrder || artisanFromProduct;
-          
+
           const organizer = booking?.organizer && typeof booking.organizer === 'object' ? booking.organizer : null;
-          
+
           const contactInfo = order?.contactInfo || booking?.contactInfo || {};
           const paymentGatewayId = tx.metadata?.paymentGatewayId || order?.paymentReference || booking?.paymentReference || null;
 

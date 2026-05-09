@@ -577,7 +577,15 @@ export const AdminReportsPage: React.FC = () => {
       const data = await res.json();
 
       if (data.success) {
-        triggerSuccess(`Report ${action} action completed successfully`);
+        let msg = `Report ${action} action completed successfully`;
+        if (data.emailAction && data.emailStatus === 'sent') {
+          msg += ` + email notification sent to the target user`;
+        } else if (data.emailAction && data.emailStatus === 'no_email') {
+          msg += ` (target has no email on file — no notification sent)`;
+        } else if (data.emailAction && data.emailStatus !== 'sent') {
+          msg += ` but email notification failed: ${data.emailStatus}`;
+        }
+        triggerSuccess(msg);
         fetchReports();
         setViewReport(null);
       } else {

@@ -9,6 +9,7 @@ import {
   Upload, X, Loader2, Layers, Info
 } from 'lucide-react';
 import { Button, Badge, Input } from '../UI';
+import { useNotification } from '../../context/NotificationContext';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid 
 } from 'recharts';
@@ -117,6 +118,7 @@ export const ArtisanProductManager: React.FC = () => {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const { showNotification } = useNotification();
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<any>(null);
   const [saving, setSaving] = useState(false);
@@ -127,7 +129,7 @@ export const ArtisanProductManager: React.FC = () => {
     if (e.target.files && editData) {
       const files = Array.from(e.target.files);
       if ((editData.images?.length || 0) + files.length > 5) {
-        alert('Maximum 5 images allowed');
+        showNotification('Maximum 5 images allowed', 'warning');
         return;
       }
       
@@ -208,12 +210,12 @@ export const ArtisanProductManager: React.FC = () => {
     if (!product) return;
 
     if (product.status === 'Published') {
-      alert(`Cannot delete "${product.name}" because it is published. Archive it instead.`);
+      showNotification(`Cannot delete "${product.name}" because it is published. Archive it instead.`, 'error');
       return;
     }
 
     if (product.status === 'Dropped by Admin') {
-      alert(`Cannot delete "${product.name}" because it was dropped by admin.`);
+      showNotification(`Cannot delete "${product.name}" because it was dropped by admin.`, 'error');
       return;
     }
 
@@ -229,14 +231,14 @@ export const ArtisanProductManager: React.FC = () => {
         if (response.ok) {
           setProducts(prev => prev.filter(p => p._id !== id));
           if (manageId === id) setManageId(null);
-          alert("Product deleted successfully.");
+          showNotification("Product deleted successfully.", 'success');
         } else {
           const data = await response.json();
-          alert(data.message || 'Failed to delete product');
+          showNotification(data.message || 'Failed to delete product', 'error');
         }
       } catch (error) {
         console.error('Error deleting product:', error);
-        alert('Failed to delete product');
+        showNotification('Failed to delete product', 'error');
       }
     }
   };
@@ -250,14 +252,14 @@ export const ArtisanProductManager: React.FC = () => {
       });
       if (response.ok) {
         setProducts(prev => prev.map(p => p._id === id ? { ...p, status: 'Pending' as const } : p));
-        alert("Product unarchived and submitted for verification!");
+        showNotification("Product unarchived and submitted for verification!", 'success');
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to unarchive product');
+        showNotification(data.message || 'Failed to unarchive product', 'error');
       }
     } catch (error) {
       console.error('Error unarchiving product:', error);
-      alert('Failed to unarchive product');
+      showNotification('Failed to unarchive product', 'error');
     }
   };
 
@@ -281,14 +283,14 @@ export const ArtisanProductManager: React.FC = () => {
         const data = await response.json();
         setProducts(prev => prev.map(p => p._id === manageId ? data.product : p));
         setIsEditing(false);
-        alert(isPublished ? "Changes saved successfully!" : "Changes saved and submitted for verification!");
+        showNotification(isPublished ? "Changes saved successfully!" : "Changes saved and submitted for verification!", 'success');
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to save changes');
+        showNotification(data.message || 'Failed to save changes', 'error');
       }
     } catch (error) {
       console.error('Error saving product:', error);
-      alert('Failed to save product');
+      showNotification('Failed to save product', 'error');
     } finally {
       setSaving(false);
     }
@@ -297,7 +299,7 @@ export const ArtisanProductManager: React.FC = () => {
   const handleArchive = async (id: string) => {
     const product = products.find(p => p._id === id);
     if (product?.status === 'Dropped by Admin') {
-      alert("Cannot archive products dropped by admin.");
+      showNotification("Cannot archive products dropped by admin.", 'error');
       return;
     }
 
@@ -329,7 +331,7 @@ export const ArtisanProductManager: React.FC = () => {
     const missingFields = mandatoryFields.filter(field => !product[field] || (Array.isArray(product[field]) && product[field].length === 0));
 
     if (missingFields.length > 0) {
-      alert(`Please fill all mandatory fields before publishing: ${missingFields.join(', ')}`);
+      showNotification(`Please fill all mandatory fields before publishing: ${missingFields.join(', ')}`, 'warning');
       return;
     }
 
@@ -343,14 +345,14 @@ export const ArtisanProductManager: React.FC = () => {
         setProducts(prev => prev.map(p => p._id === id ? { ...p, status: 'Pending' as const } : p));
         setManageId(null);
         setIsEditing(false);
-        alert("Product submitted for admin verification.");
+        showNotification("Product submitted for admin verification.", 'success');
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to publish product');
+        showNotification(data.message || 'Failed to publish product', 'error');
       }
     } catch (error) {
       console.error('Error publishing product:', error);
-      alert('Failed to publish product');
+      showNotification('Failed to publish product', 'error');
     }
   };
 
@@ -386,14 +388,14 @@ export const ArtisanProductManager: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         setProducts(prev => [data.product, ...prev]);
-        alert("Product duplicated successfully.");
+        showNotification("Product duplicated successfully.", 'success');
       } else {
         const errorData = await response.json();
-        alert(errorData.message || 'Failed to duplicate product');
+        showNotification(errorData.message || 'Failed to duplicate product', 'error');
       }
     } catch (error) {
       console.error('Error duplicating product:', error);
-      alert('Failed to duplicate product');
+      showNotification('Failed to duplicate product', 'error');
     }
   };
 

@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { CreditCard, ArrowLeft } from 'lucide-react';
+import { useNotification } from '@/context/NotificationContext';
 
 export default function CheckoutPage() {
   const params = useParams();
   const router = useRouter();
+  const { showNotification } = useNotification();
   const bookingId = params?.bookingId as string;
 
   const [loading, setLoading] = useState(true);
@@ -63,7 +65,7 @@ export default function CheckoutPage() {
       if (data.success && data.checkoutUrl) {
         window.location.href = data.checkoutUrl; // 🔥 REDIRECT
       } else {
-        alert(data.message || 'Payment failed');
+        showNotification(data.message || 'Payment failed', 'error');
         setProcessing(false);
       }
     } catch (e) {

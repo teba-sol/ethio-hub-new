@@ -151,6 +151,11 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
       if (dates.end) dateParam += `&endDate=${dates.end}`;
       
       const res = await fetch(`${endpoint}?page=${pageNum}&limit=10${roleParam}${dateParam}`);
+      
+      if (!res.ok) {
+        throw new Error(`Server error: ${res.status}`);
+      }
+      
       const data = await res.json();
 
       if (data.success) {

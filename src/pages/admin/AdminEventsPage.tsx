@@ -850,20 +850,28 @@ export const AdminEventsPage: React.FC = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDateRange, setTempDateRange] = useState({ start: '', end: '' });
   const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const ITEMS_PER_PAGE = 15;
 
   const fetchEvents = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (filterStatus !== 'All') params.set('status', filterStatus);
+      if (searchQuery) params.set('search', searchQuery);
+      params.set('page', page.toString());
+      params.set('limit', ITEMS_PER_PAGE.toString());
       
       const res = await fetch(`/api/admin/events?${params.toString()}`);
       const data = await res.json();
       const eventData = data.requests || data.events || [];
       if (data.success || data.events || data.requests) {
         setEvents(eventData.length > 0 ? eventData : MOCK_EVENTS);
+        setHasMore(data.pagination?.hasMore || false);
       } else {
         setEvents(MOCK_EVENTS);
+        setHasMore(false);
       }
     } catch (error) {
       console.error('Failed to fetch events:', error);
@@ -873,8 +881,12 @@ export const AdminEventsPage: React.FC = () => {
   };
 
   useEffect(() => {
+    setPage(1);
+  }, [filterStatus, searchQuery]);
+
+  useEffect(() => {
     fetchEvents();
-  }, [filterStatus]);
+  }, [filterStatus, page]);
 
   const handleApprove = async (id: string, note?: string) => {
     const previousEvents = [...events];
@@ -1214,9 +1226,7 @@ export const AdminEventsPage: React.FC = () => {
       {/* Events Table */}
       <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
+          <EventTableSkeleton />
         ) : filteredEvents.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -1358,16 +1368,63 @@ export const AdminEventsPage: React.FC = () => {
                         </div>
                       ) : null}
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
+            
+            {/* Pagination */}
+            {!loading && filteredEvents.length > 0 && (
+              <div className="px-6 py-4 border-t border-gray-50 flex items-center justify-between bg-gray-50/30">
+                <p className="text-xs text-gray-500 font-medium">
+                  Showing <span className="font-bold text-gray-800">{filteredEvents.length}</span> results
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={page === 1}
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    className="text-[10px] font-bold"
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-xs font-bold text-gray-600 px-3">Page {page}</span>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={!hasMore}
+                    onClick={() => setPage(p => p + 1)}
+                    className="text-[10px] font-bold"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
     </div>
   );
 };
+
+const EventTableSkeleton = () => (
+  <div className="w-full animate-pulse">
+    {[...Array(6)].map((_, i) => (
+      <div key={i} className="flex items-center gap-4 px-6 py-4 border-b border-gray-50">
+        <div className="w-10 h-10 bg-gray-100 rounded-full shrink-0"></div>
+        <div className="flex-1 space-y-2">
+          <div className="h-3 bg-gray-100 rounded w-1/3"></div>
+          <div className="h-2 bg-gray-50 rounded w-1/2"></div>
+        </div>
+        <div className="h-3 bg-gray-100 rounded w-20"></div>
+        <div className="h-3 bg-gray-100 rounded w-16"></div>
+        <div className="h-8 bg-gray-50 rounded w-24"></div>
+      </div>
+    ))}
+  </div>
+);
 
 export default AdminEventsPage;

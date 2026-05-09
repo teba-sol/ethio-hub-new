@@ -1,5 +1,10 @@
 import { Suspense } from "react";
 import PaymentSuccessContent from "./content";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Payment Successful - EthioHub",
+};
 
 export default function PaymentSuccessPage() {
   return (

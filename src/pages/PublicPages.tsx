@@ -170,7 +170,7 @@ const normalizeFestival = (festival: any, index = 0): Festival => ({
   fullDescription: festival.fullDescription || festival.fullDescription_en || '',
   fullDescription_en: festival.fullDescription_en || festival.fullDescription || '',
   fullDescription_am: festival.fullDescription_am || festival.fullDescription || '',
-  coverImage: festival.coverImage || festival.gallery?.[0] || '',
+  coverImage: festival.coverImage || festival.gallery?.[0] || localFestivalImages[index % localFestivalImages.length],
   gallery: festival.gallery || [],
   schedule: festival.schedule || [],
   mainActivities: festival.mainActivities || '',
@@ -219,8 +219,8 @@ const toSearchableText = (value: any): string => {
 const isUnsplashImage = (path: string) => path.includes('images.unsplash.com') || path.includes('unsplash.com');
 
 const getLocalProductImages = (images: string[] | undefined, index = 0) => {
-  const cleanImages = (images || []).filter((image) => image && !isUnsplashImage(image));
-  return cleanImages.length > 0 ? cleanImages : [localProductImages[index % localProductImages.length]];
+  const validImages = (images || []).filter((img) => img && img.trim() !== '');
+  return validImages.length > 0 ? validImages : [localProductImages[index % localProductImages.length]];
 };
 
 const withLocalProductFallbacks = (products: any[]) =>
@@ -329,10 +329,7 @@ export const Homepage: React.FC = () => {
   }, []);
 
   const filteredProducts = products;
-  const landingProducts = filteredProducts.slice(0, 4).map((product, index) => ({
-    ...product,
-    images: [localProductImages[index % localProductImages.length]],
-  }));
+  const landingProducts = filteredProducts.slice(0, 4);
 
   const upcomingEvents = festivals.slice(0, 3);
 
@@ -396,218 +393,226 @@ export const Homepage: React.FC = () => {
       {/* Interactive Ethiopia Map Section */}
       <EthiopiaMap />
 
-      {/* UNESCO World Heritage & Festival Events Section */}
-      <section className="py-16 md:py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#D4AF37] mb-3">TIMELESS ATTRACTIONS</p>
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary mb-4">UNESCO World Heritage & Festival Events</h2>
-            <p className="text-gray-500 max-w-2xl mx-auto">Experience Ethiopia's rich cultural tapestry through our sacred festivals and legendary heritage sites that have captivated travelers for centuries.</p>
+      {/* UNESCO World Heritage & Festival Highlights */}
+      <section className="py-24 md:py-32 bg-white relative overflow-hidden">
+        {/* Background Accents */}
+        <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-gray-100 to-transparent" />
+        <div className="absolute top-0 right-1/4 w-px h-full bg-gradient-to-b from-transparent via-gray-100 to-transparent" />
+
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-8">
+            <div className="max-w-2xl space-y-4">
+              <p className="text-xs font-bold uppercase tracking-[0.4em] text-secondary">Timeless Attractions</p>
+              <h2 className="text-4xl md:text-6xl font-serif font-bold text-primary leading-tight">
+                Living Heritage & <br /> Sacred Landscapes
+              </h2>
+            </div>
+            <p className="text-gray-500 max-w-sm text-lg font-light leading-relaxed">
+              Experience Ethiopia's rich cultural tapestry through sacred festivals and legendary sites that have captivated travelers for centuries.
+            </p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Timket Card */}
-            <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
-              <div className="h-48 bg-gray-200 relative overflow-hidden">
-                {/* <!-- Replace with actual Timket festival image --> */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[
+              {
+                name: 'Timket',
+                type: 'Sacred Festival',
+                date: 'January 19',
+                description: 'The Epiphany celebration featuring colorful processions and the blessing of water at Fasilides Bath.',
+                image: 'https://res.cloudinary.com/dmhu32ya9/image/upload/f_auto,q_auto,w_800,h_1000,c_fill/v1777798809/ethio-hub/avatars/festivalandproductimage/qdrfjcmefptoteutrlen.avif',
+                link: 'https://en.wikipedia.org/wiki/Timket',
+                color: 'amber'
+              },
+              {
+                name: 'Meskel',
+                type: 'Finding of the Cross',
+                date: 'September 27',
+                description: 'A spectacular celebration marked by the Demera bonfire, hymns, and massive public gatherings in Addis Ababa.',
+                image: 'https://res.cloudinary.com/dmhu32ya9/image/upload/f_auto,q_auto,w_800,h_1000,c_fill/v1777798803/ethio-hub/avatars/festivalandproductimage/fzfj0bverugasrobafk0.webp',
+                link: 'https://en.wikipedia.org/wiki/Meskel',
+                color: 'red'
+              },
+              {
+                name: 'Lalibela',
+                type: 'World Heritage',
+                location: 'Amhara Region',
+                description: 'Explore the 11 monolithic rock-hewn churches, a "New Jerusalem" carved into the earth in the 12th century.',
+                image: 'https://res.cloudinary.com/dmhu32ya9/image/upload/f_auto,q_auto,w_800,h_1000,c_fill/v1777798817/ethio-hub/avatars/festivalandproductimage/keu3yplue7d67f4zkb2x.webp',
+                link: 'https://en.wikipedia.org/wiki/Lalibela',
+                color: 'blue'
+              },
+              {
+                name: 'Irreecha',
+                type: 'Oromo Thanksgiving',
+                date: 'October',
+                description: 'The vibrant thanksgiving celebration symbolizing gratitude and the beauty of nature at Lake Tuppo.',
+                image: 'https://res.cloudinary.com/dmhu32ya9/image/upload/f_auto,q_auto,w_800,h_1000,c_fill/v1777798811/ethio-hub/avatars/festivalandproductimage/q9lycufuumoflweo7cyy.webp',
+                link: '/festivals',
+                color: 'green'
+              }
+            ].map((item, i) => (
+              <div 
+                key={item.name} 
+                className="group relative h-[500px] rounded-[32px] overflow-hidden shadow-2xl hover:shadow-secondary/20 transition-all duration-700"
+                style={{ transitionDelay: `${i * 100}ms` }}
+              >
+                {/* Background Image with Cloudinary Optimization */}
                 <img 
-                  src="https://images.unsplash.com/photo-1562962280-749b6e76a9d2?w=600&h=400&fit=crop" 
-                  alt="Timket Festival" 
-                  className="w-full h-full object-cover"
+                  src={item.image} 
+                  alt={item.name} 
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                 />
-              </div>
-              <div className="p-4">
-                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">Festival</span>
-                <h3 className="font-bold text-lg mt-2 text-primary">Timket</h3>
-                <p className="text-gray-600 text-sm mt-1">Epiphany celebration featuring colorful processions and traditional Tabot ceremonies.</p>
-                <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
-                  <Calendar className="w-4 h-4" />
-                  <span>January 19</span>
-                </div>
-                <Link href="https://en.wikipedia.org/wiki/Timket" target="_blank" rel="noopener noreferrer" className="inline-flex items-center mt-3 text-sm font-medium text-[#D4AF37] hover:text-[#B8962E] transition-colors">
-                  Discover More <ArrowRight className="w-4 h-4 ml-1" />
-                </Link>
-              </div>
-            </div>
+                
+                {/* Gradient Overlays */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity" />
+                <div className={`absolute inset-0 bg-gradient-to-b from-${item.color}-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700`} />
 
-            {/* Meskel Card */}
-            <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
-              <div className="h-48 bg-gray-200 relative overflow-hidden">
-                {/* <!-- Replace with actual Meskel festival image --> */}
-                <img 
-                  src="https://images.unsplash.com/photo-1572252009286-268acec5ca0a8?w=600&h=400&fit=crop" 
-                  alt="Meskel Festival" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-4">
-                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">Festival</span>
-                <h3 className="font-bold text-lg mt-2 text-primary">Meskel</h3>
-                <p className="text-gray-600 text-sm mt-1">Finding of the True Cross celebration with the iconic Demera bonfire in Addis Ababa.</p>
-                <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
-                  <Calendar className="w-4 h-4" />
-                  <span>September 27</span>
-                </div>
-                <Link href="https://en.wikipedia.org/wiki/Meskel" target="_blank" rel="noopener noreferrer" className="inline-flex items-center mt-3 text-sm font-medium text-[#D4AF37] hover:text-[#B8962E] transition-colors">
-                  Discover More <ArrowRight className="w-4 h-4 ml-1" />
-                </Link>
-              </div>
-            </div>
+                {/* Content */}
+                <div className="absolute inset-0 p-8 flex flex-col justify-end">
+                  <div className="space-y-4 translate-y-8 group-hover:translate-y-0 transition-transform duration-500">
+                    <div className="flex items-center justify-between">
+                      <span className="bg-white/10 backdrop-blur-md text-white border border-white/20 text-[10px] px-3 py-1.5 rounded-full font-bold uppercase tracking-widest">
+                        {item.type}
+                      </span>
+                    </div>
+                    
+                    <h3 className="text-3xl font-serif font-bold text-white leading-tight">
+                      {item.name}
+                    </h3>
+                    
+                    <p className="text-gray-300 text-sm leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
+                      {item.description}
+                    </p>
 
-            {/* Lalibela Card */}
-            <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
-              <div className="h-48 bg-gray-200 relative overflow-hidden">
-                {/* <!-- Replace with actual Lalibela image --> */}
-                <img 
-                  src="https://images.unsplash.com/photo-1563184572-339991b7e7fe?w=600&h=400&fit=crop" 
-                  alt="Lalibela Rock-Hewn Churches" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-4">
-                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">World Heritage</span>
-                <h3 className="font-bold text-lg mt-2 text-primary">Lalibela</h3>
-                <p className="text-gray-600 text-sm mt-1">UNESCO site featuring 11 monolithic rock-hewn churches, the "Eighth Wonder of the World."</p>
-                <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
-                  <MapPin className="w-4 h-4" />
-                  <span>Amhara Region</span>
+                    <div className="pt-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-white/60 text-xs">
+                        {item.date ? <Calendar className="w-4 h-4 text-secondary" /> : <MapPin className="w-4 h-4 text-secondary" />}
+                        <span>{item.date || item.location}</span>
+                      </div>
+                      <Link 
+                        href={item.link} 
+                        target={item.link.startsWith('http') ? "_blank" : "_self"}
+                        className="w-10 h-10 rounded-full bg-secondary text-primary flex items-center justify-center -rotate-45 group-hover:rotate-0 transition-all duration-500 shadow-lg shadow-secondary/30"
+                      >
+                        <ArrowRight className="w-5 h-5" />
+                      </Link>
+                    </div>
+                  </div>
                 </div>
-                <Link href="https://en.wikipedia.org/wiki/Lalibela" target="_blank" rel="noopener noreferrer" className="inline-flex items-center mt-3 text-sm font-medium text-[#D4AF37] hover:text-[#B8962E] transition-colors">
-                  Discover More <ArrowRight className="w-4 h-4 ml-1" />
-                </Link>
               </div>
-            </div>
-
-            {/* Irreecha Card */}
-            <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
-              <div className="h-48 bg-gray-200 relative overflow-hidden">
-                {/* <!-- Replace with actual Irreecha festival image --> */}
-                <img 
-                  src="https://images.unsplash.com/photo-1545389336-cf090694435e?w=600&h=400&fit=crop" 
-                  alt="Irreecha Festival" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-4">
-                <span className="bg-[#FEF3C7] text-[#B45309] text-xs px-3 py-1 rounded-full font-medium">Festival</span>
-                <h3 className="font-bold text-lg mt-2 text-primary">Irreecha</h3>
-                <p className="text-gray-600 text-sm mt-1">Oromo thanksgiving celebration at Lake Tuppo, symbolizing gratitude and renewal.</p>
-                <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
-                  <Calendar className="w-4 h-4" />
-                  <span>October</span>
-                </div>
-                <Link href="/festivals" className="inline-flex items-center text-[#D4AF37] font-medium hover:text-[#B8962E] transition-colors">
-                  Discover More <ArrowRight className="w-4 h-4 ml-1" />
-                </Link>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Ethiopian Festivals Celebration Section - Dynamic */}
-      <section className="py-16 md:py-20 bg-white">
+      {/* Cultural Treasures - Detailed Gallery */}
+      <section className="py-24 md:py-32 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#D4AF37] mb-3">CULTURAL CELEBRATIONS</p>
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary mb-4">Experience Ethiopian Festivities</h2>
-            <p className="text-gray-500 max-w-2xl mx-auto">From ancient religious traditions to vibrant cultural celebrations, discover the soul of Ethiopia through its festivals.</p>
-          </div>
+          <div className="flex flex-col lg:flex-row gap-16 items-start">
+            <div className="lg:w-1/3 sticky top-32 space-y-8">
+              <div className="space-y-4">
+                <span className="text-xs font-bold uppercase tracking-[0.4em] text-secondary">Heritage Spotlight</span>
+                <h2 className="text-4xl md:text-5xl font-serif font-bold text-primary leading-tight">
+                  Discover the Soul <br /> of Ethiopia
+                </h2>
+                <p className="text-gray-500 text-lg font-light leading-relaxed">
+                  Ethiopia is a land of vibrant traditions and ancient history. Explore the four pillars of our cultural identity through this curated media experience.
+                </p>
+              </div>
+              
+              <div className="space-y-6 pt-8 border-t border-gray-100">
+                {[
+                  { name: 'Meskel', label: 'The Finding of the Cross' },
+                  { name: 'Timket', label: 'Sacred Epiphany' },
+                  { name: 'Lalibela', label: 'The Rock-Hewn Churches' },
+                  { name: 'Irreecha', label: 'Thanksgiving of the Oromo' }
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-4 group cursor-pointer">
+                    <span className="text-xs font-serif italic text-secondary group-hover:translate-x-1 transition-transform">0{i+1}</span>
+                    <span className="text-lg font-medium text-primary group-hover:text-secondary transition-colors">{item.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-          {celebrationLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
-              {[1, 2].map((i) => (
-                <div key={i} className="flex flex-col md:flex-row bg-white rounded-2xl overflow-hidden shadow-lg animate-pulse">
-                  <div className="md:w-1/2 h-64 bg-gray-200"></div>
-                  <div className="p-6 md:w-1/2 space-y-4">
-                    <div className="h-4 bg-gray-200 rounded w-24"></div>
-                    <div className="h-6 bg-gray-200 rounded w-32"></div>
-                    <div className="h-4 bg-gray-200 rounded w-full"></div>
-                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : celebrationFestivals.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
-              {celebrationFestivals.slice(0, 2).map((festival) => (
-                <Link href={`/event/${festival.id}`} key={festival.id} className="group flex flex-col md:flex-row bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all">
-                  <div className="md:w-1/2 h-64 md:h-auto relative overflow-hidden">
-                    <img 
-                      src={festival.coverImage || 'https://images.unsplash.com/photo-1572252009286-268acec5ca0a8?w=600&h=400&fit=crop'} 
-                      alt={festival.name} 
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    />
-                  </div>
-                  <div className="p-6 md:w-1/2">
-                    <span className="inline-block bg-[#D4AF37]/10 text-[#D4AF37] text-xs px-3 py-1 rounded-full font-medium mb-3">
-                      {formatDate(festival.startDate)}
-                    </span>
-                    <h3 className="font-serif text-2xl font-bold text-primary mb-2">{festival.name}</h3>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-3">{festival.shortDescription}</p>
-                    <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
-                        <span className="line-clamp-1">{festival.locationName}</span>
-                      </div>
-                    </div>
-                    <div className="inline-flex items-center text-[#D4AF37] font-medium hover:text-[#B8962E] transition-colors">
-                      Explore Festival <ArrowRight className="w-4 h-4 ml-1" />
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
-              <div className="flex flex-col md:flex-row bg-white rounded-2xl overflow-hidden shadow-lg">
-                <div className="md:w-1/2 h-64 md:h-auto relative">
+            <div className="lg:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Meskel Media */}
+              <div className="space-y-4 group">
+                <div className="aspect-[4/5] rounded-[40px] overflow-hidden shadow-2xl relative">
                   <img 
-                    src="https://images.unsplash.com/photo-1572252009286-268acec5ca0a8?w=600&h=400&fit=crop" 
+                    src="https://res.cloudinary.com/dmhu32ya9/image/upload/f_auto,q_auto,w_800,c_fill/v1777798803/ethio-hub/avatars/festivalandproductimage/fzfj0bverugasrobafk0.webp" 
                     alt="Meskel" 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                   />
-                </div>
-                <div className="p-6 md:w-1/2">
-                  <span className="inline-block bg-[#D4AF37]/10 text-[#D4AF37] text-xs px-3 py-1 rounded-full font-medium mb-3">September 27</span>
-                  <h3 className="font-serif text-2xl font-bold text-primary mb-2">Meskel</h3>
-                  <p className="text-gray-600 text-sm mb-4">The Ethiopian Orthodox celebration of the Finding of the True Cross. Thousands gather in Addis Ababa's Meskel Square for the iconic Demera bonfire ceremony.</p>
-                  <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-4 h-4" />
-                      <span>Addis Ababa</span>
-                    </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute bottom-8 left-8 right-8">
+                    <h3 className="text-2xl font-serif font-bold text-white mb-2">Meskel</h3>
+                    <p className="text-white/80 text-sm">Celebrated for over 1,600 years in the Land of Origins.</p>
                   </div>
-                  <Link href="/festivals" className="inline-flex items-center text-[#D4AF37] font-medium hover:text-[#B8962E] transition-colors">
-                    Explore Festival <ArrowRight className="w-4 h-4 ml-1" />
-                  </Link>
+                </div>
+                <div className="px-4 space-y-2">
+                   <p className="text-sm text-gray-500 leading-relaxed">The finding of the True Cross is marked by the Demera bonfire, where thousands gather in yellow daisies and white traditional clothes.</p>
                 </div>
               </div>
-              <div className="flex flex-col md:flex-row bg-white rounded-2xl overflow-hidden shadow-lg">
-                <div className="md:w-1/2 h-64 md:h-auto relative">
+
+              {/* Timket Media */}
+              <div className="space-y-4 group md:translate-y-12">
+                <div className="aspect-[4/5] rounded-[40px] overflow-hidden shadow-2xl relative">
                   <img 
-                    src="https://images.unsplash.com/photo-1562962280-749b6e76a9d2?w=600&h=400&fit=crop" 
+                    src="https://res.cloudinary.com/dmhu32ya9/image/upload/f_auto,q_auto,w_800,c_fill/v1777798809/ethio-hub/avatars/festivalandproductimage/qdrfjcmefptoteutrlen.avif" 
                     alt="Timket" 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                   />
-                </div>
-                <div className="p-6 md:w-1/2">
-                  <span className="inline-block bg-[#D4AF37]/10 text-[#D4AF37] text-xs px-3 py-1 rounded-full font-medium mb-3">January 19</span>
-                  <h3 className="font-serif text-2xl font-bold text-primary mb-2">Timket</h3>
-                  <p className="text-gray-600 text-sm mb-4">The Ethiopian Epiphany celebration recreates the baptism of Jesus with colorful processions and Tabot ceremonies.</p>
-                  <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-4 h-4" />
-                      <span>Nationwide</span>
-                    </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute bottom-8 left-8 right-8">
+                    <h3 className="text-2xl font-serif font-bold text-white mb-2">Timket</h3>
+                    <p className="text-white/80 text-sm">A vibrant display of faith and color in Gondar.</p>
                   </div>
-                  <Link href="/festivals" className="inline-flex items-center text-[#D4AF37] font-medium hover:text-[#B8962E] transition-colors">
-                    Explore Festival <ArrowRight className="w-4 h-4 ml-1" />
-                  </Link>
+                </div>
+                <div className="px-4 space-y-2">
+                   <p className="text-sm text-gray-500 leading-relaxed">The Epiphany celebration is a UNESCO intangible heritage, featuring the Tabot procession and spiritual immersion in water.</p>
+                </div>
+              </div>
+
+              {/* Lalibela Media */}
+              <div className="space-y-4 group">
+                <div className="aspect-[4/5] rounded-[40px] overflow-hidden shadow-2xl relative">
+                  <img 
+                    src="https://res.cloudinary.com/dmhu32ya9/image/upload/f_auto,q_auto,w_800,c_fill/v1777798817/ethio-hub/avatars/festivalandproductimage/keu3yplue7d67f4zkb2x.webp" 
+                    alt="Lalibela" 
+                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute bottom-8 left-8 right-8">
+                    <h3 className="text-2xl font-serif font-bold text-white mb-2">Lalibela</h3>
+                    <p className="text-white/80 text-sm">The Eighth Wonder of the World.</p>
+                  </div>
+                </div>
+                <div className="px-4 space-y-2">
+                   <p className="text-sm text-gray-500 leading-relaxed">11 monolithic churches carved out of single pieces of rock in the 12th century, still active centers of worship today.</p>
+                </div>
+              </div>
+
+              {/* Irreecha Media */}
+              <div className="space-y-4 group md:translate-y-12">
+                <div className="aspect-[4/5] rounded-[40px] overflow-hidden shadow-2xl relative">
+                  <img 
+                    src="https://res.cloudinary.com/dmhu32ya9/image/upload/f_auto,q_auto,w_800,c_fill/v1777798811/ethio-hub/avatars/festivalandproductimage/q9lycufuumoflweo7cyy.webp" 
+                    alt="Irreecha" 
+                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute bottom-8 left-8 right-8">
+                    <h3 className="text-2xl font-serif font-bold text-white mb-2">Irreecha</h3>
+                    <p className="text-white/80 text-sm">Giving thanks at the end of the rainy season.</p>
+                  </div>
+                </div>
+                <div className="px-4 space-y-2">
+                   <p className="text-sm text-gray-500 leading-relaxed">The Oromo people celebrate Irreecha at Lake Tuppo and Addis Ababa, expressing gratitude for the arrival of spring and harvest.</p>
                 </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </section>
 

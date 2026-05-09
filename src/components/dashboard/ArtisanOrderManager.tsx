@@ -7,6 +7,7 @@ import {
   ArrowUpRight, RefreshCw, ShieldCheck, Mail, CreditCard
 } from 'lucide-react';
 import { Button, Badge, Input } from '../UI';
+import { useNotification } from '../../context/NotificationContext';
 import { 
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid 
 } from 'recharts';
@@ -109,6 +110,7 @@ export const ArtisanOrderManager: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [stats, setStats] = useState({ totalOrders: 0, pending: 0, delivered: 0, returns: 0 });
   const [loading, setLoading] = useState(true);
+  const { showNotification } = useNotification();
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -154,10 +156,16 @@ export const ArtisanOrderManager: React.FC = () => {
       if (data.success) {
         setOrders(prev => prev.map(o => o._id === orderId ? data.order : o));
         if (data.verificationCode) {
+<<<<<<< HEAD
           alert(`Order marked as ready!\nVerification Code: ${data.verificationCode}\n\nShare this code with the customer via message center.`);
+=======
+          showNotification(`Order marked as ready! Verification Code: ${data.verificationCode}`, 'success');
+        } else {
+          showNotification('Order status updated successfully', 'success');
+>>>>>>> origin/aman
         }
       } else {
-        alert(data.message || 'Failed to update order status');
+        showNotification(data.message || 'Failed to update order status', 'error');
       }
     } catch (error) {
       console.error('Error updating order status:', error);
@@ -178,7 +186,7 @@ export const ArtisanOrderManager: React.FC = () => {
         const statsRes = await fetch('/api/artisan/orders');
         const statsData = await statsRes.json();
         if (statsData.success) setStats(statsData.stats);
-        alert('Order status updated successfully');
+        showNotification('Order status updated successfully', 'success');
       }
     } catch (error) {
       console.error('Error updating order status:', error);
@@ -563,7 +571,7 @@ export const ArtisanOrderManager: React.FC = () => {
                             setAppliedDateRange(tempDateRange);
                             setIsDateFilterOpen(false);
                           } else {
-                            alert('Please select both start and end dates');
+                            showNotification('Please select both start and end dates', 'warning');
                           }
                         }}
                       >

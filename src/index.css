@@ -237,101 +237,39 @@ html {
   pointer-events: none;
 }
 
-/* Dark Mode Global Overrides */
+/* Mode Global Overrides */
+body {
+  background-color: #ffffff;
+  color: #111827;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
 html.dark body {
   background-color: #0a1411 !important;
-  color: #f9fafb !important;
+  color: #ffffff !important;
+}
+
+/* Ensure white background in light mode and blue-black in dark mode for key components */
+.bg-white {
+  background-color: #ffffff;
 }
 
 html.dark .bg-white {
-  background-color: #111827 !important;
-}
-html.dark .hover\:bg-white:hover {
-  background-color: #111827 !important;
-}
-html.dark .bg-gray-50 {
-  background-color: #1f2937 !important;
-}
-html.dark .hover\:bg-gray-50:hover {
-  background-color: #1f2937 !important;
-}
-html.dark .bg-gray-100 {
-  background-color: #374151 !important;
-}
-html.dark .hover\:bg-gray-100:hover {
-  background-color: #374151 !important;
-}
-html.dark .bg-gray-200 {
-  background-color: #4b5563 !important;
-}
-html.dark .bg-ethio-bg {
-  background-color: #0a1411 !important;
-}
-html.dark .hover\:bg-ethio-bg:hover {
-  background-color: #0a1411 !important;
-}
-html.dark .bg-ethio-light {
-  background-color: #11221d !important;
-}
-html.dark .bg-ethio-dark {
-  background-color: #1a2f28 !important;
+  background-color: #0d1f1a !important; /* Slightly lighter blue-black for cards */
 }
 
 html.dark .text-gray-900 {
-  color: #f9fafb !important;
+  color: #ffffff !important;
 }
-html.dark .text-gray-800 {
-  color: #f3f4f6 !important;
-}
-html.dark .text-gray-700 {
-  color: #e5e7eb !important;
-}
-html.dark .text-gray-600 {
+
+html.dark .text-gray-700, 
+html.dark .text-gray-600, 
+html.dark .text-gray-500 {
   color: #d1d5db !important;
 }
-html.dark .text-gray-500 {
-  color: #9ca3af !important;
-}
-html.dark .text-gray-400 {
-  color: #6b7280 !important;
-}
-html.dark .text-gray-300 {
-  color: #4b5563 !important;
-}
 
-html.dark .border-gray-100 {
-  border-color: #374151 !important;
-}
+html.dark .border-gray-100, 
 html.dark .border-gray-200 {
-  border-color: #4b5563 !important;
-}
-html.dark .border-gray-300 {
-  border-color: #6b7280 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
-html.dark .divide-gray-50 > :not([hidden]) ~ :not([hidden]) {
-  border-color: #1f2937 !important;
-}
-html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) {
-  border-color: #374151 !important;
-}
-
-/* Adjust primary color for better contrast in dark mode */
-html.dark .text-primary {
-  color: #4ade80 !important;
-}
-html.dark .hover\:text-primary:hover {
-  color: #4ade80 !important;
-}
-html.dark .bg-primary {
-  background-color: #1a7a5d !important;
-}
-html.dark .hover\:bg-primary:hover {
-  background-color: #1a7a5d !important;
-}
-html.dark .border-primary {
-  border-color: #1a7a5d !important;
-}
-html.dark .ring-primary {
-  --tw-ring-color: #1a7a5d !important;
-}

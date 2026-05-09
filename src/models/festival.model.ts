@@ -46,6 +46,7 @@ export interface IHotel extends Document {
   name_am: string;
   starRating: number;
   address: string;
+  coordinates?: { lat?: number; lng?: number };
   description: string; // for backward compatibility
   description_en?: string;
   description_am?: string;
@@ -114,7 +115,8 @@ export interface IPricing {
   basePrice: number;
   vipPrice: number;
   currency: string;
-  earlyBird: number;
+  earlyBird: number; // percentage
+  earlyBirdDays: number; // validity in days
   groupDiscount: number;
 }
 
@@ -178,9 +180,9 @@ const ScheduleItemSchema: Schema = new Schema({
 
 // Ticket Type Schema with inventory tracking
 const TicketTypeSchema: Schema = new Schema({
-  name: { type: String, required: true },
-  name_en: { type: String, required: true },
-  name_am: { type: String, required: true },
+  name: { type: String },  // Optional - fallback from name_en or name_am
+  name_en: { type: String },
+  name_am: { type: String },
   price: { type: Number, required: true },
   quantity: { type: Number, required: true, default: 0 },     // Total inventory
   available: { type: Number, required: true, default: 0 },     // Available (decremented on booking)
@@ -189,18 +191,18 @@ const TicketTypeSchema: Schema = new Schema({
 
 // SIMPLIFIED: Room Schema - with all fields
 const RoomSchema: Schema = new Schema({
-  name: { type: String, required: true },           // Room Name
-  name_en: { type: String, required: true },
-  name_am: { type: String, required: true },
+  name: { type: String },           // Optional - fallback from name_en or name_am
+  name_en: { type: String },
+  name_am: { type: String },
   image: { type: String },                           // Room Image URL
   bedType: { type: String, default: '1-bedroom' },   // Bed Type: '1-bedroom', '2-bedroom', etc.
   capacity: { type: Number, default: 2 },             // Capacity
   pricePerNight: { type: Number },                   // Price/Night
   availability: { type: Number, default: 5 },         // Total rooms available
   available: { type: Number, default: 5 },            // Available rooms (decremented on booking)
-  description: { type: String },                    // Room description
-  description_en: { type: String },
-  description_am: { type: String },
+  description: { type: String, default: "" },                    // Room description
+  description_en: { type: String, default: "" },
+  description_am: { type: String, default: "" },
   sqm: { type: Number },                            // Room size in sqm
   tier: { type: String, enum: ['vip', 'standard', 'both'], default: 'both' },  // Which tiers can book
   amenities: [{ type: String }],                    // Room amenities
@@ -208,9 +210,9 @@ const RoomSchema: Schema = new Schema({
 
 // Food Package Schema
 const FoodPackageSchema: Schema = new Schema({
-  name: { type: String, required: true },
-  name_en: { type: String, required: true },
-  name_am: { type: String, required: true },
+  name: { type: String },
+  name_en: { type: String },
+  name_am: { type: String },
   description: { type: String },
   description_en: { type: String },
   description_am: { type: String },
@@ -220,11 +222,15 @@ const FoodPackageSchema: Schema = new Schema({
 
 // Hotel Schema with all fields
 const HotelSchema: Schema = new Schema({
-  name: { type: String, required: true },
-  name_en: { type: String, required: true },
-  name_am: { type: String, required: true },
+  name: { type: String },  // Optional - fallback from name_en or name_am
+  name_en: { type: String },
+  name_am: { type: String },
   starRating: { type: Number },
   address: { type: String },
+  coordinates: {
+    lat: { type: Number },
+    lng: { type: Number }
+  },
   description: { type: String },
   description_en: { type: String },
   description_am: { type: String },
@@ -239,16 +245,19 @@ const HotelSchema: Schema = new Schema({
   gallery: [{ type: String }],
   rooms: [RoomSchema],
   hotelServices: [{  // Pay-at-hotel services (display only)
-    name: { type: String, required: true },
-    price: { type: Number, required: true },
+    name: { type: String },
+    price: { type: Number },
     description: { type: String }
   }],
+  foodAndDrink: [{ type: String }],
+  hotelRules: [{ type: String }],
+  propertyType: { type: String },
 });
 
 const TransportationSchema: Schema = new Schema({
-  type: { type: String, required: true },
-  type_en: { type: String, required: true },
-  type_am: { type: String, required: true },
+  type: { type: String },  // Optional - fallback from type_en or type_am
+  type_en: { type: String },
+  type_am: { type: String },
   provider: { type: String },
   price: { type: Number },
   description: { type: String },
@@ -294,6 +303,7 @@ const PricingSchema: Schema = new Schema({
   vipPrice: { type: Number, default: 0 },
   currency: { type: String, default: 'ETB' },
   earlyBird: { type: Number, default: 0 },
+  earlyBirdDays: { type: Number, default: 0 },
   groupDiscount: { type: Number, default: 0 },
 }, { _id: false });
 

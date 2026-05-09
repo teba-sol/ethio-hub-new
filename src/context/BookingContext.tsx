@@ -5,7 +5,9 @@ import { Festival, HotelAccommodation, RoomType, TransportOption, FoodPackage } 
 
 interface TicketSelection {
   type: 'vip' | 'standard' | 'earlyBird';
-  price: number;
+  name: string;
+  price: number; // Discounted price
+  originalPrice?: number; // Base price before discount
   quantity: number;
 }
 
@@ -110,6 +112,16 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
   const getTicketTotal = () => {
     if (!ticketSelection) return 0;
     return ticketSelection.price * ticketSelection.quantity;
+  };
+  
+  const getTicketTotalWithoutDiscount = () => {
+    if (!ticketSelection) return 0;
+    const base = ticketSelection.originalPrice || ticketSelection.price;
+    return base * ticketSelection.quantity;
+  };
+  
+  const getEarlyBirdSavings = () => {
+    return getTicketTotalWithoutDiscount() - getTicketTotal();
   };
   
 const getHotelTotal = () => {

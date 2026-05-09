@@ -3,6 +3,7 @@ import { jwtVerify } from 'jose';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/models/User';
 import { cookies } from 'next/headers';
+import { sendAccountStatusEmail } from '@/lib/email';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
@@ -115,6 +116,18 @@ export async function DELETE(
 
     user.status = 'Deleted';
     await user.save();
+
+    // Send email notification
+    try {
+      await sendAccountStatusEmail({
+        to: user.email,
+        name: user.name,
+        status: 'Deleted',
+        reason: 'Account has been deleted by an administrator.'
+      });
+    } catch (emailErr) {
+      console.error('Failed to send deletion email:', emailErr);
+    }
 
     return NextResponse.json({ message: 'User deleted successfully' });
   } catch (error) {
