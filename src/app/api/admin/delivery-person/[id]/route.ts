@@ -4,8 +4,11 @@ import User from '@/models/User';
 import Wallet from '@/models/wallet.model';
 import DeliveryLog from '@/models/DeliveryLog';
 import Order from '@/models/order.model';
+import Payment from '@/models/payment.model';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
+
+import Transaction from '@/models/transaction.model';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
@@ -60,6 +63,13 @@ export async function GET(
       .populate('tourist', 'name email')
       .sort({ updatedAt: -1 })
       .limit(20)
+    // Get withdrawal transactions for this delivery guy
+    const withdrawalTransactions = await Transaction.find({
+      userId: deliveryGuyId,
+      type: 'WITHDRAWAL'
+    })
+      .sort({ createdAt: -1 })
+      .limit(10)
       .lean();
     
     return NextResponse.json({
@@ -78,6 +88,7 @@ export async function GET(
         deliveryTripsCompleted: wallet.deliveryTripsCompleted || 0,
         shippingFeesReceived: wallet.shippingFeesReceived || 0,
         shippingFeesPaidOut: wallet.shippingFeesPaidOut || 0,
+        lifetimePaidOut: wallet.lifetimePaidOut || 0,
       } : null,
       deliveryLogs: deliveryLogs.map(log => ({
         _id: log._id,
@@ -92,6 +103,7 @@ export async function GET(
         distanceKm: log.distanceKm,
       })),
       recentOrders,
+      withdrawalTransactions,
       summary: {
         totalTrips: deliveryLogs.length,
         totalEarnings: totalEarningsFromLogs,
@@ -120,19 +132,65 @@ export async function POST(
     // Mock payment - in real scenario, this would integrate with telebirr or bank API
     console.log(`Mock payment: Sending ${amount} ETB to phone ${phone} for delivery guy ${deliveryGuyId}`);
     
-    // Update wallet - deduct from deliveryEarnings (mock)
+    // Generate transaction reference
+    const txRef = `PAY-DRIVER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Update wallet - deduct from availableBalance
     const wallet = await Wallet.findOne({ userId: deliveryGuyId });
     if (wallet) {
-      const deductAmount = Math.min(amount, wallet.deliveryEarnings);
-      wallet.deliveryEarnings = Math.max(0, wallet.deliveryEarnings - deductAmount);
-      wallet.lifetimePaidOut = (wallet.lifetimePaidOut || 0) + deductAmount;
+      if (wallet.availableBalance < amount) {
+        return NextResponse.json({ success: false, message: 'Insufficient balance' }, { status: 400 });
+      }
+      wallet.availableBalance -= amount;
+      wallet.lifetimePaidOut = (wallet.lifetimePaidOut || 0) + amount;
       await wallet.save();
+
+      // Create transaction record for the driver
+      await Transaction.create({
+        walletId: wallet._id,
+        userId: deliveryGuyId,
+        type: 'WITHDRAWAL',
+        amount: amount,
+        currency: 'ETB',
+        status: 'COMPLETED',
+        paymentRef: txRef,
+        metadata: {
+          withdrawalMethod: 'admin_payout',
+          phoneNumber: phone,
+          processedBy: 'admin',
+          completedAt: new Date(),
+        },
+      });
+
+      // Create a formal payment receipt record
+      await Payment.create({
+        userId: deliveryGuyId,
+        transactionRef: txRef,
+        method: 'Admin Manual Payout',
+        amount: amount,
+        status: 'Completed',
+      });
+
+      // Update admin wallet to track shipping fees paid out
+      const adminUser = await User.findOne({ role: 'admin' });
+      if (adminUser) {
+        const adminWallet = await Wallet.findOne({ userId: adminUser._id, userRole: 'admin' });
+        if (adminWallet) {
+          adminWallet.shippingFeesPaidOut = (adminWallet.shippingFeesPaidOut || 0) + amount;
+          await adminWallet.save();
+        }
+      }
     }
     
     return NextResponse.json({
       success: true,
-      message: `Mock payment of ${amount} ETB sent to ${phone}`,
-      paidAmount: amount,
+      message: `Payment of ${amount} ETB successfully transferred to ${phone}`,
+      data: {
+        amount: amount,
+        phoneNumber: phone,
+        txRef: txRef,
+        date: new Date()
+      }
     });
     
   } catch (error: any) {

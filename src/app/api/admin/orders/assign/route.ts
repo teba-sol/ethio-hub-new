@@ -4,6 +4,8 @@ import { connectDB } from '@/lib/mongodb';
 import Order from '@/models/order.model';
 import User from '@/models/User';
 import Wallet from '@/models/wallet.model';
+import DeliveryLog from '@/models/DeliveryLog';
+import Transaction from '@/models/transaction.model';
 import { sendDeliveryCodeEmail } from '@/lib/email';
 import { cookies } from 'next/headers';
 
@@ -143,18 +145,26 @@ export async function GET(req: Request) {
 
     const deliveryGuys = await Promise.all(deliveryGuysRaw.map(async (guy: any) => {
       const wallet = await Wallet.findOne({ userId: guy._id });
+      
+      // Calculate real-time stats from DeliveryLogs
+      const logs = await DeliveryLog.find({ deliveryGuyId: guy._id }).lean();
+      const totalTrips = logs.length;
+      const totalEarned = logs.reduce((sum, log) => sum + (log.shippingFee * 0.8), 0);
+      
       return {
         ...guy,
         wallet: wallet ? {
-          availableBalance: wallet.availableBalance,
-          lifetimeEarned: wallet.lifetimeEarned,
-          deliveryEarnings: wallet.deliveryEarnings,
-          deliveryTripsCompleted: wallet.deliveryTripsCompleted
+          availableBalance: wallet.availableBalance || 0,
+          lifetimeEarned: totalEarned || wallet.lifetimeEarned || 0,
+          lifetimePaidOut: wallet.lifetimePaidOut || 0,
+          deliveryEarnings: totalEarned || wallet.deliveryEarnings || 0,
+          deliveryTripsCompleted: totalTrips || wallet.deliveryTripsCompleted || 0
         } : {
           availableBalance: 0,
-          lifetimeEarned: 0,
-          deliveryEarnings: 0,
-          deliveryTripsCompleted: 0
+          lifetimeEarned: totalEarned || 0,
+          lifetimePaidOut: 0,
+          deliveryEarnings: totalEarned || 0,
+          deliveryTripsCompleted: totalTrips || 0
         }
       };
     }));

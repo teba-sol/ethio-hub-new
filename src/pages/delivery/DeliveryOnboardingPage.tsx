@@ -234,7 +234,7 @@ export const DeliveryOnboardingPage: React.FC = () => {
               <Input
                 label="Account Number"
                 placeholder="1000..."
-                leftIcon={CreditCard}
+                icon={CreditCard}
                 value={formData.accountNumber}
                 onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
                 required
@@ -243,7 +243,7 @@ export const DeliveryOnboardingPage: React.FC = () => {
                 <Input
                   label="Telebirr Number (Optional)"
                   placeholder="09..."
-                  leftIcon={Wallet}
+                  icon={Wallet}
                   value={formData.telebirrNumber}
                   onChange={(e) => setFormData({ ...formData, telebirrNumber: e.target.value })}
                 />

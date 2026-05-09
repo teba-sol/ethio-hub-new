@@ -482,7 +482,7 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
           const originalPendingAdmin = adminWallet.pendingBalance || 0;
           adminWallet.pendingBalance = originalPendingAdmin + adminCommission;
           // adminWallet.availableBalance = (adminWallet.availableBalance || 0) + adminCommission; // MOVED TO DELIVERY VERIFICATION
-          adminWallet.lifetimeEarned = (adminWallet.lifetimeEarned || 0) + adminCommission;
+          // adminWallet.lifetimeEarned = (adminWallet.lifetimeEarned || 0) + adminCommission; // MOVED TO DELIVERY VERIFICATION
           await adminWallet.save();
           console.log(`[PaymentService] Admin wallet updated: ${adminWallet._id}`, { availableBalance: adminWallet.availableBalance, pendingBalance: adminWallet.pendingBalance, lifetimeEarned: adminWallet.lifetimeEarned });
 
@@ -669,7 +669,7 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
       
       if (adminWallet) {
         adminWallet.availableBalance = (adminWallet.availableBalance || 0) + adminCommission;
-        adminWallet.lifetimeEarned = (adminWallet.lifetimeEarned || 0) + adminCommission;
+        // adminWallet.lifetimeEarned = (adminWallet.lifetimeEarned || 0) + adminCommission; // MOVED TO BOOKING CONFIRMATION
         await adminWallet.save();
       }
 

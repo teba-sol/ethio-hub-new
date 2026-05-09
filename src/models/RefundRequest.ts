@@ -15,7 +15,7 @@ export interface IRefundRequest extends Document {
   shippingFee: number;
   artisanEarnings: number;
   adminCommission: number;
-  status: 'pending' | 'processing' | 'completed';
+  status: 'pending' | 'processing' | 'completed' | 'rejected';
   adminNotes?: string;
   processedBy?: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -87,7 +87,7 @@ const RefundRequestSchema = new Schema<IRefundRequest>(
     },
     status: {
       type: String,
-      enum: ['pending', 'processing', 'completed'],
+      enum: ['pending', 'processing', 'completed', 'rejected'],
       default: 'pending',
     },
     adminNotes: {

@@ -15,12 +15,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const authResult = await verifyToken(token);
-    if (!authResult.valid || !authResult.payload) {
+    const authResult: any = await verifyToken(token);
+    if (!authResult || !authResult.userId) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const artisanId = authResult.payload.userId as string;
+    const artisanId = authResult.userId as string;
     const { searchParams } = new URL(request.url);
     const range = searchParams.get("range") || "This Year";
 

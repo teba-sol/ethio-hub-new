@@ -143,6 +143,18 @@ export const LoginPage: React.FC = () => {
       } else if (artisanStatus === "Approved") {
         router.push("/dashboard/artisan/overview");
       }
+    } else if (userRole === "delivery") {
+      const deliveryStatus = user.deliveryStatus;
+      if (!deliveryStatus || deliveryStatus === "Not Submitted") {
+        router.push("/dashboard/delivery/onboarding");
+      } else if (
+        deliveryStatus === "Pending" ||
+        deliveryStatus === "Under Review"
+      ) {
+        router.push("/delivery/waiting");
+      } else if (deliveryStatus === "Approved") {
+        router.push("/dashboard/delivery");
+      }
     } else {
       router.push(userRole === "admin" ? "/dashboard/admin/overview" : "/");
     }

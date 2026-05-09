@@ -143,6 +143,9 @@ export const ArtisanOrderManager: React.FC = () => {
   };
 
   const handleMarkAsReady = async (orderId: string) => {
+    const confirmReady = window.confirm("Are you sure you want to mark this order as ready for pickup?");
+    if (!confirmReady) return;
+
     try {
       const response = await fetch(`/api/artisan/orders/${orderId}`, {
         method: 'PUT',
@@ -153,9 +156,13 @@ export const ArtisanOrderManager: React.FC = () => {
       if (data.success) {
         setOrders(prev => prev.map(o => o._id === orderId ? data.order : o));
         if (data.verificationCode) {
+<<<<<<< HEAD
+          alert(`Order marked as ready!\nVerification Code: ${data.verificationCode}\n\nShare this code with the customer via message center.`);
+=======
           showNotification(`Order marked as ready! Verification Code: ${data.verificationCode}`, 'success');
         } else {
           showNotification('Order status updated successfully', 'success');
+>>>>>>> origin/aman
         }
       } else {
         showNotification(data.message || 'Failed to update order status', 'error');
@@ -356,28 +363,6 @@ export const ArtisanOrderManager: React.FC = () => {
                 ) : (
                   <div className="text-center py-4 text-gray-400 text-sm italic">No timeline events yet.</div>
                 )}
-              </div>
-            </section>
-
-            {/* Communication Log */}
-            <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-primary">Communication Log</h3>
-                <Button size="sm" variant="outline" leftIcon={MessageSquare}>Send Message</Button>
-              </div>
-              <div className="space-y-4">
-                {order.notes && (
-                  <div className="flex gap-4">
-                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
-                      <FileText className="w-4 h-4" />
-                    </div>
-                    <div className="bg-amber-50 p-4 rounded-2xl rounded-tl-none">
-                      <p className="text-xs font-bold text-amber-800 mb-1">Order Note</p>
-                      <p className="text-sm text-amber-900">{order.notes}</p>
-                    </div>
-                  </div>
-                )}
-                <div className="text-center py-4 text-gray-400 text-sm italic">No other messages yet.</div>
               </div>
             </section>
           </div>

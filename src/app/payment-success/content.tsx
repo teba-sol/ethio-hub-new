@@ -8,11 +8,11 @@ import { CheckCircle2, Ticket, Hotel, Car, User, Printer, Home } from "lucide-re
 export default function PaymentSuccessContent() {
   const searchParams = useSearchParams()!;
   const printRef = useRef<HTMLDivElement>(null);
-  
+
   // Get booking info from URL params - passed from checkout
   const bookingId = searchParams.get("bookingId") || "";
   const status = searchParams.get("status") || "";
-  
+
   const [bookingData, setBookingData] = useState({
     eventName: searchParams.get("eventName") || "",
     ticketType: searchParams.get("ticketType") || "",
@@ -88,7 +88,7 @@ export default function PaymentSuccessContent() {
         .finally(() => setLoading(false));
     }
   }, [bookingId, searchParams]);
-  
+
   // Show success if bookingId exists
   const isSuccess = !!bookingId || status === "success";
 
@@ -111,39 +111,39 @@ export default function PaymentSuccessContent() {
               Your booking is confirmed.
               {bookingId && <span className="block text-sm mt-1">Reference: {bookingId.slice(-8).toUpperCase()}</span>}
             </p>
-            
+
             {/* Printable Receipt */}
             <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left print:border print:border-gray-300 print:shadow-none">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-gray-800 flex items-center gap-2">
                   <Ticket className="w-4 h-4" /> BOOKING RECEIPT
                 </h3>
-                <button 
+                <button
                   onClick={handlePrint}
                   className="print:hidden flex items-center gap-1 text-sm text-gray-500 hover:text-primary"
                 >
                   <Printer className="w-4 h-4" /> Print
                 </button>
               </div>
-              
+
               {/* EthioHub Header */}
               <div className="text-center pb-3 border-b border-gray-200 mb-3">
                 <p className="text-xl font-serif font-bold text-primary">EthioHub</p>
                 <p className="text-xs text-gray-500">Your Ethiopian Experience Partner</p>
               </div>
-              
+
               {/* Event Info */}
               <div className="mb-3 pb-3 border-b border-gray-200">
                 <p className="text-xs text-gray-500 uppercase">Event</p>
                 <p className="font-medium text-primary">{bookingData.eventName || 'EthioHub Event'}</p>
               </div>
-              
+
               {/* Ticket Type */}
               <div className="mb-3 pb-3 border-b border-gray-200">
                 <p className="text-xs text-gray-500 uppercase">Ticket Type</p>
                 <p className="font-medium text-amber-600 text-lg">{(bookingData.ticketType || 'Standard').toUpperCase()} TICKET</p>
               </div>
-              
+
               {/* Hotel Info */}
               {bookingData.hotelName && (
                 <div className="mb-3 pb-3 border-b border-gray-200">
@@ -152,7 +152,7 @@ export default function PaymentSuccessContent() {
                   {bookingData.roomName && <p className="text-sm text-gray-600">Room Type: {bookingData.roomName}</p>}
                 </div>
               )}
-              
+
               {/* Transport Info */}
               {bookingData.transportType && (
                 <div className="mb-3 pb-3 border-b border-gray-200">
@@ -161,7 +161,7 @@ export default function PaymentSuccessContent() {
                   {bookingData.transportPrice !== "0" && <p className="text-sm text-gray-600">{formatCurrency(bookingData.transportPrice)}</p>}
                 </div>
               )}
-              
+
               {/* User Info */}
               <div className="mb-3 pb-3 border-b border-gray-200">
                 <p className="text-xs text-gray-500 uppercase flex items-center gap-1"><User className="w-3 h-3" /> Guest Information</p>
@@ -169,20 +169,20 @@ export default function PaymentSuccessContent() {
                 <p className="text-sm text-gray-600">{bookingData.guestEmail}</p>
                 {bookingData.guestPhone && <p className="text-sm text-gray-600">{bookingData.guestPhone}</p>}
               </div>
-              
+
               {/* Total */}
               <div className="flex justify-between items-center pt-2">
                 <p className="font-bold text-gray-800">TOTAL PAID</p>
                 <p className="font-bold text-xl text-primary">{formatCurrency(bookingData.totalAmount)}</p>
               </div>
-               
+
               {/* Payment Reference */}
               <div className="text-center pt-4 mt-4 border-t border-gray-200">
                 <p className="text-xs text-gray-400">Payment Reference: {bookingData.txRef || (isMounted ? 'Confirmed' : '...')}</p>
                 <p className="text-xs text-gray-400">Date: {isMounted ? new Date().toLocaleDateString() : '...'}</p>
               </div>
             </div>
-            
+
             {/* Action Buttons */}
             <div className="flex flex-col gap-3 print:hidden">
               <Link href="/dashboard/tourist/bookings" className="bg-primary text-white px-6 py-3 rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">

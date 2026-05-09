@@ -5,6 +5,7 @@ import Order from '@/models/order.model';
 import User from '@/models/User';
 import Wallet from '@/models/wallet.model';
 import DeliveryLog from '@/models/DeliveryLog';
+import Transaction from '@/models/transaction.model';
 import { cookies } from 'next/headers';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
@@ -94,7 +95,7 @@ export async function GET(req: Request) {
       deliveredAt: { $gte: thisMonth },
     });
 
-    const monthlyEarnings = await DeliveryLog.aggregate([
+    const monthlyEarningsAgg = await DeliveryLog.aggregate([
       {
         $match: {
           deliveryGuyId: deliveryGuy._id,
@@ -108,8 +109,9 @@ export async function GET(req: Request) {
         },
       },
     ]);
+    const monthlyEarnings = (monthlyEarningsAgg[0]?.totalShippingFees || 0) * 0.8;
 
-    const dailyEarnings = await DeliveryLog.aggregate([
+    const dailyEarningsAgg = await DeliveryLog.aggregate([
       {
         $match: {
           deliveryGuyId: deliveryGuy._id,
@@ -123,6 +125,17 @@ export async function GET(req: Request) {
         },
       },
     ]);
+    const dailyEarnings = (dailyEarningsAgg[0]?.totalShippingFees || 0) * 0.8;
+
+    // Get recent withdrawal transactions (payment receipts)
+    const recentWithdrawals = await Transaction.find({
+      userId: deliveryGuy._id,
+      type: 'WITHDRAWAL',
+      status: 'COMPLETED'
+    })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean();
 
     return NextResponse.json({
       success: true,
@@ -130,13 +143,21 @@ export async function GET(req: Request) {
       stats: {
         todayTrips,
         pendingPickups,
-        totalDeliveries: deliveryGuy.deliveryProfile?.totalDeliveries || 0,
-        dailyEarnings: dailyEarnings[0]?.totalShippingFees || 0,
+        totalDeliveries: wallet?.deliveryTripsCompleted || deliveryGuy.deliveryProfile?.totalDeliveries || 0,
+        dailyEarnings,
         monthlyTrips,
-        monthlyEarnings: monthlyEarnings[0]?.totalShippingFees || 0,
+        monthlyEarnings,
         totalEarnings: wallet?.deliveryEarnings || 0,
       },
       recentDeliveries: deliveryLogs,
+      recentWithdrawals: recentWithdrawals.map(tw => ({
+        _id: tw._id,
+        amount: tw.amount,
+        date: tw.createdAt,
+        reference: tw.paymentRef,
+        method: tw.metadata?.withdrawalMethod || 'Transfer',
+        phone: tw.metadata?.phoneNumber
+      }))
     });
   } catch (error) {
     console.error('Error fetching delivery orders:', error);

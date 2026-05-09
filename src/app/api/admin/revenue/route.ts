@@ -6,8 +6,8 @@ import { JWTPayload } from "jose";
 
 async function getUserFromToken(token: string) {
   const result = await verifyToken(token);
-  if (!result.valid || !result.payload) return null;
-  return result.payload as JWTPayload & { userId: string; role: string };
+  if (!result) return null;
+  return result as JWTPayload & { userId: string; role: string };
 }
 
 export async function GET(request: NextRequest) {

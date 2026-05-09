@@ -14,8 +14,8 @@ const CHAPA_API_URL = 'https://api.chapa.co';
 
 async function getUserFromToken(token: string) {
   const result = await verifyToken(token);
-  if (!result.valid || !result.payload) return null;
-  return result.payload as JWTPayload & { userId: string; role: string; name: string; email: string; phone?: string; avatar?: string };
+  if (!result) return null;
+  return result as JWTPayload & { userId: string; role: string; name: string; email: string; phone?: string; avatar?: string };
 }
 
 function generateTxRef(): string {
@@ -183,30 +183,26 @@ export async function POST(request: NextRequest) {
                   distanceKm = route.properties.distance / 1000;
                 }
               }
-
-              if (distanceKm === 0) {
-                const latDiff = Math.abs(userLocationData.latitude - artisanLocation.latitude);
-                const lonDiff = Math.abs(userLocationData.longitude - artisanLocation.longitude);
-                const avgLat = (userLocationData.latitude + artisanLocation.latitude) / 2;
-                const latKm = latDiff * 111;
-                const lonKm = lonDiff * 111 * Math.cos(avgLat * Math.PI / 180);
-                distanceKm = Math.sqrt(latKm * latKm + lonKm * lonKm);
-              }
-
-              distanceKm = Math.round(distanceKm * 100) / 100;
-
-              if (distanceKm <= 30) {
-                shippingCost = 100;
-              } else if (distanceKm <= 70) {
-                shippingCost = 250;
-              } else {
-                shippingCost = 450;
-              }
             }
           } catch (routingErr) {
             console.error('Routing API error:', routingErr);
-            shippingCost = 100;
           }
+
+          // Fallback to manual distance calculation if routing failed or distance is 0
+          if (distanceKm === 0) {
+            const latDiff = Math.abs(userLocationData.latitude - artisanLocation.latitude);
+            const lonDiff = Math.abs(userLocationData.longitude - artisanLocation.longitude);
+            const avgLat = (userLocationData.latitude + artisanLocation.latitude) / 2;
+            const latKm = latDiff * 111;
+            const lonKm = lonDiff * 111 * Math.cos(avgLat * Math.PI / 180);
+            distanceKm = Math.sqrt(latKm * latKm + lonKm * lonKm);
+          }
+
+          distanceKm = Math.round(distanceKm * 100) / 100;
+
+          // Calculate shipping cost: 50 birr per KM
+          // Minimum shipping fee of 50 birr
+          shippingCost = Math.max(50, Math.round(distanceKm * 50));
         }
       }
 
@@ -232,12 +228,11 @@ export async function POST(request: NextRequest) {
         total,
         adminCommission,
         artisanEarnings,
-        shippingCost,
-        distanceKm,
-        artisanLocation,
         userLocationData,
       });
     }
+
+    const requestShippingFee = Number(body.shippingFee) || 0;
 
     for (const preparedItem of preparedItems) {
       const {
@@ -249,11 +244,15 @@ export async function POST(request: NextRequest) {
         total,
         adminCommission,
         artisanEarnings,
-        shippingCost,
         distanceKm,
         artisanLocation,
         userLocationData,
       } = preparedItem;
+
+      // Use calculated shipping cost, or fallback to request shipping fee, or minimum 50
+      let finalShippingCost = preparedItem.shippingCost || requestShippingFee || 50;
+      // Ensure it's never 0 if it's an order
+      if (finalShippingCost < 50) finalShippingCost = 50;
       const orderIdempotencyKey = requestItems.length === 1
         ? idempotencyKey || undefined
         : idempotencyKey
@@ -299,7 +298,7 @@ export async function POST(request: NextRequest) {
           zipCode: '',
         },
         userLocation: userLocationData,
-        shippingFee: shippingCost,
+        shippingFee: finalShippingCost,
         distanceKm: distanceKm,
         artisanLocation: artisanLocation,
         timeline: [
@@ -336,7 +335,7 @@ export async function POST(request: NextRequest) {
 
       createdOrders.push(order);
       productSummaries.push(`${item.quantity} x ${product.name}`);
-      grandTotal += (total + shippingCost);
+      grandTotal += (total + finalShippingCost);
 
       const artisanWallet = await Wallet.findOne({ userId: artisan._id }) || new Wallet({
         userId: artisan._id,
@@ -402,8 +401,6 @@ export async function POST(request: NextRequest) {
 
         // Add commission to admin pending balance
         adminWallet.pendingBalance = (adminWallet.pendingBalance || 0) + adminCommission;
-        // Add shipping fee separately to tracking field
-        adminWallet.shippingFeesReceived = (adminWallet.shippingFeesReceived || 0) + shippingCost;
         await adminWallet.save();
 
         const existingAdminTransaction = await Transaction.findOne({
@@ -457,14 +454,14 @@ export async function POST(request: NextRequest) {
             orderId: order._id,
             productId: product._id,
             type: 'SHIPPING_FEE',
-            amount: shippingCost,
+            amount: finalShippingCost,
             currency: 'ETB',
             status: 'PENDING',
             paymentRef: txRef,
             metadata: {
               orderId: order._id.toString(),
               productId: product._id.toString(),
-              shippingFee: shippingCost,
+              shippingFee: finalShippingCost,
               paymentMethod: 'chapa',
               payerId: user.userId,
               receiverId: adminUser._id.toString(),

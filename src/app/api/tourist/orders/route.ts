@@ -82,10 +82,25 @@ export async function GET(request: NextRequest) {
       .populate('product', 'name price images discountPrice')
       .populate('artisan', 'name email')
       .populate('assignedDeliveryGuy', 'name phone deliveryProfile')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Fetch refund requests for these orders to show status in UI
+    const orderIds = orders.map(o => o._id);
+    const refundRequests = await (await import('@/models/RefundRequest')).default.find({
+      orderId: { $in: orderIds }
+    }).lean();
+
+    const ordersWithRefundStatus = orders.map(order => {
+      const refundReq = refundRequests.find(r => r.orderId.toString() === order._id.toString());
+      return {
+        ...order,
+        refundRequest: refundReq || null
+      };
+    });
 
     return new NextResponse(
-      JSON.stringify({ success: true, orders }),
+      JSON.stringify({ success: true, orders: ordersWithRefundStatus }),
       { status: 200, headers: { 'content-type': 'application/json' } }
     );
 

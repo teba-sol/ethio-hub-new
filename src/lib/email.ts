@@ -192,11 +192,10 @@ const buildDecisionHtml = ({
     <h2 style="margin-bottom: 16px; color: #0f172a;">${approved ? "Approved" : "Update required"}</h2>
     <p style="margin-bottom: 8px;">Hello ${name},</p>
     <p style="margin-bottom: 8px;">Your ${targetType} <strong>${targetLabel}</strong> has been ${approved ? "approved" : "rejected"}.</p>
-    ${
-      !approved && reason
-        ? `<p style="margin-bottom: 8px;"><strong>Reason:</strong> ${reason}</p>`
-        : ""
-    }
+    ${!approved && reason
+    ? `<p style="margin-bottom: 8px;"><strong>Reason:</strong> ${reason}</p>`
+    : ""
+  }
     <p style="margin: 0; color: #64748b;">Thank you for using Ethio Craft Hub.</p>
   </div>
 `;
@@ -229,13 +228,12 @@ const buildAccountStatusHtml = ({
       <h2 style="margin-bottom: 16px; color: ${statusColor};">${title}</h2>
       <p style="margin-bottom: 16px;">Hello ${name},</p>
       <p style="margin-bottom: 16px;">${message}</p>
-      ${
-        reason
-          ? `<div style="margin: 24px 0; padding: 16px 20px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px;">
+      ${reason
+      ? `<div style="margin: 24px 0; padding: 16px 20px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px;">
               <p style="margin: 0; color: #92400e; font-size: 14px;"><strong>Reason:</strong> ${reason}</p>
             </div>`
-          : ""
-      }
+      : ""
+    }
       <p style="margin-top: 24px; color: #64748b; font-size: 13px;">If you have any questions regarding this action, please contact our support team.</p>
       <hr style="margin: 32px 0; border: 0; border-top: 1px solid #f1f5f9;" />
       <p style="margin: 0; color: #94a3b8; font-size: 12px; text-align: center;">Ethio Craft Hub Team</p>
@@ -553,33 +551,83 @@ export const sendUserWelcomeEmail = async (input: UserWelcomeEmailInput) => {
   );
 };
 
-export const sendAccountStatusEmail = async (input: AccountStatusEmailInput) => {
-  const subject = input.status === "Active" ? "Account Activated - Ethio Craft Hub" : 
-                  input.status === "Suspended" ? "Account Suspension Notice - Ethio Craft Hub" :
-                  input.status === "Deleted" ? "Account Deletion Notice - Ethio Craft Hub" :
-                  "Account Status Update - Ethio Craft Hub";
+type RefundStatusEmailInput = {
+  to: string;
+  name: string;
+  orderId: string;
+  status: 'processing' | 'rejected' | 'completed';
+  amount: number;
+  reason?: string;
+  adminNotes?: string;
+};
 
+const buildRefundStatusHtml = (input: RefundStatusEmailInput) => {
+  const statusColors = {
+    processing: '#3b82f6',
+    rejected: '#ef4444',
+    completed: '#10b981'
+  };
+  const statusText = {
+    processing: 'Being Processed',
+    rejected: 'Rejected',
+    completed: 'Completed'
+  };
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1f2937;">
+      <h2 style="margin-bottom: 16px; color: #0f172a;">Refund Request Update</h2>
+      <p style="margin-bottom: 16px;">Hello ${input.name},</p>
+      <p style="margin-bottom: 16px;">Your refund request for order <strong>#${input.orderId.slice(-6).toUpperCase()}</strong> has been updated.</p>
+      
+      <div style="margin: 24px 0; padding: 20px 24px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px;">
+        <p style="margin-bottom: 8px;"><strong>Status:</strong> <span style="color: ${statusColors[input.status]}; font-weight: 700;">${statusText[input.status]}</span></p>
+        <p style="margin-bottom: 8px;"><strong>Amount:</strong> ETB ${input.amount.toLocaleString()}</p>
+        ${input.adminNotes ? `<p style="margin-top: 12px; font-style: italic; color: #64748b;"><strong>Admin Note:</strong> ${input.adminNotes}</p>` : ''}
+      </div>
+
+      ${input.status === 'completed' ? '<p style="color: #10b981; font-weight: 600;">The funds have been transferred to your account.</p>' : ''}
+      ${input.status === 'rejected' ? '<p style="color: #ef4444;">Please contact support if you have any questions regarding this decision.</p>' : ''}
+      
+      <p style="margin-top: 32px; color: #64748b; font-size: 13px;">Thank you for using Ethio Craft Hub.</p>
+    </div>
+  `;
+};
+
+export const sendRefundStatusEmail = async (input: RefundStatusEmailInput) => {
   await sendMail(
     input.to,
-    subject,
-    buildAccountStatusHtml(input)
+    `Refund Request Update - Order #${input.orderId.slice(-6).toUpperCase()}`,
+    buildRefundStatusHtml(input)
   );
 };
 
-// ============================================================
-// Admin Report Action Emails
-// ============================================================
+export const sendAccountStatusEmail = async (input: AccountStatusEmailInput) => {
+    const subject = input.status === "Active" ? "Account Activated - Ethio Craft Hub" :
+      input.status === "Suspended" ? "Account Suspension Notice - Ethio Craft Hub" :
+        input.status === "Deleted" ? "Account Deletion Notice - Ethio Craft Hub" :
+          "Account Status Update - Ethio Craft Hub";
 
-type AdminReportEmailInput = {
-  to: string;
-  name: string;
-  targetType: string;
-  reportReason?: string;
-  reportDescription?: string;
-  adminNote?: string;
-};
+    await sendMail(
+      input.to,
+      subject,
+      buildAccountStatusHtml(input)
+    );
+  };
 
-const buildWarningEmailHtml = (input: AdminReportEmailInput) => `
+  // ============================================================
+  // Admin Report Action Emails
+  // ============================================================
+
+  type AdminReportEmailInput = {
+    to: string;
+    name: string;
+    targetType: string;
+    reportReason?: string;
+    reportDescription?: string;
+    adminNote?: string;
+  };
+
+  const buildWarningEmailHtml = (input: AdminReportEmailInput) => `
   <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1f2937;">
     <h2 style="margin-bottom: 16px; color: #b45309;">Warning Notice - Ethio Craft Hub</h2>
     <p style="margin-bottom: 16px;">Hello ${input.name},</p>
@@ -603,7 +651,7 @@ const buildWarningEmailHtml = (input: AdminReportEmailInput) => `
   </div>
 `;
 
-const buildBanEmailHtml = (input: AdminReportEmailInput) => `
+  const buildBanEmailHtml = (input: AdminReportEmailInput) => `
   <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1f2937;">
     <h2 style="margin-bottom: 16px; color: #991b1b;">Account Permanently Banned - Ethio Craft Hub</h2>
     <p style="margin-bottom: 16px;">Hello ${input.name},</p>
@@ -627,7 +675,7 @@ const buildBanEmailHtml = (input: AdminReportEmailInput) => `
   </div>
 `;
 
-const buildContentTakenDownEmailHtml = (input: AdminReportEmailInput) => `
+  const buildContentTakenDownEmailHtml = (input: AdminReportEmailInput) => `
   <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1f2937;">
     <h2 style="margin-bottom: 16px; color: #991b1b;">Content Taken Down - Ethio Craft Hub</h2>
     <p style="margin-bottom: 16px;">Hello ${input.name},</p>
@@ -651,26 +699,26 @@ const buildContentTakenDownEmailHtml = (input: AdminReportEmailInput) => `
   </div>
 `;
 
-export const sendWarningEmail = async (input: AdminReportEmailInput) => {
-  await sendMail(
-    input.to,
-    `⚠️ Warning Notice - Your ${input.targetType} on Ethio Craft Hub`,
-    buildWarningEmailHtml(input)
-  );
-};
+  export const sendWarningEmail = async (input: AdminReportEmailInput) => {
+    await sendMail(
+      input.to,
+      `⚠️ Warning Notice - Your ${input.targetType} on Ethio Craft Hub`,
+      buildWarningEmailHtml(input)
+    );
+  };
 
-export const sendBanEmail = async (input: AdminReportEmailInput) => {
-  await sendMail(
-    input.to,
-    `🚫 Account Permanently Banned - Ethio Craft Hub`,
-    buildBanEmailHtml(input)
-  );
-};
+  export const sendBanEmail = async (input: AdminReportEmailInput) => {
+    await sendMail(
+      input.to,
+      `🚫 Account Permanently Banned - Ethio Craft Hub`,
+      buildBanEmailHtml(input)
+    );
+  };
 
-export const sendContentTakenDownEmail = async (input: AdminReportEmailInput) => {
-  await sendMail(
-    input.to,
-    `⚠️ Your Content Has Been Taken Down - Ethio Craft Hub`,
-    buildContentTakenDownEmailHtml(input)
-  );
-};
+  export const sendContentTakenDownEmail = async (input: AdminReportEmailInput) => {
+    await sendMail(
+      input.to,
+      `⚠️ Your Content Has Been Taken Down - Ethio Craft Hub`,
+      buildContentTakenDownEmailHtml(input)
+    );
+  };

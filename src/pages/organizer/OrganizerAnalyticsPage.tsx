@@ -89,18 +89,6 @@ export const OrganizerAnalyticsPage: React.FC = () => {
     return Array.from(names);
   }, [bookingTrends]);
 
-<<<<<<< HEAD
-    return {
-      id: f._id,
-      name: f.name,
-      status,
-      bookings: Math.floor(Math.random() * 500) + 50,
-      attendees: 0,
-      rating: averageRating > 0 ? averageRating : 0,
-      health: getEventHealth(100, averageRating)
-    };
-  });
-=======
   // Ticket Type Breakdown Data
   const ticketTypeData = useMemo(() => {
     if (!analyticsData?.charts?.ticketTypeBreakdown) return [];
@@ -119,7 +107,6 @@ export const OrganizerAnalyticsPage: React.FC = () => {
       }));
     }
   }, [analyticsData, ticketEvent]);
->>>>>>> origin/zeki
 
   const COLORS = ['#3b82f6', '#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
 
