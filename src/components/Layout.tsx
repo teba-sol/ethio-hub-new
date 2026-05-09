@@ -620,9 +620,9 @@ export const Header: React.FC = () => {
       }`}
     >
       <CartDrawer />
-      <nav className="max-w-7xl mx-auto px-6">
-        <div className="flex justify-between items-center">
-          <Link href="/" className="flex items-center group flex-shrink-0">
+      <nav className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center w-full">
+          <Link href="/" className="flex items-center group flex-shrink-0 -ml-2 md:ml-0">
             <div className={`relative h-12 w-12 md:h-16 md:w-16 rounded-full overflow-hidden flex items-center justify-center border-2 transition-all duration-500 shadow-xl group-hover:scale-110 ${
               isScrolled || !isHomePage ? "border-primary/20 shadow-primary/5" : "border-white/30 shadow-black/20"
             }`}>

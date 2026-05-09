@@ -3,6 +3,7 @@ import { jwtVerify } from 'jose';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/models/User';
 import { cookies } from 'next/headers';
+import { sendAccountStatusEmail } from '@/lib/email';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
@@ -40,6 +41,17 @@ export async function POST(
     user.suspensionReason = null;
     user.suspendedAt = null;
     await user.save();
+
+    // Send email notification
+    try {
+      await sendAccountStatusEmail({
+        to: user.email,
+        name: user.name,
+        status: 'Active'
+      });
+    } catch (emailErr) {
+      console.error('Failed to send activation email:', emailErr);
+    }
 
     const userResponse = user.toObject();
     delete (userResponse as any).password;

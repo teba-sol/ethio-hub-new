@@ -6,6 +6,7 @@ import {
   Clock, DollarSign, RefreshCw, AlertCircle, Truck, X
 } from 'lucide-react';
 import { Button, Badge } from '../UI';
+import { useNotification } from '../../context/NotificationContext';
 
 interface Order {
   _id: string;
@@ -69,6 +70,7 @@ export const AdminOrderManager: React.FC = () => {
   const [selectedDeliveryGuy, setSelectedDeliveryGuy] = useState<string | null>(null);
   const [deliveryPersonDetails, setDeliveryPersonDetails] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     fetchOrders();
@@ -91,7 +93,7 @@ export const AdminOrderManager: React.FC = () => {
 
   const handleAssignDelivery = async (orderId: string) => {
     if (!assigningTo) {
-      alert('Please select a delivery person');
+      showNotification('Please select a delivery person', 'warning');
       return;
     }
 
@@ -105,15 +107,15 @@ export const AdminOrderManager: React.FC = () => {
 
       const result = await res.json();
       if (result.success) {
-        alert('Delivery guy assigned successfully');
+        showNotification('Delivery guy assigned successfully', 'success');
         setSelectedOrder(null);
         setAssigningTo('');
         fetchOrders();
       } else {
-        alert(result.message || 'Failed to assign delivery guy');
+        showNotification(result.message || 'Failed to assign delivery guy', 'error');
       }
     } catch (err) {
-      alert('Error assigning delivery guy');
+      showNotification('Error assigning delivery guy', 'error');
     } finally {
       setAssigning(false);
     }
@@ -512,15 +514,15 @@ export const AdminOrderManager: React.FC = () => {
                       className="w-full"
                       onClick={async () => {
                         if (!deliveryPersonDetails.deliveryGuy?.phone) {
-                          alert('No phone number available');
+                          showNotification('No phone number available', 'error');
                           return;
                         }
                         const amount = deliveryPersonDetails.wallet?.deliveryEarnings || 0;
                         if (amount <= 0) {
-                          alert('No earnings to pay');
+                          showNotification('No earnings to pay', 'warning');
                           return;
                         }
-                        if (confirm(`Mock payment: Send ${formatCurrency(amount)} to ${deliveryPersonDetails.deliveryGuy.phone}?`)) {
+                        if (window.confirm(`Mock payment: Send ${formatCurrency(amount)} to ${deliveryPersonDetails.deliveryGuy.phone}?`)) {
                           try {
                             const res = await fetch(`/api/admin/delivery-person/${selectedDeliveryGuy}`, {
                               method: 'POST',
@@ -529,11 +531,11 @@ export const AdminOrderManager: React.FC = () => {
                             });
                             const result = await res.json();
                             if (result.success) {
-                              alert(`Mock payment of ${formatCurrency(amount)} sent to ${deliveryPersonDetails.deliveryGuy.phone}`);
+                              showNotification(`Mock payment of ${formatCurrency(amount)} sent to ${deliveryPersonDetails.deliveryGuy.phone}`, 'success');
                               fetchDeliveryPersonDetails(selectedDeliveryGuy);
                             }
                           } catch (err) {
-                            alert('Payment failed');
+                            showNotification('Payment failed', 'error');
                           }
                         }
                       }}

@@ -32,6 +32,13 @@ type ApprovalDecisionEmailInput = {
   reason?: string;
 };
 
+type AccountStatusEmailInput = {
+  to: string;
+  name: string;
+  status: "Active" | "Suspended" | "Deleted" | "Banned";
+  reason?: string;
+};
+
 export type EmailProviderErrorCode =
   | "EMAIL_PROVIDER_NOT_READY"
   | "EMAIL_PROVIDER_AUTH"
@@ -193,6 +200,48 @@ const buildDecisionHtml = ({
     <p style="margin: 0; color: #64748b;">Thank you for using Ethio Craft Hub.</p>
   </div>
 `;
+
+const buildAccountStatusHtml = ({
+  name,
+  status,
+  reason,
+}: AccountStatusEmailInput) => {
+  let statusColor = "#0f766e"; // Active
+  let title = "Account Activated";
+  let message = "Your account has been successfully activated. You now have full access to the Ethio Craft Hub platform.";
+
+  if (status === "Suspended") {
+    statusColor = "#b45309";
+    title = "Account Suspended";
+    message = "Your account has been suspended by an administrator.";
+  } else if (status === "Deleted") {
+    statusColor = "#b91c1c";
+    title = "Account Deleted";
+    message = "Your account has been removed from our platform.";
+  } else if (status === "Banned") {
+    statusColor = "#7f1d1d";
+    title = "Account Banned";
+    message = "Your account has been permanently banned due to policy violations.";
+  }
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1f2937;">
+      <h2 style="margin-bottom: 16px; color: ${statusColor};">${title}</h2>
+      <p style="margin-bottom: 16px;">Hello ${name},</p>
+      <p style="margin-bottom: 16px;">${message}</p>
+      ${
+        reason
+          ? `<div style="margin: 24px 0; padding: 16px 20px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px;">
+              <p style="margin: 0; color: #92400e; font-size: 14px;"><strong>Reason:</strong> ${reason}</p>
+            </div>`
+          : ""
+      }
+      <p style="margin-top: 24px; color: #64748b; font-size: 13px;">If you have any questions regarding this action, please contact our support team.</p>
+      <hr style="margin: 32px 0; border: 0; border-top: 1px solid #f1f5f9;" />
+      <p style="margin: 0; color: #94a3b8; font-size: 12px; text-align: center;">Ethio Craft Hub Team</p>
+    </div>
+  `;
+};
 
 export const sendMail = async (to: string, subject: string, html: string) => {
   try {
@@ -501,5 +550,127 @@ export const sendUserWelcomeEmail = async (input: UserWelcomeEmailInput) => {
     input.to,
     "Welcome to Ethio Craft Hub - Account Created",
     buildUserWelcomeHtml(input)
+  );
+};
+
+export const sendAccountStatusEmail = async (input: AccountStatusEmailInput) => {
+  const subject = input.status === "Active" ? "Account Activated - Ethio Craft Hub" : 
+                  input.status === "Suspended" ? "Account Suspension Notice - Ethio Craft Hub" :
+                  input.status === "Deleted" ? "Account Deletion Notice - Ethio Craft Hub" :
+                  "Account Status Update - Ethio Craft Hub";
+
+  await sendMail(
+    input.to,
+    subject,
+    buildAccountStatusHtml(input)
+  );
+};
+
+// ============================================================
+// Admin Report Action Emails
+// ============================================================
+
+type AdminReportEmailInput = {
+  to: string;
+  name: string;
+  targetType: string;
+  reportReason?: string;
+  reportDescription?: string;
+  adminNote?: string;
+};
+
+const buildWarningEmailHtml = (input: AdminReportEmailInput) => `
+  <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1f2937;">
+    <h2 style="margin-bottom: 16px; color: #b45309;">Warning Notice - Ethio Craft Hub</h2>
+    <p style="margin-bottom: 16px;">Hello ${input.name},</p>
+    <p style="margin-bottom: 16px;">We have received a report regarding your ${input.targetType.toLowerCase()} on Ethio Craft Hub. Our team has reviewed the report and found it necessary to issue you a formal warning.</p>
+    ${input.reportReason ? `
+    <div style="margin: 20px 0; padding: 16px 20px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px;">
+      <p style="margin-bottom: 8px; color: #92400e; font-size: 14px;"><strong>Report Reason:</strong> ${input.reportReason}</p>
+      ${input.reportDescription ? `<p style="margin: 0; color: #92400e; font-size: 14px;"><strong>Details:</strong> ${input.reportDescription}</p>` : ''}
+    </div>
+    ` : ''}
+    ${input.adminNote ? `
+    <div style="margin: 20px 0; padding: 16px 20px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;">
+      <p style="margin-bottom: 8px; color: #166534; font-size: 14px;"><strong>Admin Note:</strong></p>
+      <p style="margin: 0; color: #166534; font-size: 14px;">${input.adminNote}</p>
+    </div>
+    ` : ''}
+    <p style="margin-bottom: 16px; font-weight: 500;">Please review your content and ensure it complies with our community guidelines and terms of service. Further violations may result in account suspension or permanent removal.</p>
+    <p style="margin-bottom: 16px;">If you believe this warning was issued in error, please contact our support team at <a href="mailto:support@ethiohub.com" style="color: #0f766e;">support@ethiohub.com</a>.</p>
+    <hr style="margin: 32px 0; border: 0; border-top: 1px solid #f1f5f9;" />
+    <p style="margin: 0; color: #94a3b8; font-size: 12px; text-align: center;">Ethio Craft Hub Team</p>
+  </div>
+`;
+
+const buildBanEmailHtml = (input: AdminReportEmailInput) => `
+  <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1f2937;">
+    <h2 style="margin-bottom: 16px; color: #991b1b;">Account Permanently Banned - Ethio Craft Hub</h2>
+    <p style="margin-bottom: 16px;">Hello ${input.name},</p>
+    <p style="margin-bottom: 16px;">After a thorough review, your account on Ethio Craft Hub has been <strong>permanently banned</strong> due to serious violations of our community guidelines and terms of service.</p>
+    ${input.reportReason ? `
+    <div style="margin: 20px 0; padding: 16px 20px; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 12px;">
+      <p style="margin-bottom: 8px; color: #991b1b; font-size: 14px;"><strong>Reason for Ban:</strong> ${input.reportReason}</p>
+      ${input.reportDescription ? `<p style="margin: 0; color: #991b1b; font-size: 14px;"><strong>Details:</strong> ${input.reportDescription}</p>` : ''}
+    </div>
+    ` : ''}
+    ${input.adminNote ? `
+    <div style="margin: 20px 0; padding: 16px 20px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;">
+      <p style="margin-bottom: 8px; color: #166534; font-size: 14px;"><strong>Admin Note:</strong></p>
+      <p style="margin: 0; color: #166534; font-size: 14px;">${input.adminNote}</p>
+    </div>
+    ` : ''}
+    <p style="margin-bottom: 16px; color: #dc2626; font-weight: 500;">This action is permanent and cannot be reversed. Your account has been permanently removed from the platform.</p>
+    <p style="margin-bottom: 16px;">If you have questions or believe this decision was made in error, you may contact our support team at <a href="mailto:support@ethiohub.com" style="color: #0f766e;">support@ethiohub.com</a>. Note that appeals are reviewed at our discretion.</p>
+    <hr style="margin: 32px 0; border: 0; border-top: 1px solid #f1f5f9;" />
+    <p style="margin: 0; color: #94a3b8; font-size: 12px; text-align: center;">Ethio Craft Hub Team</p>
+  </div>
+`;
+
+const buildContentTakenDownEmailHtml = (input: AdminReportEmailInput) => `
+  <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1f2937;">
+    <h2 style="margin-bottom: 16px; color: #991b1b;">Content Taken Down - Ethio Craft Hub</h2>
+    <p style="margin-bottom: 16px;">Hello ${input.name},</p>
+    <p style="margin-bottom: 16px;">Following a community report and review, your <strong>${input.targetType.toLowerCase()}</strong> has been <strong>taken down</strong> from Ethio Craft Hub.</p>
+    ${input.reportReason ? `
+    <div style="margin: 20px 0; padding: 16px 20px; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 12px;">
+      <p style="margin-bottom: 8px; color: #991b1b; font-size: 14px;"><strong>Reason:</strong> ${input.reportReason}</p>
+      ${input.reportDescription ? `<p style="margin: 0; color: #991b1b; font-size: 14px;"><strong>Details:</strong> ${input.reportDescription}</p>` : ''}
+    </div>
+    ` : ''}
+    ${input.adminNote ? `
+    <div style="margin: 20px 0; padding: 16px 20px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;">
+      <p style="margin-bottom: 8px; color: #166534; font-size: 14px;"><strong>Admin Note:</strong></p>
+      <p style="margin: 0; color: #166534; font-size: 14px;">${input.adminNote}</p>
+    </div>
+    ` : ''}
+    <p style="margin-bottom: 16px;">This does not necessarily mean your account is suspended. However, repeated violations may lead to further action including account suspension or ban.</p>
+    <p style="margin-bottom: 16px;">If you believe this action was taken in error, please contact our support team at <a href="mailto:support@ethiohub.com" style="color: #0f766e;">support@ethiohub.com</a>.</p>
+    <hr style="margin: 32px 0; border: 0; border-top: 1px solid #f1f5f9;" />
+    <p style="margin: 0; color: #94a3b8; font-size: 12px; text-align: center;">Ethio Craft Hub Team</p>
+  </div>
+`;
+
+export const sendWarningEmail = async (input: AdminReportEmailInput) => {
+  await sendMail(
+    input.to,
+    `⚠️ Warning Notice - Your ${input.targetType} on Ethio Craft Hub`,
+    buildWarningEmailHtml(input)
+  );
+};
+
+export const sendBanEmail = async (input: AdminReportEmailInput) => {
+  await sendMail(
+    input.to,
+    `🚫 Account Permanently Banned - Ethio Craft Hub`,
+    buildBanEmailHtml(input)
+  );
+};
+
+export const sendContentTakenDownEmail = async (input: AdminReportEmailInput) => {
+  await sendMail(
+    input.to,
+    `⚠️ Your Content Has Been Taken Down - Ethio Craft Hub`,
+    buildContentTakenDownEmailHtml(input)
   );
 };

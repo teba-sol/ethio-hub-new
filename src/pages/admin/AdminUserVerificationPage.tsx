@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Search, Filter, CheckCircle2, XCircle, Eye, Clock, 
+import {
+  Search, Filter, CheckCircle2, XCircle, Eye, Clock,
   FileText, Download, User, ShieldCheck, AlertCircle,
   ChevronRight, Calendar, Mail, Phone, History, Check, Ban, Loader2
 } from 'lucide-react';
@@ -16,6 +16,15 @@ const getString = (val: any): string => {
     return '';
   }
   return String(val || '');
+};
+
+const formatDate = (date: any) => {
+  if (!date) return 'N/A';
+  return new Date(date).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
 };
 
 // --- Types ---
@@ -56,18 +65,27 @@ interface VerificationRequest {
   region?: string;
   city?: string;
   artisanProfile?: any;
-  deliveryProfile?: {
-    bankName?: string;
-    accountNumber?: string;
-    telebirrNumber?: string;
-    profileImage?: string;
-    idDocument?: string;
-  };
+  organizerProfile?: any;
+  deliveryProfile?: any;
   vehicleType?: string;
   licensePlate?: string;
+  vehicleModel?: string;
+  gender?: string;
+  experience?: number;
+  bio?: string;
+  address?: string;
+  website?: string;
+  payoutMethod?: string;
+  bankName?: string;
+  accountName?: string;
+  accountHolderName?: string;
+  accountNumber?: string;
+  telebirrNumber?: string;
+  chapaAccountId?: string;
 }
 
 interface VerificationStats {
+  notSubmitted: number;
   pending: number;
   underReview: number;
   approved: number;
@@ -86,9 +104,12 @@ export const AdminUserVerificationPage: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<VerificationRequest | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectionModal, setShowRejectionModal] = useState(false);
-  const [stats, setStats] = useState<VerificationStats>({ pending: 0, underReview: 0, approved: 0, rejected: 0 });
+  const [stats, setStats] = useState<VerificationStats>({ pending: 0, underReview: 0, approved: 0, rejected: 0, notSubmitted: 0 });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const ITEMS_PER_PAGE = 15;
 
   const fetchRequests = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -96,11 +117,33 @@ export const AdminUserVerificationPage: React.FC = () => {
     try {
       const params = new URLSearchParams();
       if (filterStatus !== 'All') params.set('status', filterStatus);
+      if (filterRole !== 'All') {
+        const roleMap: Record<string, string> = {
+          'Organizer': 'organizer',
+          'Artisan': 'artisan',
+          'Delivery Guy': 'delivery'
+        };
+        params.set('role', roleMap[filterRole] || filterRole.toLowerCase());
+      }
+      if (searchQuery) params.set('search', searchQuery);
+      params.set('page', page.toString());
+      params.set('limit', ITEMS_PER_PAGE.toString());
+      if (dateRange.start) params.set('startDate', dateRange.start);
+      if (dateRange.end) params.set('endDate', dateRange.end);
 
+      console.log('Fetching user verification with params:', params.toString());
       const res = await fetch(`/api/admin/verification?${params.toString()}`);
       const data = await res.json();
+      console.log('Received verification data:', data);
+      
       if (data.success) {
-        setRequests(data.requests);
+        setRequests(data.requests || []);
+        setHasMore(data.pagination?.hasMore || false);
+      } else {
+        console.error('API Error:', data.message);
+        if (data.message === 'Authentication required') {
+          // Handle session expiry
+        }
       }
     } catch (error) {
       console.error('Failed to fetch requests:', error);
@@ -108,7 +151,7 @@ export const AdminUserVerificationPage: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filterStatus]);
+  }, [filterStatus, filterRole, searchQuery, page, dateRange]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -123,6 +166,10 @@ export const AdminUserVerificationPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    setPage(1); // Reset to first page when filters change
+  }, [filterStatus, filterRole, searchQuery, dateRange]);
+
+  useEffect(() => {
     fetchRequests();
     fetchStats();
   }, [fetchRequests, fetchStats]);
@@ -130,10 +177,10 @@ export const AdminUserVerificationPage: React.FC = () => {
   const handleApprove = async (id: string, role: 'Organizer' | 'Artisan' | 'Delivery Guy') => {
     // Optimistic UI update
     const previousRequests = [...requests];
-    setRequests(prev => prev.map(req => 
+    setRequests(prev => prev.map(req =>
       req.id === id ? { ...req, status: 'approved' as VerificationStatus } : req
     ));
-    
+
     setActionLoading(id);
     try {
       const res = await fetch(`/api/admin/verification/${id}/approve`, {
@@ -161,13 +208,13 @@ export const AdminUserVerificationPage: React.FC = () => {
 
   const handleReject = async (id: string, role: 'Organizer' | 'Artisan' | 'Delivery Guy') => {
     if (!rejectionReason.trim()) return;
-    
+
     // Optimistic UI update
     const previousRequests = [...requests];
-    setRequests(prev => prev.map(req => 
+    setRequests(prev => prev.map(req =>
       req.id === id ? { ...req, status: 'rejected' as VerificationStatus, rejectionReason: rejectionReason.trim() } : req
     ));
-    
+
     setActionLoading(id);
     try {
       const res = await fetch(`/api/admin/verification/${id}/reject`, {
@@ -196,30 +243,21 @@ export const AdminUserVerificationPage: React.FC = () => {
     }
   };
 
-  const filteredRequests = requests.filter(req => {
-    const matchesRole = filterRole === 'All' || req.userRole === filterRole;
-    const matchesSearch = req.userName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          req.userEmail.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesDate = (!dateRange.start || new Date(req.submittedAt) >= new Date(dateRange.start)) &&
-                        (!dateRange.end || new Date(req.submittedAt) <= new Date(dateRange.end));
-
-    return matchesRole && matchesSearch && matchesDate;
-  });
+  const filteredRequests = requests;
 
   const StatusBadge = ({ status }: { status: VerificationStatus }) => {
-    const statusKey = `admin.status.${status === 'not_submitted' ? 'statusNotSubmitted' : 
+    const statusKey = status === 'not_submitted' ? 'statusNotSubmitted' :
       status === 'submitted' ? 'statusSubmitted' :
-      status === 'under_review' ? 'statusUnderReview' :
-      status === 'approved' ? 'statusApproved' :
-      status === 'rejected' ? 'statusRejected' : 'statusModificationRequested'}`;
-    
-    const variant = 
+        status === 'under_review' ? 'statusUnderReview' :
+          status === 'approved' ? 'statusApproved' :
+            status === 'rejected' ? 'statusRejected' : 'statusModificationRequested';
+
+    const variant =
       status === 'approved' ? 'success' :
-      status === 'rejected' ? 'error' :
-      status === 'submitted' ? 'warning' :
-      status === 'under_review' ? 'info' : 'secondary';
-    
+        status === 'rejected' ? 'error' :
+          status === 'submitted' ? 'warning' :
+            status === 'under_review' ? 'info' : 'secondary';
+
     return <Badge variant={variant}>{t(statusKey)}</Badge>;
   };
 
@@ -282,8 +320,8 @@ export const AdminUserVerificationPage: React.FC = () => {
         <div className="flex flex-col lg:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder={t("common.search") + "..."}
               className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/20"
               value={searchQuery}
@@ -291,31 +329,33 @@ export const AdminUserVerificationPage: React.FC = () => {
             />
           </div>
           <div className="flex flex-wrap gap-2">
-<select 
-                className="px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 border-none cursor-pointer"
-                value={filterRole}
-                onChange={(e) => setFilterRole(e.target.value)}
-              >
-                <option value="All">{t("common.all")}</option>
-                <option value="Organizer">Organizer</option>
-                <option value="Artisan">Artisan</option>
-                <option value="Delivery Guy">Delivery Guy</option>
-              </select>
-             <select 
-               className="px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 border-none cursor-pointer"
-               value={filterStatus}
-               onChange={(e) => setFilterStatus(e.target.value)}
-             >
-               <option value="All">{t("admin.allStatus")}</option>
-               <option value="Submitted">{t("status.statusSubmitted")}</option>
-               <option value="Under Review">{t("status.statusUnderReview")}</option>
-               <option value="Approved">{t("status.statusApproved")}</option>
-               <option value="Rejected">{t("status.statusRejected")}</option>
-             </select>
+            <select
+              className="px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 border-none cursor-pointer"
+              value={filterRole}
+              onChange={(e) => setFilterRole(e.target.value)}
+            >
+              <option value="All">{t("common.all")}</option>
+              <option value="Organizer">Organizer</option>
+              <option value="Artisan">Artisan</option>
+              <option value="Delivery Guy">Delivery Guy</option>
+            </select>
+            <select
+              className="px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 border-none cursor-pointer"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+            >
+              <option value="All">{t("admin.allStatus")}</option>
+              <option value="Not Submitted">{t("status.statusNotSubmitted")}</option>
+              <option value="Pending">{t("status.statusSubmitted")}</option>
+              <option value="Under Review">{t("status.statusUnderReview")}</option>
+              <option value="Approved">{t("status.statusApproved")}</option>
+              <option value="Rejected">{t("status.statusRejected")}</option>
+              <option value="Modification Requested">{t("status.statusModificationRequested")}</option>
+            </select>
             <div className="relative">
-              <Button 
-                variant={dateRange.start || dateRange.end ? "primary" : "outline"} 
-                size="sm" 
+              <Button
+                variant={dateRange.start || dateRange.end ? "primary" : "outline"}
+                size="sm"
                 leftIcon={Calendar}
                 onClick={() => setShowDatePicker(!showDatePicker)}
               >
@@ -325,8 +365,8 @@ export const AdminUserVerificationPage: React.FC = () => {
                 <div className="absolute right-0 mt-2 p-4 bg-white border border-gray-200 rounded-2xl shadow-xl z-20 w-64 space-y-3">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Start Date</label>
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       className="w-full p-2 bg-gray-50 border-none rounded-lg text-xs"
                       value={dateRange.start}
                       onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
@@ -334,8 +374,8 @@ export const AdminUserVerificationPage: React.FC = () => {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">End Date</label>
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       className="w-full p-2 bg-gray-50 border-none rounded-lg text-xs"
                       value={dateRange.end}
                       onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
@@ -353,94 +393,84 @@ export const AdminUserVerificationPage: React.FC = () => {
             </div>
           </div>
         </div>
-        
-        <div className="flex gap-2 border-t border-gray-50 pt-4 overflow-x-auto">
-          {[
-            { key: 'allRequests', role: 'All', status: 'All' },
-            { key: 'organizerRequests', role: 'Organizer', status: 'All' },
-            { key: 'artisanRequests', role: 'Artisan', status: 'All' },
-            { key: 'deliveryRequests', role: 'Delivery Guy', status: 'All' },
-            { key: 'pending', role: 'All', status: 'Submitted' },
-            { key: 'approved', role: 'All', status: 'Approved' },
-            { key: 'rejected', role: 'All', status: 'Rejected' }
-          ].map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => {
-                setFilterRole(tab.role);
-                setFilterStatus(tab.status);
-              }}
-              className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                (tab.key === 'allRequests' && filterStatus === 'All' && filterRole === 'All') ||
-                (tab.key === 'organizerRequests' && filterRole === 'Organizer') ||
-                (tab.key === 'artisanRequests' && filterRole === 'Artisan') ||
-                (tab.key === 'pending' && filterStatus === 'Submitted') ||
-                (tab.key === 'approved' && filterStatus === 'Approved') ||
-                (tab.key === 'rejected' && filterStatus === 'Rejected')
-                ? 'bg-primary text-white shadow-md' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-              }`}
-            >
-              {t(`admin.quickFilters.${tab.key}`)}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Table */}
       <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
         {loading ? (
-           <div className="flex items-center justify-center py-20">
-             <Loader2 className="w-8 h-8 animate-spin text-primary" />
-             <span className="ml-3 text-gray-500">{t('admin.loadingVerificationRequests')}</span>
-           </div>
+          <TableSkeleton />
         ) : filteredRequests.length === 0 ? (
-           <div className="flex flex-col items-center justify-center py-20">
-             <ShieldCheck className="w-12 h-12 text-gray-300 mb-4" />
-             <p className="text-gray-500 font-medium">{t('admin.noVerificationRequests')}</p>
-             <p className="text-gray-400 text-sm">{t('admin.tryAdjustingFilters')}</p>
-           </div>
+          <div className="flex flex-col items-center justify-center py-20">
+            <ShieldCheck className="w-12 h-12 text-gray-300 mb-4" />
+            <p className="text-gray-500 font-medium">{t('admin.noVerificationRequests')}</p>
+            <p className="text-gray-400 text-sm">{t('admin.tryAdjustingFilters')}</p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
-                 <tr className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                   <th className="px-6 py-4">{t("admin.userVerifications")}</th>
-                   <th className="px-6 py-4">{t("admin.businessInfo")}</th>
-                   <th className="px-6 py-4">{t("admin.submittedOn")}</th>
-                   <th className="px-6 py-4">{t("admin.documents")}</th>
-                   <th className="px-6 py-4">{t("admin.status")}</th>
-                   <th className="px-6 py-4 text-right">{t("admin.actions")}</th>
-                 </tr>
+                <tr className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-4">{t("admin.userVerifications")}</th>
+                  <th className="px-6 py-4">{t("admin.businessInfo")}</th>
+                  <th className="px-6 py-4">{t("admin.submittedOn")}</th>
+                  <th className="px-6 py-4">{t("admin.documents")}</th>
+                  <th className="px-6 py-4">{t("admin.status")}</th>
+                  <th className="px-6 py-4 text-right">{t("admin.actions")}</th>
+                </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filteredRequests.map((req) => (
                   <tr key={req.id} className="hover:bg-gray-50 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold overflow-hidden">
-                           {req.userAvatar ? (
-                             <img src={req.userAvatar} alt={getString(req.userName)} className="w-full h-full object-cover" />
-                           ) : (
-                             getString(req.userName).charAt(0)
-                           )}
+                        <div className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold overflow-hidden shrink-0">
+                          {req.userAvatar ? (
+                            <img src={req.userAvatar} alt={getString(req.userName)} className="w-full h-full object-cover" />
+                          ) : (
+                            getString(req.userName).charAt(0)
+                          )}
                         </div>
-                         <div>
-                           <p className="font-bold text-gray-800">{getString(req.userName)}</p>
-                           <p className="text-xs text-gray-500">{req.userEmail}</p>
-                         </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-gray-800 truncate">{getString(req.userName)}</p>
+                          <p className="text-xs text-gray-500 truncate">{req.userEmail}</p>
+                          <p className="text-xs text-gray-400">{req.userPhone || 'No phone'}</p>
+                        </div>
                       </div>
                     </td>
-                     <td className="px-6 py-4">
-                       <p className="font-medium text-gray-700">{getString(req.businessName || 'N/A')}</p>
-                       <p className="text-xs text-gray-500">{getString(req.category || '')}</p>
-                     </td>
-                     <td className="px-6 py-4 text-gray-600">{req.submittedAt}</td>
-                     <td className="px-6 py-4">
-                       <div className="flex items-center gap-1 text-gray-500">
-                         <FileText className="w-4 h-4" />
-                         <span>{req.documents?.length || 0} {t("documents.files")}</span>
-                       </div>
-                     </td>
+                    <td className="px-6 py-4">
+                      <div className="space-y-1">
+                        {req.userRole === 'Artisan' && (
+                          <>
+                            <p className="font-medium text-gray-800">{getString(req.businessName || 'N/A')}</p>
+                            <p className="text-xs text-gray-500">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold mr-1">
+                                {req.category || 'No category'}
+                              </span>
+                            </p>
+                            <p className="text-xs text-gray-400">{req.region}{req.city ? `, ${req.city}` : ''}</p>
+                          </>
+                        )}
+                        {req.userRole === 'Organizer' && (
+                          <>
+                            <p className="font-medium text-gray-800">{getString(req.businessName || 'N/A')}</p>
+                            <p className="text-xs text-gray-400">{req.region}{req.city ? `, ${req.city}` : ''}</p>
+                          </>
+                        )}
+                        {req.userRole === 'Delivery Guy' && (
+                          <>
+                            <p className="text-sm text-gray-600">{req.vehicleType || 'N/A'}</p>
+                            <p className="text-xs text-gray-400">Plate: {req.licensePlate || 'N/A'}</p>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-gray-500 text-sm">{formatDate(req.submittedAt)}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-1 text-gray-500">
+                        <FileText className="w-4 h-4" />
+                        <span className="text-sm">{req.documents?.length || 0} {t("documents.files")}</span>
+                      </div>
+                    </td>
                     <td className="px-6 py-4">
                       <StatusBadge status={req.status} />
                     </td>
@@ -469,19 +499,19 @@ export const AdminUserVerificationPage: React.FC = () => {
             {/* Modal Header */}
             <div className="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
               <div className="flex items-center gap-4">
-                 <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xl overflow-hidden">
-                   {selectedRequest.userAvatar ? (
-                     <img src={selectedRequest.userAvatar} alt={getString(selectedRequest.userName)} className="w-full h-full object-cover" />
-                   ) : (
-                     getString(selectedRequest.userName).charAt(0)
-                   )}
-                 </div>
-                 <div>
-                   <h2 className="text-2xl font-bold text-gray-800">{getString(selectedRequest.userName)}</h2>
+                <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xl overflow-hidden">
+                  {selectedRequest.userAvatar ? (
+                    <img src={selectedRequest.userAvatar} alt={getString(selectedRequest.userName)} className="w-full h-full object-cover" />
+                  ) : (
+                    getString(selectedRequest.userName).charAt(0)
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">{getString(selectedRequest.userName)}</h2>
                   <p className="text-sm text-gray-500">{t('admin.verificationRequest')}: {selectedRequest.id}</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedRequest(null)}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
@@ -498,90 +528,179 @@ export const AdminUserVerificationPage: React.FC = () => {
                     <User className="w-5 h-5 text-primary" /> {t('admin.userInformation')}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                    {/* Common fields for all roles */}
                     <div className="space-y-1">
-                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.email')}</p>
-                        <p className="text-sm font-medium text-gray-700 flex items-center gap-2"><Mail className="w-4 h-4" /> {selectedRequest.userEmail}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.phone')}</p>
-                        <p className="text-sm font-medium text-gray-700 flex items-center gap-2"><Phone className="w-4 h-4" /> {selectedRequest.userPhone}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.businessName')}</p>
-                        <p className="text-sm font-medium text-gray-700">{selectedRequest.businessName || 'N/A'}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.category')}</p>
-                        <p className="text-sm font-medium text-gray-700">{selectedRequest.category || 'N/A'}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.region')}</p>
-                        <p className="text-sm font-medium text-gray-700">{selectedRequest.region || 'N/A'}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.city')}</p>
-                        <p className="text-sm font-medium text-gray-700">{selectedRequest.city || 'N/A'}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.registrationDate')}</p>
-                        <p className="text-sm font-medium text-gray-700">{selectedRequest.registrationDate}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.submittedOn')}</p>
-                        <p className="text-sm font-medium text-gray-700">{selectedRequest.submittedAt}</p>
-                      </div>
-                      
-                      {selectedRequest.userRole === 'Delivery Guy' && (
-                        <>
-                          <div className="space-y-1">
-                            <p className="text-xs font-bold text-gray-400 uppercase">Vehicle Type</p>
-                            <p className="text-sm font-medium text-gray-700">{selectedRequest.vehicleType || 'N/A'}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs font-bold text-gray-400 uppercase">License Plate</p>
-                            <p className="text-sm font-medium text-gray-700">{selectedRequest.licensePlate || 'N/A'}</p>
-                          </div>
-                        </>
-                      )}
+                      <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.email')}</p>
+                      <p className="text-sm font-medium text-gray-700 flex items-center gap-2"><Mail className="w-4 h-4" /> {selectedRequest.userEmail}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.phone')}</p>
+                      <p className="text-sm font-medium text-gray-700 flex items-center gap-2"><Phone className="w-4 h-4" /> {selectedRequest.userPhone || 'N/A'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.registrationDate')}</p>
+                      <p className="text-sm font-medium text-gray-700">{formatDate(selectedRequest.registrationDate)}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.submittedOn')}</p>
+                      <p className="text-sm font-medium text-gray-700">{formatDate(selectedRequest.submittedAt)}</p>
+                    </div>
 
-                      <div className="md:col-span-2 space-y-2">
-                        <div className="flex justify-between items-center">
-                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.profileCompletion')}</p>
-                          <span className="text-xs font-bold text-primary">{selectedRequest.profileCompletion}%</span>
+                    {/* Artisan-specific fields */}
+                    {selectedRequest.userRole === 'Artisan' && (
+                      <>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.businessName')}</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.artisanProfile?.businessName || selectedRequest.businessName || 'N/A'}</p>
                         </div>
-                        <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
-                          <div className="bg-primary h-full transition-all duration-500" style={{ width: `${selectedRequest.profileCompletion}%` }}></div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.category')}</p>
+                          <p className="text-sm font-medium text-gray-700">
+                            {selectedRequest.artisanProfile?.category || selectedRequest.category ? (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-bold">
+                                {selectedRequest.artisanProfile?.category || selectedRequest.category}
+                              </span>
+                            ) : 'N/A'}
+                          </p>
                         </div>
-                      </div>
-                      {selectedRequest.artisanProfile?.bio && (
-                        <div className="md:col-span-2 space-y-1">
-                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.bio')}</p>
-                          <p className="text-sm font-medium text-gray-700">{selectedRequest.artisanProfile.bio}</p>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">Craft / Experience</p>
+                          <p className="text-sm font-medium text-gray-700">
+                            {selectedRequest.artisanProfile?.experience || selectedRequest.experience
+                              ? `${selectedRequest.artisanProfile?.experience || selectedRequest.experience} years`
+                              : 'N/A'}
+                          </p>
                         </div>
-                      )}
-                      {selectedRequest.artisanProfile?.address && (
-                        <div className="md:col-span-2 space-y-1">
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">Gender</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.artisanProfile?.gender || selectedRequest.gender || 'N/A'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.region')}</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.artisanProfile?.region || selectedRequest.region || 'N/A'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.city')}</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.artisanProfile?.city || selectedRequest.city || 'N/A'}</p>
+                        </div>
+                        <div className="space-y-1">
                           <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.address')}</p>
-                          <p className="text-sm font-medium text-gray-700">{selectedRequest.artisanProfile.address}</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.artisanProfile?.address || selectedRequest.address || 'N/A'}</p>
                         </div>
-                      )}
-                      {selectedRequest.artisanProfile?.bankName && (
-                        <div className="md:col-span-2 space-y-1">
-                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.paymentInfo')}</p>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">Bio</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.artisanProfile?.bio || selectedRequest.bio || 'N/A'}</p>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Organizer-specific fields */}
+                    {selectedRequest.userRole === 'Organizer' && (
+                      <>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.businessName')}</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.organizerProfile?.companyName || selectedRequest.businessName || 'N/A'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">Website</p>
                           <p className="text-sm font-medium text-gray-700">
-                            {selectedRequest.artisanProfile.bankName} - {selectedRequest.artisanProfile.accountName} ({selectedRequest.artisanProfile.accountNumber})
+                            {selectedRequest.organizerProfile?.website || selectedRequest.website ? (
+                              <a href={selectedRequest.organizerProfile?.website || selectedRequest.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{selectedRequest.organizerProfile?.website || selectedRequest.website}</a>
+                            ) : 'N/A'}
                           </p>
                         </div>
-                      )}
-                      {selectedRequest.userRole === 'Delivery Guy' && selectedRequest.deliveryProfile?.bankName && (
-                        <div className="md:col-span-2 space-y-1">
-                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.paymentInfo')}</p>
-                          <p className="text-sm font-medium text-gray-700">
-                            {selectedRequest.deliveryProfile.bankName} - {selectedRequest.deliveryProfile.accountNumber}
-                            {selectedRequest.deliveryProfile.telebirrNumber && ` (Telebirr: ${selectedRequest.deliveryProfile.telebirrNumber})`}
-                          </p>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.region')}</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.organizerProfile?.region || selectedRequest.region || 'N/A'}</p>
                         </div>
-                      )}
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.city')}</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.organizerProfile?.city || selectedRequest.city || 'N/A'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.address')}</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.organizerProfile?.address || selectedRequest.address || 'N/A'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">Payout Method</p>
+                          <p className="text-sm font-medium text-gray-700 capitalize">{(selectedRequest.organizerProfile?.payoutMethod || selectedRequest.payoutMethod || 'N/A').replace(/([A-Z])/g, ' $1').trim()}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">Bio</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.organizerProfile?.bio || selectedRequest.bio || 'N/A'}</p>
+                        </div>
+                        {selectedRequest.organizerProfile?.payoutMethod === 'bank' && (
+                          <div className="space-y-1">
+                            <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.paymentInfo')}</p>
+                            <p className="text-sm font-medium text-gray-700">
+                              {selectedRequest.organizerProfile?.bankName || selectedRequest.bankName || 'N/A'} - {selectedRequest.organizerProfile?.accountHolderName || selectedRequest.accountHolderName || 'N/A'} ({selectedRequest.organizerProfile?.accountNumber || selectedRequest.accountNumber || 'N/A'})
+                            </p>
+                          </div>
+                        )}
+                        {selectedRequest.organizerProfile?.payoutMethod === 'telebirr' && (
+                          <div className="space-y-1">
+                            <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.paymentInfo')}</p>
+                            <p className="text-sm font-medium text-gray-700">Telebirr: {selectedRequest.organizerProfile?.telebirrNumber || selectedRequest.telebirrNumber || 'N/A'}</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Delivery Guy-specific fields */}
+                    {selectedRequest.userRole === 'Delivery Guy' && (
+                      <>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">Vehicle Type</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.deliveryProfile?.vehicleType || selectedRequest.vehicleType || 'N/A'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">Vehicle Model</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.deliveryProfile?.vehicleModel || selectedRequest.vehicleModel || 'N/A'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">License Plate</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.deliveryProfile?.licensePlate || selectedRequest.licensePlate || 'N/A'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.region')}</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.deliveryProfile?.region || selectedRequest.region || 'N/A'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.city')}</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedRequest.deliveryProfile?.city || selectedRequest.city || 'N/A'}</p>
+                        </div>
+                        {(selectedRequest.deliveryProfile?.bankName || selectedRequest.bankName) && (
+                          <div className="space-y-1">
+                            <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.paymentInfo')}</p>
+                            <p className="text-sm font-medium text-gray-700">
+                              {selectedRequest.deliveryProfile?.bankName || selectedRequest.bankName || 'N/A'} - {selectedRequest.deliveryProfile?.accountNumber || selectedRequest.accountNumber || 'N/A'}
+                              {(selectedRequest.deliveryProfile?.telebirrNumber || selectedRequest.telebirrNumber) && ` (Telebirr: ${selectedRequest.deliveryProfile?.telebirrNumber || selectedRequest.telebirrNumber})`}
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Artisan payment info */}
+                    {selectedRequest.userRole === 'Artisan' && (selectedRequest.artisanProfile?.bankName || selectedRequest.bankName) && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.paymentInfo')}</p>
+                        <p className="text-sm font-medium text-gray-700">
+                          {selectedRequest.artisanProfile?.bankName || selectedRequest.bankName || 'N/A'} - {selectedRequest.artisanProfile?.accountName || selectedRequest.accountName || 'N/A'} ({selectedRequest.artisanProfile?.accountNumber || selectedRequest.accountNumber || 'N/A'})
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Profile completion for all */}
+                    <div className="md:col-span-2 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.profileCompletion')}</p>
+                        <span className="text-xs font-bold text-primary">{selectedRequest.profileCompletion}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+                        <div className="bg-primary h-full transition-all duration-500" style={{ width: `${selectedRequest.profileCompletion}%` }}></div>
+                      </div>
+                    </div>
                   </div>
                 </section>
 
@@ -591,7 +710,7 @@ export const AdminUserVerificationPage: React.FC = () => {
                     <FileText className="w-5 h-5 text-primary" /> {t('admin.submittedDocuments')}
                   </h3>
                   {selectedRequest.documents.length === 0 ? (
-                     <p className="text-gray-500 text-sm text-center py-8">{t('admin.noDocumentsUploaded')}</p>
+                    <p className="text-gray-500 text-sm text-center py-8">{t('admin.noDocumentsUploaded')}</p>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {selectedRequest.documents.map((doc) => (
@@ -611,7 +730,7 @@ export const AdminUserVerificationPage: React.FC = () => {
                           <div className="p-4 flex justify-between items-center">
                             <div>
                               <p className="font-bold text-gray-800 text-sm">{doc.name}</p>
-                              <p className="text-[10px] text-gray-400">{t('admin.uploadedOn')} {doc.uploadedAt}</p>
+                              <p className="text-[10px] text-gray-400">{t('admin.uploadedOn')} {formatDate(doc.uploadedAt)}</p>
                             </div>
                           </div>
                         </div>
@@ -635,7 +754,7 @@ export const AdminUserVerificationPage: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm font-bold text-gray-800">{t('admin.accountCreated')}</p>
-                        <p className="text-xs text-gray-500">{selectedRequest.registrationDate}</p>
+                        <p className="text-xs text-gray-500">{formatDate(selectedRequest.registrationDate)}</p>
                       </div>
                     </div>
                     <div className="relative pl-8">
@@ -644,7 +763,7 @@ export const AdminUserVerificationPage: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm font-bold text-gray-800">{t('admin.documentsSubmitted')}</p>
-                        <p className="text-xs text-gray-500">{selectedRequest.submittedAt}</p>
+                        <p className="text-xs text-gray-500">{formatDate(selectedRequest.submittedAt)}</p>
                       </div>
                     </div>
                     {selectedRequest.status === 'approved' && (
@@ -679,7 +798,7 @@ export const AdminUserVerificationPage: React.FC = () => {
                   <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                     <ShieldCheck className="w-5 h-5 text-primary" /> {t('admin.decisionPanel')}
                   </h3>
-                  
+
                   {selectedRequest.status === 'rejected' && selectedRequest.rejectionReason && (
                     <div className="p-4 bg-red-50 border border-red-100 rounded-xl">
                       <p className="text-xs font-bold text-red-700 mb-1">{t('admin.previousRejectionReason')}:</p>
@@ -691,9 +810,9 @@ export const AdminUserVerificationPage: React.FC = () => {
                     <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-center">
                       <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
                       <p className="text-sm font-bold text-emerald-700">
-                        {selectedRequest.userRole === 'Artisan' ? t('admin.thisArtisanIsApproved') : 
-                         selectedRequest.userRole === 'Organizer' ? 'This organizer is approved' :
-                         'This delivery guy is approved'}
+                        {selectedRequest.userRole === 'Artisan' ? t('admin.thisArtisanIsApproved') :
+                          selectedRequest.userRole === 'Organizer' ? 'This organizer is approved' :
+                            'This delivery guy is approved'}
                       </p>
                       <p className="text-xs text-emerald-600 mt-1">{t('admin.fullDashboardAccess')}</p>
                     </div>
@@ -731,7 +850,6 @@ export const AdminUserVerificationPage: React.FC = () => {
                       </Button>
                     </div>
                   )}
-
                   <p className="text-[10px] text-gray-400 text-center">
                     {t('admin.approvingWillEnable')}
                   </p>
@@ -741,8 +859,58 @@ export const AdminUserVerificationPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Pagination Controls */}
+      {!loading && filteredRequests.length > 0 && (
+        <div className="px-6 py-4 flex items-center justify-between bg-white rounded-2xl border border-gray-100 shadow-sm mt-4">
+          <p className="text-xs text-gray-500 font-medium">
+            Showing <span className="font-bold text-gray-800">{filteredRequests.length}</span> results
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="text-[10px] font-bold"
+            >
+              Previous
+            </Button>
+            <span className="text-xs font-bold text-gray-600 px-3">Page {page}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!hasMore}
+              onClick={() => setPage(p => p + 1)}
+              className="text-[10px] font-bold"
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+// --- Skeleton Loader Component ---
+const TableSkeleton = () => (
+  <div className="w-full animate-pulse">
+    <div className="space-y-0">
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="flex items-center gap-4 px-6 py-4 border-b border-gray-50">
+          <div className="w-10 h-10 bg-gray-100 rounded-full shrink-0"></div>
+          <div className="flex-1 space-y-2">
+            <div className="h-3 bg-gray-100 rounded w-1/4"></div>
+            <div className="h-2 bg-gray-50 rounded w-1/3"></div>
+          </div>
+          <div className="h-3 bg-gray-100 rounded w-16"></div>
+          <div className="h-3 bg-gray-100 rounded w-20"></div>
+          <div className="h-8 bg-gray-50 rounded w-24"></div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 export default AdminUserVerificationPage;

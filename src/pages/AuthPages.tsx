@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button, Input, Modal, SuspensionModal } from "../components/UI";
 import { useAuth } from "../context/AuthContext";
+import { useNotification } from "../context/NotificationContext";
 
 import { UserRole } from "../types";
 import { useLanguage } from "../context/LanguageContext";
@@ -41,6 +42,7 @@ export const LoginPage: React.FC = () => {
   const [pendingGoogleUser, setPendingGoogleUser] = useState<{ email: string; name: string } | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
   const { login } = useAuth();
+  const { showNotification } = useNotification();
   const router = useRouter();
 
   const googleLogin = useGoogleLogin({
@@ -72,18 +74,18 @@ export const LoginPage: React.FC = () => {
         } else if (data.success) {
           handleSuccessfulLogin(data.user);
         } else {
-          alert(data.message || 'Google login failed');
+          showNotification(data.message || 'Google login failed', 'error');
         }
       } catch (error: any) {
         console.error('Google login error:', error);
-        alert(error.message || 'Google login failed');
+        showNotification(error.message || 'Google login failed', 'error');
       } finally {
         setGoogleLoading(false);
       }
     },
     onError: () => {
       console.error('Google login failed');
-      alert('Google login failed. Please try again.');
+      showNotification('Google login failed. Please try again.', 'error');
     },
   });
 
@@ -108,11 +110,11 @@ export const LoginPage: React.FC = () => {
         setShowRoleModal(false);
         handleSuccessfulLogin(data.user);
       } else {
-        alert(data.message || 'Registration failed');
+        showNotification(data.message || 'Registration failed', 'error');
       }
     } catch (error: any) {
       console.error('Google register error:', error);
-      alert(error.message || 'Registration failed');
+      showNotification(error.message || 'Registration failed', 'error');
     } finally {
       setGoogleLoading(false);
     }
@@ -208,11 +210,11 @@ export const LoginPage: React.FC = () => {
         }
         handleSuccessfulLogin(res.user);
       } else {
-        alert(res.message || t("auth.loginFailed"));
+        showNotification(res.message || t("auth.loginFailed"), 'error');
       }
     } catch (error: any) {
       console.error("Login error:", error);
-      alert(error.message || t("auth.unexpectedError"));
+      showNotification(error.message || t("auth.unexpectedError"), 'error');
     }
   };
 
@@ -368,13 +370,14 @@ export const RegisterPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<UserRole>(UserRole.TOURIST);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showNotification } = useNotification();
   const router = useRouter();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (password !== confirmPassword) {
-      alert(t("auth.passwordsDontMatch"));
+      showNotification(t("auth.passwordsDontMatch"), 'error');
       return;
     }
 
@@ -413,7 +416,7 @@ export const RegisterPage: React.FC = () => {
       }).toString();
       router.push(`/register/verify?${query}`);
     } catch (error: any) {
-      alert(error.message || t("auth.unexpectedError"));
+      showNotification(error.message || t("auth.unexpectedError"), 'error');
     } finally {
       setIsSubmitting(false);
     }

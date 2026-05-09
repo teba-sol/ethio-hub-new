@@ -6,6 +6,7 @@ import {
   RefreshCw, Download, Calendar, ArrowUpRight
 } from 'lucide-react';
 import { Button, Badge } from '@/components/UI';
+import { useNotification } from '@/context/NotificationContext';
 
 interface PayrollItem {
   _id: string;
@@ -22,6 +23,7 @@ export default function DeliveryPayrollPage() {
   const [payroll, setPayroll] = useState<PayrollItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     fetchPayroll();
@@ -43,7 +45,7 @@ export default function DeliveryPayrollPage() {
   };
 
   const handlePayout = async (id: string) => {
-    if (!confirm('Are you sure you want to process payout for this driver?')) return;
+    if (!window.confirm('Are you sure you want to process payout for this driver?')) return;
     
     setProcessingId(id);
     try {
@@ -54,13 +56,13 @@ export default function DeliveryPayrollPage() {
       });
       const data = await res.json();
       if (data.success) {
-        alert(data.message);
+        showNotification(data.message, 'success');
         fetchPayroll();
       } else {
-        alert(data.message || 'Payout failed');
+        showNotification(data.message || 'Payout failed', 'error');
       }
     } catch (err) {
-      alert('Error processing payout');
+      showNotification('Error processing payout', 'error');
     } finally {
       setProcessingId(null);
     }

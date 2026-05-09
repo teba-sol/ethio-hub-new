@@ -5,6 +5,7 @@ import { Festival, HotelAccommodation, RoomType, TransportOption, FoodPackage } 
 
 interface TicketSelection {
   type: 'vip' | 'standard' | 'earlyBird';
+  name: string;
   price: number; // Discounted price
   originalPrice?: number; // Base price before discount
   quantity: number;

@@ -6,6 +6,7 @@ import {
   FileText, Clock, ArrowUpRight, Truck
 } from 'lucide-react';
 import { Button, Badge, Input } from '../../components/UI';
+import { useNotification } from '../../context/NotificationContext';
 
 type VerificationStatus = 'Not Submitted' | 'Pending' | 'Under Review' | 'Approved' | 'Rejected' | 'Modification Requested';
 type UserStatus = 'Active' | 'Suspended' | 'Deleted' | 'Banned';
@@ -92,46 +93,8 @@ export const AdminUsersPage: React.FC = () => {
   const [totalUsers, setTotalUsers] = useState(0);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
-  const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [notification, setNotification] = useState<{ 
-    message: string; 
-    type: 'success' | 'error' | 'warning';
-    password?: string;
-    email?: string;
-  } | null>(null);
+  const { showNotification } = useNotification();
 
-  const showNotification = (
-    message: string, 
-    type: 'success' | 'error' | 'warning' = 'success',
-    password?: string,
-    email?: string
-  ) => {
-    // Clear any existing auto-hide timeout
-    if (notificationTimeoutRef.current) {
-      clearTimeout(notificationTimeoutRef.current);
-      notificationTimeoutRef.current = null;
-    }
-
-    // If we are showing a regular notification and a password card is already visible,
-    // don't overwrite the password card unless the new notification is also a password/error.
-    if (notification?.password && !password && type === 'success') {
-      if (message === 'Password copied to clipboard') {
-        setCopySuccess(true);
-        setTimeout(() => setCopySuccess(false), 2000);
-      }
-      return;
-    }
-
-    setNotification({ message, type, password, email });
-    
-    // Only auto-hide if there's no password (user wants manual close for passwords)
-    if (!password) {
-      notificationTimeoutRef.current = setTimeout(() => {
-        setNotification(null);
-        notificationTimeoutRef.current = null;
-      }, 4000);
-    }
-  };
 
   useEffect(() => {
     fetchUsers();
@@ -201,7 +164,7 @@ export const AdminUsersPage: React.FC = () => {
   const handleSuspendUser = async (userId: string, reason: string) => {
     const trimmedReason = reason.trim();
     if (!trimmedReason) {
-      alert('Suspension reason is required');
+      showNotification('Suspension reason is required', 'warning');
       return;
     }
 
@@ -224,6 +187,7 @@ export const AdminUsersPage: React.FC = () => {
         fetchStats();
         setIsSuspensionModalOpen(false);
         setSuspendingUserId(null);
+        showNotification('User account suspended successfully', 'success');
       } else {
         showNotification(data.message || 'Failed to suspend user', 'error');
       }
@@ -256,7 +220,8 @@ export const AdminUsersPage: React.FC = () => {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to soft delete this user?')) return;
+    // We'll use a standard alert for now, but in a real app we'd use a custom confirm modal
+    if (!window.confirm('Are you sure you want to soft delete this user?')) return;
     try {
       setActionLoading(userId);
       const response = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
@@ -395,8 +360,7 @@ export const AdminUsersPage: React.FC = () => {
         showNotification(
           'User Created Successfully!', 
           'success', 
-          result.tempPassword,
-          formData.email
+          { password: result.tempPassword, email: formData.email }
         );
         fetchUsers();
       }
@@ -1005,78 +969,6 @@ export const AdminUsersPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Notification Overlay */}
-      {notification && (
-        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] animate-in zoom-in-95 duration-300">
-          {notification.password ? (
-            <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 text-center border border-emerald-100 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div>
-              <button 
-                onClick={() => setNotification(null)} 
-                className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors group"
-              >
-                <XCircle className="w-5 h-5 text-gray-400 group-hover:text-red-500" />
-              </button>
-              
-              <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle2 className="w-10 h-10 text-emerald-600" />
-              </div>
-              
-              <h2 className="text-2xl font-serif font-bold text-gray-800 mb-2">{notification.message}</h2>
-              <p className="text-sm text-gray-500 mb-8">
-                The account has been created for <strong>{notification.email}</strong>.<br/>
-                A welcome email with these credentials has been sent.
-              </p>
-              
-              <div className="bg-gradient-to-br from-gray-50 to-emerald-50 p-6 rounded-2xl border border-emerald-100 mb-8 shadow-inner relative">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Copy Temporary Password</p>
-                <div className="relative group">
-                  <div className="text-3xl font-mono font-bold text-primary tracking-wider bg-white py-4 rounded-xl border border-gray-100 shadow-sm select-all">
-                    {notification.password}
-                  </div>
-                  <button 
-                    onClick={() => {
-                      navigator.clipboard.writeText(notification.password!);
-                      showNotification('Password copied to clipboard');
-                    }}
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-all ${
-                      copySuccess ? 'text-emerald-500 bg-emerald-50' : 'text-gray-400 hover:text-primary hover:bg-gray-50'
-                    }`}
-                    title="Copy to clipboard"
-                  >
-                    {copySuccess ? <CheckCircle2 className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
-                  </button>
-                </div>
-                {copySuccess && (
-                  <p className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-emerald-600 font-bold uppercase tracking-widest animate-in fade-in slide-in-from-bottom-1">
-                    Copied to clipboard!
-                  </p>
-                )}
-                <p className="text-[10px] text-gray-400 font-bold mt-4 uppercase tracking-widest flex items-center justify-center gap-2">
-                  Please save this password securely
-                </p>
-              </div>
-
-              <p className="text-xs text-gray-400 italic">Click the X in the top right to close this card</p>
-            </div>
-          ) : (
-            <div className={`px-8 py-4 rounded-2xl shadow-2xl border flex items-center gap-4 ${
-              notification.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' :
-              notification.type === 'error' ? 'bg-red-50 border-red-100 text-red-800' :
-              'bg-amber-50 border-amber-100 text-amber-800'
-            }`}>
-              {notification.type === 'success' ? (
-                <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-              ) : notification.type === 'error' ? (
-                <XCircle className="w-6 h-6 text-red-500" />
-              ) : (
-                <AlertTriangle className="w-6 h-6 text-amber-500" />
-              )}
-              <p className="font-bold text-sm">{notification.message}</p>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 };

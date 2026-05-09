@@ -31,7 +31,9 @@ interface DashboardData {
   };
   revenueData: {
     grossTotal: number;
-    totalOrders: number;
+    refundTotal: number;
+    totalTransactions: number;
+    cancellationRate: number;
   };
   verificationStats: {
     pending: number;
@@ -39,18 +41,22 @@ interface DashboardData {
     approved: number;
     rejected: number;
   };
-  pendingItems: {
-    events: Array<{ id: string; name: string; submitter: string; date: string }>;
-    products: any[];
-    verifications: Array<{ id: string; name: string; role: string; date: string; avatar: string }>;
-    reports: Array<{ id: string; type: string; message: string; time: string }>;
-  };
-  recentActivity: {
-    users: Array<{ id: string; name: string; role: string; date: string }>;
-    orders: Array<{ id: string; buyerName: string; amount: number; date: string }>;
-    bookings: Array<{ id: string; touristName: string; eventName: string; amount: number; date: string }>;
-  };
-}
+    pendingItems: {
+      events: Array<{ id: string; name: string; submitter: string; date: string }>;
+      products: { count: number };
+      verifications: Array<{ id: string; name: string; role: string; date: string; avatar: string }>;
+      reports: Array<{ id: string; type: string; message: string; time: string }>;
+    };
+    recentActivity: {
+      users: Array<{ id: string; name: string; role: string; date: string }>;
+      orders: Array<{ id: string; buyerName: string; amount: number; date: string }>;
+      bookings: Array<{ id: string; touristName: string; eventName: string; amount: number; date: string }>;
+    };
+    charts: {
+      revenue: Array<{ name: string; revenue: number; commission: number }>;
+      userGrowth: Array<{ name: string; tourists: number; artisans: number; organizers: number }>;
+    };
+  }
 
 // --- Components ---
 
@@ -161,23 +167,15 @@ export const AdminOverviewPage: React.FC = () => {
     );
   }
 
-  const { userStats, eventStats, revenueData, verificationStats, pendingItems, recentActivity } = data || {};
+  const { userStats, eventStats, revenueData, verificationStats, pendingItems, recentActivity, charts } = data || {};
 
-  // Prepare chart data (using mock data for now - can be fetched from API later)
-  const REVENUE_DATA = [
-    { name: 'Jan', revenue: 45000, commission: 6750 },
-    { name: 'Feb', revenue: 52000, commission: 7800 },
-    { name: 'Mar', revenue: 48000, commission: 7200 },
-    { name: 'Apr', revenue: 61000, commission: 9150 },
-    { name: 'May', revenue: 55000, commission: 8250 },
-    { name: 'Jun', revenue: 75000, commission: 11250 },
+  // Chart data from API or defaults
+  const REVENUE_DATA = charts?.revenue || [
+    { name: 'No Data', revenue: 0, commission: 0 },
   ];
 
-  const USER_GROWTH_DATA = [
-    { name: 'Week 1', tourists: 45, artisans: 5, organizers: 2 },
-    { name: 'Week 2', tourists: 52, artisans: 8, organizers: 3 },
-    { name: 'Week 3', tourists: 48, artisans: 6, organizers: 4 },
-    { name: 'Week 4', tourists: 65, artisans: 12, organizers: 5 },
+  const USER_GROWTH_DATA = charts?.userGrowth || [
+    { name: 'No Data', tourists: 0, artisans: 0, organizers: 0 },
   ];
 
   return (
@@ -303,16 +301,16 @@ export const AdminOverviewPage: React.FC = () => {
               
               <div className="mt-12 pt-8 border-t border-white/10 grid grid-cols-2 gap-8">
                 <div>
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Total Orders</p>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Total Transactions</p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-emerald-400">{(revenueData?.totalOrders || 0).toLocaleString()}</span>
+                    <span className="text-2xl font-bold text-emerald-400">{(revenueData as any)?.totalTransactions || 0}</span>
                   </div>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Avg Order Value</p>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Avg Transaction Value</p>
                   <div className="flex items-baseline gap-2">
                     <span className="text-2xl font-bold text-blue-400">
-                      ETB {revenueData?.grossTotal && revenueData?.totalOrders ? Math.round(revenueData.grossTotal / revenueData.totalOrders).toLocaleString() : 0}
+                      ETB {revenueData?.grossTotal && (revenueData as any)?.totalTransactions ? Math.round(revenueData.grossTotal / (revenueData as any).totalTransactions).toLocaleString() : 0}
                     </span>
                   </div>
                 </div>
@@ -340,12 +338,12 @@ export const AdminOverviewPage: React.FC = () => {
                   <AlertCircle className="w-6 h-6" />
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] text-red-500 font-bold">-2.4%</p>
+                  <p className="text-[10px] text-red-500 font-bold">Live</p>
                 </div>
               </div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Refund Volume</p>
-              <h4 className="text-2xl font-bold text-gray-800">ETB 45,200</h4>
-              <p className="text-xs text-gray-500 mt-1 font-medium">1.2% of total sales</p>
+              <h4 className="text-2xl font-bold text-gray-800">ETB {(revenueData?.refundTotal || 0).toLocaleString()}</h4>
+              <p className="text-xs text-gray-500 mt-1 font-medium">Total processed refunds</p>
             </div>
           </div>
         </div>
@@ -507,8 +505,8 @@ export const AdminOverviewPage: React.FC = () => {
             <div className="p-2 bg-red-50 rounded-lg text-red-600"><XCircle className="w-5 h-5" /></div>
             <p className="text-xs font-bold text-gray-400 uppercase">Cancellation Rate</p>
           </div>
-          <p className="text-2xl font-bold text-gray-800">2.4%</p>
-          <p className="text-xs text-emerald-500 font-bold mt-1">-0.5% improvement</p>
+          <p className="text-2xl font-bold text-gray-800">{(revenueData?.cancellationRate || 0).toFixed(1)}%</p>
+          <p className="text-xs text-gray-500 font-bold mt-1">Based on total orders</p>
         </div>
       </div>
 
@@ -552,16 +550,16 @@ export const AdminOverviewPage: React.FC = () => {
             <div className="flex justify-between items-center p-4 bg-blue-50 rounded-xl border border-blue-100 cursor-pointer hover:bg-blue-100/50 transition-colors" onClick={() => router.push('/dashboard/admin/products')}>
               <div className="flex items-center gap-3">
                 <Package className="w-5 h-5 text-blue-600" />
-                <span className="font-bold text-blue-900">Pending Products</span>
+                <span className="font-bold text-blue-900">New Products</span>
               </div>
-              <Badge variant="secondary">34</Badge>
+              <Badge variant="secondary">{pendingItems?.products?.count || 0}</Badge>
             </div>
             <div className="flex justify-between items-center p-4 bg-red-50 rounded-xl border border-red-100 cursor-pointer hover:bg-red-100/50 transition-colors" onClick={() => router.push('/dashboard/admin/reports')}>
               <div className="flex items-center gap-3">
                 <Flag className="w-5 h-5 text-red-600" />
-                <span className="font-bold text-red-900">Reported Items</span>
+                <span className="font-bold text-red-900">Active Reports</span>
               </div>
-              <Badge variant="error">5</Badge>
+              <Badge variant="error">{pendingItems?.reports?.length || 0}</Badge>
             </div>
             <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100 cursor-pointer hover:bg-gray-100/50 transition-colors" onClick={() => router.push('/dashboard/admin/verification-moderation')}>
               <div className="flex items-center gap-3">

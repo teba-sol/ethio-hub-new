@@ -35,50 +35,43 @@ export async function GET(request: NextRequest) {
     }
 
     // Correct aggregation to get counts for both artisan and organizer statuses
-    const [artisanStats, organizerStats] = await Promise.all([
+    const [artisanStats, organizerStats, deliveryStats] = await Promise.all([
       User.aggregate([
         { $match: { role: 'artisan' } },
-        {
-          $group: {
-            _id: '$artisanStatus',
-            count: { $sum: 1 },
-          },
-        },
+        { $group: { _id: '$artisanStatus', count: { $sum: 1 } } },
       ]),
       User.aggregate([
         { $match: { role: 'organizer' } },
-        {
-          $group: {
-            _id: '$organizerStatus',
-            count: { $sum: 1 },
-          },
-        },
+        { $group: { _id: '$organizerStatus', count: { $sum: 1 } } },
+      ]),
+      User.aggregate([
+        { $match: { role: 'delivery' } },
+        { $group: { _id: '$deliveryStatus', count: { $sum: 1 } } },
       ])
     ]);
 
     const statsMap: Record<string, number> = {
+      'Not Submitted': 0,
       'Pending': 0,
       'Under Review': 0,
       'Approved': 0,
       'Rejected': 0,
+      'Modification Requested': 0,
     };
 
-    artisanStats.forEach((s: any) => {
-      if (statsMap[s._id] !== undefined) {
-        statsMap[s._id] += s.count;
-      }
-    });
-
-    organizerStats.forEach((s: any) => {
-      if (statsMap[s._id] !== undefined) {
-        statsMap[s._id] += s.count;
-      }
+    [artisanStats, organizerStats, deliveryStats].forEach((roleStats) => {
+      roleStats.forEach((s: any) => {
+        if (statsMap[s._id] !== undefined) {
+          statsMap[s._id] += s.count;
+        }
+      });
     });
 
     return new NextResponse(
       JSON.stringify({
         success: true,
         stats: {
+          notSubmitted: statsMap['Not Submitted'],
           pending: statsMap['Pending'],
           underReview: statsMap['Under Review'],
           approved: statsMap['Approved'],

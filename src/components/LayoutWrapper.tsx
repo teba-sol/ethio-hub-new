@@ -8,6 +8,12 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else if (savedTheme === "light") {
+      document.documentElement.classList.remove("dark");
+    }
     setMounted(true);
   }, []);
 

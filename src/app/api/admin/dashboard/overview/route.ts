@@ -5,6 +5,7 @@ import Festival from '@/models/festival.model';
 import Order from '@/models/order.model';
 import Booking from '@/models/booking.model';
 import Report from '@/models/report.model';
+import Product from '@/models/product.model';
 import { jwtVerify } from 'jose';
 
 export const dynamic = 'force-dynamic';
@@ -51,6 +52,8 @@ export async function GET(request: NextRequest) {
       recentUsers,
       recentOrders,
       recentBookings,
+      revenueChart,
+      userGrowthChart,
     ] = await Promise.all([
       // User stats
       User.aggregate([
@@ -93,20 +96,49 @@ export async function GET(request: NextRequest) {
         };
       }),
 
-      // Revenue data
-      Order.aggregate([
-        { $match: { paymentStatus: 'paid' } },
-        {
-          $group: {
-            _id: null,
-            grossTotal: { $sum: '$totalPrice' },
-            totalOrders: { $sum: 1 },
+      // Revenue and Transaction data (Combined Orders and Bookings)
+      Promise.all([
+        Order.aggregate([
+          { $match: { paymentStatus: { $in: ['paid', 'refunded'] } } },
+          {
+            $group: {
+              _id: '$paymentStatus',
+              grossTotal: { $sum: '$totalPrice' },
+              count: { $sum: 1 },
+            },
           },
-        },
-      ]).then(result => ({
-        grossTotal: result[0]?.grossTotal || 0,
-        totalOrders: result[0]?.totalOrders || 0,
-      })),
+        ]),
+        Booking.aggregate([
+          { $match: { paymentStatus: 'paid' } },
+          {
+            $group: {
+              _id: null,
+              grossTotal: { $sum: '$totalPrice' },
+              count: { $sum: 1 },
+            },
+          },
+        ]),
+        Order.countDocuments({ status: 'Cancelled' })
+      ]).then(([orderRes, bookingRes, cancelledCount]) => {
+        const paidOrders = orderRes.find(r => r._id === 'paid');
+        const refundedOrders = orderRes.find(r => r._id === 'refunded');
+        
+        const orderGross = paidOrders?.grossTotal || 0;
+        const refundGross = refundedOrders?.grossTotal || 0;
+        const bookingGross = bookingRes[0]?.grossTotal || 0;
+        
+        const totalOrders = (paidOrders?.count || 0) + (refundedOrders?.count || 0);
+        const totalBookings = bookingRes[0]?.count || 0;
+        
+        return {
+          grossTotal: orderGross + bookingGross,
+          refundTotal: refundGross,
+          totalTransactions: totalOrders + totalBookings,
+          totalOrders,
+          totalBookings,
+          cancellationRate: totalOrders > 0 ? (cancelledCount / totalOrders) * 100 : 0
+        };
+      }),
 
       // Verification stats (artisan verifications)
       User.aggregate([
@@ -140,8 +172,10 @@ export async function GET(request: NextRequest) {
           date: e.submittedAt || e.createdAt,
         }))),
 
-      // Pending products (need to check Product model)
-      Promise.resolve([]), // Placeholder - implement when Product model is available
+      // Pending products (products added in last 7 days as placeholder for 'new')
+      Product.countDocuments({
+        createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      }).then(count => ({ count })),
 
       // Pending verifications
       User.find({ role: 'artisan', artisanStatus: 'Pending' })
@@ -193,16 +227,87 @@ export async function GET(request: NextRequest) {
       // Recent bookings
       Booking.find()
         .populate('tourist', 'name')
-        .populate('event', 'name')
+        .populate('festival', 'name')
         .sort({ createdAt: -1 })
         .limit(5)
         .then(bookings => bookings.map(b => ({
           id: b._id.toString(),
           touristName: (b.tourist as any)?.name || 'Unknown',
-          eventName: (b.event as any)?.name || 'Unknown',
+          eventName: (b.festival as any)?.name || 'Unknown',
           amount: b.totalPrice || 0,
           date: b.createdAt,
         }))),
+
+      // Chart Data: Monthly Revenue (Last 6 months)
+      Promise.all([
+        Order.aggregate([
+          { $match: { paymentStatus: 'paid', createdAt: { $gte: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000) } } },
+          {
+            $group: {
+              _id: { month: { $month: "$createdAt" }, year: { $year: "$createdAt" } },
+              revenue: { $sum: "$totalPrice" }
+            }
+          },
+          { $sort: { "_id.year": 1, "_id.month": 1 } }
+        ]),
+        Booking.aggregate([
+          { $match: { paymentStatus: 'paid', createdAt: { $gte: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000) } } },
+          {
+            $group: {
+              _id: { month: { $month: "$createdAt" }, year: { $year: "$createdAt" } },
+              revenue: { $sum: "$totalPrice" }
+            }
+          },
+          { $sort: { "_id.year": 1, "_id.month": 1 } }
+        ])
+      ]).then(([orderChart, bookingChart]) => {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const combined = new Map();
+        
+        orderChart.forEach(item => {
+          const key = `${months[item._id.month - 1]} ${item._id.year}`;
+          combined.set(key, { name: months[item._id.month - 1], revenue: item.revenue, commission: item.revenue * 0.1 });
+        });
+        
+        bookingChart.forEach(item => {
+          const key = `${months[item._id.month - 1]} ${item._id.year}`;
+          const existing = combined.get(key) || { name: months[item._id.month - 1], revenue: 0, commission: 0 };
+          combined.set(key, { 
+            name: existing.name, 
+            revenue: existing.revenue + item.revenue, 
+            commission: existing.commission + (item.revenue * 0.1) 
+          });
+        });
+        
+        return Array.from(combined.values()).slice(-6);
+      }),
+
+      // Chart Data: User Growth (Last 4 weeks)
+      User.aggregate([
+        { $match: { createdAt: { $gte: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000) } } },
+        {
+          $group: {
+            _id: { 
+              week: { $floor: { $divide: [{ $dayOfMonth: "$createdAt" }, 7] } },
+              role: "$role"
+            },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { "_id.week": 1 } }
+      ]).then(results => {
+        const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+        const chart = weeks.map(w => ({ name: w, tourists: 0, artisans: 0, organizers: 0 }));
+        
+        results.forEach(item => {
+          const weekIdx = Math.min(item._id.week, 3);
+          if (item._id.role === 'tourist') chart[weekIdx].tourists += item.count;
+          if (item._id.role === 'artisan') chart[weekIdx].artisans += item.count;
+          if (item._id.role === 'organizer') chart[weekIdx].organizers += item.count;
+        });
+        
+        return chart;
+      }),
     ]);
 
     return new NextResponse(
@@ -224,6 +329,10 @@ export async function GET(request: NextRequest) {
             orders: recentOrders,
             bookings: recentBookings,
           },
+          charts: {
+            revenue: revenueChart,
+            userGrowth: userGrowthChart
+          }
         },
       }),
       { status: 200, headers: { 'content-type': 'application/json' } }

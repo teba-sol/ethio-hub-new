@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/UI';
 import { useBooking } from '@/context/BookingContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { useNotification } from '@/context/NotificationContext';
 import apiClient from '@/lib/apiClient';
 import { getLocalizedText } from '@/utils/getLocalizedText';
 import { Festival, HotelAccommodation, RoomType } from '@/types';
@@ -38,6 +39,7 @@ export default function HotelDetailPage() {
     ticketSelection
   } = useBooking();
   const { language, t } = useLanguage();
+  const { showNotification } = useNotification();
   const [festival, setFestival] = useState<Festival | null>(null);
   const [hotel, setHotel] = useState<HotelAccommodation | null>(null);
   const [allHotels, setAllHotels] = useState<HotelAccommodation[]>([]);
@@ -171,7 +173,7 @@ export default function HotelDetailPage() {
   };
 
   const handleEnquiry = () => {
-    alert('Enquiry sent! The hotel will contact you soon.');
+    showNotification('Enquiry sent! The hotel will contact you soon.', 'success');
     setShowEnquiryModal(false);
     setEnquiryMessage('');
   };
