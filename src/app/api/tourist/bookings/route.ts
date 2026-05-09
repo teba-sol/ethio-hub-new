@@ -261,6 +261,44 @@ export async function PUT(request: NextRequest) {
         booking.organizerAmount = Math.round(booking.totalPrice * 0.90 * 100) / 100;
       }
 
+      // Update Wallets and Transactions
+      const organizerId = booking.organizer;
+      const adminUser = await User.findOne({ role: 'admin' }).session(session);
+
+      // Update Organizer Wallet
+      const organizerWallet = await Wallet.findOne({ userId: organizerId, userRole: 'organizer' }).session(session);
+      if (organizerWallet) {
+        organizerWallet.pendingBalance = Math.max(0, (organizerWallet.pendingBalance || 0) - (booking.organizerAmount || 0));
+        organizerWallet.availableBalance = (organizerWallet.availableBalance || 0) + (booking.organizerAmount || 0);
+        organizerWallet.lifetimeEarned = (organizerWallet.lifetimeEarned || 0) + (booking.organizerAmount || 0);
+        await organizerWallet.save({ session });
+      }
+
+      // Update Organizer Transaction
+      await Transaction.updateOne(
+        { bookingId: booking._id, userId: organizerId, type: 'ORDER_PAYMENT' },
+        { $set: { status: 'COMPLETED' } },
+        { session }
+      );
+
+      // Update Admin Wallet
+      if (adminUser) {
+        const adminWallet = await Wallet.findOne({ userId: adminUser._id, userRole: 'admin' }).session(session);
+        if (adminWallet) {
+          adminWallet.pendingBalance = Math.max(0, (adminWallet.pendingBalance || 0) - (booking.platformFee || 0));
+          adminWallet.availableBalance = (adminWallet.availableBalance || 0) + (booking.platformFee || 0);
+          adminWallet.lifetimeEarned = (adminWallet.lifetimeEarned || 0) + (booking.platformFee || 0);
+          await adminWallet.save({ session });
+        }
+
+        // Update Admin Transaction
+        await Transaction.updateOne(
+          { bookingId: booking._id, userId: adminUser._id, type: 'ADMIN_COMMISSION' },
+          { $set: { status: 'COMPLETED' } },
+          { session }
+        );
+      }
+
       await booking.save({ session });
     }
 

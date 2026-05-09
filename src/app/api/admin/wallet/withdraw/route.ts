@@ -6,7 +6,7 @@ import User from '@/models/User';
 import Payment from '@/models/payment.model';
 import mongoose from 'mongoose';
 
-const MIN_WITHDRAWAL = 500;
+const MIN_WITHDRAWAL = 40;
 const CHAPA_API_URL = 'https://api.chapa.co/v1';
 const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY;
 const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
@@ -16,11 +16,18 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { amount, destination } = body; // destination: 'chapa' or other payout method
+    const { amount, phoneNumber } = body; 
 
     if (!amount || isNaN(Number(amount)) || Number(amount) < MIN_WITHDRAWAL) {
       return NextResponse.json(
         { success: false, message: `Minimum withdrawal amount is ETB ${MIN_WITHDRAWAL}` },
+        { status: 400 }
+      );
+    }
+
+    if (!phoneNumber) {
+      return NextResponse.json(
+        { success: false, message: 'Phone number is required for withdrawal' },
         { status: 400 }
       );
     }
@@ -53,65 +60,24 @@ export async function POST(request: NextRequest) {
     // Generate transaction reference
     const txRef = `WITHDRAW-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // Initialize Chapa "Withdrawal" (technically a hosted payment link for the admin to confirm/pay out)
-    if (!CHAPA_SECRET_KEY) {
-      return NextResponse.json(
-        { success: false, message: 'Chapa not configured' },
-        { status: 500 }
-      );
-    }
-
-    const chapaPayload = {
-      amount: withdrawalAmount.toString(),
-      currency: 'ETB',
-      email: adminUser.email || 'admin@ethiohub.com',
-      first_name: 'Admin',
-      last_name: 'Withdrawal',
-      tx_ref: txRef,
-      callback_url: `${FRONTEND_URL}/api/admin/wallet/withdraw/callback`,
-      return_url: `${FRONTEND_URL}/admin/wallet?status=success&tx_ref=${txRef}`,
-      customization: {
-        title: "EthioHub Admin Withdrawal",
-        description: `Platform withdrawal for ETB ${withdrawalAmount}`
-      },
-    };
-
-    const chapaResponse = await fetch(`${CHAPA_API_URL}/transaction/initialize`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${CHAPA_SECRET_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(chapaPayload),
-    });
-
-    const chapaData = await chapaResponse.json();
-
-    if (!chapaResponse.ok || !chapaData.data?.checkout_url) {
-      return NextResponse.json(
-        { success: false, message: chapaData.message || 'Chapa initialization failed' },
-        { status: 400 }
-      );
-    }
-
-    // Update wallet balances (Deduct immediately as it's initiated)
+    // Update wallet balances (Mock: Deduct and complete immediately)
     adminWallet.availableBalance = Math.round((adminWallet.availableBalance - withdrawalAmount) * 100) / 100;
     adminWallet.lifetimePaidOut = Math.round((adminWallet.lifetimePaidOut + withdrawalAmount) * 100) / 100;
     await adminWallet.save();
 
-    // Create withdrawal transaction
+    // Create completed withdrawal transaction
     const transaction = await Transaction.create({
       walletId: adminWallet._id,
       userId: adminUser._id,
       type: 'WITHDRAWAL',
       amount: withdrawalAmount,
       currency: 'ETB',
-      status: 'PENDING', // Will be confirmed via callback or return
+      status: 'COMPLETED',
       paymentRef: txRef,
       metadata: {
-        withdrawalMethod: destination || 'chapa',
-        initiatedAt: new Date(),
-        checkoutUrl: chapaData.data.checkout_url,
+        withdrawalMethod: 'mock_transfer',
+        phoneNumber: phoneNumber,
+        completedAt: new Date(),
       },
     });
 
@@ -120,10 +86,10 @@ export async function POST(request: NextRequest) {
       await Payment.create({
         userId: adminUser._id,
         transactionRef: txRef,
-        method: 'chapa',
+        method: 'mock_transfer',
         amount: withdrawalAmount,
-        status: 'Pending',
-        invoiceUrl: chapaData.data.checkout_url,
+        status: 'Success',
+        metadata: { phoneNumber }
       });
     } catch (payError) {
       console.error('[AdminWithdrawAPI] Payment record creation failed:', payError);
@@ -131,12 +97,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Admin withdrawal initiated',
-      checkoutUrl: chapaData.data.checkout_url,
+      message: `ETB ${withdrawalAmount} successfully transferred to ${phoneNumber}`,
       data: {
         transactionId: transaction._id,
         amount: withdrawalAmount,
-        status: 'PENDING',
+        status: 'COMPLETED',
+        phoneNumber,
+        txRef
       },
     });
   } catch (error: any) {

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Package, MapPin, Phone, User, CheckCircle, 
-  Clock, DollarSign, RefreshCw, AlertCircle, Truck, X
+  Clock, DollarSign, RefreshCw, AlertCircle, Truck, X, CheckCircle2
 } from 'lucide-react';
 import { Button, Badge } from '../UI';
 
@@ -71,11 +71,14 @@ export const AdminOrderManager: React.FC = () => {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   
-  // Payment modal states
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [payAmount, setPayAmount] = useState<string>('');
   const [payPhone, setPayPhone] = useState<string>('');
   const [processingPayment, setProcessingPayment] = useState(false);
+  
+  // Receipt state
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [lastPaymentData, setLastPaymentData] = useState<any>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -179,6 +182,8 @@ export const AdminOrderManager: React.FC = () => {
         showNotification(`Payment of ${formatCurrency(amount)} processed successfully`, 'success');
         setIsPayModalOpen(false);
         setPayAmount('');
+        setLastPaymentData(result.data);
+        setShowReceipt(true);
         fetchDeliveryPersonDetails(selectedDeliveryGuy!);
         fetchOrders(); // Refresh to update balances in the table
       } else {
@@ -712,6 +717,40 @@ export const AdminOrderManager: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Payout History */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                      <DollarSign className="w-4 h-4" /> Payout History ({deliveryPersonDetails.withdrawalTransactions?.length || 0})
+                    </h4>
+                    <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                      {deliveryPersonDetails.withdrawalTransactions?.length === 0 ? (
+                        <div className="py-8 text-center text-gray-400 italic bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                          No payout history found
+                        </div>
+                      ) : (
+                        deliveryPersonDetails.withdrawalTransactions?.map((tx: any) => (
+                          <div key={tx._id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-white transition-all group">
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-white rounded-lg border border-gray-100 text-emerald-600">
+                                  <CheckCircle className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-gray-800">{formatCurrency(tx.amount)}</p>
+                                  <p className="text-[10px] text-gray-500">{new Date(tx.createdAt).toLocaleString()}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase">To: {tx.metadata?.phoneNumber || 'N/A'}</p>
+                                <p className="text-[9px] font-mono text-gray-300">#{tx.paymentRef?.slice(-8)}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
                   {/* Pay Now Button */}
                   <div className="pt-8 border-t border-gray-100 flex flex-col items-center">
                     <div className="w-full flex justify-between items-center mb-6 px-2">
@@ -825,6 +864,80 @@ export const AdminOrderManager: React.FC = () => {
         </div>
       )}
 
+      {/* Payment Receipt Modal */}
+      {showReceipt && lastPaymentData && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
+            {/* Success Header */}
+            <div className="bg-emerald-600 p-8 text-center relative">
+              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/10 to-transparent opacity-50"></div>
+              <div className="relative z-10">
+                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg ring-4 ring-emerald-500/30">
+                  <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+                </div>
+                <h4 className="text-xl font-bold text-white mb-1">Payment Successful</h4>
+                <p className="text-emerald-100 text-sm opacity-90">Driver Payout Receipt</p>
+              </div>
+            </div>
+
+            {/* Receipt Body */}
+            <div className="p-8 space-y-6">
+              <div className="text-center">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Amount Transferred</p>
+                <p className="text-4xl font-black text-primary">{formatCurrency(lastPaymentData.amount)}</p>
+              </div>
+
+              <div className="space-y-4 pt-4 border-t border-dashed border-gray-100">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-400">Recipient Driver</span>
+                  <span className="font-bold text-gray-900">{deliveryPersonDetails?.deliveryGuy?.name}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-400">Phone Number</span>
+                  <span className="font-bold text-gray-900">{lastPaymentData.phoneNumber}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-400">Date</span>
+                  <span className="font-medium text-gray-900">{new Date(lastPaymentData.date).toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-400">Reference</span>
+                  <span className="font-mono text-[10px] font-bold text-gray-500">{lastPaymentData.txRef}</span>
+                </div>
+              </div>
+
+              <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                <p className="text-[10px] text-emerald-700 text-center font-medium">
+                  Payment processed and deducted from driver available balance. Platform records updated.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Button
+                  className="w-full py-4 rounded-2xl shadow-xl shadow-emerald-600/20"
+                  onClick={() => setShowReceipt(false)}
+                >
+                  Close Receipt
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full py-4 rounded-2xl border-gray-100 text-gray-400"
+                  onClick={() => window.print()}
+                >
+                  Download / Print Receipt
+                </Button>
+              </div>
+            </div>
+
+            {/* Receipt Footer Decor */}
+            <div className="h-2 bg-gray-50 flex gap-1 px-4">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="flex-1 bg-white rounded-t-full"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -98,32 +98,58 @@ export async function POST(
       const driverShare = Math.round(shippingFee * 0.8 * 100) / 100;
       const adminLogisticsShare = Math.round(shippingFee * 0.2 * 100) / 100;
 
-      const artisanWallet = await Wallet.findOne({ userId: order.artisan });
-      if (artisanWallet) {
+      const artisanWallet = await Wallet.findOneAndUpdate(
+        { userId: order.artisan },
+        { 
+          $inc: { 
+            availableBalance: artisanEarnings,
+            // lifetimeEarned: artisanEarnings, // ALREADY UPDATED IN PAYMENT SERVICE
+          },
+          $set: { userRole: 'artisan' }
+        },
+        { upsert: true, new: true }
+      );
+      if (artisanWallet && artisanWallet.pendingBalance > 0) {
         artisanWallet.pendingBalance = Math.max(0, artisanWallet.pendingBalance - artisanEarnings);
-        artisanWallet.availableBalance += artisanEarnings;
-        // artisanWallet.lifetimeEarned += artisanEarnings; // ALREADY UPDATED IN PAYMENT SERVICE
         await artisanWallet.save();
       }
 
       const adminUser = await User.findOne({ role: 'admin' });
       if (adminUser) {
+        await Wallet.findOneAndUpdate(
+          { userId: adminUser._id },
+          { 
+            $inc: { 
+              availableBalance: adminCommission + adminLogisticsShare,
+              lifetimeEarned: adminCommission + adminLogisticsShare,
+              shippingFeesReceived: driverShare
+            },
+            $set: { userRole: 'admin' }
+          },
+          { upsert: true, new: true }
+        );
+        
+        // Handle pending balance separately if wallet exists
         const adminWallet = await Wallet.findOne({ userId: adminUser._id });
-        if (adminWallet) {
+        if (adminWallet && adminWallet.pendingBalance > 0) {
           adminWallet.pendingBalance = Math.max(0, adminWallet.pendingBalance - adminCommission);
-          adminWallet.availableBalance += (adminCommission + adminLogisticsShare);
-          // adminWallet.lifetimeEarned += adminCommission; // ALREADY UPDATED IN PAYMENT SERVICE
-          adminWallet.shippingFeesReceived += shippingFee;
           await adminWallet.save();
         }
       }
 
-      const deliveryGuyWallet = await Wallet.findOne({ userId: deliveryGuy._id });
-      if (deliveryGuyWallet) {
-        deliveryGuyWallet.deliveryEarnings += driverShare; // Only driver's 80% goes to his earnings
-        deliveryGuyWallet.deliveryTripsCompleted += 1;
-        await deliveryGuyWallet.save();
-      }
+      await Wallet.findOneAndUpdate(
+        { userId: deliveryGuy._id },
+        { 
+          $inc: { 
+            availableBalance: driverShare,
+            lifetimeEarned: driverShare,
+            deliveryEarnings: driverShare,
+            deliveryTripsCompleted: 1
+          },
+          $set: { userRole: 'delivery' }
+        },
+        { upsert: true, new: true }
+      );
 
       await DeliveryLog.create({
         orderId: order._id,

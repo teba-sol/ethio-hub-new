@@ -81,6 +81,7 @@ export const DeliveryDashboard: React.FC = () => {
     totalEarnings: number;
   } | null>(null);
   const [recentDeliveries, setRecentDeliveries] = useState<DeliveryLog[]>([]);
+  const [recentWithdrawals, setRecentWithdrawals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<DeliveryOrder | null>(null);
   const [verificationCode, setVerificationCode] = useState('');
@@ -121,6 +122,7 @@ export const DeliveryDashboard: React.FC = () => {
         setOrders(data.orders || []);
         setStats(data.stats);
         setRecentDeliveries(data.recentDeliveries || []);
+        setRecentWithdrawals(data.recentWithdrawals || []);
       }
     } catch (err) {
       console.error('Error fetching delivery data:', err);
@@ -363,7 +365,7 @@ export const DeliveryDashboard: React.FC = () => {
 
         {/* Stats Grid */}
         {stats && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <StatCard 
               icon={CheckCircle} 
               label="Today's Trips" 
@@ -375,12 +377,6 @@ export const DeliveryDashboard: React.FC = () => {
               label="Pending Pickup" 
               value={stats.pendingPickups} 
               color="amber" 
-            />
-            <StatCard 
-              icon={TrendingUp} 
-              label="Daily Earnings" 
-              value={formatCurrency(stats.dailyEarnings)} 
-              color="blue" 
             />
             <StatCard 
               icon={Wallet} 
@@ -763,6 +759,39 @@ export const DeliveryDashboard: React.FC = () => {
                     </span>
                   </div>
                 </div>
+              </div>
+
+              {/* Payment Receipts Section */}
+              <div className="p-8 border-t border-gray-100 bg-gray-50/30">
+                <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4" /> Payment Receipts (Recent Payouts)
+                </h4>
+                
+                {recentWithdrawals.length === 0 ? (
+                  <div className="py-12 text-center text-gray-400 italic bg-white rounded-3xl border border-dashed border-gray-200">
+                    No payment receipts found yet.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {recentWithdrawals.map((payout) => (
+                      <div key={payout._id} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600">
+                            <CheckCircle className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-800">{formatCurrency(payout.amount)}</p>
+                            <p className="text-[10px] text-gray-500">{new Date(payout.date).toLocaleDateString()} at {new Date(payout.date).toLocaleTimeString()}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase">Ref: {payout.reference?.slice(-8)}</p>
+                          <p className="text-[9px] font-mono text-gray-400">{payout.method}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </>
           )}

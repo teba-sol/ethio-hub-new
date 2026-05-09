@@ -4,8 +4,8 @@ import Wallet from '@/models/wallet.model';
 import Product from '@/models/product.model';
 import User from '@/models/User';
 import '@/models/artisan/product.model';
-import '@/models/order.model';
-import '@/models/booking.model';
+import Order from '@/models/order.model';
+import Booking from '@/models/booking.model';
 import '@/models/festival.model';
 import Transaction from '@/models/transaction.model';
 import RefundRequest from '@/models/RefundRequest';
@@ -62,21 +62,29 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get separate totals for artisan and organizer (COMPLETED only = Total Earned)
-    const [artisanTotal, organizerTotal, refundInReviewTotal] = await Promise.all([
-      Transaction.aggregate([
-        { $match: { type: 'ADMIN_COMMISSION', 'metadata.role': 'artisan', status: 'COMPLETED' } },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
+    // Get separate totals for artisan and organizer from cleared records only (Delivered/Completed)
+    const [artisanTotal, organizerTotal, shippingTotal, refundInReviewTotal] = await Promise.all([
+      Order.aggregate([
+        { $match: { status: 'Delivered' } },
+        { $group: { _id: null, total: { $sum: '$adminCommission' } } }
       ]),
-      Transaction.aggregate([
-        { $match: { type: 'ADMIN_COMMISSION', 'metadata.role': 'organizer', status: 'COMPLETED' } },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
+      Booking.aggregate([
+        { $match: { status: 'completed' } },
+        { $group: { _id: null, total: { $sum: '$adminCommission' } } }
+      ]),
+      Order.aggregate([
+        { $match: { status: 'Delivered' } },
+        { $group: { _id: null, total: { $sum: '$shippingFee' } } }
       ]),
       RefundRequest.aggregate([
         { $match: { status: { $in: ['pending', 'processing'] } } },
         { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
       ]),
     ]);
+
+    const artisanEarned = artisanTotal[0]?.total || 0;
+    const organizerEarned = organizerTotal[0]?.total || 0;
+    const shippingEarned = shippingTotal[0]?.total || 0;
 
     // Get transactions (all admin commission transactions)
     const [transactions, total] = await Promise.all([
@@ -150,13 +158,18 @@ export async function GET(request: NextRequest) {
         wallet: {
           pendingBalance: adminWallet.pendingBalance || 0,
           availableBalance: adminWallet.availableBalance || 0,
-          lifetimeEarned: adminWallet.lifetimeEarned || 0,
+          lifetimeEarned: Math.max(
+            (adminWallet.availableBalance || 0) + (adminWallet.lifetimePaidOut || 0),
+            adminWallet.lifetimeEarned || 0,
+            artisanEarned + organizerEarned + (shippingEarned * 0.2)
+          ),
           lifetimePaidOut: adminWallet.lifetimePaidOut || 0,
           lifetimeRefunded: adminWallet.lifetimeRefunded || 0,
-          shippingFeesReceived: adminWallet.shippingFeesReceived || 0,
+          shippingFeesReceived: adminWallet.shippingFeesReceived || shippingEarned,
+          shippingFeesPaidOut: adminWallet.shippingFeesPaidOut || 0,
           currency: adminWallet.currency || 'ETB',
-          artisanTotalEarned: artisanTotal[0]?.total || 0,
-          organizerTotalEarned: organizerTotal[0]?.total || 0,
+          artisanTotalEarned: artisanEarned,
+          organizerTotalEarned: organizerEarned,
           refundInReview: refundInReviewTotal[0]?.total || 0,
           refundInReviewCount: refundInReviewTotal[0]?.count || 0,
         },

@@ -402,8 +402,6 @@ export async function POST(request: NextRequest) {
 
         // Add commission to admin pending balance
         adminWallet.pendingBalance = (adminWallet.pendingBalance || 0) + adminCommission;
-        // Add shipping fee separately to tracking field
-        adminWallet.shippingFeesReceived = (adminWallet.shippingFeesReceived || 0) + shippingCost;
         await adminWallet.save();
 
         const existingAdminTransaction = await Transaction.findOne({

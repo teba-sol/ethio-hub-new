@@ -20,6 +20,7 @@ interface WalletData {
     artisanTotalEarned?: number;
     organizerTotalEarned?: number;
     shippingFeesReceived?: number;
+    shippingFeesPaidOut?: number;
     refundInReview?: number;
     refundInReviewCount?: number;
   };
@@ -128,9 +129,12 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
+  const [withdrawSuccessMessage, setWithdrawSuccessMessage] = useState('');
+  const [lastWithdrawData, setLastWithdrawData] = useState<{ amount: number; phoneNumber: string; txRef: string } | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showCommissionBreakdown, setShowCommissionBreakdown] = useState(false);
   const [showDateFilter, setShowDateFilter] = useState(false);
@@ -193,13 +197,19 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
     }
 
     const amount = Number(withdrawAmount);
-    if (amount < 500) {
-      setWithdrawError('Minimum withdrawal amount is ETB 500');
+    const minAmount = userType === 'admin' ? 40 : 500;
+    if (amount < minAmount) {
+      setWithdrawError(`Minimum withdrawal amount is ETB ${minAmount}`);
       return;
     }
 
     if (walletData && amount > walletData.wallet.availableBalance) {
       setWithdrawError('Amount exceeds available balance');
+      return;
+    }
+
+    if (userType === 'admin' && !phoneNumber) {
+      setWithdrawError('Please enter a phone number');
       return;
     }
 
@@ -211,24 +221,24 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({ amount, phoneNumber }),
       });
 
       const data = await res.json();
 
       if (data.success) {
-        if ((userType === 'admin' || userType === 'organizer') && data.checkoutUrl) {
-          // Redirect admin or organizer to Chapa for withdrawal confirmation
-          window.location.href = data.checkoutUrl;
-          return;
-        }
-        
+        setLastWithdrawData({
+          amount: data.data.amount,
+          phoneNumber: data.data.phoneNumber,
+          txRef: data.data.txRef
+        });
         setWithdrawSuccess(true);
+        setWithdrawSuccessMessage(data.message || 'Withdrawal successful!');
         setWithdrawAmount('');
-        setTimeout(() => {
-          setWithdrawSuccess(false);
-          fetchWallet(page);
-        }, 3000);
+        setPhoneNumber('');
+        
+        // Refresh immediately so the lists update behind the receipt
+        fetchWallet(page, roleFilter, dateRange);
       } else {
         setWithdrawError(data.message || 'Withdrawal request failed');
       }
@@ -394,8 +404,10 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
               </div>
               <span className="text-xs font-bold text-emerald-500 uppercase tracking-wider">Shipping Fees</span>
             </div>
-            <p className="text-2xl font-bold text-primary">{formatCurrency(wallet.shippingFeesReceived || 0)}</p>
-            <p className="text-xs text-emerald-400 mt-1">For delivery guy payroll</p>
+            <p className="text-2xl font-bold text-primary">
+              {formatCurrency((wallet.shippingFeesReceived || 0) - (wallet.shippingFeesPaidOut || 0))}
+            </p>
+            <p className="text-xs text-emerald-400 mt-1">Available for delivery guy payroll</p>
           </div>
         </div>
       )}
@@ -429,19 +441,28 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                   type="number"
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
-                  placeholder="e.g. 1200 (Min. 500)"
+                  placeholder={`e.g. 1200 (Min. ${userType === 'admin' ? 40 : 500})`}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white text-sm"
                 />
               </div>
 
-              {withdrawError && (
-                <div className="text-xs text-red-600">{withdrawError}</div>
+              {userType === 'admin' && (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Recipient Phone Number</label>
+                  <input
+                    type="text"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="e.g. 0912345678"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white text-sm"
+                  />
+                </div>
               )}
 
-              {withdrawSuccess && (
-                <div className="text-xs text-emerald-600 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" />
-                  Withdrawal request submitted successfully!
+              {withdrawError && (
+                <div className="text-xs text-red-600 font-medium bg-red-50 p-2 rounded-lg border border-red-100 flex items-center gap-2">
+                  <AlertCircle className="w-3 h-3" />
+                  {withdrawError}
                 </div>
               )}
 
@@ -450,11 +471,13 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                 onClick={handleWithdraw}
                 disabled={isWithdrawing || !withdrawAmount}
               >
-                {isWithdrawing ? 'Processing...' : 'Withdraw'}
+                {isWithdrawing ? 'Processing Transfer...' : 'Withdraw Money'}
               </Button>
 
               <p className="text-xs text-gray-400">
-                You will be redirected to Chapa to process the withdrawal request.
+                {userType === 'admin' 
+                  ? 'Funds will be transferred immediately to the specified phone number.'
+                  : 'You will be redirected to Chapa to process the withdrawal request.'}
               </p>
             </div>
           </div>
@@ -470,18 +493,86 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                   .filter(tx => tx.type === 'WITHDRAWAL')
                   .slice(0, 5)
                   .map((tx) => (
-                    <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg border">
+                    <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-50 bg-gray-50/30">
                       <div>
-                        <p className="font-medium tabular-nums text-sm">{formatCurrency(tx.amount)}</p>
-                        <p className="text-xs text-gray-400">{new Date(tx.createdAt).toLocaleDateString()}</p>
+                        <p className="font-bold text-gray-900 tabular-nums text-sm">{formatCurrency(tx.amount)}</p>
+                        <p className="text-[10px] text-gray-400 font-medium">
+                          {tx.metadata?.phoneNumber ? `To: ${tx.metadata.phoneNumber}` : new Date(tx.createdAt).toLocaleDateString()}
+                        </p>
                       </div>
-                      <Badge variant={transactionTypeVariants[tx.type] || 'secondary'} size="sm">
+                      <Badge variant={tx.status === 'COMPLETED' ? 'success' : 'warning'} size="sm">
                         {tx.status}
                       </Badge>
                     </div>
                   ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Withdrawal Receipt Modal */}
+      {withdrawSuccess && lastWithdrawData && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
+            {/* Success Header */}
+            <div className="bg-emerald-600 p-8 text-center relative">
+              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/10 to-transparent opacity-50"></div>
+              <div className="relative z-10">
+                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg ring-4 ring-emerald-500/30">
+                  <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+                </div>
+                <h4 className="text-xl font-bold text-white mb-1">Transfer Successful</h4>
+                <p className="text-emerald-100 text-sm opacity-90">Payment Receipt</p>
+              </div>
+            </div>
+
+            {/* Receipt Body */}
+            <div className="p-8 space-y-6">
+              <div className="text-center">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Amount Transferred</p>
+                <p className="text-4xl font-black text-primary">{formatCurrency(lastWithdrawData.amount)}</p>
+              </div>
+
+              <div className="space-y-4 pt-4 border-t border-dashed border-gray-100">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-400">Recipient</span>
+                  <span className="font-bold text-gray-900">{lastWithdrawData.phoneNumber}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-400">Date</span>
+                  <span className="font-medium text-gray-900">{new Date().toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-400">Time</span>
+                  <span className="font-medium text-gray-900">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-400">Reference</span>
+                  <span className="font-mono text-[10px] font-bold text-gray-500">{lastWithdrawData.txRef}</span>
+                </div>
+              </div>
+
+              <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                <p className="text-[10px] text-emerald-700 text-center font-medium">
+                  The funds have been deducted from your available balance and the recipient has been credited.
+                </p>
+              </div>
+
+              <Button
+                className="w-full py-6 rounded-2xl shadow-xl shadow-emerald-600/20"
+                onClick={() => setWithdrawSuccess(false)}
+              >
+                Close Receipt
+              </Button>
+            </div>
+
+            {/* Receipt Footer Decor */}
+            <div className="h-2 bg-gray-50 flex gap-1 px-4">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="flex-1 bg-white rounded-t-full"></div>
+              ))}
+            </div>
           </div>
         </div>
       )}
