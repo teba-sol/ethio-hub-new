@@ -124,6 +124,7 @@ export interface Product {
   estimatedDelivery: string;
   returnPolicy: string;
   currency: string;
+  discountPrice?: number;
 }
 
 export interface RoomType {

@@ -35,10 +35,10 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
 
   const router = useRouter();
 
-  const isWishlisted = isInWishlist(product.id || (product as any)._id);
+  const isWishlisted = !!isInWishlist(product.id || (product as any)._id);
   const isTourist = user?.role?.toLowerCase() === UserRole.TOURIST.toLowerCase();
-  const lowStock = product.stock && product.stock < 10;
-  const hasDiscount = product.discountPrice && product.discountPrice < product.price;
+  const lowStock = typeof product.stock === 'number' && product.stock < 10 && product.stock > 0;
+  const hasDiscount = !!(product.discountPrice && product.discountPrice < product.price);
 
   const productName = getLocalizedText(product as any, 'name', language);
   const artisanName = getLocalizedText(product as any, 'artisanName' as any, language) || product.artisanName || '';
@@ -171,15 +171,6 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
             )}
           </div>
 
-          {/* Shipping Info */}
-          <div className="flex items-center text-[10px] text-gray-400 mb-4 gap-1.5">
-            <Truck className="w-3 h-3" />
-            <span>{t('productCard.shipsIn')} {product.estimatedDelivery}</span>
-            {product.shippingCost === 0 && (
-              <Badge variant="success" className="ml-auto text-[8px] px-2 py-0.5 font-bold">FREE SHIP</Badge>
-            )}
-          </div>
-
           {/* Price & Actions */}
           <div className="mt-auto pt-4 border-t border-gray-100 dark:border-white/10 flex items-end justify-between gap-3">
             <div className="flex flex-col flex-1 min-w-0">
@@ -202,7 +193,7 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
                 className="rounded-2xl shadow-xl font-black text-[9px] uppercase tracking-[0.2em] bg-primary hover:bg-secondary transition-all duration-500 px-5 py-3 h-12 border-none"
                 onClick={handleAddToCart}
               >
-                Add to Bag
+                Add to Cart
               </Button>
             </div>
           </div>

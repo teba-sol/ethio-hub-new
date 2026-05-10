@@ -438,6 +438,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if user already has a booking for this event
+    const existingBooking = await Booking.findOne({
+      tourist: touristId,
+      festival: festivalId,
+      status: { $in: ['confirmed', 'completed'] }
+    }).session(session);
+
+    if (existingBooking) {
+      await session.abortTransaction();
+      return new NextResponse(
+        JSON.stringify({ 
+          success: false, 
+          message: 'You have already booked this event. Each user is limited to one booking per event.' 
+        }),
+        { status: 409, headers: { 'content-type': 'application/json' } }
+      );
+    }
+
     const festival = await Festival.findById(festivalId).session(session);
     if (!festival) {
       await session.abortTransaction();

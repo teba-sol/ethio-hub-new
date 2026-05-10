@@ -113,8 +113,7 @@ export const TouristBookingsView: React.FC = () => {
   const filteredBookings = bookings.filter((booking: any) => {
     const eventName = booking.festival?.name || '';
     const matchesSearch = eventName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || booking.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
   if (loading) {
@@ -149,17 +148,6 @@ export const TouristBookingsView: React.FC = () => {
             />
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
           </div>
-          <select 
-            className="bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/10 w-full sm:w-auto"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="All">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="completed">Completed</option>
-          </select>
         </div>
       </div>
       
@@ -297,7 +285,9 @@ export const TouristBookingsView: React.FC = () => {
               
               <div className="flex justify-between text-xs text-gray-400">
                 <span>Booked on: {new Date(selectedBooking.createdAt).toLocaleDateString()}</span>
-                <span className={`capitalize ${selectedBooking.paymentStatus === 'paid' ? 'text-green-600' : 'text-amber-600'}`}>Payment: {selectedBooking.paymentStatus}</span>
+                <span className={`capitalize ${(selectedBooking.paymentStatus === 'paid' || selectedBooking.status === 'confirmed') ? 'text-green-600' : 'text-amber-600'}`}>
+                  Payment: {(selectedBooking.paymentStatus === 'paid' || selectedBooking.status === 'confirmed') ? 'paid' : selectedBooking.paymentStatus}
+                </span>
               </div>
                
               {selectedBooking.status === 'confirmed' && selectedBooking.paymentStatus === 'paid' && (

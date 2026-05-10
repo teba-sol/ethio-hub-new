@@ -439,7 +439,7 @@ const UserMenu: React.FC<{ isScrolled: boolean, isHomePage: boolean }> = ({ isSc
     if (!user) return "/login";
     const role = user.role.toLowerCase();
     const dashboardHomeByRole: Record<string, string> = {
-      tourist: "/dashboard/tourist/settings",
+      tourist: "/dashboard/tourist/bookings",
       organizer: "/dashboard/organizer/overview",
       artisan: "/dashboard/artisan/overview",
       admin: "/dashboard/admin/overview",

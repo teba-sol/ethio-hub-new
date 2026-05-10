@@ -35,12 +35,37 @@ export default function CheckoutPage() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [alreadyBooked, setAlreadyBooked] = useState(false);
+
+  useEffect(() => {
+    const checkExistingBooking = async () => {
+      if (!user || !eventId) return;
+      try {
+        const response = await apiClient.get('/api/tourist/bookings');
+        if (response.success) {
+          const hasBooked = response.bookings.some((b: any) => 
+            (b.festival?._id === eventId || b.festival === eventId) && 
+            ['confirmed', 'completed'].includes(b.status)
+          );
+          setAlreadyBooked(hasBooked);
+        }
+      } catch (err) {
+        console.error('Error checking existing booking:', err);
+      }
+    };
+    checkExistingBooking();
+  }, [user, eventId]);
 
   const hotelNights = checkIn && checkOut 
     ? Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)))
     : 0;
 
   const handlePayment = async () => {
+    if (alreadyBooked) {
+      setError('You already booked this event. Each user can only book once.');
+      return;
+    }
+
     if (!ticketSelection) {
       router.push(`/event/${eventId}/tickets`);
       return;
@@ -195,8 +220,22 @@ export default function CheckoutPage() {
 
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="mb-10">
-          <h1 className="text-4xl font-serif font-bold text-primary mb-2">Review Your Booking</h1>
+          <div className="flex items-center gap-4 mb-2">
+            <button 
+              onClick={() => router.back()}
+              className="p-2 bg-white rounded-xl border border-gray-100 text-gray-400 hover:text-primary hover:border-primary/20 transition-all shadow-sm"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="text-4xl font-serif font-bold text-primary">Review Your Booking</h1>
+          </div>
           <p className="text-gray-500">Please review your selections before proceeding to secure payment.</p>
+          {alreadyBooked && (
+            <div className="mt-4 p-4 bg-amber-50 border border-amber-100 rounded-xl flex items-center gap-3 text-amber-700">
+              <AlertCircle className="w-5 h-5" />
+              <p className="text-sm font-medium">You have already booked this event. You can only book once.</p>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -325,12 +364,12 @@ export default function CheckoutPage() {
 
               <Button
                 onClick={handlePayment}
-                disabled={isProcessing}
+                disabled={isProcessing || alreadyBooked}
                 isLoading={isProcessing}
-                className="w-full py-4 shadow-lg shadow-primary/20"
-                leftIcon={CreditCard}
+                className={`w-full py-4 shadow-lg ${alreadyBooked ? 'opacity-50 grayscale cursor-not-allowed' : 'shadow-primary/20'}`}
+                leftIcon={alreadyBooked ? CheckCircle2 : CreditCard}
               >
-                Secure Payment
+                {alreadyBooked ? 'Already Booked' : 'Secure Payment'}
               </Button>
 
               <div className="mt-6 space-y-3">

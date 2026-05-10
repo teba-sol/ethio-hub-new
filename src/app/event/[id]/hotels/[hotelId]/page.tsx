@@ -243,13 +243,20 @@ export default function HotelDetailPage() {
     <div className="min-h-screen bg-white">
       {/* Header */}
       <div className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <button
             onClick={() => router.push(`/event/${eventId}/hotels`)}
             className="flex items-center gap-2 text-gray-500 hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>{t('common.backToHotels')}</span>
+          </button>
+          
+          <button
+            onClick={() => router.push(`/event/${eventId}/hotels`)}
+            className="px-6 py-2 bg-gray-900 text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-primary transition-all shadow-lg shadow-gray-200"
+          >
+            Back
           </button>
         </div>
       </div>
@@ -622,23 +629,6 @@ export default function HotelDetailPage() {
 
             <div className="mt-8 pt-6 border-t border-gray-200">
               {renderValidationNotice()}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Button
-                  className={`w-full py-3 ${validationErrors.length > 0 ? 'mt-4' : ''}`}
-                  onClick={() => handleContinue('transport')}
-                  disabled={!selectedRoom}
-                >
-                  {selectedRoom ? 'Continue to Transport' : 'Select a Room'}
-                </Button>
-                <Button
-                  className={`w-full py-3 ${validationErrors.length > 0 ? 'mt-4' : ''}`}
-                  onClick={() => handleContinue('checkout')}
-                  disabled={!selectedRoom}
-                  variant="outline"
-                >
-                  Continue to Checkout
-                </Button>
-              </div>
             </div>
 
             {/* Facilities Section */}

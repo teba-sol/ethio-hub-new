@@ -368,7 +368,7 @@ export const Homepage: React.FC = () => {
                 <Box className="h-4 w-4" />
                 {t('home.curatedMarketplace')}
               </div>
-              <h2 className="text-4xl font-serif font-bold text-primary dark:text-white tracking-tight">{t("home.masterArtisanCatalog")}</h2>
+              <h2 className="text-4xl font-serif font-bold text-black dark:text-white tracking-tight">{t("home.masterArtisanCatalog")}</h2>
               <p className="text-gray-500 dark:text-gray-300 max-w-lg text-lg font-light">{t("home.directTrade")}</p>
             </div>
             <Link href="/products">
@@ -2297,8 +2297,8 @@ export const ProductDetailPage: React.FC = () => {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-secondary"></div>
                   </div>
                 ) : reviews.length > 0 ? (
-                  reviews.map((review) => (
-                    <ReviewItem key={review.id} review={review} />
+                  reviews.map((review, idx) => (
+                    <ReviewItem key={review.id || review._id || idx} review={review} />
                   ))
                 ) : (
                   <div className="text-center py-16 bg-gray-50 rounded-[32px] border border-dashed border-gray-200">
