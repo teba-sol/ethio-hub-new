@@ -1,5 +1,5 @@
 "use client";
-import { ArtisanReviewsPage } from '@/pages/artisan/ArtisanReviewsPage';
+import { ArtisanReviewsPage } from '@/components/artisan/ArtisanReviewsPage';
 
 export default function Page() {
   return <ArtisanReviewsPage />;

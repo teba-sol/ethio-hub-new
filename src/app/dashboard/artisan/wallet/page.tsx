@@ -1,5 +1,5 @@
 "use client";
-import { ArtisanWalletPage } from '@/pages/artisan/ArtisanWalletPage';
+import { ArtisanWalletPage } from '@/components/artisan/ArtisanWalletPage';
 
 export default function Page() {
   return <ArtisanWalletPage />;

@@ -1,5 +1,5 @@
 "use client";
-import { LoginPage } from '@/pages/AuthPages';
+import { LoginPage } from '@/components/auth/AuthPages';
 import { Suspense } from 'react';
 
 export default function Page() {

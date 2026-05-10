@@ -1,5 +1,5 @@
 "use client";
-import { OrganizerWalletPage } from '@/pages/organizer/OrganizerWalletPage';
+import { OrganizerWalletPage } from '@/components/organizer/OrganizerWalletPage';
 
 export default function Page() {
   return <OrganizerWalletPage />;

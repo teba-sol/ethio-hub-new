@@ -1,5 +1,5 @@
 "use client";
-import { OrganizerBookingsPage } from '@/pages/organizer/OrganizerBookingsPage';
+import { OrganizerBookingsPage } from '@/components/organizer/OrganizerBookingsPage';
 
 export default function Page() {
   return <OrganizerBookingsPage />;

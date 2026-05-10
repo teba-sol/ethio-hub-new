@@ -1,5 +1,5 @@
 "use client";
-import { AdminWalletPage } from '@/pages/admin/AdminWalletPage';
+import { AdminWalletPage } from '@/components/admin/AdminWalletPage';
 
 export default function Page() {
   return <AdminWalletPage />;

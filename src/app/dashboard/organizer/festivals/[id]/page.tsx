@@ -1,5 +1,5 @@
 "use client";
-import { OrganizerEventDetailPage } from '@/pages/organizer/OrganizerEventDetailPage';
+import { OrganizerEventDetailPage } from '@/components/organizer/OrganizerEventDetailPage';
 
 export default function Page() {
   return <OrganizerEventDetailPage />;

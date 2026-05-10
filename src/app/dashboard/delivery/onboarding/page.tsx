@@ -1,6 +1,6 @@
 "use client";
 
-import { DeliveryOnboardingPage } from '@/pages/delivery/DeliveryOnboardingPage';
+import { DeliveryOnboardingPage } from '@/components/delivery/DeliveryOnboardingPage';
 
 export default function Page() {
   return <DeliveryOnboardingPage />;

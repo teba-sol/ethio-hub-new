@@ -1,5 +1,5 @@
 "use client";
-import { AdminOverviewPage } from '@/pages/admin/AdminOverviewPage';
+import { AdminOverviewPage } from '@/components/admin/AdminOverviewPage';
 
 export default function Page() {
   return <AdminOverviewPage />;

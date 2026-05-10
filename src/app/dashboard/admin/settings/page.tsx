@@ -1,5 +1,5 @@
 "use client";
-import { AdminSettingsPage } from '@/pages/admin/AdminSettingsPage';
+import { AdminSettingsPage } from '@/components/admin/AdminSettingsPage';
 
 export default function Page() {
   return <AdminSettingsPage />;

@@ -1,5 +1,5 @@
 "use client";
-import { OrganizerOnboardingPage } from '@/pages/organizer/OrganizerOnboardingPage';
+import { OrganizerOnboardingPage } from '@/components/organizer/OrganizerOnboardingPage';
 
 export default function Page() {
   return <OrganizerOnboardingPage />;

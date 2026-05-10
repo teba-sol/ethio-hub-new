@@ -1,5 +1,5 @@
 "use client";
-import { ProductDetailPage } from '@/pages/PublicPages';
+import { ProductDetailPage } from '@/components/public/PublicPages';
 
 export default function Page() {
   return <ProductDetailPage />;

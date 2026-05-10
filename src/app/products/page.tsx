@@ -1,5 +1,5 @@
 "use client";
-import { ProductListingPage } from '@/pages/PublicPages';
+import { ProductListingPage } from '@/components/public/PublicPages';
 import { Suspense } from 'react';
 
 export default function Page() {

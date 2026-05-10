@@ -1,5 +1,5 @@
 "use client";
-import { FestivalListingPage } from '@/pages/PublicPages';
+import { FestivalListingPage } from '@/components/public/PublicPages';
 import { Suspense } from 'react';
 
 export default function Page() {

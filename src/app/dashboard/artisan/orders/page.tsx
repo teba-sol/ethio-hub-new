@@ -1,5 +1,5 @@
 "use client";
-import { ArtisanOrdersPage } from '@/pages/artisan/ArtisanOrdersPage';
+import { ArtisanOrdersPage } from '@/components/artisan/ArtisanOrdersPage';
 
 export default function Page() {
   return <ArtisanOrdersPage />;

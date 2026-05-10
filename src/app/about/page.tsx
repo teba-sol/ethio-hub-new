@@ -1,5 +1,5 @@
 "use client";
-import { AboutPage } from '@/pages/PublicPages';
+import { AboutPage } from '@/components/public/PublicPages';
 
 export default function Page() {
   return <AboutPage />;

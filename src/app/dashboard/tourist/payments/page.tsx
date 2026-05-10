@@ -1,5 +1,5 @@
 "use client";
-import { TouristPaymentsPage } from '@/pages/tourist/TouristPaymentsPage';
+import { TouristPaymentsPage } from '@/components/tourist/TouristPaymentsPage';
 
 export default function Page() {
   return <TouristPaymentsPage />;

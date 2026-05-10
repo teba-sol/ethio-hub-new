@@ -1,5 +1,5 @@
 "use client";
-import { Homepage } from '@/pages/PublicPages';
+import { Homepage } from '@/components/public/PublicPages';
 import { Suspense } from 'react';
 
 export default function Page() {

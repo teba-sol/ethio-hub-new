@@ -1,5 +1,5 @@
 "use client";
-import { OrganizerOverviewPage } from '@/pages/organizer/OrganizerOverviewPage';
+import { OrganizerOverviewPage } from '@/components/organizer/OrganizerOverviewPage';
 
 export default function Page() {
   return <OrganizerOverviewPage />;

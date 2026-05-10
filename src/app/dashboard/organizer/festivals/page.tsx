@@ -1,5 +1,5 @@
 "use client";
-import { OrganizerFestivalsPage } from '@/pages/organizer/OrganizerFestivalsPage';
+import { OrganizerFestivalsPage } from '@/components/organizer/OrganizerFestivalsPage';
 
 export default function Page() {
   return <OrganizerFestivalsPage />;
