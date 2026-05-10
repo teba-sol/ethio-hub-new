@@ -4,6 +4,7 @@ import Booking from '@/models/booking.model';
 import Payment from '@/models/payment.model';
 import mongoose from 'mongoose';
 import { verifyToken } from '@/services/auth.service';
+import { JWTPayload } from 'jose';
 
 const CHAPA_BASE_URL = process.env.CHAPA_BASE_URL || 'https://api.chapa.co/v1';
 const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY;
@@ -11,8 +12,8 @@ const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3
 
 async function getUserFromToken(token: string) {
   const result = await verifyToken(token);
-  if (!result) return null;
-  return result;
+  if (!result || !result.valid || !result.payload) return null;
+  return result.payload as JWTPayload & { userId: string; role: string };
 }
 
 export async function POST(request: NextRequest) {

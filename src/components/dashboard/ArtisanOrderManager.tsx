@@ -1,15 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Search, Filter, Download, ChevronLeft, ChevronRight, 
-  Eye, CheckCircle2, XCircle, Clock, Truck, Package, 
-  AlertCircle, DollarSign, Calendar, User, MapPin, 
-  MessageSquare, FileText, MoreVertical, Printer, 
+import {
+  Search, Filter, Download, ChevronLeft, ChevronRight,
+  Eye, CheckCircle2, XCircle, Clock, Truck, Package,
+  AlertCircle, DollarSign, Calendar, User, MapPin,
+  MessageSquare, FileText, MoreVertical, Printer,
   ArrowUpRight, RefreshCw, ShieldCheck, Mail, CreditCard
 } from 'lucide-react';
 import { Button, Badge, Input } from '../UI';
 import { useNotification } from '../../context/NotificationContext';
-import { 
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid 
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid
 } from 'recharts';
 
 // --- Types ---
@@ -83,28 +83,28 @@ interface Order {
 
 // --- Components ---
 
-  const OrderStatusBadge: React.FC<{ status: string }> = ({ status }) => {
-    const normalizedStatus = status === 'Awaiting Payment' ? 'Paid' : status;
-    const styles: Record<string, string> = {
-      'Pending': 'bg-amber-50 text-amber-600 border-amber-100',
-      'Paid': 'bg-blue-50 text-blue-600 border-blue-100',
-      'Ready for Pickup': 'bg-purple-50 text-purple-600 border-purple-100',
-      'Assigned': 'bg-violet-50 text-violet-600 border-violet-100',
-      'Shipped': 'bg-indigo-50 text-indigo-600 border-indigo-100',
-      'Delivered': 'bg-emerald-50 text-emerald-600 border-emerald-100',
-      'Returned': 'bg-gray-50 text-gray-600 border-gray-100',
-      'Cancelled': 'bg-red-50 text-red-600 border-red-100',
-      'paid': 'bg-emerald-50 text-emerald-600 border-emerald-100',
-      'pending': 'bg-amber-50 text-amber-600 border-amber-100',
-      'refunded': 'bg-red-50 text-red-600 border-red-100'
-    };
-
-    return (
-      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${styles[normalizedStatus] || 'bg-gray-50 text-gray-500'}`}>
-        {normalizedStatus}
-      </span>
-    );
+const OrderStatusBadge: React.FC<{ status: string }> = ({ status }) => {
+  const normalizedStatus = status === 'Awaiting Payment' ? 'Paid' : status;
+  const styles: Record<string, string> = {
+    'Pending': 'bg-amber-50 text-amber-600 border-amber-100',
+    'Paid': 'bg-blue-50 text-blue-600 border-blue-100',
+    'Ready for Pickup': 'bg-purple-50 text-purple-600 border-purple-100',
+    'Assigned': 'bg-violet-50 text-violet-600 border-violet-100',
+    'Shipped': 'bg-indigo-50 text-indigo-600 border-indigo-100',
+    'Delivered': 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    'Returned': 'bg-gray-50 text-gray-600 border-gray-100',
+    'Cancelled': 'bg-red-50 text-red-600 border-red-100',
+    'paid': 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    'pending': 'bg-amber-50 text-amber-600 border-amber-100',
+    'refunded': 'bg-red-50 text-red-600 border-red-100'
   };
+
+  return (
+    <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${styles[normalizedStatus] || 'bg-gray-50 text-gray-500'}`}>
+      {normalizedStatus}
+    </span>
+  );
+};
 
 export const ArtisanOrderManager: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -156,13 +156,9 @@ export const ArtisanOrderManager: React.FC = () => {
       if (data.success) {
         setOrders(prev => prev.map(o => o._id === orderId ? data.order : o));
         if (data.verificationCode) {
-<<<<<<< HEAD
-          alert(`Order marked as ready!\nVerification Code: ${data.verificationCode}\n\nShare this code with the customer via message center.`);
-=======
           showNotification(`Order marked as ready! Verification Code: ${data.verificationCode}`, 'success');
         } else {
           showNotification('Order status updated successfully', 'success');
->>>>>>> origin/aman
         }
       } else {
         showNotification(data.message || 'Failed to update order status', 'error');
@@ -199,8 +195,8 @@ export const ArtisanOrderManager: React.FC = () => {
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(o => 
-        o._id.toLowerCase().includes(q) || 
+      result = result.filter(o =>
+        o._id.toLowerCase().includes(q) ||
         o.tourist.name.toLowerCase().includes(q) ||
         o.product.name.toLowerCase().includes(q)
       );
@@ -297,7 +293,7 @@ export const ArtisanOrderManager: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column: Order Details */}
           <div className="lg:col-span-2 space-y-8">
-            
+
             {/* Order Items */}
             <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
               <h3 className="text-xl font-bold text-primary mb-6">Order Items</h3>
@@ -320,7 +316,7 @@ export const ArtisanOrderManager: React.FC = () => {
                     <p className="font-bold text-lg text-primary">ETB {(order.unitPrice * order.quantity).toLocaleString()}</p>
                   </div>
                 </div>
-                
+
                 <div className="bg-gray-50 p-6 rounded-2xl space-y-3">
                   <div className="flex justify-between text-lg font-bold text-primary pt-3">
                     <span>Total Price (Paid by Tourist)</span>
@@ -347,9 +343,9 @@ export const ArtisanOrderManager: React.FC = () => {
                   order.timeline.map((event, idx) => (
                     <div key={idx} className="relative flex gap-6 items-start">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center z-10 border-4 border-white ${idx === order.timeline!.length - 1 ? 'bg-primary text-white' : 'bg-gray-100 text-gray-400'}`}>
-                        {idx === 0 ? <FileText className="w-4 h-4" /> : 
-                         event.status === 'Delivered' ? <CheckCircle2 className="w-4 h-4" /> :
-                         <Clock className="w-4 h-4" />}
+                        {idx === 0 ? <FileText className="w-4 h-4" /> :
+                          event.status === 'Delivered' ? <CheckCircle2 className="w-4 h-4" /> :
+                            <Clock className="w-4 h-4" />}
                       </div>
                       <div>
                         <p className="font-bold text-primary">
@@ -403,8 +399,8 @@ export const ArtisanOrderManager: React.FC = () => {
             <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-4">
               <h3 className="text-xl font-bold text-primary mb-2">Actions</h3>
               {!['Ready for Pickup', 'Assigned', 'Shipped', 'Delivered'].includes(order.status) ? (
-                <Button 
-                  className="w-full justify-start" 
+                <Button
+                  className="w-full justify-start"
                   variant="primary"
                   leftIcon={Truck}
                   onClick={() => handleMarkAsReady(order._id)}
@@ -412,8 +408,8 @@ export const ArtisanOrderManager: React.FC = () => {
                   Mark as Ready
                 </Button>
               ) : (
-                <Button 
-                  className="w-full justify-start" 
+                <Button
+                  className="w-full justify-start"
                   variant="primary"
                   leftIcon={Truck}
                   disabled
@@ -474,9 +470,9 @@ export const ArtisanOrderManager: React.FC = () => {
         <div className="flex flex-col md:flex-row items-center gap-4 w-full xl:w-auto">
           <div className="relative w-full md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Search orders, customers..." 
+            <input
+              type="text"
+              placeholder="Search orders, customers..."
               className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -484,19 +480,19 @@ export const ArtisanOrderManager: React.FC = () => {
           </div>
           <div className="h-8 w-[1px] bg-gray-100 hidden md:block"></div>
           <div className="relative">
-                <select 
-                  className="appearance-none bg-gray-50 border-none rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary cursor-pointer focus:ring-2 focus:ring-primary/10"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="All">All Status</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Paid">Paid</option>
-                  <option value="Ready for Pickup">Ready for Pickup</option>
-                  <option value="Shipped">Shipped</option>
-                  <option value="Delivered">Delivered</option>
-                  <option value="Returned">Returned</option>
-                </select>
+            <select
+              className="appearance-none bg-gray-50 border-none rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary cursor-pointer focus:ring-2 focus:ring-primary/10"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="All">All Status</option>
+              <option value="Pending">Pending</option>
+              <option value="Paid">Paid</option>
+              <option value="Ready for Pickup">Ready for Pickup</option>
+              <option value="Shipped">Shipped</option>
+              <option value="Delivered">Delivered</option>
+              <option value="Returned">Returned</option>
+            </select>
             <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
           </div>
         </div>
@@ -506,7 +502,7 @@ export const ArtisanOrderManager: React.FC = () => {
           <div className="relative">
             <div className="flex items-center gap-2">
               <div className="relative">
-                <select 
+                <select
                   className="appearance-none bg-gray-50 border-none rounded-xl py-2.5 pl-4 pr-10 text-xs font-bold text-primary cursor-pointer focus:ring-2 focus:ring-primary/10"
                   value={dateFilter}
                   onChange={(e) => {
@@ -534,8 +530,8 @@ export const ArtisanOrderManager: React.FC = () => {
                   <div className="space-y-4">
                     <div>
                       <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Start Date</label>
-                      <input 
-                        type="date" 
+                      <input
+                        type="date"
                         className="w-full bg-gray-50 border-none rounded-xl py-2 px-3 text-xs focus:ring-2 focus:ring-primary/10"
                         value={tempDateRange.start}
                         onChange={(e) => setTempDateRange(prev => ({ ...prev, start: e.target.value }))}
@@ -543,17 +539,17 @@ export const ArtisanOrderManager: React.FC = () => {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">End Date</label>
-                      <input 
-                        type="date" 
+                      <input
+                        type="date"
                         className="w-full bg-gray-50 border-none rounded-xl py-2 px-3 text-xs focus:ring-2 focus:ring-primary/10"
                         value={tempDateRange.end}
                         onChange={(e) => setTempDateRange(prev => ({ ...prev, end: e.target.value }))}
                       />
                     </div>
                     <div className="flex gap-2 pt-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
+                      <Button
+                        size="sm"
+                        variant="outline"
                         className="flex-1 h-9 text-xs"
                         onClick={() => {
                           setIsDateFilterOpen(false);
@@ -563,8 +559,8 @@ export const ArtisanOrderManager: React.FC = () => {
                       >
                         Cancel
                       </Button>
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         className="flex-1 h-9 text-xs"
                         onClick={() => {
                           if (tempDateRange.start && tempDateRange.end) {
@@ -655,9 +651,9 @@ export const ArtisanOrderManager: React.FC = () => {
       <div className="flex justify-between items-center pt-4">
         <p className="text-xs text-gray-400 font-medium">Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredOrders.length)} of {filteredOrders.length} orders</p>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             disabled={currentPage === 1}
             onClick={() => setCurrentPage(p => p - 1)}
             leftIcon={ChevronLeft}
@@ -675,9 +671,9 @@ export const ArtisanOrderManager: React.FC = () => {
               </button>
             ))}
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage(p => p + 1)}
             rightIcon={ChevronRight}

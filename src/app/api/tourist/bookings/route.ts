@@ -633,26 +633,32 @@ export async function POST(request: NextRequest) {
       } : undefined,
     };
 
-    // Calculate split payment
-    const hasHotel = selectedRoom?.hotelName ? true : (hasHotelBooking || false);
+    // Calculate split payment - ticket gets 10% admin commission, hotel/transport get 5% organizer fee
+    const hasHotel = selectedRoom?.hotelName ? true : false;
+    const hasTransport = selectedTransport?.transportId ? true : false;
+    
+    const roomTotal = (selectedRoom?.roomPrice || 0) * (selectedRoom?.nights || 1);
+    const transportTotal = (selectedTransport?.price || 0) * (selectedTransport?.days || 1);
+    const ticketPrice = Math.max(0, calculatedTotalPrice - roomTotal - transportTotal);
 
-    if (!hasHotel) {
-      // Festival tickets & products - both fees apply
-      bookingData.commissionPercent = 10;
-      bookingData.platformFee = Math.round(calculatedTotalPrice * 0.10 * 100) / 100;
-      bookingData.organizerAmount = Math.round(calculatedTotalPrice * 0.90 * 100) / 100;
-      bookingData.touristFeePercent = 5;
-      bookingData.touristServiceFee = touristServiceFee || Math.round(calculatedTotalPrice * 0.05 * 100) / 100;
-    } else {
-      // Hotel bookings - no fees
-      bookingData.platformFee = 0;
-      bookingData.organizerAmount = calculatedTotalPrice;
-      bookingData.commissionPercent = 0;
-      bookingData.touristServiceFee = 0;
-      bookingData.touristFeePercent = 0;
-    }
+    // Calculate fees
+    const hotelFee = hasHotel ? Math.round(roomTotal * 0.05 * 100) / 100 : 0;
+    const transportFee = hasTransport ? Math.round(transportTotal * 0.05 * 100) / 100 : 0;
+    const adminCommission = ticketPrice > 0 ? Math.round(ticketPrice * 0.10 * 100) / 100 : 0;
+    const ticketOrganizerAmount = ticketPrice > 0 ? Math.round(ticketPrice * 0.90 * 100) / 100 : 0;
 
+    bookingData.platformFee = adminCommission;
+    bookingData.commissionPercent = 10;
+    bookingData.touristFeePercent = 5;
+    bookingData.touristServiceFee = touristServiceFee || 0;
+    
+    // Organizer gets: 90% of ticket + 5% of hotel + 5% of transport
+    bookingData.organizerAmount = ticketOrganizerAmount + hotelFee + transportFee;
+    bookingData.hotelFee = hotelFee;
+    bookingData.transportFee = transportFee;
     bookingData.hasHotelBooking = hasHotel;
+    bookingData.hasTransportBooking = hasTransport;
+    bookingData.adminCommission = adminCommission;
 
     const [booking] = await Booking.create([bookingData], { session });
 

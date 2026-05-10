@@ -445,7 +445,7 @@ export const AdminRefundRequestsPage: React.FC = () => {
               <Button 
                 fullWidth 
                 onClick={() => setNotification(null)}
-                variant={notification.type === 'error' ? 'outline' : 'solid'}
+                variant={notification.type === 'error' ? 'outline' : 'primary'}
               >
                 Dismiss
               </Button>

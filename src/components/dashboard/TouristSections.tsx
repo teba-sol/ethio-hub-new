@@ -28,6 +28,11 @@ interface PaymentData {
   artisanProfile?: { businessName?: string; userId?: { email?: string } };
   quantity?: number;
   contactInfo?: { fullName?: string; email?: string; phone?: string };
+  ticketType?: string;
+  bookingDetails?: {
+    room?: { hotelName?: string; roomPrice?: number; hotelRefCode?: string; roomId?: string };
+    transport?: { type?: string; price?: number; transportRefCode?: string; transportId?: string };
+  };
 }
 
 const MOCK_BOOKINGS = [

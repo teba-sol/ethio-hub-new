@@ -49,7 +49,17 @@ interface Transaction {
   role?: 'artisan' | 'organizer';
   quantity?: number;
   unitPrice?: number;
+  contactInfo?: { fullName?: string; email?: string; phone?: string };
+  ticketType?: string;
+  bookingDetails?: {
+    room?: { hotelName?: string; roomPrice?: number; hotelRefCode?: string; roomId?: string };
+    transport?: { type?: string; price?: number; transportRefCode?: string; transportId?: string };
+  };
   details?: TransactionDetails;
+  metadata?: {
+    phoneNumber?: string;
+    [key: string]: any;
+  };
 }
 
 interface TransactionDetails {
