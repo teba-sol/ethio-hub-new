@@ -717,7 +717,7 @@ export const Homepage: React.FC = () => {
               <article key={festival.id} className="group overflow-hidden rounded-[28px] bg-white shadow-xl shadow-black/5 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl">
                 <Link href={`/event/${festival.id}`} className="block">
                   <div className="relative h-64 overflow-hidden">
-                    <img src={festival.coverImage || ''} alt={festival.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    <img src={festival.coverImage || undefined} alt={festival.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                     <div className="absolute left-5 top-5 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
                       {festival.currency} {festival.baseTicketPrice || 0}
