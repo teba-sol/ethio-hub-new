@@ -14,7 +14,7 @@ export async function GET() {
       return NextResponse.json({ user: null }, { status: 200 });
     }
 
-    let payload = null;
+    let payload: any = null;
     if (sessionToken) {
       const result = await verifyToken(sessionToken);
       if (result.valid) {
@@ -24,14 +24,8 @@ export async function GET() {
 
     // If session token is invalid/expired but refresh token exists, try to refresh
     if (!payload && refreshToken) {
-<<<<<<< HEAD
-      const refreshResult = await verifyToken(refreshToken);
-      if (refreshResult.valid && refreshResult.payload) {
-        const refreshPayload = refreshResult.payload;
-=======
       const result = await verifyToken(refreshToken);
-      if (result.valid) {
->>>>>>> origin/aman
+      if (result.valid && result.payload) {
         // Refresh token is valid, generate new access token
         const refreshPayload: any = result.payload;
         const newAccessToken = await generateAccessToken({

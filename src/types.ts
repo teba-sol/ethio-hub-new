@@ -164,6 +164,7 @@ export interface FoodPackage {
 
 export interface HotelAccommodation {
   id: string;
+  _id?: string;
   name: string; // For backward compatibility
   name_en: string;
   name_am: string;
