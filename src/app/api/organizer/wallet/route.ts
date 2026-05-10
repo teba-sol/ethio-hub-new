@@ -33,15 +33,15 @@ export async function GET(request: NextRequest) {
 
     // 1. Process pending balances that should be cleared (Lazy Update)
     const now = new Date();
-    
+
     // Find festivals that have ended
     const endedFestivals = await Festival.find({
       organizer: userObjectId,
       endDate: { $lt: now }
     }).select('_id');
-    
+
     const endedFestivalIds = endedFestivals.map(f => f._id);
-    
+
     if (endedFestivalIds.length > 0) {
       // Find uncleared bookings for these festivals
       const unclearedBookings = await Booking.find({
@@ -49,12 +49,12 @@ export async function GET(request: NextRequest) {
         paymentStatus: 'paid',
         isEarningsCleared: { $ne: true }
       });
-      
+
       if (unclearedBookings.length > 0) {
         let totalTicketEarningsToClear = 0;
         let totalAdminToClear = 0;
         const bookingIdsToUpdate: any[] = [];
-        
+
         for (const booking of unclearedBookings) {
           // Only move the ticket portion (90% of ticket price)
           // The provider funds (85%) and organizer service commission (5%) were already moved to available at booking time
@@ -63,16 +63,16 @@ export async function GET(request: NextRequest) {
           totalAdminToClear += booking.platformFee || 0;
           bookingIdsToUpdate.push(booking._id);
         }
-        
+
         // Update Organizer Wallet
         await Wallet.findOneAndUpdate(
           { userId: userObjectId, userRole: 'organizer' },
-          { 
-            $inc: { 
+          {
+            $inc: {
               pendingBalance: -totalTicketEarningsToClear,
               availableBalance: totalTicketEarningsToClear
               // lifetimeEarned was already updated at booking time
-            } 
+            }
           },
           { upsert: true }
         );
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
             { upsert: true }
           );
         }
-        
+
         // Mark bookings as cleared
         await Booking.updateMany(
           { _id: { $in: bookingIdsToUpdate } },

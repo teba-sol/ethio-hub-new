@@ -7,7 +7,7 @@ import {
   ArrowLeft, MapPin, Calendar, Ticket, Star,
   Clock, Flag, ChevronLeft, ChevronRight, X,
   Heart, Share2, CheckCircle, Award,
-  Coffee, Camera, Music, Shield, Wifi, ParkingCircle,
+  Coffee, Camera, Music, Shield, ShieldCheck, Wifi, ParkingCircle,
   Info, AlertCircle, Sparkles, Utensils, CalendarDays,
   Banknote, Users, Building2, Car, Map as MapIcon,
   ChevronDown, ExternalLink, Globe
@@ -69,6 +69,20 @@ export default function EventPage() {
     fetchData();
   }, [eventId, setEvent]);
 
+  // Early Bird Pricing logic
+  const pricing = festival?.pricing;
+  const earlyBirdDeadline = pricing?.earlyBirdDeadline ? new Date(pricing.earlyBirdDeadline) : null;
+  const postedAtRaw = festival?.reviewedAt || festival?.updatedAt || festival?.createdAt;
+  const postedAt = postedAtRaw ? new Date(postedAtRaw) : null;
+  const earlyBirdDays = pricing?.earlyBirdDays || 0;
+
+  const earlyBirdExpiresAt = earlyBirdDeadline || (postedAt && earlyBirdDays > 0
+    ? new Date(postedAt.getTime() + earlyBirdDays * 24 * 60 * 60 * 1000)
+    : null);
+
+  const isEarlyBirdAvailable = !!earlyBirdExpiresAt && new Date() <= earlyBirdExpiresAt;
+  const earlyBirdPercent = pricing?.earlyBird || 0;
+
   useEffect(() => {
     if (festival) {
       setIsWishlisted(isInWishlist(festival._id || festival.id));
@@ -77,7 +91,7 @@ export default function EventPage() {
 
   const handleWishlistToggle = () => {
     if (!user) {
-      router.push('/auth?mode=login');
+      router.push('/login');
       return;
     }
     if (isWishlisted) {
@@ -165,7 +179,10 @@ export default function EventPage() {
     );
   }
 
-  const eventPrice = festival.pricing?.basePrice || festival.baseTicketPrice || 0;
+  const basePrice = festival.pricing?.basePrice || festival.baseTicketPrice || 0;
+  const eventPrice = isEarlyBirdAvailable && earlyBirdPercent > 0
+    ? Math.round(basePrice * (1 - earlyBirdPercent / 100))
+    : basePrice;
   const eventCurrency = festival.pricing?.currency || festival.currency || 'ETB';
 
   const sectionVariants: any = {
@@ -178,18 +195,29 @@ export default function EventPage() {
   };
 
   return (
-    <div className="bg-white text-gray-900 dark:bg-[#0a1411] dark:text-white min-h-screen font-sans selection:bg-secondary selection:text-primary transition-colors duration-500">
+    <div className="text-gray-900 dark:text-white min-h-screen font-sans selection:bg-secondary selection:text-primary transition-colors duration-500">
       {/* Hero Section */}
       <section className="relative h-screen overflow-hidden">
-        {/* Action Buttons (Inside Hero Area) */}
-        <div className="absolute top-24 inset-x-0 z-20 px-6">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
+        {/* Navigation Overlays */}
+        <div className="absolute top-0 inset-x-0 z-50 p-6 flex items-center justify-between pointer-events-none">
+          <motion.button
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            onClick={() => router.push('/')}
+            className="w-12 h-12 flex items-center justify-center bg-gray-100/50 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-full text-gray-900 dark:text-white hover:bg-white hover:text-primary transition-all shadow-2xl pointer-events-auto"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </motion.button>
+
+          <div className="flex items-center gap-6 pointer-events-auto">
             <motion.button
-              whileHover={{ x: -5 }}
-              onClick={() => router.back()}
-              className="w-12 h-12 flex items-center justify-center bg-gray-100/50 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-full text-gray-900 dark:text-white hover:bg-white hover:text-primary transition-all group shadow-2xl"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => router.push('/search')}
+              className="px-6 py-3 bg-gray-100/50 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-full text-gray-900 dark:text-white font-bold text-xs uppercase tracking-widest hover:bg-white hover:text-primary transition-all shadow-2xl flex items-center gap-3"
             >
-              <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+              <Sparkles className="w-4 h-4 text-secondary" />
+              {language === 'am' ? 'ተጨማሪ ያስሱ' : 'Explore More'}
             </motion.button>
 
             <div className="flex items-center gap-3">
@@ -225,8 +253,7 @@ export default function EventPage() {
             alt={getLocalizedText(festival, 'name', language)}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-[#0a0a0b] via-transparent to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-white/40 dark:bg-black/50" />
         </motion.div>
 
         <div className="absolute inset-0 flex flex-col justify-end pb-24 px-6">
@@ -242,8 +269,8 @@ export default function EventPage() {
                   {festival.type || 'Cultural Experience'}
                 </span>
                 {festival.isVerified && (
-                  <span className="bg-emerald-500/20 backdrop-blur-md text-emerald-400 border border-emerald-500/30 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-full flex items-center gap-2">
-                    <Shield className="w-3.5 h-3.5" /> {language === 'am' ? 'የተረጋገጠ' : 'Verified'}
+                  <span className="bg-emerald-500/10 dark:bg-emerald-500/20 backdrop-blur-md text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-full flex items-center gap-2">
+                    <ShieldCheck className="w-3.5 h-3.5" /> {language === 'am' ? 'የተረጋገጠ' : 'Verified'}
                   </span>
                 )}
               </div>
@@ -275,9 +302,9 @@ export default function EventPage() {
         <motion.div
           animate={{ y: [0, 10, 0] }}
           transition={{ duration: 2, repeat: Infinity }}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-50"
+          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-70 text-gray-900 dark:text-white"
         >
-          <span className="text-[10px] uppercase tracking-[0.4em] font-bold">Scroll</span>
+          <span className="text-[10px] uppercase tracking-[0.4em] font-black">Scroll</span>
           <ChevronDown className="w-4 h-4" />
         </motion.div>
       </section>
@@ -285,13 +312,52 @@ export default function EventPage() {
       {/* Main Content Sections */}
       <div className="relative z-10 px-6 space-y-32 pb-32">
 
-        {/* Story Section */}
+        {/* Experience Gallery Section */}
+        {allImages.length > 0 && (
+          <motion.section
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={sectionVariants}
+            className="max-w-7xl mx-auto pt-24"
+          >
+            <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-8">
+              <div className="space-y-4">
+                <span className="text-xs font-bold uppercase tracking-[0.5em] text-secondary">The Collection</span>
+                <h2 className="text-5xl md:text-7xl font-serif font-bold text-gray-900 dark:text-white leading-tight">
+                  {language === 'am' ? 'የምስል ትውስታዎች' : 'Visual Chronicles'}
+                </h2>
+              </div>
+              <button 
+                onClick={() => setLightboxOpen(true)}
+                className="flex items-center gap-3 px-8 py-4 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-secondary hover:text-primary transition-all group shadow-xl"
+              >
+                <Camera className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                Explore {allImages.length} Photographs
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 aspect-[16/9] md:aspect-[21/9]">
+              <div className="col-span-2 row-span-2 rounded-[40px] overflow-hidden group relative cursor-pointer" onClick={() => { setLightboxIndex(0); setLightboxOpen(true); }}>
+                <img src={allImages[0]} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" alt="Gallery 1" />
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
+              </div>
+              {allImages.slice(1, 5).map((img, i) => (
+                <div key={i} className="rounded-[32px] overflow-hidden group relative cursor-pointer" onClick={() => { setLightboxIndex(i + 1); setLightboxOpen(true); }}>
+                  <img src={img} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" alt={`Gallery ${i + 2}`} />
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
+                </div>
+              ))}
+            </div>
+          </motion.section>
+        )}
+
         <motion.section
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
           variants={sectionVariants}
-          className="max-w-7xl mx-auto pt-24"
+          className="max-w-7xl mx-auto"
         >
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_0.4fr] gap-20 items-start">
             <div className="space-y-12">
@@ -334,33 +400,20 @@ export default function EventPage() {
             </div>
 
             <div className="sticky top-32 space-y-8">
-              {/* Media Preview / Gallery Stack */}
-              <div className="relative group cursor-pointer" onClick={() => setLightboxOpen(true)}>
-                <div className="aspect-[3/4] rounded-[40px] overflow-hidden border border-white/10 shadow-2xl">
-                  <img
-                    src={allImages[1] || allImages[0]}
-                    alt="Gallery preview"
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute bottom-8 left-8 right-8 flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-widest text-white/80">{allImages.length} Photographs</span>
-                    <div className="p-3 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
-                      <Camera className="w-4 h-4 text-white" />
-                    </div>
-                  </div>
-                </div>
-                {/* Decorative Elements */}
-                <div className="absolute -top-4 -right-4 w-24 h-24 bg-secondary/10 rounded-full blur-2xl -z-10" />
-                <div className="absolute -bottom-4 -left-4 w-32 h-32 bg-primary/10 rounded-full blur-3xl -z-10" />
-              </div>
 
               {/* Price Callout */}
-              <div className="bg-gray-50 dark:bg-gradient-to-br dark:from-secondary/10 dark:to-primary/10 border border-gray-100 dark:border-secondary/20 rounded-[32px] p-8 backdrop-blur-xl transition-all">
+              <div className="bg-gray-100 dark:bg-white/10 border border-gray-200 dark:border-white/10 rounded-[32px] p-8 shadow-xl transition-all">
                 <p className="text-xs font-bold text-secondary uppercase tracking-[0.3em] mb-4">{language === 'am' ? 'ጀምሮ' : 'Starting From'}</p>
-                <div className="flex items-baseline gap-2 mb-8">
-                  <span className="text-5xl font-serif font-bold text-gray-900 dark:text-white transition-colors">{eventPrice}</span>
-                  <span className="text-xl font-light text-gray-500 dark:text-white/60 transition-colors">{eventCurrency}</span>
+                <div className="flex flex-col gap-1 mb-8">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-5xl font-serif font-bold text-gray-900 dark:text-white transition-colors">{eventPrice}</span>
+                    <span className="text-xl font-light text-gray-500 dark:text-white/60 transition-colors">{eventCurrency}</span>
+                  </div>
+                  {eventPrice < basePrice && (
+                    <span className="text-sm font-bold text-red-500 line-through opacity-80">
+                      Was {basePrice} {eventCurrency}
+                    </span>
+                  )}
                 </div>
                 <Link href={`/event/${festival._id}/tickets`}>
                   <motion.button
@@ -368,7 +421,7 @@ export default function EventPage() {
                     whileTap={{ scale: 0.98 }}
                     className="w-full py-4 bg-secondary text-primary font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-secondary/10"
                   >
-                    {language === 'am' ? 'ቲኬት ይቁረጡ' : 'Book Your Passage'}
+                    {language === 'am' ? 'ቦታዎን ያስይዙ' : 'Proceed to Booking'}
                   </motion.button>
                 </Link>
               </div>
@@ -382,215 +435,90 @@ export default function EventPage() {
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
           variants={sectionVariants}
-          className="max-w-7xl mx-auto"
+          className="max-w-5xl mx-auto"
         >
-          <div className="text-center mb-24 space-y-4">
+          <div className="text-center mb-32 space-y-4">
             <span className="text-xs font-bold uppercase tracking-[0.5em] text-secondary">The Journey</span>
-            <h2 className="text-5xl md:text-7xl font-serif font-bold text-gray-900 dark:text-white leading-tight transition-colors">
+            <h2 className="text-5xl md:text-7xl font-serif font-bold text-gray-900 dark:text-white leading-tight">
               {language === 'am' ? 'የዝግጅቱ መርሐግብር' : 'Sacred Timeline'}
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-            {festival.schedule && festival.schedule.length > 0 ? (
-              festival.schedule.map((day, idx) => (
-                <motion.div
-                  key={idx}
-                  whileHover={{ y: -10 }}
-                  className="group relative bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[40px] p-8 overflow-hidden transition-all hover:bg-gray-100 dark:hover:bg-white/10 hover:border-secondary/30"
-                >
-                  <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
-                    <CalendarDays className="w-48 h-48 text-gray-900 dark:text-white" />
-                  </div>
+          <div className="relative">
+            {/* Vertical Line */}
+            <div className="absolute left-8 md:left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-secondary/30 to-transparent hidden md:block" />
+            <div className="absolute left-8 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-secondary/30 to-transparent md:hidden" />
 
-                  <div className="relative z-10 space-y-8">
-                    <div className="flex items-center justify-between">
-                      <div className="h-14 w-14 rounded-2xl bg-secondary flex flex-col items-center justify-center text-primary shadow-xl shadow-secondary/10">
-                        <span className="text-[8px] font-black uppercase leading-none mb-0.5">Day</span>
-                        <span className="text-2xl font-black leading-none">{day.day}</span>
+            <div className="space-y-32 md:space-y-48">
+              {festival.schedule && festival.schedule.length > 0 ? (
+                festival.schedule.map((day, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, y: 50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className={`relative flex flex-col md:flex-row items-start md:items-center gap-12 md:gap-24 ${
+                      idx % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'
+                    }`}
+                  >
+                    {/* Timeline Marker */}
+                    <div className="absolute left-8 md:left-1/2 -translate-x-1/2 w-20 h-20 rounded-full bg-white dark:bg-[#0a1411] border-[6px] border-secondary flex items-center justify-center z-10 shadow-2xl shadow-secondary/20">
+                      <div className="flex flex-col items-center">
+                        <span className="text-[9px] font-black uppercase text-secondary leading-none mb-1">Day</span>
+                        <span className="text-2xl font-black text-primary dark:text-white leading-none">{day.day}</span>
                       </div>
-                      {day.time && (
-                        <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-white/5 rounded-full border border-gray-100 dark:border-white/10 text-[10px] font-bold text-gray-500 dark:text-white/60 transition-colors">
-                          <Clock className="w-3 h-3" />
-                          {day.time}
-                        </div>
-                      )}
                     </div>
 
-                    <div className="space-y-4">
-                      <h3 className="text-2xl font-serif font-bold text-gray-900 dark:text-white group-hover:text-secondary transition-colors">
-                        {getLocalizedText(day, 'title', language)}
-                      </h3>
-                      <p className="text-gray-500 dark:text-gray-400 leading-relaxed font-light transition-colors">
-                        {getLocalizedText(day, 'activities', language)}
-                      </p>
+                    {/* Content Area */}
+                    <div className={`w-full md:w-[42%] pl-24 md:pl-0 ${idx % 2 === 0 ? 'md:text-right' : 'md:text-left'}`}>
+                      <div className="space-y-8">
+                        <div className={`flex items-center gap-3 ${idx % 2 === 0 ? 'md:justify-end' : 'md:justify-start'}`}>
+                          {day.time && (
+                            <div className="flex items-center gap-2 px-5 py-2 bg-secondary/10 dark:bg-secondary/5 rounded-full border border-secondary/20 text-[10px] font-black uppercase tracking-widest text-secondary">
+                              <Clock className="w-4 h-4" />
+                              {day.time}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-6">
+                          <h3 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 dark:text-white">
+                            {getLocalizedText(day, 'title', language)}
+                          </h3>
+                          <p className="text-gray-500 dark:text-gray-400 text-lg font-light leading-relaxed">
+                            {getLocalizedText(day, 'activities', language)}
+                          </p>
+                        </div>
+
+                        {day.performers && day.performers.length > 0 && (
+                          <div className={`pt-10 border-t border-gray-100 dark:border-white/10 flex flex-col ${idx % 2 === 0 ? 'md:items-end' : 'md:items-start'}`}>
+                            <div className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 mb-6">Featured Voices</div>
+                            <div className={`flex flex-wrap gap-3 ${idx % 2 === 0 ? 'md:justify-end' : 'md:justify-start'}`}>
+                              {day.performers.map((p, pi) => (
+                                <span key={pi} className="px-5 py-2 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl text-[11px] font-bold text-gray-700 dark:text-white/90 shadow-sm">
+                                  {p}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    {day.performers && day.performers.length > 0 && (
-                      <div className="pt-8 border-t border-gray-100 dark:border-white/10 transition-colors">
-                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Featured Voices</div>
-                        <div className="flex flex-wrap gap-2">
-                          {day.performers.map((p, pi) => (
-                            <span key={pi} className="px-3 py-1.5 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl text-xs font-medium text-gray-600 dark:text-white/80 transition-colors">
-                              {p}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              ))
-            ) : (
-              <div className="col-span-full py-24 bg-gray-50 dark:bg-white/5 rounded-[40px] border border-dashed border-gray-200 dark:border-white/10 text-center transition-colors">
-                <Info className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-6 transition-colors" />
-                <h3 className="text-2xl font-serif font-bold text-gray-900 dark:text-white mb-2 transition-colors">Schedule Unveiling Soon</h3>
-                <p className="text-gray-500">The detailed mysteries of this journey are being finalized.</p>
-              </div>
-            )}
+                    {/* Spacer */}
+                    <div className="hidden md:block md:w-[42%]" />
+                  </motion.div>
+                ))
+              ) : (
+                <div className="py-32 bg-white dark:bg-white/5 rounded-[56px] border border-dashed border-gray-200 dark:border-white/10 text-center">
+                  <Info className="w-20 h-20 text-gray-200 dark:text-gray-700 mx-auto mb-8" />
+                  <h3 className="text-3xl font-serif font-bold text-gray-900 dark:text-white mb-3">Schedule Unveiling Soon</h3>
+                  <p className="text-gray-500 font-light">The detailed mysteries of this journey are being finalized.</p>
+                </div>
+              )}
+            </div>
           </div>
         </motion.section>
-
-        {/* Accommodation Section */}
-        {festival.hotels && festival.hotels.length > 0 && (
-          <motion.section
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={sectionVariants}
-            className="max-w-7xl mx-auto"
-          >
-            <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-8">
-              <div className="space-y-4">
-                <span className="text-xs font-bold uppercase tracking-[0.5em] text-secondary">Sanctuary</span>
-                <h2 className="text-5xl md:text-7xl font-serif font-bold text-gray-900 dark:text-white leading-tight transition-colors">
-                  {language === 'am' ? 'መቆያ ስፍራዎች' : 'Where to Rest'}
-                </h2>
-              </div>
-              <p className="text-gray-500 dark:text-gray-400 max-w-sm text-lg font-light leading-relaxed transition-colors">
-                Hand-picked accommodations that blend modern comfort with traditional Ethiopian hospitality.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              {festival.hotels.map((hotel: any, idx: number) => (
-                <motion.div
-                  key={idx}
-                  whileHover={{ scale: 1.01 }}
-                  className="group bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[48px] overflow-hidden flex flex-col md:flex-row gap-8 p-8 transition-all"
-                >
-                  <div className="w-full md:w-[45%] h-[400px] md:h-auto rounded-[32px] overflow-hidden">
-                    <img
-                      src={hotel.image}
-                      alt={hotel.name}
-                      className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-                    />
-                  </div>
-
-                  <div className="flex-1 flex flex-col justify-between py-4">
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex gap-1">
-                          {[...Array(hotel.starRating || 5)].map((_, i) => (
-                            <Star key={i} className="w-3.5 h-3.5 text-secondary fill-current" />
-                          ))}
-                        </div>
-                        <span className="text-[10px] font-bold text-gray-400 dark:text-white/40 uppercase tracking-widest transition-colors">Hotel Partner</span>
-                      </div>
-
-                      <h3 className="text-3xl font-serif font-bold text-gray-900 dark:text-white leading-tight transition-colors">
-                        {getLocalizedText(hotel, 'name', language)}
-                      </h3>
-
-                      <div className="flex items-start gap-2 text-gray-500 dark:text-gray-400 transition-colors">
-                        <MapPin className="w-4 h-4 text-secondary shrink-0 mt-1" />
-                        <span className="text-sm font-light leading-relaxed">{hotel.address || 'Central Location'}</span>
-                      </div>
-
-                      <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-white/10 transition-colors">
-                        <div className="text-[10px] font-bold text-gray-400 dark:text-white/40 uppercase tracking-widest transition-colors">Included Rooms</div>
-                        <div className="space-y-3">
-                          {hotel.rooms?.slice(0, 2).map((room: any, ri: number) => (
-                            <div key={ri} className="flex items-center justify-between text-sm">
-                              <span className="text-gray-700 dark:text-white/80 font-medium transition-colors">{getLocalizedText(room, 'name', language)}</span>
-                              <span className="text-secondary font-bold">{eventCurrency} {room.pricePerNight}<span className="text-[10px] text-gray-400 font-light ml-1">/night</span></span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    <Link href={`/event/${festival._id}/hotels`}>
-                      <button className="mt-8 w-full py-4 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-white/10 transition-all text-gray-900 dark:text-white">
-                        View Availability
-                      </button>
-                    </Link>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.section>
-        )}
-
-        {/* Transportation Section */}
-        {festival.transportation && festival.transportation.length > 0 && (
-          <motion.section
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={sectionVariants}
-            className="max-w-7xl mx-auto"
-          >
-            <div className="grid grid-cols-1 lg:grid-cols-[0.4fr_1fr] gap-20 items-center">
-              <div className="space-y-8">
-                <div className="space-y-4">
-                  <span className="text-xs font-bold uppercase tracking-[0.5em] text-secondary">Transit</span>
-                  <h2 className="text-5xl md:text-6xl font-serif font-bold text-gray-900 dark:text-white leading-tight transition-colors">
-                    {language === 'am' ? 'የትራንስፖርት አገልግሎት' : 'Seamless Travels'}
-                  </h2>
-                </div>
-                <p className="text-gray-500 dark:text-gray-400 text-lg font-light leading-relaxed transition-colors">
-                  Arrive with ease. We offer premium transportation options to ensure your journey is as memorable as the destination.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                {festival.transportation.map((t, idx) => (
-                  <div key={idx} className="group relative bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[40px] p-8 overflow-hidden hover:bg-gray-100 dark:hover:bg-white/10 transition-all">
-                    <div className="absolute top-0 right-0 p-8 opacity-[0.03] dark:opacity-[0.05] group-hover:scale-110 transition-transform">
-                      <Car className="w-32 h-32 text-gray-900 dark:text-white" />
-                    </div>
-
-                    <div className="relative z-10 space-y-6">
-                      <div className="h-12 w-12 rounded-2xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 flex items-center justify-center transition-colors">
-                        <Car className="w-6 h-6 text-secondary" />
-                      </div>
-
-                      <div>
-                        <h3 className="text-2xl font-serif font-bold text-gray-900 dark:text-white mb-2 transition-colors">{getLocalizedText(t, 'type', language)}</h3>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm font-light leading-relaxed line-clamp-2 transition-colors">
-                          {getLocalizedText(t, 'description', language)}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-6 border-t border-gray-100 dark:border-white/10 transition-colors">
-                        <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest transition-colors">Option Price</p>
-                          <p className="text-xl font-bold text-gray-900 dark:text-white transition-colors">{eventCurrency} {t.price}</p>
-                        </div>
-                        <Link href={`/event/${festival._id}/transport`}>
-                          <button className="p-3 bg-secondary rounded-xl text-primary hover:rotate-12 transition-transform">
-                            <ArrowLeft className="w-5 h-5 rotate-180" />
-                          </button>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.section>
-        )}
 
         {/* Premium Inclusions (Services & Packages) */}
         {((festival.services?.culturalServices || []).length > 0 || (festival.services?.foodPackages || []).length > 0) && (
@@ -603,7 +531,7 @@ export default function EventPage() {
           >
             <div className="text-center mb-24 space-y-4">
               <span className="text-xs font-bold uppercase tracking-[0.5em] text-secondary">The Full Experience</span>
-              <h2 className="text-5xl md:text-7xl font-serif font-bold text-white leading-tight">
+              <h2 className="text-5xl md:text-7xl font-serif font-bold text-gray-900 dark:text-white leading-tight">
                 {language === 'am' ? 'ልዩ አገልግሎቶች' : 'Curated Services'}
               </h2>
             </div>
@@ -611,7 +539,7 @@ export default function EventPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
               {/* Culinary Packages */}
               {festival.services?.foodPackages?.map((pkg: FoodPackage, idx: number) => (
-                <div key={idx} className="group bg-gray-50 dark:bg-gradient-to-br dark:from-white/5 dark:to-secondary/5 border border-gray-100 dark:border-white/10 rounded-[48px] p-10 relative overflow-hidden transition-all">
+                <div key={idx} className="group bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-[48px] p-10 relative overflow-hidden transition-all">
                   <div className="absolute -top-12 -right-12 p-24 opacity-[0.03] group-hover:scale-110 transition-transform">
                     <Utensils className="w-64 h-64 text-gray-900 dark:text-white" />
                   </div>
@@ -695,7 +623,68 @@ export default function EventPage() {
           </motion.section>
         )}
 
-        {/* Tickets & Reservation Section */}
+        {/* Policies & Rules Section */}
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={sectionVariants}
+          className="max-w-7xl mx-auto"
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+            <div className="lg:col-span-1 space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="h-px w-12 bg-secondary" />
+                <span className="text-xs font-bold uppercase tracking-[0.4em] text-secondary">Policies</span>
+              </div>
+              <h2 className="text-4xl font-serif font-bold text-gray-900 dark:text-white leading-tight">
+                Rules of the Journey
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400 font-light leading-relaxed">
+                Important information regarding your participation in this cultural experience.
+              </p>
+            </div>
+
+            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
+              {[
+                {
+                  title: language === 'am' ? 'የስረዛ ፖሊሲ' : 'Cancellation Policy',
+                  content: getLocalizedText(festival.policies as any, 'cancellation', language) || festival.cancellationPolicy || 'Standard cancellation policies apply.',
+                  icon: AlertCircle
+                },
+                {
+                  title: language === 'am' ? 'የደህንነት ደንቦች' : 'Safety & Health',
+                  content: getLocalizedText(festival.policies as any, 'safety', language) || festival.safetyRules || 'All guests must follow on-site safety protocols.',
+                  icon: Shield
+                },
+                {
+                  title: language === 'am' ? 'የዕድሜ ገደብ' : 'Age Guidelines',
+                  content: getLocalizedText(festival.policies as any, 'ageRestriction', language) || festival.ageRestriction || 'Please check specific age requirements for this event.',
+                  icon: Users
+                },
+                {
+                  title: language === 'am' ? 'የቦታ አጠቃቀም ደንቦች' : 'Booking Terms',
+                  content: getLocalizedText(festival.policies as any, 'terms', language) || festival.bookingTerms || 'By booking, you agree to the event terms and conditions.',
+                  icon: Info
+                }
+              ].map((policy, pi) => (
+                <div key={pi} className="p-8 bg-gray-50 dark:bg-white/5 rounded-[32px] border border-gray-100 dark:border-white/10 space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-secondary/10 rounded-xl">
+                      <policy.icon className="w-5 h-5 text-secondary" />
+                    </div>
+                    <h4 className="font-bold text-gray-900 dark:text-white">{policy.title}</h4>
+                  </div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed font-light">
+                    {policy.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.section>
+
+        {/* Final CTA Section */}
         <motion.section
           id="tickets"
           initial="hidden"
@@ -704,76 +693,49 @@ export default function EventPage() {
           variants={sectionVariants}
           className="max-w-4xl mx-auto"
         >
-          <div className="bg-gradient-to-br from-primary via-primary/80 to-[#0a3d2e] rounded-[56px] p-12 md:p-20 text-center relative overflow-hidden shadow-2xl shadow-primary/40 border border-white/10">
+          <div className="bg-primary rounded-[56px] p-12 md:p-20 text-center relative overflow-hidden shadow-2xl shadow-primary/40 border border-white/10">
             {/* Background Texture */}
             <div className="absolute inset-0 opacity-10 mix-blend-overlay">
               <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
             </div>
-            <div className="absolute -top-24 -left-24 w-64 h-64 bg-secondary/20 rounded-full blur-[100px]" />
-            <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-primary/20 rounded-full blur-[100px]" />
 
-            <div className="relative z-10 space-y-12">
+            <div className="relative z-10 space-y-10">
               <div className="space-y-6">
                 <div className="inline-flex items-center gap-3 px-6 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full text-white text-[10px] font-black uppercase tracking-[0.3em]">
-                  <Ticket className="w-4 h-4 text-secondary" />
-                  {language === 'am' ? 'ቦታዎን ይያዙ' : 'Reserve Your Place'}
+                  <Sparkles className="w-4 h-4 text-secondary" />
+                  {language === 'am' ? 'ጉዞዎን ይጀምሩ' : 'Begin Your Journey'}
                 </div>
                 <h2 className="text-5xl md:text-7xl font-serif font-bold text-white leading-tight">
-                  {language === 'am' ? 'የቲኬት ዓይነቶች' : 'Choose Your Passage'}
+                  {language === 'am' ? 'ለመሳተፍ ተዘጋጅተዋል?' : 'Ready to Experience the Magic?'}
                 </h2>
                 <p className="text-white/60 text-xl font-light max-w-2xl mx-auto">
-                  Secure your entry to Ethiopia's most prestigious cultural gathering. Select the tier that best suits your journey.
+                  Step into the vibrant heart of Ethiopian culture. Secure your passage and create memories that will last a lifetime.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-6">
-                {festival.ticketTypes?.map((ticket: any, idx: number) => (
-                  <motion.div
-                    key={idx}
-                    whileHover={{ scale: 1.02 }}
-                    className="flex flex-col md:flex-row items-center justify-between p-8 bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[32px] gap-8 hover:bg-white/10 transition-all"
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+                <Link href={`/event/${festival._id}/tickets`} className="w-full sm:w-auto">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-full sm:px-12 py-5 bg-secondary text-primary font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-secondary/30"
                   >
-                    <div className="flex flex-col md:items-start gap-2">
-                      <h3 className="text-3xl font-serif font-bold text-white">{getLocalizedText(ticket, 'name', language)}</h3>
-                      <p className="text-white/40 text-sm font-medium uppercase tracking-widest">
-                        {ticket.available} Spots Remaining
-                      </p>
-                    </div>
-
-                    <div className="flex flex-col md:flex-row items-center gap-8">
-                      <div className="text-center md:text-right">
-                        <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block mb-1">Price</span>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-4xl font-serif font-bold text-white">{ticket.price}</span>
-                          <span className="text-sm font-light text-white/60">{eventCurrency}</span>
-                        </div>
-                      </div>
-                      <Link href={`/event/${festival._id}/tickets?type=${ticket.name}`} className="w-full md:w-auto">
-                        <motion.button
-                          whileTap={{ scale: 0.95 }}
-                          className="w-full md:px-12 py-5 bg-secondary text-primary font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-secondary/20"
-                        >
-                          Select Tier
-                        </motion.button>
-                      </Link>
-                    </div>
-                  </motion.div>
-                ))}
+                    {language === 'am' ? 'አሁኑኑ ይቁረጡ' : 'Book Your Passage Now'}
+                  </motion.button>
+                </Link>
               </div>
 
               <div className="flex flex-wrap items-center justify-center gap-8 text-white/40 pt-12 border-t border-white/5">
-                <div className="flex items-center gap-3">
-                  <Shield className="w-5 h-5 text-secondary" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Secure Payments</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-secondary" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Instant Confirmation</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Award className="w-5 h-5 text-secondary" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Verified Event</span>
-                </div>
+                {[
+                  { icon: Shield, text: language === 'am' ? 'አስተማማኝ ክፍያ' : 'Secure Payments' },
+                  { icon: CheckCircle, text: language === 'am' ? 'ፈጣን ማረጋገጫ' : 'Instant Confirmation' },
+                  { icon: Award, text: language === 'am' ? 'የተረጋገጠ ዝግጅት' : 'Verified Event' }
+                ].map((badge, bi) => (
+                  <div key={bi} className="flex items-center gap-3">
+                    <badge.icon className="w-5 h-5 text-secondary" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">{badge.text}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

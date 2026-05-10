@@ -18,20 +18,38 @@ import {
   sendRegistrationOtpEmail,
 } from "../../../../../lib/email";
 import { applyRateLimit, getRequestIp } from "../../../../../lib/rateLimit";
+import { RegisterRequestSchema } from "../../../../../lib/validations/auth.schema";
 
 export async function POST(request: Request) {
   try {
     await connectDB();
 
     const body = await request.json();
-    const name = body.name?.trim();
-    const email = normalizeEmail(body.email || "");
+    
+    // --- Schema Validation ---
+    const validationResult = RegisterRequestSchema.safeParse(body);
+
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: "Validation failed", 
+          errors: validationResult.error.flatten().fieldErrors 
+        },
+        { status: 400 }
+      );
+    }
+
+    const { name, email, password, role } = validationResult.data;
+    const normalizedEmail = normalizeEmail(email);
+
     const ip = getRequestIp(request);
     const limiter = applyRateLimit({
-      key: `request-otp:${ip}:${email}`,
+      key: `request-otp:${ip}:${normalizedEmail}`,
       limit: 5,
       windowMs: 10 * 60 * 1000,
     });
+
     if (!limiter.allowed) {
       return NextResponse.json(
         {
@@ -39,44 +57,6 @@ export async function POST(request: Request) {
           message: `Too many OTP requests. Try again in ${limiter.retryAfterSeconds}s.`,
         },
         { status: 429 }
-      );
-    }
-
-    const password = body.password || "";
-    const role = body.role?.toLowerCase?.() || "tourist";
-    const allowedRoles = ["tourist", "organizer", "artisan"];
-
-    if (!name || !email || !password) {
-      return NextResponse.json(
-        { success: false, message: "Name, email, and password are required." },
-        { status: 400 }
-      );
-    }
-
-    if (!isAllowedRegistrationEmail(email)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Please use a valid Gmail address (example@gmail.com).",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (password.length < 8) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Password must be at least 8 characters long.",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (!allowedRoles.includes(role)) {
-      return NextResponse.json(
-        { success: false, message: "Invalid registration role." },
-        { status: 400 }
       );
     }
 

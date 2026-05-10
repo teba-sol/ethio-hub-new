@@ -263,12 +263,12 @@ export const AdminProductManagementPage: React.FC<{ initialId?: string }> = ({ i
                     <LayoutGrid className="w-4 h-4" /> Product Media
                   </h3>
                   <div className="grid grid-cols-1 gap-4">
-                    {product.images.length > 0 ? (
+                    {(product.images?.length || 0) > 0 ? (
                       <>
-                        <img src={product.images[0]} className="w-full h-64 object-cover rounded-2xl shadow-sm" alt="Main" />
-                        {product.images.length > 1 && (
+                        <img src={product.images?.[0]} className="w-full h-64 object-cover rounded-2xl shadow-sm" alt="Main" />
+                        {(product.images?.length || 0) > 1 && (
                           <div className="grid grid-cols-2 gap-4">
-                            {product.images.slice(1, 3).map((img, idx) => (
+                            {product.images?.slice(1, 3).map((img, idx) => (
                               <img key={idx} src={img} className="w-full h-32 object-cover rounded-xl shadow-sm" alt={`Gallery ${idx}`} />
                             ))}
                           </div>
@@ -376,7 +376,7 @@ export const AdminProductManagementPage: React.FC<{ initialId?: string }> = ({ i
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
                     <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">Orders</p>
-                    <p className="text-xl font-bold text-emerald-900">{product.orderCount || product.orders.length}</p>
+                    <p className="text-xl font-bold text-emerald-900">{product.orderCount || product.orders?.length || 0}</p>
                   </div>
                   <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
                     <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Revenue</p>
@@ -395,10 +395,10 @@ export const AdminProductManagementPage: React.FC<{ initialId?: string }> = ({ i
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                   <div className="p-6 border-b border-gray-50 flex justify-between items-center">
                     <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                      <Users className="w-4 h-4" /> Order History ({product.orders.length})
+                      <Users className="w-4 h-4" /> Order History ({product.orders?.length || 0})
                     </h3>
                   </div>
-                  {product.orders.length === 0 ? (
+                  {(product.orders?.length || 0) === 0 ? (
                     <div className="p-12 text-center text-gray-400">
                       <p className="text-sm">No orders yet for this product.</p>
                     </div>
@@ -415,7 +415,7 @@ export const AdminProductManagementPage: React.FC<{ initialId?: string }> = ({ i
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                          {product.orders.map((order) => (
+                          {(product.orders || []).map((order) => (
                             <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                               <td className="px-6 py-4">
                                 <div className="flex items-center gap-3">
@@ -631,8 +631,8 @@ export const AdminProductManagementPage: React.FC<{ initialId?: string }> = ({ i
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 shrink-0">
-                            {product.images.length > 0 ? (
-                              <img src={product.images[0]} className="w-full h-full object-cover" alt="" />
+                            {(product.images?.length || 0) > 0 ? (
+                              <img src={product.images?.[0]} className="w-full h-full object-cover" alt="" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center"><Package className="w-4 h-4 text-gray-300" /></div>
                             )}

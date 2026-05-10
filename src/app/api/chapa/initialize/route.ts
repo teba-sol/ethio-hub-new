@@ -529,22 +529,22 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
 
-     if (!response.ok || !data.data?.checkout_url) {
-       console.error('Chapa API error:', JSON.stringify(data, null, 2));
-       const errorMessage = typeof data.message === 'object' ? JSON.stringify(data.message) : (data.message || 'Failed to initialize payment');
-       return NextResponse.json(
-         { success: false, message: errorMessage },
-         { status: response.status }
-       );
-     }
+    if (!response.ok || !data.data?.checkout_url) {
+      console.error('Chapa API error:', JSON.stringify(data, null, 2));
+      const errorMessage = typeof data.message === 'object' ? JSON.stringify(data.message) : (data.message || 'Failed to initialize payment');
+      return NextResponse.json(
+        { success: false, message: errorMessage },
+        { status: response.status }
+      );
+    }
 
-     // Update Payment with Chapa checkout URL
-     await Payment.updateOne(
-       { transactionRef: txRef },
-       { $set: { invoiceUrl: data.data.checkout_url } }
-     );
+    // Update Payment with Chapa checkout URL
+    await Payment.updateOne(
+      { transactionRef: txRef },
+      { $set: { invoiceUrl: data.data.checkout_url } }
+    );
 
-     return NextResponse.json({
+    return NextResponse.json({
       success: true,
       checkout_url: data.data.checkout_url,
       tx_ref: txRef,

@@ -6,7 +6,7 @@ export const MOCK_PRODUCTS: Product[] = [
     name: 'Handwoven Dorze Gabi',
     description: 'A traditional heavy cotton blanket with intricate, colorful borders woven by the Dorze people of the Gamo Highlands.',
     culturalStory: 'The Gabi is more than a blanket; it is a symbol of protection and respect. In Dorze culture, the patterns woven into the borders represent the weaver\'s lineage and the mountains they call home.',
-    price: 145,
+    price: 14500,
     category: 'Textiles',
     artisanId: 'a1',
     artisanName: 'Abebe Weaving Collective',
@@ -20,17 +20,17 @@ export const MOCK_PRODUCTS: Product[] = [
     isHandmade: true,
     productionTime: 21,
     shippingLocations: ['Worldwide'],
-    shippingCost: 25,
+    shippingCost: 250,
     estimatedDelivery: '10-14 days',
     returnPolicy: '30-day heritage guarantee.',
-    currency: 'USD'
+    currency: 'ETB'
   },
   {
     id: 'p2',
     name: 'Hand-burnished Jebena Pot',
     description: 'Traditional clay coffee pot with a spherical base and narrow neck, hand-burnished to a deep obsidian sheen.',
     culturalStory: 'The Jebena is the heart of the Ethiopian coffee ceremony. Each pot is molded from the earth of the Rift Valley, representing the hospitality that is fundamental to Ethiopian life.',
-    price: 65,
+    price: 6500,
     category: 'Pottery',
     artisanId: 'a2',
     artisanName: 'Fikirte Ceramics',
@@ -44,17 +44,17 @@ export const MOCK_PRODUCTS: Product[] = [
     isHandmade: true,
     productionTime: 14,
     shippingLocations: ['Worldwide'],
-    shippingCost: 30,
+    shippingCost: 300,
     estimatedDelivery: '14-21 days',
     returnPolicy: 'Breakage insurance included.',
-    currency: 'USD'
+    currency: 'ETB'
   },
   {
     id: 'p3',
     name: 'Lalibela Silver Processional Cross',
     description: 'A stunning sterling silver pendant inspired by the rock-hewn processional crosses of Lalibela.',
     culturalStory: 'The geometric complexity of the Lalibela cross symbolizes the interconnectedness of faith, history, and geometry. No two crosses are exactly alike, reflecting the unique hand of the silversmith.',
-    price: 120,
+    price: 12000,
     category: 'Jewelry',
     artisanId: 'a3',
     artisanName: 'Solomon’s Heritage Silver',
@@ -68,17 +68,17 @@ export const MOCK_PRODUCTS: Product[] = [
     isHandmade: true,
     productionTime: 10,
     shippingLocations: ['Worldwide'],
-    shippingCost: 15,
+    shippingCost: 150,
     estimatedDelivery: '7-10 days',
     returnPolicy: 'Full refund within 30 days.',
-    currency: 'USD'
+    currency: 'ETB'
   },
   {
     id: 'p4',
     name: 'Harari Colorful Woven Basket',
     description: 'Vibrantly dyed grass baskets used for ceremonial displays in Harari households.',
     culturalStory: 'Known as "Mesob," these baskets are the pride of Harari women. The vibrant colors and patterns are a visual language of the walled city of Harar.',
-    price: 85,
+    price: 8500,
     category: 'Basketry',
     artisanId: 'a4',
     artisanName: 'Harar Women’s Guild',
@@ -92,10 +92,10 @@ export const MOCK_PRODUCTS: Product[] = [
     isHandmade: true,
     productionTime: 30,
     shippingLocations: ['Worldwide'],
-    shippingCost: 20,
+    shippingCost: 200,
     estimatedDelivery: '14-20 days',
     returnPolicy: 'Exchanges only for handcrafted items.',
-    currency: 'USD'
+    currency: 'ETB'
   }
 ];
 

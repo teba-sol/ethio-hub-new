@@ -221,7 +221,14 @@ export default function TransportPage() {
               return (
                 <div
                   key={transport.id}
-                  onClick={() => !isSoldOut && setSelectedTransport(transport)}
+                  onClick={() => {
+                    if (isSoldOut) return;
+                    if (selectedTransport?.id === transport.id) {
+                      setSelectedTransport(null);
+                    } else {
+                      setSelectedTransport(transport);
+                    }
+                  }}
                   className={`relative flex flex-col md:flex-row bg-white rounded-3xl overflow-hidden cursor-pointer transition-all duration-300 border-2 ${isSelected
                     ? 'border-primary ring-4 ring-primary/5 shadow-xl translate-x-1'
                     : 'border-transparent hover:border-gray-200 shadow-sm hover:shadow-md'

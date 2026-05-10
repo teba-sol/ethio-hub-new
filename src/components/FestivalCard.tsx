@@ -47,16 +47,16 @@ export const FestivalCard: React.FC<{ festival: Festival }> = ({ festival }) => 
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-ethio-dark via-ethio-dark/20 to-transparent" />
       </Link>
-      <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
-        <div className="flex items-center space-x-3 text-[10px] text-secondary font-bold uppercase tracking-widest mb-3">
-          <CalIcon className="w-4 h-4" />
+      <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+        <div className="flex items-center space-x-3 text-[10px] text-secondary font-bold uppercase tracking-widest mb-2">
+          <CalIcon className="w-3.5 h-3.5" />
           <span>{new Date(festival.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-          <span>•</span>
-          <MapPin className="w-4 h-4" />
+          <span className="opacity-30">•</span>
+          <MapPin className="w-3.5 h-3.5" />
           <span>{locationName.split(',')[0]}</span>
         </div>
-        <h3 className="text-3xl font-serif font-bold mb-3 tracking-tight">{name}</h3>
-        <p className="text-gray-200 text-xs line-clamp-2 mb-6 font-light max-w-sm opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-2 group-hover:translate-y-0">
+        <h3 className="text-2xl font-serif font-bold mb-2 tracking-tight group-hover:text-secondary transition-colors duration-300">{name}</h3>
+        <p className="text-gray-300 text-[11px] line-clamp-2 mb-6 font-light max-w-sm opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-2 group-hover:translate-y-0 leading-relaxed">
           {shortDesc}
         </p>
         <div className="flex items-center justify-between pt-4 border-t border-white/10">
@@ -67,13 +67,13 @@ export const FestivalCard: React.FC<{ festival: Festival }> = ({ festival }) => 
           <Button 
             variant="secondary" 
             size="sm" 
-            className="px-6 rounded-xl font-bold text-[9px] uppercase tracking-widest"
+            className="px-6 rounded-full font-black text-[10px] uppercase tracking-[0.1em] shadow-lg shadow-secondary/10 hover:shadow-secondary/30 transition-all"
             onClick={(e) => {
               e.preventDefault();
               router.push(`/event/${festival.id}`);
             }}
           >
-            Book Experience
+            Explore
           </Button>
         </div>
       </div>

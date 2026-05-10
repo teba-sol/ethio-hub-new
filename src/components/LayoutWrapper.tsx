@@ -24,7 +24,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
     pathname === '/about' ||
     pathname.startsWith('/products/') ||
     pathname.startsWith('/festivals/') ||
-    pathname.startsWith('/event/') ||
+    (pathname.startsWith('/event/') && !pathname.endsWith('/tickets') && !pathname.includes('/tickets/') && !pathname.endsWith('/package') && !pathname.endsWith('/hotels') && !pathname.endsWith('/transport')) ||
     pathname.startsWith('/hotels/') ||
     pathname.startsWith('/payment/') ||
     pathname.startsWith('/payment-success')

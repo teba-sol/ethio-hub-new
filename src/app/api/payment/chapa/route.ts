@@ -22,17 +22,17 @@ export async function POST(request: NextRequest) {
 
     const token = request.cookies.get('sessionToken')?.value;
     let userId = null;
-    
+
     if (token) {
       const user: any = await getUserFromToken(token);
       if (user) userId = user.userId;
     }
 
     const body = await request.json();
-    const { 
+    const {
       bookingId,
       orderId,
-      amount, 
+      amount,
       currency = 'ETB',
       email,
       firstName,
@@ -87,8 +87,8 @@ export async function POST(request: NextRequest) {
       return_url: bookingId
         ? `${FRONTEND_URL}/payment-success?bookingId=${bookingId}&status=success&tx_ref=${txRef}`
         : orderId
-        ? `${FRONTEND_URL}/payment-success?orderId=${orderId}&status=success&tx_ref=${txRef}`
-        : `${FRONTEND_URL}/payment-success?status=success&tx_ref=${txRef}`,
+          ? `${FRONTEND_URL}/payment-success?orderId=${orderId}&status=success&tx_ref=${txRef}`
+          : `${FRONTEND_URL}/payment-success?status=success&tx_ref=${txRef}`,
       customization: {
         title: "EthioHub Payment",
         description: description || "Booking payment"
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       } catch (dbError) {
         console.log('Payment ref update skipped:', dbError);
       }
-      
+
       return NextResponse.json({
         success: true,
         checkoutUrl: data.data.checkout_url,

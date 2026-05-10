@@ -87,8 +87,8 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           <div className="flex items-center gap-2 mt-2">
             {originalPrice && originalPrice > price && (
               <>
-                <span className="text-xs text-gray-400 line-through font-bold">ETB {originalPrice}</span>
-                <span className="w-1 h-1 rounded-full bg-gray-300" />
+                <span className="text-xs text-red-500/80 line-through font-bold">ETB {originalPrice}</span>
+                <span className="w-1 h-1 rounded-full bg-red-300" />
               </>
             )}
             <span className="text-xs font-black bg-red-500 text-white px-2 py-0.5 rounded-md">

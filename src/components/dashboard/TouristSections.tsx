@@ -5,7 +5,7 @@ import {
   MapIcon, Ticket, ShoppingCart, Heart, User as UserIcon,
   Search, Plus, Package, Calendar, CreditCard, ChevronRight,
   ShieldCheck, HelpCircle, FileText, Mail, X, User, Phone,
-  CheckCircle2, AlertTriangle
+  CheckCircle2, AlertTriangle, Camera
 } from 'lucide-react';
 import { Button, Input, Badge } from '../UI';
 import { useAuth } from '../../context/AuthContext';
@@ -95,17 +95,18 @@ export const TouristBookingsView: React.FC = () => {
   };
 
   const getStatusBadge = (status: string) => {
+    const baseClass = "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm transition-all duration-300";
     switch (status) {
       case 'confirmed':
-        return <Badge variant="success" className="capitalize">{status}</Badge>;
+        return <span className={`${baseClass} bg-emerald-50 text-emerald-600 border-emerald-100/50`}>{status}</span>;
       case 'pending':
-        return <Badge variant="info" className="capitalize">{status}</Badge>;
+        return <span className={`${baseClass} bg-amber-50 text-amber-600 border-amber-100/50`}>{status}</span>;
       case 'cancelled':
-        return <Badge variant="secondary" className="capitalize">{status}</Badge>;
+        return <span className={`${baseClass} bg-red-50 text-red-600 border-red-100/50`}>{status}</span>;
       case 'completed':
-        return <Badge variant="success" className="capitalize">{status}</Badge>;
+        return <span className={`${baseClass} bg-primary/5 text-primary border-primary/10`}>{status}</span>;
       default:
-        return <Badge className="capitalize">{status}</Badge>;
+        return <span className={`${baseClass} bg-gray-50 text-gray-600 border-gray-100/50`}>{status}</span>;
     }
   };
 
@@ -134,7 +135,7 @@ export const TouristBookingsView: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="pt-10 pb-12 space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <h2 className="text-3xl font-serif font-bold text-primary">My Festival Passes</h2>
         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
@@ -162,37 +163,43 @@ export const TouristBookingsView: React.FC = () => {
         </div>
       </div>
       
-      <div className="grid gap-6">
+      <div className="grid gap-8">
         {filteredBookings.length > 0 ? (
           filteredBookings.map((booking: any) => (
-            <div key={booking._id} className="bg-white p-6 rounded-3xl border border-gray-100 flex flex-col md:flex-row gap-6 hover:shadow-md transition-shadow">
-              <div className="w-full md:w-48 h-32 rounded-2xl overflow-hidden shrink-0">
+            <div key={booking._id} className="bg-white p-5 rounded-[24px] border border-gray-100 flex flex-col md:flex-row gap-6 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 group">
+              <div className="w-full md:w-44 h-32 rounded-[20px] overflow-hidden shrink-0 relative">
                 <img 
                   src={booking.festival?.coverImage || 'https://images.unsplash.com/photo-1566998826769-e58f276226b9?q=80&w=200'} 
                   alt={booking.festival?.name} 
-                  className="w-full h-full object-cover" 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                 />
+                <div className="absolute top-3 right-3">
+                  {getStatusBadge(booking.status)}
+                </div>
               </div>
-              <div className="flex-1 flex flex-col justify-between">
+              <div className="flex-1 flex flex-col justify-between py-1">
                 <div>
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-xl font-bold text-primary">{booking.festival?.name || 'Festival'}</h3>
-                    {getStatusBadge(booking.status)}
-                  </div>
-                  <div className="flex items-center text-gray-500 text-sm mt-2 gap-4">
-                    <span className="flex items-center"><Calendar className="w-4 h-4 mr-1" /> 
-                      {booking.festival?.startDate ? new Date(booking.festival.startDate).toLocaleDateString() : 'Date TBD'}
+                  <h3 className="text-lg font-bold text-gray-900 group-hover:text-primary transition-colors">{booking.festival?.name || 'Festival'}</h3>
+                  <div className="flex items-center text-gray-400 text-xs mt-2 gap-4 font-medium uppercase tracking-wider">
+                    <span className="flex items-center"><Calendar className="w-3.5 h-3.5 mr-1.5 text-primary/60" /> 
+                      {booking.festival?.startDate ? new Date(booking.festival.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Date TBD'}
                     </span>
-                    <span className="flex items-center"><MapIcon className="w-4 h-4 mr-1" /> {booking.festival?.locationName || 'Location TBD'}</span>
+                    <span className="flex items-center"><MapIcon className="w-3.5 h-3.5 mr-1.5 text-primary/60" /> {booking.festival?.locationName || 'Location TBD'}</span>
                   </div>
                 </div>
-                <div className="flex justify-between items-end mt-4">
-                  <div className="text-sm font-medium text-gray-600">
-                    <span className="text-primary font-bold">{booking.quantity}</span> Ticket(s) • 
-                    <span className="text-primary font-bold ml-1">ETB {booking.totalPrice}</span>
-                    <span className="ml-2 text-xs bg-gray-100 px-2 py-0.5 rounded-full capitalize">{booking.ticketType}</span>
+                <div className="flex justify-between items-center mt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="text-xs font-bold px-3 py-1.5 bg-gray-50 text-gray-600 rounded-full border border-gray-100">
+                      {booking.quantity} Ticket{booking.quantity > 1 ? 's' : ''}
+                    </div>
+                    <div className="text-xs font-bold px-3 py-1.5 bg-primary/5 text-primary rounded-full border border-primary/10 capitalize">
+                      {booking.ticketType}
+                    </div>
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => setSelectedBooking(booking)}>View Details</Button>
+                  <div className="flex items-center gap-4">
+                    <span className="text-lg font-serif font-bold text-primary">ETB {booking.totalPrice?.toLocaleString()}</span>
+                    <Button size="sm" variant="outline" className="rounded-full px-5 text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white border-primary/20" onClick={() => setSelectedBooking(booking)}>Details</Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -365,35 +372,35 @@ export const TouristOrdersView: React.FC = () => {
   });
 
   const getOrderStatusBadge = (status: string, paymentStatus: string, refundRequest?: any) => {
+    const baseClass = "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm transition-all duration-300";
+    
     if (refundRequest) {
-      const styles: Record<string, { variant: string; label: string }> = {
-        'pending': { variant: 'warning', label: 'Refund Requested' },
-        'processing': { variant: 'info', label: 'Refund Processing' },
-        'completed': { variant: 'success', label: 'Refund Completed' },
-        'rejected': { variant: 'error', label: 'Refund Rejected' },
+      const styles: Record<string, { bg: string; text: string; border: string; label: string }> = {
+        'pending': { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100/50', label: 'Refund Requested' },
+        'processing': { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100/50', label: 'Refund Processing' },
+        'completed': { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-100/50', label: 'Refund Completed' },
+        'rejected': { bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-100/50', label: 'Refund Rejected' },
       };
-      const style = styles[refundRequest.status] || { variant: 'secondary', label: 'Refund Update' };
-      return <Badge variant={style.variant as any} className="capitalize">{style.label}</Badge>;
+      const style = styles[refundRequest.status] || { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-100/50', label: 'Refund Update' };
+      return <span className={`${baseClass} ${style.bg} ${style.text} ${style.border}`}>{style.label}</span>;
     }
 
-    const statusStyles: Record<string, { variant: string; label: string }> = {
-      'Awaiting Payment': { variant: 'info', label: 'Paid' },
-      'Pending': { variant: 'warning', label: 'Pending' },
-      'Paid': { variant: 'info', label: 'Paid - Preparing' },
-      'Ready for Pickup': { variant: 'purple', label: 'Ready for Pickup' },
-      'Shipped': { variant: 'primary', label: 'In Transit' },
-      'Delivered': { variant: 'success', label: 'Delivered' },
-      'Returned': { variant: 'secondary', label: 'Returned' },
-      'Cancelled': { variant: 'error', label: 'Cancelled' },
+    const statusStyles: Record<string, { bg: string; text: string; border: string; label: string }> = {
+      'Paid': { bg: 'bg-primary/5', text: 'text-primary', border: 'border-primary/10', label: 'Paid - Preparing' },
+      'Ready for Pickup': { bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-100/50', label: 'Ready for Pickup' },
+      'Shipped': { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100/50', label: 'In Transit' },
+      'Delivered': { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-100/50', label: 'Delivered' },
+      'Returned': { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-200/50', label: 'Returned' },
+      'Cancelled': { bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-100/50', label: 'Cancelled' },
     };
 
     if (paymentStatus === 'refunded') {
-      return <Badge variant="error" className="capitalize">Refunded</Badge>;
+      return <span className={`${baseClass} bg-red-50 text-red-600 border-red-100/50`}>Refunded</span>;
     }
 
     const normalizedStatus = status === 'Awaiting Payment' ? 'Paid' : status;
-    const style = statusStyles[normalizedStatus] || { variant: 'secondary', label: normalizedStatus };
-    return <Badge variant={style.variant as any} className="capitalize">{style.label}</Badge>;
+    const style = statusStyles[normalizedStatus] || { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-100/50', label: normalizedStatus };
+    return <span className={`${baseClass} ${style.bg} ${style.text} ${style.border}`}>{style.label}</span>;
   };
 
   if (loading) {
@@ -405,7 +412,7 @@ export const TouristOrdersView: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="pt-10 pb-12 space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <h2 className="text-3xl font-serif font-bold text-primary">My Craft Orders</h2>
         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
@@ -432,26 +439,32 @@ export const TouristOrdersView: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid gap-8">
         {filteredOrders.length > 0 ? (
           filteredOrders.map((order) => (
-            <div id={`order-${order._id}`} key={order._id} className="bg-white p-6 rounded-3xl border border-gray-100 flex flex-col md:flex-row gap-6 hover:shadow-md transition-shadow">
-              <div className="w-24 h-24 rounded-2xl overflow-hidden shrink-0 border border-gray-100">
-                <img src={order.product?.images?.[0] || '/placeholder-product.jpg'} alt="Product" className="w-full h-full object-cover" />
+            <div id={`order-${order._id}`} key={order._id} className="bg-white p-5 rounded-[24px] border border-gray-100 flex flex-col md:flex-row gap-6 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 group">
+              <div className="w-24 h-24 rounded-[20px] overflow-hidden shrink-0 border border-gray-50 relative bg-gray-50/50">
+                <img src={order.product?.images?.[0] || '/placeholder-product.jpg'} alt="Product" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
               </div>
-              <div className="flex-1">
-                <div className="flex justify-between items-start mb-2">
+              <div className="flex-1 flex flex-col justify-between py-1">
+                <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-bold text-primary text-lg">#{order._id?.slice(-8).toUpperCase()}</h3>
-                    <p className="text-sm text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
+                    <div className="flex items-center gap-3 mb-1">
+                      <h3 className="font-bold text-gray-900 group-hover:text-primary transition-colors">#{order._id?.slice(-8).toUpperCase()}</h3>
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date(order.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    </div>
+                    <p className="text-gray-500 text-sm font-medium">{order.product?.name || 'Product'}</p>
                   </div>
                   {getOrderStatusBadge(order.status, order.paymentStatus, order.refundRequest)}
                 </div>
-                <p className="text-gray-600 text-sm mb-4">{order.product?.name || 'Product'}</p>
-                <div className="flex justify-between items-center pt-4 border-t border-gray-50">
-                  <span className="font-bold text-primary">ETB {order.totalPrice?.toLocaleString()}</span>
+                
+                <div className="flex justify-between items-center mt-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Amount</span>
+                    <span className="text-base font-serif font-bold text-primary ml-1">ETB {order.totalPrice?.toLocaleString()}</span>
+                  </div>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="text-xs" onClick={() => setSelectedOrder(order)}>View Details</Button>
+                    <Button size="sm" variant="outline" className="rounded-full px-5 text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white border-primary/20" onClick={() => setSelectedOrder(order)}>Details</Button>
                   </div>
                 </div>
               </div>
@@ -978,7 +991,7 @@ export const TouristPaymentsView: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="pt-10 pb-12 space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <h2 className="text-3xl font-serif font-bold text-primary">Payment History</h2>
         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
@@ -1010,13 +1023,13 @@ export const TouristPaymentsView: React.FC = () => {
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50/50 border-b border-gray-100">
               <tr>
-                <th className="p-6 font-bold text-gray-500 uppercase tracking-wider">Transaction ID</th>
-                <th className="p-6 font-bold text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="p-6 font-bold text-gray-500 uppercase tracking-wider">Description</th>
-                <th className="p-6 font-bold text-gray-500 uppercase tracking-wider">Method</th>
-                <th className="p-6 font-bold text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="p-6 font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="p-6 font-bold text-gray-500 uppercase tracking-wider">Action</th>
+                <th className="p-6 font-bold text-[10px] text-gray-400 uppercase tracking-[0.1em]">Transaction ID</th>
+                <th className="p-6 font-bold text-[10px] text-gray-400 uppercase tracking-[0.1em]">Date</th>
+                <th className="p-6 font-bold text-[10px] text-gray-400 uppercase tracking-[0.1em]">Description</th>
+                <th className="p-6 font-bold text-[10px] text-gray-400 uppercase tracking-[0.1em]">Method</th>
+                <th className="p-6 font-bold text-[10px] text-gray-400 uppercase tracking-[0.1em]">Amount</th>
+                <th className="p-6 font-bold text-[10px] text-gray-400 uppercase tracking-[0.1em]">Status</th>
+                <th className="p-6 font-bold text-[10px] text-gray-400 uppercase tracking-[0.1em]">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -1042,7 +1055,7 @@ export const TouristPaymentsView: React.FC = () => {
                     </td>
                     <td className="p-6 font-bold text-primary">ETB {payment.totalPrice?.toLocaleString()}</td>
                     <td className="p-6">
-                      <Badge variant="success" className="bg-green-50 text-green-600 border-green-100">Success</Badge>
+                      <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-100/50">Success</span>
                     </td>
                     <td className="p-6">
                       <Link href={`/payment-success?orderId=${payment._id}&status=success`} target="_blank">
@@ -1076,10 +1089,13 @@ export const TouristSettingsView: React.FC = () => {
     newPassword: '',
     confirmPassword: ''
   });
-  const [passwordStatus, setPasswordStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [passwordStatus, setPasswordStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [passwordStep, setPasswordStep] = useState<'request' | 'verify'>('request');
+  const [otp, setOtp] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const triggerSuccess = (msg: string) => {
     setSuccessMessage(msg);
@@ -1212,7 +1228,6 @@ export const TouristSettingsView: React.FC = () => {
     setPasswordStatus('loading');
     setErrorMessage('');
 
-    // Basic validation
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       setPasswordStatus('error');
       setErrorMessage('New passwords do not match');
@@ -1225,19 +1240,75 @@ export const TouristSettingsView: React.FC = () => {
       return;
     }
 
-    // Mock API call
-    setTimeout(() => {
-      setPasswordStatus('success');
-      setTimeout(() => {
-        setShowPasswordModal(false);
-        setPasswordStatus('idle');
-        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      }, 2000);
-    }, 1500);
+    setPasswordStatus('loading');
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user?.email,
+          otp: otp,
+          newPassword: passwordForm.newPassword
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setPasswordStatus('success');
+        setTimeout(() => {
+          setShowPasswordModal(false);
+          setPasswordStatus('idle');
+          setPasswordStep('request');
+          setOtp('');
+          setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        }, 2000);
+      } else {
+        setPasswordStatus('error');
+        setErrorMessage(data.message || 'Failed to reset password');
+      }
+    } catch (err) {
+      setPasswordStatus('error');
+      setErrorMessage('An error occurred');
+    }
   };
 
+  const handleRequestOtp = async () => {
+    if (!user?.email) return;
+    
+    setPasswordStatus('loading');
+    setErrorMessage('');
+    
+    try {
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setPasswordStep('verify');
+        setPasswordStatus('idle');
+        setResendCooldown(60);
+      } else {
+        setPasswordStatus('error');
+        setErrorMessage(data.message || 'Failed to send OTP');
+      }
+    } catch (err) {
+      setPasswordStatus('error');
+      setErrorMessage('An error occurred');
+    }
+  };
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="pt-10 pb-12 space-y-8 animate-in fade-in duration-500">
       {/* Success Message Pop-out */}
       {showSuccess && (
         <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top duration-300">
@@ -1261,69 +1332,21 @@ export const TouristSettingsView: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="md:col-span-2 space-y-8">
-          <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-            <h3 className="text-xl font-bold text-primary mb-6">{t('settings.profileInformation')}</h3>
+        <div className="md:col-span-2 space-y-6">
+          <section className="bg-white p-6 md:p-10 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-500">
+            <h3 className="text-xl font-bold text-gray-900 mb-8 flex items-center gap-3">
+              <div className="w-1.5 h-6 bg-primary rounded-full"></div>
+              {t('settings.profileInformation')}
+            </h3>
             <form onSubmit={handleProfileSave}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Input 
                   label={t('settings.fullName')}
                   value={profileForm.name}
                   onChange={(e) => setProfileForm({...profileForm, name: e.target.value})}
+                  required
                 />
                 <Input label={t('settings.emailAddress')} value={user?.email || ""} disabled />
-                <Input 
-                  label={t('settings.phoneNumber')}
-                  value={profileForm.phone}
-                  onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
-                  placeholder="+251 911 234 567"
-                />
-                <Input 
-                  label={t('settings.country')}
-                  value={profileForm.country}
-                  onChange={(e) => setProfileForm({...profileForm, country: e.target.value})}
-                  placeholder="Ethiopia"
-                />
-                <Input 
-                  label={t('settings.nationality')}
-                  value={profileForm.nationality}
-                  onChange={(e) => setProfileForm({...profileForm, nationality: e.target.value})}
-                  placeholder="Ethiopian"
-                />
-                <Input 
-                  label={t('settings.dateOfBirth')}
-                  type="date"
-                  value={profileForm.dateOfBirth}
-                  onChange={(e) => setProfileForm({...profileForm, dateOfBirth: e.target.value})}
-                />
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.profilePhoto')}</label>
-                  <div className="flex items-center gap-4">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploadingImage}
-                      className="px-4 py-2 bg-primary text-white rounded-lg font-medium text-sm hover:bg-primary/90 disabled:opacity-50"
-                    >
-                      {uploadingImage ? 'Uploading...' : t('settings.chooseImage')}
-                    </button>
-                    {profileForm.profileImage && (
-                      <span className="text-sm text-green-600">{t('settings.imageUploaded')}</span>
-                    )}
-                  </div>
-                  {profileForm.profileImage && (
-                    <div className="mt-4 w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200">
-                      <img src={profileForm.profileImage} alt={t('settings.preview')} className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                </div>
               </div>
               <div className="mt-8 flex justify-end">
                 <Button type="submit" disabled={savingProfile}>
@@ -1348,13 +1371,45 @@ export const TouristSettingsView: React.FC = () => {
         </div>
 
         <div className="space-y-8">
-          <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg mb-4">
-                <img src={profileForm.profileImage || "https://ui-avatars.com/api/?name=" + encodeURIComponent(profileForm.name || 'Tourist')} alt={t('settings.profile')} className="w-full h-full object-cover" />
+          <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm flex flex-col items-center">
+            <h3 className="text-xl font-bold text-primary mb-6 w-full text-left">{t('settings.profilePhoto')}</h3>
+            <div 
+              className="relative group cursor-pointer" 
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-xl bg-gray-50 relative">
+                <img 
+                  src={profileForm.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(profileForm.name || 'Tourist')}&background=0f4c3a&color=fff`} 
+                  alt={t('settings.profile')} 
+                  className="w-full h-full object-cover" 
+                />
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <Camera className="w-8 h-8 text-white" />
+                </div>
               </div>
-              <p className="text-xs text-gray-500">{t('settings.uploadPhoto')}</p>
+              
+              {uploadingImage && (
+                <div className="absolute inset-0 bg-white/60 rounded-full flex items-center justify-center backdrop-blur-sm">
+                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
+              
+              <div className="absolute bottom-0 right-0 bg-primary w-8 h-8 rounded-full border-2 border-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                <Camera className="w-4 h-4 text-white" />
+              </div>
             </div>
+            
+            <p className="text-xs text-gray-500 mt-6 text-center max-w-[200px] leading-relaxed">
+              Click the image to upload a new profile photo. Recommended size is 256x256px.
+            </p>
+            
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
           </section>
         </div>
       </div>
@@ -1375,52 +1430,92 @@ export const TouristSettingsView: React.FC = () => {
                 <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
                   <ShieldCheck className="w-8 h-8" />
                 </div>
-                <h4 className="text-xl font-bold text-primary">Password Updated!</h4>
-                <p className="text-gray-500 text-sm">Your password has been successfully changed.</p>
+                <h4 className="text-xl font-bold text-primary">Password Reset!</h4>
+                <p className="text-gray-500 text-sm">Your password has been successfully updated.</p>
+              </div>
+            ) : passwordStep === 'request' ? (
+              <div className="space-y-6">
+                <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    We will send a security code to <span className="font-bold text-primary">{user?.email}</span> to verify your identity.
+                  </p>
+                </div>
+                <Button 
+                  className="w-full py-6 rounded-2xl font-bold text-base" 
+                  onClick={handleRequestOtp}
+                  disabled={passwordStatus === 'loading'}
+                >
+                  {passwordStatus === 'loading' ? 'Sending Code...' : 'Send Verification Code'}
+                </Button>
+                <p className="text-[10px] text-gray-400 text-center uppercase tracking-widest">
+                  Secure Identity Verification
+                </p>
               </div>
             ) : (
-              <form onSubmit={handlePasswordUpdate} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Current Password</label>
-                  <input 
-                    type="password" 
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                    value={passwordForm.currentPassword}
-                    onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">New Password</label>
-                  <input 
-                    type="password" 
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                    value={passwordForm.newPassword}
-                    onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Confirm New Password</label>
-                  <input 
-                    type="password" 
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                    value={passwordForm.confirmPassword}
-                    onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
-                    required
-                  />
+              <form onSubmit={handlePasswordUpdate} className="space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Verification Code</label>
+                    <input 
+                      type="text" 
+                      maxLength={6}
+                      placeholder="000000"
+                      className="w-full px-6 py-4 rounded-2xl border-2 border-gray-100 focus:border-primary focus:ring-0 outline-none transition-all text-center text-2xl font-serif font-bold tracking-[0.5em] placeholder:tracking-normal placeholder:text-gray-200"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                      required
+                    />
+                    <div className="mt-2 flex justify-center">
+                      {resendCooldown > 0 ? (
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Resend in {resendCooldown}s</span>
+                      ) : (
+                        <button 
+                          type="button" 
+                          onClick={handleRequestOtp}
+                          className="text-[10px] text-primary font-bold uppercase tracking-widest hover:underline"
+                        >
+                          Resend Code
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-4 space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">New Password</label>
+                      <input 
+                        type="password" 
+                        placeholder="••••••••"
+                        className="w-full px-6 py-4 rounded-2xl border-2 border-gray-100 focus:border-primary focus:ring-0 outline-none transition-all"
+                        value={passwordForm.newPassword}
+                        onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Confirm Password</label>
+                      <input 
+                        type="password" 
+                        placeholder="••••••••"
+                        className="w-full px-6 py-4 rounded-2xl border-2 border-gray-100 focus:border-primary focus:ring-0 outline-none transition-all"
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                        required
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {passwordStatus === 'error' && (
-                  <div className="p-3 bg-red-50 text-red-600 text-sm rounded-xl font-medium">
+                  <div className="p-4 bg-red-50 text-red-600 text-xs rounded-2xl font-bold flex items-center gap-3">
+                    <AlertTriangle className="w-4 h-4" />
                     {errorMessage}
                   </div>
                 )}
 
-                <div className="pt-4 flex gap-3">
-                  <Button type="button" variant="outline" className="flex-1" onClick={() => setShowPasswordModal(false)}>Cancel</Button>
-                  <Button type="submit" className="flex-1" disabled={passwordStatus === 'loading'}>
-                    {passwordStatus === 'loading' ? 'Updating...' : 'Update Password'}
+                <div className="pt-2">
+                  <Button type="submit" className="w-full py-6 rounded-2xl font-bold text-base" disabled={passwordStatus === 'loading'}>
+                    {passwordStatus === 'loading' ? 'Updating...' : 'Reset Password'}
                   </Button>
                 </div>
               </form>
@@ -1433,7 +1528,7 @@ export const TouristSettingsView: React.FC = () => {
 };
 
 export const TouristHelpView: React.FC = () => (
-  <div className="space-y-8 animate-in fade-in duration-500">
+  <div className="pt-10 pb-12 space-y-8 animate-in fade-in duration-500">
     <h2 className="text-3xl font-serif font-bold text-primary">Help Center</h2>
     
     <div className="bg-primary text-white p-6 md:p-10 rounded-[40px] shadow-xl relative overflow-hidden">

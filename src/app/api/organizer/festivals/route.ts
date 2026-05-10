@@ -16,6 +16,8 @@ import {
   validateCreateAvailability 
 } from '../../../../lib/festivalNormalization';
 
+import { FestivalSchema, FestivalDraftSchema } from '../../../../lib/validations/festival.schema';
+
 const textValue = (...values: any[]) => {
   const value = values.find((item) => typeof item === 'string' && item.trim());
   return value ? value.trim() : '';
@@ -45,12 +47,11 @@ export async function GET(request: NextRequest) {
         );
     }
 
-    const festivals = await Festival.find({ organizer: organizerId });
+    console.log(`Fetching festivals for organizer: ${organizerId}`);
+    const festivals = await Festival.find({ organizer: organizerId }).lean();
+    console.log(`Found ${festivals.length} festivals`);
 
-    return new NextResponse(
-      JSON.stringify({ success: true, festivals }),
-      { status: 200, headers: { 'content-type': 'application/json' } }
-    );
+    return NextResponse.json({ success: true, festivals });
 
   } catch (error: any) {
     if (error.code === 'ERR_JWT_EXPIRED' || error.code === 'ERR_JWS_INVALID') {
@@ -131,17 +132,17 @@ export async function POST(request: NextRequest) {
     const normalizedLocationNameEn = textValue(location?.name_en, location?.name);
     const normalizedLocationNameAm = textValue(location?.name_am, location?.name);
 
-    if (!isDraft && (
-      (!normalizedNameEn && !normalizedNameAm) ||
-      (!normalizedShortEn && !normalizedShortAm) ||
-      (!normalizedFullEn && !normalizedFullAm) ||
-      !startDate ||
-      !endDate ||
-      !location ||
-      (!normalizedLocationNameEn && !normalizedLocationNameAm)
-    )) {
+    // --- Schema Validation ---
+    const validationSchema = isDraft ? FestivalDraftSchema : FestivalSchema;
+    const validationResult = validationSchema.safeParse(body);
+
+    if (!validationResult.success) {
       return new NextResponse(
-        JSON.stringify({ success: false, message: 'Missing required fields' }),
+        JSON.stringify({ 
+          success: false, 
+          message: 'Validation failed', 
+          errors: validationResult.error.flatten().fieldErrors 
+        }),
         { status: 400, headers: { 'content-type': 'application/json' } }
       );
     }

@@ -6,6 +6,7 @@ import User from '@/models/User';
 import { cookies } from 'next/headers';
 import { isProductCompleteForReview } from '@/lib/reviewAutomation';
 import { queueAdminReviewEmail } from '@/lib/adminApproval';
+import { ArtisanProductSchema, ArtisanProductDraftSchema } from '@/lib/validations/artisan.schema';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
@@ -98,6 +99,21 @@ export async function POST(req: Request) {
 
     const body = await req.json();
 
+    // --- Schema Validation ---
+    const isDraft = body.status === 'Draft' || !body.status;
+    const validationSchema = isDraft ? ArtisanProductDraftSchema : ArtisanProductSchema;
+    const validationResult = validationSchema.safeParse(body);
+
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { 
+          message: 'Validation failed', 
+          errors: validationResult.error.flatten().fieldErrors 
+        },
+        { status: 400 }
+      );
+    }
+
     const {
       name,
       name_en,
@@ -122,19 +138,7 @@ export async function POST(req: Request) {
       deliveryTime,
       shippingFee,
       status,
-    } = body;
-
-    const normalizedNameEn = textValue(name_en, name);
-    const normalizedNameAm = textValue(name_am);
-    const normalizedDescriptionEn = textValue(description_en, description);
-    const normalizedDescriptionAm = textValue(description_am);
-
-    if (!normalizedNameEn || !normalizedNameAm || !normalizedDescriptionEn || !normalizedDescriptionAm || !price || !stock || !category || !deliveryTime || !shippingFee) {
-      return NextResponse.json(
-        { message: 'English and Amharic name and description are required, along with pricing and inventory fields.' },
-        { status: 400 }
-      );
-    }
+    } = validationResult.data;
 
     let productStatus = status;
     if (status === 'Publish' || status === 'Published') {

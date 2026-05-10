@@ -2,18 +2,37 @@ import { NextResponse, NextRequest } from "next/server";
 import * as authService from "@/services/auth.service";
 import { connectDB } from "@/lib/mongodb";
 import { applyRateLimit, getRequestIp } from "@/lib/rateLimit";
+import { LoginSchema } from "@/lib/validations/auth.schema";
 
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
     const body = await request.json();
-    const email = String(body?.email || "").trim().toLowerCase();
+    
+    // --- Schema Validation ---
+    const validationResult = LoginSchema.safeParse(body);
+
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: "Validation failed", 
+          errors: validationResult.error.flatten().fieldErrors 
+        },
+        { status: 400 }
+      );
+    }
+
+    const { email, password } = validationResult.data;
+    const normalizedEmail = email.trim().toLowerCase();
+
     const ip = getRequestIp(request);
     const rate = applyRateLimit({
-      key: `login:${ip}:${email}`,
+      key: `login:${ip}:${normalizedEmail}`,
       limit: 10,
       windowMs: 15 * 60 * 1000,
     });
+
     if (!rate.allowed) {
       return NextResponse.json(
         {

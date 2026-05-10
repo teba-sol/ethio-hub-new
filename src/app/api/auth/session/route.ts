@@ -24,10 +24,16 @@ export async function GET() {
 
     // If session token is invalid/expired but refresh token exists, try to refresh
     if (!payload && refreshToken) {
+<<<<<<< HEAD
       const refreshResult = await verifyToken(refreshToken);
       if (refreshResult.valid && refreshResult.payload) {
         const refreshPayload = refreshResult.payload;
+=======
+      const result = await verifyToken(refreshToken);
+      if (result.valid) {
+>>>>>>> origin/aman
         // Refresh token is valid, generate new access token
+        const refreshPayload: any = result.payload;
         const newAccessToken = await generateAccessToken({
           userId: refreshPayload.userId,
           email: refreshPayload.email,
