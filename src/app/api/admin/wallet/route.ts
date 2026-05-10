@@ -6,7 +6,7 @@ import User from '@/models/User';
 import '@/models/artisan/product.model';
 import Order from '@/models/order.model';
 import Booking from '@/models/booking.model';
-import '@/models/festival.model';
+import Festival from '@/models/festival.model';
 import Transaction from '@/models/transaction.model';
 import RefundRequest from '@/models/RefundRequest';
 import mongoose from 'mongoose';
@@ -32,6 +32,79 @@ export async function GET(request: NextRequest) {
         { success: false, message: 'Admin user not found' },
         { status: 404 }
       );
+    }
+
+    // 1. Process pending festival balances that should be cleared (Lazy Update)
+    const now = new Date();
+    
+    // Find festivals that have ended
+    const endedFestivals = await Festival.find({
+      endDate: { $lt: now }
+    }).select('_id organizer');
+    
+    const endedFestivalIds = endedFestivals.map(f => f._id);
+    
+    if (endedFestivalIds.length > 0) {
+      // Find uncleared bookings for these festivals
+      const unclearedBookings = await Booking.find({
+        festival: { $in: endedFestivalIds },
+        paymentStatus: 'paid',
+        isEarningsCleared: { $ne: true }
+      });
+      
+      if (unclearedBookings.length > 0) {
+        // Group by organizer to update their wallets
+        const organizerUpdates: Record<string, { ticketPortion: number }> = {};
+        let totalAdminToClear = 0;
+        const bookingIdsToUpdate: any[] = [];
+        
+        for (const booking of unclearedBookings) {
+          const orgId = booking.organizer.toString();
+          if (!organizerUpdates[orgId]) {
+            organizerUpdates[orgId] = { ticketPortion: 0 };
+          }
+          
+          // Only move the ticket portion (90% of ticket price)
+          const ticketPortion = (booking.ticketPrice || 0) * 0.90;
+          organizerUpdates[orgId].ticketPortion += ticketPortion;
+          totalAdminToClear += booking.platformFee || 0;
+          bookingIdsToUpdate.push(booking._id);
+        }
+        
+        // Update Organizer Wallets
+        for (const [orgId, amounts] of Object.entries(organizerUpdates)) {
+          await Wallet.findOneAndUpdate(
+            { userId: new mongoose.Types.ObjectId(orgId), userRole: 'organizer' },
+            { 
+              $inc: { 
+                pendingBalance: -amounts.ticketPortion,
+                availableBalance: amounts.ticketPortion
+                // lifetimeEarned already updated at booking
+              } 
+            },
+            { upsert: true }
+          );
+        }
+
+        // Update Admin Wallet
+        await Wallet.findOneAndUpdate(
+          { userId: adminUser._id, userRole: 'admin' },
+          {
+            $inc: {
+              pendingBalance: -totalAdminToClear,
+              availableBalance: totalAdminToClear,
+              lifetimeEarned: totalAdminToClear
+            }
+          },
+          { upsert: true }
+        );
+        
+        // Mark bookings as cleared
+        await Booking.updateMany(
+          { _id: { $in: bookingIdsToUpdate } },
+          { $set: { isEarningsCleared: true } }
+        );
+      }
     }
 
     // Get admin wallet by userId
@@ -108,7 +181,7 @@ export async function GET(request: NextRequest) {
         })
         .populate({
           path: 'bookingId',
-          select: 'tourist festival organizer quantity totalPrice adminCommission organizerEarnings commissionRate currency status paymentStatus paymentRef paymentMethod paymentDate contactInfo bookingDetails createdAt',
+          select: 'tourist festival organizer quantity totalPrice adminCommission organizerEarnings commissionRate currency status paymentStatus paymentRef paymentMethod paymentDate contactInfo bookingDetails providerAmount hotelFee transportFee createdAt',
           populate: [
             {
               path: 'tourist',
@@ -199,6 +272,9 @@ export async function GET(request: NextRequest) {
             createdAt: tx.createdAt,
             orderId: order?._id || tx.orderId,
             bookingId: booking?._id || tx.bookingId,
+            providerAmount: booking?.providerAmount || 0,
+            hotelFee: booking?.hotelFee || 0,
+            transportFee: booking?.transportFee || 0,
             productId: product?._id || tx.productId || tx.metadata?.productId || order?.product || null,
             productName: product?.name || (booking?.festival ? `Festival: ${booking.festival.name}` : null),
             artisanName: artisan?.name || organizer?.name || tx.metadata?.artisanId || tx.metadata?.organizerId || null,
@@ -223,6 +299,9 @@ export async function GET(request: NextRequest) {
               unitPrice: tx.unitPrice || order?.unitPrice || (booking ? booking.totalPrice / booking.quantity : null) || tx.metadata?.unitPrice || null,
               totalPrice: order?.totalPrice || booking?.totalPrice || tx.metadata?.totalAmount || null,
               artisanEarnings: order?.artisanEarnings || booking?.organizerEarnings || (booking?.totalPrice ? (booking.totalPrice - tx.amount) : (order?.totalPrice ? (order.totalPrice - tx.amount) : 0)),
+              providerAmount: booking?.providerAmount || 0,
+              hotelFee: booking?.hotelFee || 0,
+              transportFee: booking?.transportFee || 0,
               adminCommission: order?.adminCommission || booking?.adminCommission || tx.amount || null,
               commissionRate: order?.commissionRate || booking?.commissionRate || tx.metadata?.commissionRate || null,
               paymentRef: tx.paymentRef || order?.paymentRef || booking?.paymentRef || null,

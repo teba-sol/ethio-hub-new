@@ -70,7 +70,7 @@ export default function CheckoutPage() {
         bookingDetails: {
           ...(selectedRoom ? {
             room: {
-              hotelId: selectedHotel?._id || selectedHotel?.id || '',
+              hotelId: selectedHotel?.id || '',
               roomId: selectedRoom._id || selectedRoom.id,
               hotelName: selectedHotel?.name || '',
               roomName: selectedRoom.name,

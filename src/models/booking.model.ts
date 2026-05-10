@@ -22,6 +22,9 @@ export interface IBooking extends Document {
     email: string;
     phone: string;
   };
+  ticketPrice: number; // Actual ticket price (unitPrice * quantity)
+  hotelFee: number;    // Actual hotel price paid by user
+  transportFee: number; // Actual transport price paid by user
   specialRequests?: string;
   bookingDetails?: {
     room?: {
@@ -46,6 +49,7 @@ export interface IBooking extends Document {
   touristServiceFee: number; // EthioHub's service fee from tourist (5%)
   touristFeePercent: number; // Tourist service fee percentage (5%)
   hasHotelBooking: boolean;  // True if hotel booking (exempt from fees)
+  isEarningsCleared: boolean; // True when funds move from pending to available (after event ends)
   bookedAt: Date;
   updatedAt: Date;
 }
@@ -123,6 +127,10 @@ const BookingSchema: Schema = new Schema(
       email: { type: String, required: true },
       phone: { type: String, required: true },
     },
+    ticketPrice: {
+      type: Number,
+      default: 0,
+    },
     specialRequests: {
       type: String,
     },
@@ -168,6 +176,10 @@ const BookingSchema: Schema = new Schema(
       default: false,
     },
     hasTransportBooking: {
+      type: Boolean,
+      default: false,
+    },
+    isEarningsCleared: {
       type: Boolean,
       default: false,
     },

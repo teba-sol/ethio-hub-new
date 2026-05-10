@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Booking from '@/models/booking.model';
 import Festival from '@/models/festival.model';
+import Wallet from '@/models/wallet.model';
+import Transaction from '@/models/transaction.model';
 import * as jose from 'jose';
 import mongoose from 'mongoose';
 
@@ -24,13 +26,15 @@ export async function GET(request: NextRequest) {
 
     const query: any = {
       organizer: new mongoose.Types.ObjectId(organizerId),
-      status: 'confirmed',
     };
 
     if (serviceType === 'hotel') {
       query.hasHotelBooking = true;
     } else if (serviceType === 'transport') {
       query.hasTransportBooking = true;
+    } else {
+      // Default: only show bookings with at least one service
+      query.$or = [{ hasHotelBooking: true }, { hasTransportBooking: true }];
     }
 
     const bookings = await Booking.find(query)
@@ -38,49 +42,80 @@ export async function GET(request: NextRequest) {
       .populate('tourist', 'name email')
       .lean();
 
-    const settlements = bookings.map((booking: any) => {
-      const isHotel = booking.bookingDetails?.room?.hotelName;
-      const isTransport = booking.bookingDetails?.transport?.transportId;
+    const settlements: any[] = [];
 
-      if (serviceType === 'hotel' && !isHotel) return null;
-      if (serviceType === 'transport' && !isTransport) return null;
+    bookings.forEach((booking: any) => {
+      const festivalName = booking.festival?.name_en || booking.festival?.name || booking.festival?.name_am || 'Event';
+      const userName = booking.tourist?.name || 'Guest';
+      const userEmail = booking.tourist?.email || 'guest@email.com';
 
-      const totalServicePrice = (isHotel 
-        ? booking.bookingDetails?.room?.roomPrice * (booking.bookingDetails?.room?.nights || 1)
-        : booking.bookingDetails?.transport?.price * (booking.bookingDetails?.transport?.days || 1)
-      ) || 0;
+      if (booking.hasHotelBooking) {
+        const hotelPrice = booking.hotelFee || (booking.bookingDetails?.room?.roomPrice || 0);
+        const organizerFee = Math.round(hotelPrice * 0.05 * 100) / 100;
+        const providerDue = Math.round(hotelPrice * 0.85 * 100) / 100;
+        
+        const status = (booking as any).hotelSettlementStatus || 'pending';
+        const paidAt = (booking as any).hotelSettlementPaidAt || undefined;
+        const payoutDetails = (booking as any).hotelPayoutDetails || undefined;
 
-      const organizerFee = Math.round(totalServicePrice * 0.05 * 100) / 100;
-      const providerDue = totalServicePrice - organizerFee;
+        settlements.push({
+          _id: booking._id.toString() + '_hotel',
+          realBookingId: booking._id.toString(),
+          festivalId: booking.festival?._id,
+          festivalName,
+          serviceType: 'hotel',
+          providerId: booking.bookingDetails?.room?.hotelId,
+          providerName: booking.bookingDetails?.room?.hotelName || 'Hotel Provider',
+          userId: booking.tourist?._id,
+          userName,
+          userEmail,
+          price: hotelPrice,
+          organizerFee,
+          providerDue,
+          status,
+          paidAt,
+          payoutDetails,
+          details: {
+            roomType: booking.bookingDetails?.room?.roomName || 'Standard Room',
+            checkIn: booking.bookingDetails?.room?.checkIn,
+            checkOut: booking.bookingDetails?.room?.checkOut,
+          }
+        });
+      }
 
-      return {
-        _id: booking._id,
-        festivalId: booking.festival?._id,
-        festivalName: booking.festival?.name_en || booking.festival?.name || booking.festival?.name_am || 'Event',
-        serviceType: isHotel ? 'hotel' : 'transport',
-        providerId: isHotel ? booking.bookingDetails?.room?.hotelId : booking.bookingDetails?.transport?.transportId,
-        providerName: isHotel ? booking.bookingDetails?.room?.hotelName : booking.bookingDetails?.transport?.type || 'Provider',
-        userId: booking.tourist?._id,
-        userName: booking.tourist?.name || 'Guest',
-        userEmail: booking.tourist?.email || 'guest@email.com',
-        price: totalServicePrice,
-        organizerFee,
-        providerDue,
-        status: (booking as any).settlementStatus || 'pending',
-        bookedAt: booking.bookedAt,
-        paidAt: (booking as any).paidAt,
-        details: isHotel ? {
-          hotelName: booking.bookingDetails?.room?.hotelName,
-          roomType: booking.bookingDetails?.room?.roomName,
-          checkIn: booking.checkInDate,
-          checkOut: booking.checkOutDate,
-        } : {
-          transportType: booking.bookingDetails?.transport?.type,
-          pickupLocation: '',
-          dropoffLocation: '',
-        },
-      };
-    }).filter(Boolean);
+      if (booking.hasTransportBooking) {
+        const transportPrice = booking.transportFee || (booking.bookingDetails?.transport?.price || 0);
+        const organizerFee = Math.round(transportPrice * 0.05 * 100) / 100;
+        const providerDue = Math.round(transportPrice * 0.85 * 100) / 100;
+
+        const status = (booking as any).transportSettlementStatus || 'pending';
+        const paidAt = (booking as any).transportSettlementPaidAt || undefined;
+        const payoutDetails = (booking as any).transportPayoutDetails || undefined;
+
+        settlements.push({
+          _id: booking._id.toString() + '_transport',
+          realBookingId: booking._id.toString(),
+          festivalId: booking.festival?._id,
+          festivalName,
+          serviceType: 'transport',
+          providerId: booking.bookingDetails?.transport?.transportId,
+          providerName: booking.bookingDetails?.transport?.type || 'Transport Provider',
+          userId: booking.tourist?._id,
+          userName,
+          userEmail,
+          price: transportPrice,
+          organizerFee,
+          providerDue,
+          status,
+          paidAt,
+          payoutDetails,
+          details: {
+            transportType: booking.bookingDetails?.transport?.type || 'Standard Car',
+            pickupTime: booking.bookingDetails?.transport?.pickupTime,
+          }
+        });
+      }
+    });
 
     let filteredSettlements = settlements;
     if (status === 'pending') {
@@ -89,7 +124,13 @@ export async function GET(request: NextRequest) {
       filteredSettlements = settlements.filter((s: any) => s.status === 'paid');
     }
 
-    return NextResponse.json({ success: true, settlements: filteredSettlements });
+    const totalOrganizerFee = settlements.reduce((sum: number, s: any) => sum + s.organizerFee, 0);
+
+    return NextResponse.json({ 
+      success: true, 
+      settlements: filteredSettlements,
+      totalOrganizerFee
+    });
   } catch (error: any) {
     console.error('Error fetching settlements:', error);
     return NextResponse.json({ success: false, message: 'Internal Server Error' }, { status: 500 });
@@ -108,29 +149,94 @@ export async function POST(request: NextRequest) {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'ethio-hub-secret-key-2025');
     const { payload } = await jose.jwtVerify(token, secret);
     const organizerId = payload.userId as string;
+    const userObjectId = new mongoose.Types.ObjectId(organizerId);
 
-    const { pathname } = new URL(request.url);
-    const parts = pathname.split('/');
-    const bookingId = parts[parts.length - 2];
+    const body = await request.json();
+    const { amount, phoneNumber, bookingId, serviceType } = body;
 
     if (!bookingId) {
       return NextResponse.json({ success: false, message: 'Booking ID required' }, { status: 400 });
     }
 
-    const booking = await Booking.findOneAndUpdate(
-      { _id: bookingId, organizer: new mongoose.Types.ObjectId(organizerId) },
-      { 
-        settlementStatus: 'paid',
-        paidAt: new Date() 
-      },
-      { new: true }
-    );
+    const booking = await Booking.findOne({ _id: bookingId, organizer: userObjectId });
 
     if (!booking) {
       return NextResponse.json({ success: false, message: 'Booking not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, booking });
+    const payoutAmount = amount || booking.providerAmount;
+
+    // 0. Verify Wallet Funds
+    const wallet = await Wallet.findOne({ userId: userObjectId });
+    if (!wallet) {
+      return NextResponse.json({ success: false, message: 'Wallet not found' }, { status: 404 });
+    }
+
+    if (serviceType === 'hotel' && (wallet.hotelAvailableBalance || 0) < payoutAmount) {
+      return NextResponse.json({ success: false, message: 'Insufficient Hotel balance! This provider was likely already paid.' }, { status: 400 });
+    }
+    if (serviceType === 'transport' && (wallet.transportAvailableBalance || 0) < payoutAmount) {
+      return NextResponse.json({ success: false, message: 'Insufficient Transport balance! This provider was likely already paid.' }, { status: 400 });
+    }
+
+    // 1. Update Wallet
+    const incQuery: any = {
+      thirdPartyAvailableBalance: -payoutAmount,
+      thirdPartyPaidOut: payoutAmount
+    };
+
+    if (serviceType === 'hotel') {
+      incQuery.hotelAvailableBalance = -payoutAmount;
+      incQuery.hotelPaidOut = payoutAmount;
+    } else if (serviceType === 'transport') {
+      incQuery.transportAvailableBalance = -payoutAmount;
+      incQuery.transportPaidOut = payoutAmount;
+    }
+
+    await Wallet.findOneAndUpdate(
+      { userId: userObjectId },
+      { $inc: incQuery },
+      { upsert: true }
+    );
+
+    // 2. Create Transaction Record
+    await Transaction.create({
+      userId: userObjectId,
+      bookingId: booking._id,
+      type: 'THIRD_PARTY_SETTLEMENT',
+      amount: payoutAmount,
+      status: 'COMPLETED',
+      paymentRef: `SETTLE-${Date.now()}`,
+      metadata: {
+        phoneNumber,
+        payoutAmount,
+        serviceType,
+        bookingId: booking._id
+      }
+    });
+
+    // 3. Update Booking
+    const updateField = serviceType === 'hotel' ? 'hotelSettlementStatus' : 'transportSettlementStatus';
+    const paidAtField = serviceType === 'hotel' ? 'hotelSettlementPaidAt' : 'transportSettlementPaidAt';
+    const payoutDetailsField = serviceType === 'hotel' ? 'hotelPayoutDetails' : 'transportPayoutDetails';
+    
+    await Booking.updateOne(
+      { _id: booking._id },
+      { 
+        $set: { 
+          [updateField]: 'paid',
+          [paidAtField]: new Date(),
+          [payoutDetailsField]: {
+            amount: payoutAmount,
+            phoneNumber,
+            paidAt: new Date()
+          }
+        } 
+      },
+      { strict: false }
+    );
+
+    return NextResponse.json({ success: true, message: 'Settlement processed successfully' });
   } catch (error: any) {
     console.error('Error marking settlement as paid:', error);
     return NextResponse.json({ success: false, message: 'Internal Server Error' }, { status: 500 });

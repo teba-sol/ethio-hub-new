@@ -4,6 +4,9 @@ import Wallet from '@/models/wallet.model';
 import Transaction from '@/models/transaction.model';
 import { verifyToken } from '@/services/auth.service';
 import mongoose from 'mongoose';
+import Booking from '@/models/booking.model';
+import Festival from '@/models/festival.model';
+import User from '@/models/User';
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,6 +30,76 @@ export async function GET(request: NextRequest) {
 
     const userId = tokenResult.payload.userId as string;
     const userObjectId = new mongoose.Types.ObjectId(userId);
+
+    // 1. Process pending balances that should be cleared (Lazy Update)
+    const now = new Date();
+    
+    // Find festivals that have ended
+    const endedFestivals = await Festival.find({
+      organizer: userObjectId,
+      endDate: { $lt: now }
+    }).select('_id');
+    
+    const endedFestivalIds = endedFestivals.map(f => f._id);
+    
+    if (endedFestivalIds.length > 0) {
+      // Find uncleared bookings for these festivals
+      const unclearedBookings = await Booking.find({
+        festival: { $in: endedFestivalIds },
+        paymentStatus: 'paid',
+        isEarningsCleared: { $ne: true }
+      });
+      
+      if (unclearedBookings.length > 0) {
+        let totalTicketEarningsToClear = 0;
+        let totalAdminToClear = 0;
+        const bookingIdsToUpdate: any[] = [];
+        
+        for (const booking of unclearedBookings) {
+          // Only move the ticket portion (90% of ticket price)
+          // The provider funds (85%) and organizer service commission (5%) were already moved to available at booking time
+          const ticketPortion = (booking.ticketPrice || 0) * 0.90;
+          totalTicketEarningsToClear += ticketPortion;
+          totalAdminToClear += booking.platformFee || 0;
+          bookingIdsToUpdate.push(booking._id);
+        }
+        
+        // Update Organizer Wallet
+        await Wallet.findOneAndUpdate(
+          { userId: userObjectId, userRole: 'organizer' },
+          { 
+            $inc: { 
+              pendingBalance: -totalTicketEarningsToClear,
+              availableBalance: totalTicketEarningsToClear
+              // lifetimeEarned was already updated at booking time
+            } 
+          },
+          { upsert: true }
+        );
+
+        // Update Admin Wallet (Find Admin)
+        const adminUser = await User.findOne({ role: 'admin' });
+        if (adminUser) {
+          await Wallet.findOneAndUpdate(
+            { userId: adminUser._id, userRole: 'admin' },
+            {
+              $inc: {
+                pendingBalance: -totalAdminToClear,
+                availableBalance: totalAdminToClear,
+                lifetimeEarned: totalAdminToClear
+              }
+            },
+            { upsert: true }
+          );
+        }
+        
+        // Mark bookings as cleared
+        await Booking.updateMany(
+          { _id: { $in: bookingIdsToUpdate } },
+          { $set: { isEarningsCleared: true } }
+        );
+      }
+    }
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -74,7 +147,7 @@ export async function GET(request: NextRequest) {
         })
         .populate({
           path: 'bookingId',
-          select: 'tourist festival organizer quantity totalPrice adminCommission organizerEarnings commissionRate currency status paymentStatus paymentRef paymentMethod paymentDate contactInfo bookingDetails createdAt',
+          select: 'tourist festival organizer quantity totalPrice adminCommission organizerEarnings commissionRate currency status paymentStatus paymentRef paymentMethod paymentDate contactInfo bookingDetails providerAmount hotelFee transportFee createdAt',
           populate: [
             {
               path: 'tourist',
@@ -127,6 +200,12 @@ export async function GET(request: NextRequest) {
           lifetimeEarned: wallet.lifetimeEarned || 0,
           lifetimePaidOut: wallet.lifetimePaidOut || 0,
           lifetimeRefunded: wallet.lifetimeRefunded || 0,
+          thirdPartyAvailableBalance: wallet.thirdPartyAvailableBalance || 0,
+          thirdPartyPaidOut: wallet.thirdPartyPaidOut || 0,
+          hotelAvailableBalance: wallet.hotelAvailableBalance || 0,
+          hotelPaidOut: wallet.hotelPaidOut || 0,
+          transportAvailableBalance: wallet.transportAvailableBalance || 0,
+          transportPaidOut: wallet.transportPaidOut || 0,
           currency: wallet.currency || 'ETB',
         },
         transactions: transactions.map((tx: any) => {
@@ -155,6 +234,9 @@ export async function GET(request: NextRequest) {
             createdAt: tx.createdAt,
             orderId: order?._id || tx.orderId,
             bookingId: booking?._id || tx.bookingId,
+            providerAmount: booking?.providerAmount || 0,
+            hotelFee: booking?.hotelFee || 0,
+            transportFee: booking?.transportFee || 0,
             productId: product?._id || tx.productId || tx.metadata?.productId || order?.product || null,
             productName: product?.name || (booking?.festival ? `Festival: ${booking.festival.name}` : null),
             artisanName: artisan?.name || organizer?.name || tx.metadata?.artisanId || tx.metadata?.organizerId || null,
@@ -178,6 +260,9 @@ export async function GET(request: NextRequest) {
               unitPrice: tx.unitPrice || order?.unitPrice || (booking ? booking.totalPrice / booking.quantity : null) || tx.metadata?.unitPrice || null,
               totalPrice: order?.totalPrice || booking?.totalPrice || tx.metadata?.totalAmount || null,
               artisanEarnings: order?.artisanEarnings || booking?.organizerEarnings || tx.amount || null,
+              providerAmount: booking?.providerAmount || 0,
+              hotelFee: booking?.hotelFee || 0,
+              transportFee: booking?.transportFee || 0,
               adminCommission: order?.adminCommission || booking?.adminCommission || (booking?.totalPrice ? (booking.totalPrice - tx.amount) : (order?.totalPrice ? (order.totalPrice - tx.amount) : 0)),
               commissionRate: order?.commissionRate || booking?.commissionRate || tx.metadata?.commissionRate || null,
               paymentRef: tx.paymentRef || order?.paymentRef || booking?.paymentRef || null,

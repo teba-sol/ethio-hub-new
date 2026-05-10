@@ -47,6 +47,7 @@ export default function HotelDetailPage() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showGuestSelector, setShowGuestSelector] = useState(false);
   const [showEnquiryModal, setShowEnquiryModal] = useState(false);
   const [enquiryMessage, setEnquiryMessage] = useState('');
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -126,7 +127,7 @@ export default function HotelDetailPage() {
 
   // Get related hotels (other hotels from the same event, excluding current)
   const relatedHotels = allHotels.filter(h => {
-    const hId = h._id || h.id || '';
+    const hId = h.id || '';
     return hId !== hotelId && hId !== `hotel-${hotelId}`;
   }).slice(0, 3);
 

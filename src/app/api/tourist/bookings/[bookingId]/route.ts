@@ -6,7 +6,7 @@ import * as jose from 'jose';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { bookingId: string } }
+  { params }: { params: Promise<{ bookingId: string }> }
 ) {
   try {
     await connectDB();
@@ -27,7 +27,7 @@ export async function GET(
     }
 
     const touristId = payload.userId as string;
-    const { bookingId } = params;
+    const { bookingId } = await params;
 
     if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
       return NextResponse.json({ success: false, message: 'Invalid booking ID' }, { status: 400 });

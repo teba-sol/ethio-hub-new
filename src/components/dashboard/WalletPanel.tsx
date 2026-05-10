@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Coins, TrendingUp, DollarSign, Download, ArrowUpRight,
   ArrowDownLeft, RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet, Eye, X,
-  Truck
+  Truck, Users, Hotel, Car
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button, Badge } from '../UI';
@@ -23,6 +23,12 @@ interface WalletData {
     shippingFeesPaidOut?: number;
     refundInReview?: number;
     refundInReviewCount?: number;
+    thirdPartyAvailableBalance?: number;
+    thirdPartyPaidOut?: number;
+    hotelAvailableBalance?: number;
+    hotelPaidOut?: number;
+    transportAvailableBalance?: number;
+    transportPaidOut?: number;
   };
   transactions: Transaction[];
   pagination: {
@@ -43,6 +49,9 @@ interface Transaction {
   createdAt: string;
   orderId?: string;
   bookingId?: string;
+  providerAmount?: number;
+  hotelFee?: number;
+  transportFee?: number;
   productId?: string;
   productName?: string;
   artisanName?: string;
@@ -80,6 +89,9 @@ interface TransactionDetails {
   unitPrice?: number;
   totalPrice?: number;
   artisanEarnings?: number;
+  providerAmount?: number;
+  hotelFee?: number;
+  transportFee?: number;
   adminCommission?: number | null;
   commissionRate?: number | null;
   paymentRef?: string;
@@ -212,7 +224,12 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
     }
 
     const amount = Number(withdrawAmount);
-    const minAmount = userType === 'admin' ? 40 : 500;
+    if (amount <= 0) {
+      setWithdrawError('Withdrawal amount cannot be negative or zero');
+      return;
+    }
+
+    const minAmount = userType === 'admin' ? 40 : userType === 'organizer' ? 2 : 500;
     if (amount < minAmount) {
       setWithdrawError(`Minimum withdrawal amount is ETB ${minAmount}`);
       return;
@@ -223,7 +240,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
       return;
     }
 
-    if (userType === 'admin' && !phoneNumber) {
+    if ((userType === 'admin' || userType === 'organizer') && !phoneNumber) {
       setWithdrawError('Please enter a phone number');
       return;
     }
@@ -367,9 +384,44 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
               </div>
             )}
           </div>
-          <p className="text-2xl font-bold text-primary">{formatCurrency(wallet.lifetimeEarned)}</p>
-          <p className="text-xs text-gray-400 mt-1">{userType === 'admin' ? 'Total cleared commission' : 'Lifetime platform earnings'}</p>
+          <p className="text-2xl font-bold text-primary">
+            {formatCurrency((wallet.availableBalance || 0) + (wallet.lifetimePaidOut || 0))}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">{userType === 'admin' ? 'Total cleared commission' : 'Lifetime available earnings'}</p>
         </div>
+        
+        {userType === 'organizer' && (
+          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Users className="w-5 h-5 text-purple-600" />
+                </div>
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Third-Party Available</span>
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-primary">{formatCurrency(wallet.thirdPartyAvailableBalance || 0)}</p>
+            
+            <div className="mt-4 pt-4 border-t border-gray-50 grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  <Hotel className="w-3 h-3" />
+                  Hotel
+                </div>
+                <p className="text-sm font-bold text-gray-700">{formatCurrency(wallet.hotelAvailableBalance || 0)}</p>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  <Car className="w-3 h-3" />
+                  Transport
+                </div>
+                <p className="text-sm font-bold text-gray-700">{formatCurrency(wallet.transportAvailableBalance || 0)}</p>
+              </div>
+            </div>
+            
+            <p className="text-xs text-gray-400 mt-3">Total funds for providers</p>
+          </div>
+        )}
 
         {userType === 'admin' && (wallet.refundInReview || 0) > 0 && (
           <div
@@ -448,20 +500,21 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
       {(showWithdraw || userType === 'admin') && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100">
-            <h3 className="text-xl font-bold text-primary mb-4">Withdraw via Chapa</h3>
+            <h3 className="text-xl font-bold text-primary mb-4">Withdraw Funds</h3>
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Amount (ETB)</label>
                 <input
                   type="number"
+                  min={userType === 'admin' ? 40 : userType === 'organizer' ? 2 : 500}
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
-                  placeholder={`e.g. 1200 (Min. ${userType === 'admin' ? 40 : 500})`}
+                  placeholder={`e.g. 1200 (Min. ${userType === 'admin' ? 40 : userType === 'organizer' ? 2 : 500})`}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white text-sm"
                 />
               </div>
 
-              {userType === 'admin' && (
+              {(userType === 'admin' || userType === 'organizer') && (
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium">Recipient Phone Number</label>
                   <input
@@ -490,7 +543,7 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
               </Button>
 
               <p className="text-xs text-gray-400">
-                {userType === 'admin' 
+                {(userType === 'admin' || userType === 'organizer')
                   ? 'Funds will be transferred immediately to the specified phone number.'
                   : 'You will be redirected to Chapa to process the withdrawal request.'}
               </p>
@@ -865,6 +918,53 @@ export const WalletPanel: React.FC<WalletPanelProps> = ({
                   </div>
                 </div>
               </div>
+
+              {selectedTransaction.bookingId && (
+                <div className="bg-purple-50/50 p-6 rounded-2xl border border-purple-100">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-purple-900">Third-Party Financials</h4>
+                      <p className="text-xs text-purple-600">Breakdown for hotels and transport providers</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400">Total Provider Due (85%)</p>
+                      <p className="text-xl font-black text-purple-700">
+                        {formatCurrency(selectedTransaction.details?.providerAmount || selectedTransaction.providerAmount || 0)}
+                      </p>
+                    </div>
+                    
+                    { (selectedTransaction.details?.hotelFee || selectedTransaction.hotelFee || 0) > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                          <Hotel className="w-3 h-3" />
+                          Hotel Portion (85%)
+                        </div>
+                        <p className="text-lg font-bold text-gray-700">
+                          {formatCurrency((selectedTransaction.details?.hotelFee || selectedTransaction.hotelFee || 0) * 0.85)}
+                        </p>
+                      </div>
+                    )}
+                    
+                    { (selectedTransaction.details?.transportFee || selectedTransaction.transportFee || 0) > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                          <Car className="w-3 h-3" />
+                          Transport Portion (85%)
+                        </div>
+                        <p className="text-lg font-bold text-gray-700">
+                          {formatCurrency((selectedTransaction.details?.transportFee || selectedTransaction.transportFee || 0) * 0.85)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <h4 className="font-bold text-primary mb-4">Tourist Information</h4>

@@ -13,6 +13,12 @@ export interface IWallet extends Document {
   shippingFeesPaidOut: number;
   deliveryEarnings: number;
   deliveryTripsCompleted: number;
+  thirdPartyAvailableBalance: number;
+  thirdPartyPaidOut: number;
+  hotelAvailableBalance: number;
+  hotelPaidOut: number;
+  transportAvailableBalance: number;
+  transportPaidOut: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,6 +81,36 @@ const WalletSchema: Schema = new Schema(
       min: 0,
     },
     deliveryTripsCompleted: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    thirdPartyAvailableBalance: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    thirdPartyPaidOut: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    hotelAvailableBalance: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    hotelPaidOut: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    transportAvailableBalance: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    transportPaidOut: {
       type: Number,
       default: 0,
       min: 0,

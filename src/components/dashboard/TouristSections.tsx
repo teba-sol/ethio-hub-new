@@ -240,49 +240,51 @@ export const TouristBookingsView: React.FC = () => {
                 <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-gray-400" /><span className="font-medium">{selectedBooking.contactInfo?.phone || 'N/A'}</span></div>
               </div>
 
-              {/* Hotel and Transport Info */}
-              {(selectedBooking.hotelName || selectedBooking.transportType) && (
-                <div className="bg-gray-50 p-4 rounded-xl space-y-2">
-                  <p className="text-xs text-gray-400 uppercase">Additional Services</p>
-                  {selectedBooking.hotelName && (
-                    <div className="text-sm flex flex-col border-b border-gray-100 pb-2">
-                      <div className="flex justify-between">
-                        <span>Hotel: {selectedBooking.hotelName}</span>
-                        <span className="font-medium">ETB {selectedBooking.roomPrice || 0}</span>
-                      </div>
-                      {(selectedBooking.hotelRefCode || selectedBooking.bookingDetails?.room?.hotelRefCode) && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                            Hotel Ref: {selectedBooking.hotelRefCode || selectedBooking.bookingDetails?.room?.hotelRefCode}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {selectedBooking.transportType && (
-                    <div className="text-sm flex flex-col pt-1">
-                      <div className="flex justify-between">
-                        <span>Transport: {selectedBooking.transportType}</span>
-                        <span className="font-medium">ETB {selectedBooking.transportPrice || 0}</span>
-                      </div>
-                      {(selectedBooking.transportRefCode || selectedBooking.bookingDetails?.transport?.transportRefCode) && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <span className="text-[10px] bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                            Transport Ref: {selectedBooking.transportRefCode || selectedBooking.bookingDetails?.transport?.transportRefCode}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+              {/* Price Breakdown */}
+              <div className="bg-gray-50 p-4 rounded-xl space-y-3">
+                <p className="text-xs text-gray-400 uppercase font-bold">Price Breakdown</p>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">
+                    {selectedBooking.ticketType === 'standard' ? 'Standard Ticket' : 
+                     selectedBooking.ticketType === 'vip' ? 'VIP Ticket' : 'Early Bird Ticket'} 
+                    (x{selectedBooking.quantity})
+                  </span>
+                  <span className="font-bold">ETB {(selectedBooking.ticketPrice || 0).toLocaleString()}</span>
                 </div>
-              )}
-              
-
-              
-              <div className="border-t pt-4 space-y-2">
-                <div className="flex justify-between items-center font-bold text-lg">
-                  <span className="text-primary">Total Amount</span>
-                  <span className="text-primary">ETB {selectedBooking.totalPrice.toFixed(2)}</span>
+                
+                {selectedBooking.hotelName && (
+                  <div className="flex flex-col border-t border-gray-100 pt-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Hotel: {selectedBooking.hotelName}</span>
+                      <span className="font-bold">ETB {(selectedBooking.roomPrice || 0).toLocaleString()}</span>
+                    </div>
+                    {(selectedBooking.hotelRefCode || selectedBooking.bookingDetails?.room?.hotelRefCode) && (
+                      <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase w-fit mt-1">
+                        Ref: {selectedBooking.hotelRefCode || selectedBooking.bookingDetails?.room?.hotelRefCode}
+                      </span>
+                    )}
+                  </div>
+                )}
+                
+                {selectedBooking.transportType && (
+                  <div className="flex flex-col border-t border-gray-100 pt-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Transport: {selectedBooking.transportType}</span>
+                      <span className="font-bold">ETB {(selectedBooking.transportPrice || 0).toLocaleString()}</span>
+                    </div>
+                    {(selectedBooking.transportRefCode || selectedBooking.bookingDetails?.transport?.transportRefCode) && (
+                      <span className="text-[10px] bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-bold uppercase w-fit mt-1">
+                        Ref: {selectedBooking.transportRefCode || selectedBooking.bookingDetails?.transport?.transportRefCode}
+                      </span>
+                    )}
+                  </div>
+                )}
+                
+                <div className="flex justify-between items-center border-t border-gray-200 pt-3 mt-2">
+                  <span className="font-bold text-primary uppercase text-xs">Total Paid</span>
+                  <span className="font-bold text-xl text-primary underline decoration-primary/30 decoration-2 underline-offset-4">
+                    ETB {selectedBooking.totalPrice.toLocaleString()}
+                  </span>
                 </div>
               </div>
               

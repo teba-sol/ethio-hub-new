@@ -50,11 +50,12 @@ export async function GET(request: NextRequest) {
       // Ensure bookingDetails is included
       hotelName: booking.bookingDetails?.room?.hotelName,
       roomName: booking.bookingDetails?.room?.roomName,
-      roomPrice: (booking.bookingDetails?.room?.roomPrice || 0) * (booking.bookingDetails?.room?.nights || 1),
+      roomPrice: booking.hotelFee || (booking.bookingDetails?.room?.roomPrice || 0) * (booking.bookingDetails?.room?.nights || 1),
       hotelRefCode: booking.bookingDetails?.room?.hotelRefCode,
       transportType: booking.bookingDetails?.transport?.type,
-      transportPrice: (booking.bookingDetails?.transport?.price || 0) * (booking.bookingDetails?.transport?.days || 1),
+      transportPrice: booking.transportFee || (booking.bookingDetails?.transport?.price || 0) * (booking.bookingDetails?.transport?.days || 1),
       transportRefCode: booking.bookingDetails?.transport?.transportRefCode,
+      ticketPrice: booking.ticketPrice || (booking.totalPrice - (booking.hotelFee || 0) - (booking.transportFee || 0)),
     }));
 
     return NextResponse.json({ success: true, bookings: transformedBookings });
@@ -249,23 +250,35 @@ export async function PUT(request: NextRequest) {
       const transportTotal = (booking.bookingDetails?.transport?.price || 0) * (booking.bookingDetails?.transport?.days || 1);
       const ticketPrice = Math.max(0, booking.totalPrice - roomTotal - transportTotal);
 
-      // Calculate hotel fee (5% of room total)
-      const hotelFee = hasHotel ? Math.round(roomTotal * 0.05 * 100) / 100 : 0;
-      // Calculate transport fee (5% of transport total)
-      const transportFee = hasTransport ? Math.round(transportTotal * 0.05 * 100) / 100 : 0;
-      // Calculate admin commission (10% of ticket total)
-      const adminCommission = ticketPrice > 0 ? Math.round(ticketPrice * 0.10 * 100) / 100 : 0;
+      // Calculate admin commission (10% of TOTAL price)
+      const adminCommission = Math.round(booking.totalPrice * 0.10 * 100) / 100;
+
+      // Calculate hotel commission for organizer (5% of room total)
+      const hotelOrganizerCommission = hasHotel ? Math.round(roomTotal * 0.05 * 100) / 100 : 0;
+      // Calculate transport commission for organizer (5% of transport total)
+      const transportOrganizerCommission = hasTransport ? Math.round(transportTotal * 0.05 * 100) / 100 : 0;
+      
+      // Calculate Provider amounts (85% - as Admin takes 10% and Organizer takes 5%)
+      const hotelProviderAmount = hasHotel ? Math.round(roomTotal * 0.85 * 100) / 100 : 0;
+      const transportProviderAmount = hasTransport ? Math.round(transportTotal * 0.85 * 100) / 100 : 0;
+
       // Calculate organizer earnings from ticket (90% of ticket)
       const ticketOrganizerAmount = ticketPrice > 0 ? Math.round(ticketPrice * 0.90 * 100) / 100 : 0;
 
       booking.platformFee = adminCommission;
+      booking.adminCommission = adminCommission; // Sync both fields
       booking.commissionPercent = 10;
       booking.touristFeePercent = 5;
       booking.touristServiceFee = 0;
+      
       // Organizer gets: 90% of ticket + 5% of hotel + 5% of transport
-      booking.organizerAmount = ticketOrganizerAmount + hotelFee + transportFee;
-      booking.hotelFee = hotelFee;
-      booking.transportFee = transportFee;
+      booking.organizerAmount = ticketOrganizerAmount + hotelOrganizerCommission + transportOrganizerCommission;
+      // Provider gets: 85% of hotel + 85% of transport
+      booking.providerAmount = hotelProviderAmount + transportProviderAmount;
+      
+      booking.hotelFee = roomTotal;
+      booking.transportFee = transportTotal;
+      booking.ticketPrice = ticketPrice;
 
       // Generate receipt
       booking.receipt = {
@@ -293,12 +306,23 @@ export async function PUT(request: NextRequest) {
       const organizerId = booking.organizer;
       const adminUser = await User.findOne({ role: 'admin' }).session(session);
 
+      // Money distribution logic:
+      // 1. Ticket earnings (90% of ticket) -> Pending (wait for event end)
+      // 2. Service commission (5% of services) -> Available immediately
+      // 3. Provider portion (85% of services) -> Available immediately
+      const organizerServiceCommission = hotelOrganizerCommission + transportOrganizerCommission;
+      const totalProviderAmount = hotelProviderAmount + transportProviderAmount;
+
       // Update Organizer Wallet
       const organizerWallet = await Wallet.findOne({ userId: organizerId, userRole: 'organizer' }).session(session);
       if (organizerWallet) {
-        organizerWallet.pendingBalance = Math.max(0, (organizerWallet.pendingBalance || 0) - (booking.organizerAmount || 0));
-        organizerWallet.availableBalance = (organizerWallet.availableBalance || 0) + (booking.organizerAmount || 0);
+        organizerWallet.pendingBalance = (organizerWallet.pendingBalance || 0) + ticketOrganizerAmount;
+        organizerWallet.availableBalance = (organizerWallet.availableBalance || 0) + organizerServiceCommission;
+        organizerWallet.thirdPartyAvailableBalance = (organizerWallet.thirdPartyAvailableBalance || 0) + totalProviderAmount;
+        organizerWallet.hotelAvailableBalance = (organizerWallet.hotelAvailableBalance || 0) + hotelProviderAmount;
+        organizerWallet.transportAvailableBalance = (organizerWallet.transportAvailableBalance || 0) + transportProviderAmount;
         organizerWallet.lifetimeEarned = (organizerWallet.lifetimeEarned || 0) + (booking.organizerAmount || 0);
+        
         await organizerWallet.save({ session });
       }
 
@@ -328,30 +352,6 @@ export async function PUT(request: NextRequest) {
       }
 
       await booking.save({ session });
-
-      // Update organizer's wallet with earnings
-      await Wallet.findOneAndUpdate(
-        { userId: booking.organizer, userRole: 'organizer' },
-        {
-          $inc: {
-            availableBalance: booking.organizerAmount,
-            lifetimeEarned: booking.organizerAmount,
-          }
-        },
-        { upsert: true, session }
-      );
-
-      // Create transaction record
-      await Transaction.create([{
-        userId: booking.organizer,
-        type: 'earning',
-        amount: booking.organizerAmount,
-        currency: booking.currency || 'ETB',
-        status: 'completed',
-        description: `Booking payment for ${festival?.name || 'Event'}`,
-        reference: booking._id,
-        referenceType: 'booking',
-      }], { session });
     }
 
     await session.commitTransaction();
@@ -641,28 +641,47 @@ export async function POST(request: NextRequest) {
     const transportTotal = (selectedTransport?.price || 0) * (selectedTransport?.days || 1);
     const ticketPrice = Math.max(0, calculatedTotalPrice - roomTotal - transportTotal);
 
-    // Calculate fees
-    const hotelFee = hasHotel ? Math.round(roomTotal * 0.05 * 100) / 100 : 0;
-    const transportFee = hasTransport ? Math.round(transportTotal * 0.05 * 100) / 100 : 0;
-    const adminCommission = ticketPrice > 0 ? Math.round(ticketPrice * 0.10 * 100) / 100 : 0;
+    // Calculate admin commission (10% of TOTAL price)
+    const adminCommission = Math.round(calculatedTotalPrice * 0.10 * 100) / 100;
+
+    // Calculate commissions for organizer (5%)
+    const hotelOrganizerCommission = hasHotel ? Math.round(roomTotal * 0.05 * 100) / 100 : 0;
+    const transportOrganizerCommission = hasTransport ? Math.round(transportTotal * 0.05 * 100) / 100 : 0;
+    
+    // Calculate Provider amounts (85% - as Admin takes 10% and Organizer takes 5%)
+    const hotelProviderAmount = hasHotel ? Math.round(roomTotal * 0.85 * 100) / 100 : 0;
+    const transportProviderAmount = hasTransport ? Math.round(transportTotal * 0.85 * 100) / 100 : 0;
+
     const ticketOrganizerAmount = ticketPrice > 0 ? Math.round(ticketPrice * 0.90 * 100) / 100 : 0;
 
     bookingData.platformFee = adminCommission;
+    bookingData.adminCommission = adminCommission;
     bookingData.commissionPercent = 10;
     bookingData.touristFeePercent = 5;
     bookingData.touristServiceFee = touristServiceFee || 0;
     
     // Organizer gets: 90% of ticket + 5% of hotel + 5% of transport
-    bookingData.organizerAmount = ticketOrganizerAmount + hotelFee + transportFee;
-    bookingData.hotelFee = hotelFee;
-    bookingData.transportFee = transportFee;
+    bookingData.organizerAmount = ticketOrganizerAmount + hotelOrganizerCommission + transportOrganizerCommission;
+    // Provider gets: 85% of hotel + 85% of transport
+    bookingData.providerAmount = hotelProviderAmount + transportProviderAmount;
+
+    bookingData.hotelFee = roomTotal;
+    bookingData.transportFee = transportTotal;
+    bookingData.ticketPrice = ticketPrice;
     bookingData.hasHotelBooking = hasHotel;
     bookingData.hasTransportBooking = hasTransport;
     bookingData.adminCommission = adminCommission;
 
     const [booking] = await Booking.create([bookingData], { session });
 
-    // Initialize Organizer Wallet (Pending)
+    // Money distribution logic:
+    // 1. Ticket earnings (90% of ticket) -> Pending (wait for event end)
+    // 2. Service commission (5% of services) -> Available immediately
+    // 3. Provider portion (85% of services) -> Available immediately
+    const organizerServiceCommission = hotelOrganizerCommission + transportOrganizerCommission;
+    const totalProviderAmount = hotelProviderAmount + transportProviderAmount;
+
+    // Initialize Organizer Wallet
     const organizerId = festival.organizer;
     let organizerWallet = await Wallet.findOne({ userId: organizerId, userRole: 'organizer' }).session(session);
     if (!organizerWallet) {
@@ -675,9 +694,19 @@ export async function POST(request: NextRequest) {
         lifetimePaidOut: 0,
         lifetimeRefunded: 0,
         currency: 'ETB',
+        thirdPartyAvailableBalance: 0,
+        hotelAvailableBalance: 0,
+        transportAvailableBalance: 0
       });
     }
-    organizerWallet.pendingBalance = (organizerWallet.pendingBalance || 0) + bookingData.organizerAmount;
+
+    organizerWallet.pendingBalance = (organizerWallet.pendingBalance || 0) + ticketOrganizerAmount;
+    organizerWallet.availableBalance = (organizerWallet.availableBalance || 0) + organizerServiceCommission;
+    organizerWallet.thirdPartyAvailableBalance = (organizerWallet.thirdPartyAvailableBalance || 0) + totalProviderAmount;
+    organizerWallet.hotelAvailableBalance = (organizerWallet.hotelAvailableBalance || 0) + hotelProviderAmount;
+    organizerWallet.transportAvailableBalance = (organizerWallet.transportAvailableBalance || 0) + transportProviderAmount;
+    organizerWallet.lifetimeEarned = (organizerWallet.lifetimeEarned || 0) + bookingData.organizerAmount;
+    
     await organizerWallet.save({ session });
 
     // Create Organizer Transaction (Pending)
