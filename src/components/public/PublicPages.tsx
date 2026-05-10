@@ -2134,7 +2134,7 @@ export const ProductDetailPage: React.FC = () => {
             </div>
 
             <div className="text-4xl font-bold text-primary mb-8 flex items-baseline gap-2">
-              ${product.price} <span className="text-sm font-light text-gray-400">USD</span>
+              {product.price} <span className="text-sm font-light text-gray-400">ETB</span>
             </div>
 
             <p className="text-lg text-gray-600 leading-relaxed font-light mb-10 border-l-4 border-secondary pl-6">
@@ -2155,7 +2155,7 @@ export const ProductDetailPage: React.FC = () => {
               <div className="flex items-center justify-between border-t border-gray-200 pt-4">
                 <span className="text-xs font-bold uppercase tracking-widest text-gray-500">Total Price</span>
                 <span className="text-xl font-bold text-primary">
-                  ${product.price * quantity} <span className="text-xs font-light text-gray-400">USD</span>
+                  {product.price * quantity} <span className="text-xs font-light text-gray-400">ETB</span>
                 </span>
               </div>
 
@@ -2189,7 +2189,7 @@ export const ProductDetailPage: React.FC = () => {
               </div>
               <div>
                 <h4 className="flex items-center gap-2 font-bold text-primary mb-2 text-xs uppercase tracking-widest"><Truck className="w-4 h-4 text-secondary" /> Shipping</h4>
-                <p className="text-gray-500">{product.shippingLocations.join(', ')} (${product.shippingCost})</p>
+                <p className="text-gray-500">{product.shippingLocations.join(', ')} ({product.shippingCost} ETB)</p>
               </div>
             </div>
 

@@ -130,85 +130,95 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
         </div>
       </div>
 
-        {/* Content */}
-        <div className="p-5 flex flex-col flex-1 bg-white dark:bg-ethio-dark">
-          {/* Category & Rating */}
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-bold text-secondary uppercase tracking-[0.15em] bg-secondary/10 px-3 py-1 rounded-full">
-              {product.category}
-            </span>
-            <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-full">
-              <Star className="w-3 h-3 text-amber-400 fill-current" />
-              <span className="text-[10px] font-bold text-amber-700">{product.rating || '4.5'}</span>
-              <span className="text-[9px] text-amber-600 ml-0.5">(120)</span>
-            </div>
-          </div>
-
-          {/* Title */}
-          <h3 className="text-lg font-serif font-black text-primary group-hover:text-secondary transition-colors mb-2 line-clamp-2 leading-tight uppercase tracking-tight">
-            <Link href={`/products/${product.id}`}>{productName}</Link>
-          </h3>
-
-          {/* Artisan & Region */}
-          <div className="flex items-center gap-2 mb-4 flex-wrap">
-            <Link
-              href={`/products?artisan=${product.artisanId}`}
-              className="text-[11px] text-gray-500 hover:text-primary transition-colors font-medium flex items-center gap-1.5"
-            >
-              <span className="w-5 h-5 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-[9px] font-bold text-primary dark:text-primary">
-                {artisanName.charAt(0).toUpperCase()}
-              </span>
-              {t('productCard.by')} <span className="text-gray-700 dark:text-gray-300">{artisanName}</span>
-            </Link>
-            {displayRegion && (
-              <>
-                <span className="text-gray-300">•</span>
-                <span className="text-[10px] text-primary font-medium flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />
-                  {displayRegion}
-                </span>
-              </>
-            )}
-          </div>
-
-          {/* Price & Actions */}
-          <div className="mt-auto pt-4 border-t border-gray-100 dark:border-white/10 flex items-end justify-between gap-3">
-            <div className="flex flex-col flex-1 min-w-0">
-              <div className="flex items-baseline gap-1.5 flex-wrap">
-                <span className="text-xl font-black text-primary">
-                  {hasDiscount ? product.discountPrice : product.price}
-                </span>
-                <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest">ETB</span>
-                {hasDiscount && (
-                  <span className="text-xs text-gray-300 line-through shrink-0 font-medium">
-                    {product.price}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                size="sm"
-                className="rounded-2xl shadow-xl font-black text-[9px] uppercase tracking-[0.2em] bg-primary hover:bg-secondary transition-all duration-500 px-5 py-3 h-12 border-none"
-                onClick={handleAddToCart}
-              >
-                Add to Cart
-              </Button>
-            </div>
+      {/* Content */}
+      <div className="p-5 flex flex-col flex-1 bg-white dark:bg-ethio-dark">
+        {/* Category & Rating */}
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-[10px] font-bold text-secondary uppercase tracking-[0.15em] bg-secondary/10 px-3 py-1 rounded-full">
+            {product.category}
+          </span>
+          <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-full">
+            <Star className="w-3 h-3 text-amber-400 fill-current" />
+            <span className="text-[10px] font-bold text-amber-700">{product.rating ? Number(product.rating).toFixed(1) : '0'}</span>
+            <span className="text-[9px] text-amber-600 ml-0.5">({product.numReviews || 0})</span>
           </div>
         </div>
 
-        {/* Report Modal */}
-        {showReportModal && (
-          <ReportModal
-            targetId={product.id}
-            targetType="Product"
-            targetName={productName}
-            onClose={() => setShowReportModal(false)}
-            userId={user?.id || ''}
-          />
-        )}
-      </article>
+        {/* Title */}
+        <h3 className="text-lg font-serif font-black text-primary group-hover:text-secondary transition-colors mb-2 line-clamp-2 leading-tight uppercase tracking-tight">
+          <Link href={`/products/${product.id}`}>{productName}</Link>
+        </h3>
+
+        {/* Artisan & Region */}
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <Link
+            href={`/products?artisan=${product.artisanId}`}
+            className="text-[11px] text-gray-500 hover:text-primary transition-colors font-medium flex items-center gap-1.5"
+          >
+            <span className="w-5 h-5 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-[9px] font-bold text-primary dark:text-primary">
+              {artisanName.charAt(0).toUpperCase()}
+            </span>
+            {t('productCard.by')} <span className="text-gray-700 dark:text-gray-300">{artisanName}</span>
+          </Link>
+          {displayRegion && (
+            <>
+              <span className="text-gray-300">•</span>
+              <span className="text-[10px] text-primary font-medium flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                {displayRegion}
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* Price & Actions */}
+        <div className="mt-auto pt-4 border-t border-gray-100 dark:border-white/10 flex items-end justify-between gap-3">
+          <div className="flex flex-col flex-1 min-w-0">
+            <div className="flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-xl font-black text-primary">
+                {hasDiscount ? product.discountPrice : product.price}
+              </span>
+              <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest">ETB</span>
+              {hasDiscount && (
+                <span className="text-xs text-gray-300 line-through shrink-0 font-medium">
+                  {product.price}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${product.stock > 0 ? 'text-gray-400' : 'text-red-500'}`}>
+                {product.stock > 0 ? `Stock: ${product.stock}` : 'Out of Stock'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              className={`rounded-2xl shadow-xl font-black text-[9px] uppercase tracking-[0.2em] transition-all duration-500 px-5 py-3 h-12 border-none ${
+                product.stock > 0 
+                  ? 'bg-primary hover:bg-secondary' 
+                  : 'bg-gray-300 cursor-not-allowed grayscale'
+              }`}
+              onClick={product.stock > 0 ? handleAddToCart : undefined}
+              disabled={product.stock <= 0}
+            >
+              {product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <ReportModal
+          targetId={product.id}
+          targetType="Product"
+          targetName={productName}
+          onClose={() => setShowReportModal(false)}
+          userId={user?.id || ''}
+        />
+      )}
+    </article>
   );
 };

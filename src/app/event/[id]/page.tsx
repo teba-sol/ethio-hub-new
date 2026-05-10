@@ -282,10 +282,23 @@ export default function EventPage() {
               <div className="flex flex-wrap items-center gap-8 pt-4">
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] font-bold text-secondary uppercase tracking-[0.3em]">{language === 'am' ? 'ቦታ' : 'Location'}</span>
-                  <div className="flex items-center gap-2 text-xl font-light text-gray-700 dark:text-white/90 transition-colors">
-                    <MapPin className="w-5 h-5 text-secondary" />
-                    <span>{getLocalizedText(festival.location as any, 'name', language) || festival.locationName}</span>
-                  </div>
+                  <button
+                    onClick={() => {
+                      const lat = festival.coordinates?.lat || festival.location?.coordinates?.lat;
+                      const lng = festival.coordinates?.lng || festival.location?.coordinates?.lng;
+                      const name = getLocalizedText(festival.location as any, 'name', language) || festival.locationName;
+                      
+                      const url = lat && lng 
+                        ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+                        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
+                      window.open(url, '_blank');
+                    }}
+                    className="flex items-center gap-2 text-xl font-light text-gray-700 dark:text-white/90 transition-all hover:text-primary group/loc text-left"
+                  >
+                    <MapPin className="w-5 h-5 text-secondary group-hover/loc:scale-110 transition-transform" />
+                    <span className="border-b border-transparent group-hover/loc:border-primary">{getLocalizedText(festival.location as any, 'name', language) || festival.locationName}</span>
+                    <ExternalLink className="w-3 h-3 opacity-0 group-hover/loc:opacity-100 transition-opacity" />
+                  </button>
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] font-bold text-secondary uppercase tracking-[0.3em]">{language === 'am' ? 'ቀን' : 'Date'}</span>

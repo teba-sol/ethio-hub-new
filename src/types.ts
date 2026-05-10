@@ -125,6 +125,7 @@ export interface Product {
   returnPolicy: string;
   currency: string;
   discountPrice?: number;
+  numReviews?: number;
 }
 
 export interface RoomType {
