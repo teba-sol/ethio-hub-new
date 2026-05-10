@@ -137,11 +137,16 @@ export async function POST(request: NextRequest) {
     const validationResult = validationSchema.safeParse(body);
 
     if (!validationResult.success) {
+      const fieldErrors = validationResult.error.flatten().fieldErrors;
+      const errorDetail = Object.entries(fieldErrors)
+        .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+        .join('; ');
+        
       return new NextResponse(
         JSON.stringify({ 
           success: false, 
-          message: 'Validation failed', 
-          errors: validationResult.error.flatten().fieldErrors 
+          message: `Validation failed: ${errorDetail}`, 
+          errors: fieldErrors
         }),
         { status: 400, headers: { 'content-type': 'application/json' } }
       );

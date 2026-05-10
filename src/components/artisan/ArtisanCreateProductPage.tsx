@@ -171,7 +171,7 @@ export const ArtisanCreateProductPage: React.FC = () => {
          tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : undefined,
          weight: formData.weight || undefined,
          deliveryTime: formData.deliveryTime,
-         shippingFee: '0', 
+         shippingFee: 0, 
          status: status
        };
 
@@ -187,7 +187,9 @@ export const ArtisanCreateProductPage: React.FC = () => {
        const result = await response.json();
 
        if (!response.ok) {
-         const errorMsg = result.errors ? result.errors.join(', ') : (result.message || 'Failed to save product');
+         const errorMsg = result.errors 
+           ? (Array.isArray(result.errors) ? result.errors.join(', ') : Object.values(result.errors).flat().join(', ')) 
+           : (result.message || 'Failed to save product');
          throw new Error(errorMsg);
        }
 

@@ -220,6 +220,7 @@ export const FestivalCreationWizard: React.FC<{
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadingFile, setUploadingFile] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const validateStep = (currentStep: number) => {
     const newErrors: Record<string, string> = {};
@@ -728,6 +729,9 @@ export const FestivalCreationWizard: React.FC<{
       return;
     }
 
+    if (isPublishing) return;
+    setIsPublishing(true);
+
     try {
       const dataToPublish = {
         ...formData.core,
@@ -751,7 +755,7 @@ export const FestivalCreationWizard: React.FC<{
         pricing: formData.pricing,
         ticketTypes: formData.ticketTypes,
         status: 'Draft',
-        verificationStatus: 'Pending Approval',
+        verificationStatus: 'Draft',
         submittedAt: new Date().toISOString()
       };
 
@@ -775,6 +779,8 @@ export const FestivalCreationWizard: React.FC<{
     } catch (error) {
       console.error('Error publishing festival:', error);
       showNotification('An error occurred while publishing the festival.', 'error');
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -2836,28 +2842,7 @@ export const FestivalCreationWizard: React.FC<{
                          </div>
                       </div>
 
-                      {/* Final Actions */}
-                      <div className="flex flex-col justify-center space-y-6">
-                        <div className="p-8 bg-amber-50 rounded-[32px] border border-amber-100">
-                          <div className="flex items-start gap-4">
-                            <div className="p-2 bg-amber-100 rounded-lg">
-                              <AlertCircle className="w-5 h-5 text-amber-600" />
-                            </div>
-                            <div>
-                              <h5 className="text-sm font-bold text-amber-800 mb-1">Verification Required</h5>
-                              <p className="text-xs text-amber-700/70 leading-relaxed">Your festival will be reviewed by our team before it becomes visible to tourists. This usually takes 24-48 hours.</p>
-                            </div>
-                          </div>
-                        </div>
 
-                        <Button 
-                          size="lg" 
-                          className="w-full h-16 rounded-[24px] text-lg font-black shadow-xl shadow-primary/20"
-                          onClick={handlePublish}
-                        >
-                          Submit for Verification
-                        </Button>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -2889,6 +2874,7 @@ export const FestivalCreationWizard: React.FC<{
             <Button
               rightIcon={step === 8 ? CheckCircle2 : ChevronRight}
               onClick={step === 8 ? handlePublish : nextStep}
+              isLoading={step === 8 && isPublishing}
               className={step === 8 ? 'bg-emerald-500 hover:bg-emerald-600 border-emerald-500' : ''}
             >
               {step === 8 ? (initialData ? 'Save Changes' : 'Complete & Submit') : 'Continue'}

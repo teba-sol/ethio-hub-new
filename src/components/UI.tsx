@@ -163,10 +163,10 @@ export const EventStatusBadge: React.FC<EventStatusBadgeProps> = ({
   if (verificationStatus === 'Not Submitted') {
     status = 'Draft';
     variant = 'secondary';
-  } else if (verificationStatus === 'Pending Review') {
+  } else if (verificationStatus === 'Pending Review' || verificationStatus === 'Pending Approval') {
     status = 'Pending Review';
     variant = 'warning';
-  } else if (verificationStatus === 'Under Review') {
+  } else if (verificationStatus === 'Under Review' || verificationStatus === 'under_review') {
     status = 'Under Review';
     variant = 'info';
   } else if (verificationStatus === 'Rejected') {

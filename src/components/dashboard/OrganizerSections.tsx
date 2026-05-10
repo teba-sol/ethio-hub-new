@@ -412,35 +412,36 @@ const getImageUrl = (path: string | undefined | null) => {
                <button onClick={onBack} className="p-2 bg-ethio-bg rounded-xl text-primary hover:bg-primary hover:text-white transition-all mr-2">
                  <ChevronLeft className="w-5 h-5" />
                </button>
-               <Badge variant="secondary" className="bg-secondary/10 text-secondary border-none">
-                 {currentData.status === 'Completed' || (currentData.endDate && new Date(currentData.endDate) < new Date()) ? 'Completed' : 
-                  currentData.status === 'Published' ? 'Published' : 
-                  (currentData.verificationStatus === 'Pending Approval' || currentData.verificationStatus === 'Under Review') ? 'Under Review' : 'Draft'}
-               </Badge>
-               {currentData.isVerified && <VerifiedBadge />}
-               {/* Verification Status Badge */}
-               <span className="px-3 py-1 rounded-full text-xs font-medium">
-                 {currentData.verificationStatus === 'Pending Approval' && (
+               {/* Consolidated Status Badge */}
+               <div className="flex items-center gap-2">
+                 {currentData.status === 'Completed' || (currentData.endDate && new Date(currentData.endDate) < new Date()) ? (
+                   <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-none">
+                     Completed
+                   </Badge>
+                 ) : currentData.verificationStatus === 'Pending Approval' ? (
                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary">
                      Pending Review
                    </Badge>
-                 )}
-                 {currentData.verificationStatus === 'Under Review' && (
+                 ) : currentData.verificationStatus === 'Under Review' ? (
                    <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500">
                      Under Review
                    </Badge>
-                 )}
-                 {currentData.verificationStatus === 'Approved' && (
+                 ) : currentData.verificationStatus === 'Approved' ? (
                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500">
-                     Approved
+                     Published
+                   </Badge>
+                 ) : currentData.verificationStatus === 'Rejected' ? (
+                   <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500">
+                     Rejected
+                   </Badge>
+                 ) : (
+                   <Badge variant="secondary" className="bg-secondary/10 text-secondary border-none">
+                     Draft
                    </Badge>
                  )}
-                 {currentData.verificationStatus === 'Rejected' && (
-                 <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500">
-                   Rejected
-                 </Badge>
-               )}
-               </span>
+               </div>
+               {currentData.isVerified && <VerifiedBadge />}
+
              </div>
 
              {currentData.verificationStatus === 'Rejected' && (

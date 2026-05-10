@@ -832,7 +832,7 @@ const MOCK_EVENTS: Event[] = Array.from({ length: 8 }).map((_, i) => ({
 
 export const AdminEventsPage: React.FC = () => {
   const { t } = useLanguage();
-  const [filterStatus, setFilterStatus] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('Pending Approval');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
   const [events, setEvents] = useState<any[]>([]);
@@ -1330,7 +1330,7 @@ export const AdminEventsPage: React.FC = () => {
                        >
                          {t("admin.review")}
                        </Button>
-                      {['Pending Approval', 'Under Review', 'pending_approval', 'under_review'].includes(event.status) ? (
+                      {['Pending Approval', 'Under Review', 'pending_approval', 'under_review'].includes(event.verificationStatus || event.status) ? (
                         <div className="relative">
                           <button 
                             className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 bg-gray-50"
