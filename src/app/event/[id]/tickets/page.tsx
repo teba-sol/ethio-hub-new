@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
   ArrowLeft, Check, Hotel, Car, Star, Info, ChevronRight, 
   ShoppingCart, Plus, Bed, Bus, Plane, Building, Sparkles,
-  RefreshCcw, ShieldCheck, Ticket, CreditCard, Clock, Shield
+  RefreshCcw, ShieldCheck, Ticket, CreditCard, Clock, Shield, Loader2
 } from 'lucide-react';
 import { TicketCard } from '@/components/booking/TicketCard';
 import { PriceSummary } from '@/components/booking/PriceSummary';
@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 const EARLY_BIRD_WINDOW_HOURS = Number(process.env.NEXT_PUBLIC_EARLY_BIRD_WINDOW_HOURS || 5);
 
-export default function TicketsPage() {
+function TicketsContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -470,5 +470,20 @@ export default function TicketsPage() {
         </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+export default function TicketsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-ethio-bg flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6">
+          <Loader2 className="w-16 h-16 text-secondary animate-spin" />
+          <p className="text-xs font-black uppercase tracking-[0.4em] text-gray-400 animate-pulse">Designing Experience</p>
+        </div>
+      </div>
+    }>
+      <TicketsContent />
+    </Suspense>
   );
 }

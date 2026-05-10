@@ -946,6 +946,8 @@ export const AboutPage: React.FC = () => {
   );
 };
 
+export default Homepage;
+
 export const ProductListingPage: React.FC = () => {
   const searchParams = useSearchParams();
   const artisanParam = searchParams?.get('artisan');

@@ -94,3 +94,5 @@ export const DeliveryWaitingPage: React.FC = () => {
     </div>
   );
 };
+
+export default DeliveryWaitingPage;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button, Input } from "../../components/UI";
@@ -15,7 +15,7 @@ const readJsonSafely = async (response: Response) => {
   }
 };
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const token = useMemo(() => searchParams?.get("token") || "", [searchParams]);
 
@@ -101,5 +101,17 @@ export default function VerifyEmailPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    }>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }

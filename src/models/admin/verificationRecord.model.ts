@@ -4,7 +4,7 @@ export type VerificationAction = 'approved' | 'rejected' | 'under_review';
 
 export interface IVerificationRecord extends Document {
   userId: mongoose.Types.ObjectId;
-  userRole: 'artisan' | 'organizer';
+  userRole: 'artisan' | 'organizer' | 'delivery';
   artisanProfileId?: mongoose.Types.ObjectId;
   action: VerificationAction;
   adminId: mongoose.Types.ObjectId;
@@ -24,7 +24,7 @@ const VerificationRecordSchema = new Schema<IVerificationRecord>(
     },
     userRole: {
       type: String,
-      enum: ['artisan', 'organizer'],
+      enum: ['artisan', 'organizer', 'delivery'],
       required: true,
     },
     artisanProfileId: {

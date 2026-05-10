@@ -4,7 +4,12 @@ import { Camera, Upload, MapPin, Briefcase, User as UserIcon, CheckCircle, Alert
 import { Button, Input } from '../../components/UI';
 import { useAuth } from '../../context/AuthContext';
 import { ArtisanStatus } from '../../types';
-import { LocationPicker } from '../../components/checkout/LocationPicker';
+import dynamic from 'next/dynamic';
+
+const LocationPicker = dynamic(
+  () => import('../../components/checkout/LocationPicker').then(mod => mod.LocationPicker),
+  { ssr: false }
+);
 
 // Chapa Bank IDs - Replace these placeholder UUIDs with actual IDs from GET /api/chapa.co/v1/banks
 const BANK_ID_MAP: Record<string, string> = {

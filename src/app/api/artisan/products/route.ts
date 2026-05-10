@@ -140,6 +140,11 @@ export async function POST(req: Request) {
       status,
     } = validationResult.data;
 
+    const normalizedNameEn = textValue(name_en, name);
+    const normalizedNameAm = textValue(name_am, name);
+    const normalizedDescriptionEn = textValue(description_en, description);
+    const normalizedDescriptionAm = textValue(description_am, description);
+
     let productStatus = status;
     if (status === 'Publish' || status === 'Published') {
       productStatus = Number(stock) === 0 ? 'Out of Stock' : 'Pending';
@@ -147,9 +152,7 @@ export async function POST(req: Request) {
       productStatus = 'Draft';
     }
 
-    const tagsArray = tags
-      ? (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()) : tags)
-      : [];
+    const tagsArray = Array.isArray(tags) ? tags : [];
 
     const shouldAutoPending = isProductCompleteForReview({
       name_en: normalizedNameEn,
@@ -185,10 +188,9 @@ export async function POST(req: Request) {
       tags: tagsArray,
       weight,
       deliveryTime,
-      shippingFee,
-      status: productStatus,
-      verificationStatus:
-        ['Published', 'Pending', 'Out of Stock'].includes(productStatus) || shouldAutoPending ? 'Pending' : 'Pending',
+      shippingFee: String(shippingFee),
+      status: productStatus as any,
+      verificationStatus: 'Pending',
     });
 
     if (product.verificationStatus === 'Pending') {

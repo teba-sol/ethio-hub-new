@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
@@ -18,7 +18,7 @@ const readJsonSafely = async (response: Response) => {
   }
 };
 
-export default function RegisterVerifyPage() {
+function VerifyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryEmail = searchParams?.get("email") || "";
@@ -169,5 +169,17 @@ export default function RegisterVerifyPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterVerifyPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    }>
+      <VerifyContent />
+    </Suspense>
   );
 }

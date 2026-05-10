@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function TestPaymentPage() {
+function TestPaymentContent() {
   const searchParams = useSearchParams();
   const [txRef, setTxRef] = useState(searchParams.get("tx_ref") || "");
   const [result, setResult] = useState<any>(null);
@@ -93,5 +93,17 @@ export default function TestPaymentPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TestPaymentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    }>
+      <TestPaymentContent />
+    </Suspense>
   );
 }
