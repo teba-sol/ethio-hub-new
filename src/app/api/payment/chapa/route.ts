@@ -85,13 +85,11 @@ export async function POST(request: NextRequest) {
       tx_ref: txRef,
       callback_url: `${FRONTEND_URL}/api/payment/chapa/callback`,
       return_url: bookingId
-        ? `${FRONTEND_URL}/payment-success?bookingId=${bookingId}&status=success&tx_ref=${txRef}`
-        : orderId
-          ? `${FRONTEND_URL}/payment-success?orderId=${orderId}&status=success&tx_ref=${txRef}`
-          : `${FRONTEND_URL}/payment-success?status=success&tx_ref=${txRef}`,
+        ? `${FRONTEND_URL}/dashboard/tourist/bookings`
+        : `${FRONTEND_URL}/products`,
       customization: {
-        title: "EthioHub Payment",
-        description: description || "Booking payment"
+        title: "EthioHub Pay",
+        description: (description || "Booking payment").substring(0, 255)
       },
       meta: {
         bookingId: bookingId,

@@ -58,6 +58,11 @@ phone: {
       type: Date,
       default: null
     },
+    
+    profileImage: {
+      type: String,
+      default: null
+    },
 
     artisanStatus: {
       type: String,

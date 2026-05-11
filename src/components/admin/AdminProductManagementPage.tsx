@@ -518,8 +518,8 @@ export const AdminProductManagementPage: React.FC<{ initialId?: string }> = ({ i
         {[
           { label: 'Total Products', value: stats.total.toString() || '0', icon: Package, color: 'text-blue-600', bg: 'bg-blue-50' },
           { label: 'Units Sold', value: (stats.totalSold || 0).toLocaleString(), icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Total Revenue', value: `ETB ${((stats.totalRevenue || 0) / 1000000).toFixed(1)}M`, icon: DollarSign, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-          { label: 'Platform Comm.', value: `ETB ${((stats.totalCommission || 0) / 1000).toFixed(1)}K`, icon: CheckCircle2, color: 'text-amber-600', bg: 'bg-amber-50' },
+          { label: 'Total Revenue', value: (stats.totalRevenue - stats.totalCommission) >= 1000 ? `ETB ${((stats.totalRevenue - stats.totalCommission) / 1000).toFixed(1)}K` : `ETB ${(stats.totalRevenue - stats.totalCommission).toLocaleString()}`, icon: DollarSign, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+          { label: 'Commission', value: stats.totalCommission >= 1000 ? `ETB ${(stats.totalCommission / 1000).toFixed(1)}K` : `ETB ${stats.totalCommission.toLocaleString()}`, icon: CheckCircle2, color: 'text-amber-600', bg: 'bg-amber-50' },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm">
             <div className="flex items-center gap-4">

@@ -216,7 +216,7 @@ export default function TransportPage() {
               const remainingUnits = transport.remaining ?? 0;
               const isSoldOut = remainingUnits <= 0;
               const isSelected = selectedTransport?.id === transport.id;
-              const isVipFree = ticketSelection?.type === 'vip' && transport.vipIncluded;
+              const isVipFree = (ticketSelection?.type as string) === 'vip' && transport.vipIncluded;
 
               return (
                 <div
@@ -390,15 +390,13 @@ export default function TransportPage() {
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-500 font-medium">Daily Rate</span>
                           <span className="text-sm font-black text-gray-900">
-                            {ticketSelection?.type === 'vip' && selectedTransport.vipIncluded
-                              ? 'Included'
-                              : `${currency} ${selectedTransport.price}`}
+                            {`${currency} ${selectedTransport.price || 0}`}
                           </span>
                         </div>
                         <div className="flex justify-between items-center pt-4 border-t border-gray-50">
                           <span className="text-base font-black text-gray-900">Transport Total</span>
                           <span className="text-2xl font-serif font-black text-primary">
-                            {getTransportTotal() === 0 ? 'Included' : `${currency} ${getTransportTotal()}`}
+                            {`${currency} ${getTransportTotal()}`}
                           </span>
                         </div>
                       </div>

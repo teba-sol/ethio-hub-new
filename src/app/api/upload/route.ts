@@ -24,31 +24,39 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm'];
-    if (!allowedTypes.includes(file.type)) {
+    const isImage = file.type.startsWith('image/');
+    const allowedDocs = ['application/pdf', 'video/mp4', 'video/webm'];
+    
+    if (!isImage && !allowedDocs.includes(file.type)) {
       return NextResponse.json({ 
         success: false, 
         message: 'Invalid file type. Only images and videos are allowed.' 
       }, { status: 400 });
     }
 
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dmhu32ya9';
     const uploadPreset = 'ethio-hub';
 
     if (!cloudName) {
+      console.error('Cloudinary Cloud Name is missing');
       return NextResponse.json({ 
         success: false, 
         message: 'Cloudinary configuration missing.' 
       }, { status: 500 });
     }
 
+    console.log(`Uploading file: ${file.name}, type: ${file.type}, folder: ${folder}`);
+
     // Upload to Cloudinary using unsigned preset
     try {
-      const bytes = await file.arrayBuffer();
       const formDataUpload = new FormData();
-      formDataUpload.append('file', new Blob([bytes], { type: file.type }));
+      formDataUpload.append('file', file);
       formDataUpload.append('upload_preset', uploadPreset);
-      formDataUpload.append('folder', `ethio-hub/${folder}`);
+      
+      // Only add folder if provided
+      if (folder) {
+        formDataUpload.append('folder', folder);
+      }
 
       const cloudResponse = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
         method: 'POST',

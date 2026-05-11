@@ -83,9 +83,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Name, email, and role are required' }, { status: 400 });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json({ message: 'Invalid email format' }, { status: 400 });
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    const isLikelyRandom = (str: string) => {
+      const consonants = str.match(/[^aeiou0-9@.]{4,}/gi);
+      if (consonants) return true;
+      const [name, domain] = str.split('@');
+      if (!name || name.length < 3) return true;
+      if (!domain || domain.length < 4) return true;
+      return false;
+    };
+
+    if (!emailRegex.test(email) || isLikelyRandom(email)) {
+      return NextResponse.json({ message: 'Invalid or suspicious email address' }, { status: 400 });
     }
 
     const validRoles = ['admin', 'tourist', 'organizer', 'artisan', 'delivery'];
@@ -94,8 +103,13 @@ export async function POST(req: Request) {
     }
 
     if (role.toLowerCase() === 'delivery') {
-      if (!deliveryProfile?.phone || !deliveryProfile?.vehicleType) {
+      const phone = deliveryProfile?.phone || '';
+      const phoneRegex = /^(09|07)\d{8}$/;
+      if (!phone || !deliveryProfile?.vehicleType) {
         return NextResponse.json({ message: 'Phone and vehicle type are required for delivery personnel' }, { status: 400 });
+      }
+      if (!phoneRegex.test(phone)) {
+        return NextResponse.json({ message: 'Delivery phone must be 10 digits starting with 09 or 07' }, { status: 400 });
       }
     }
 

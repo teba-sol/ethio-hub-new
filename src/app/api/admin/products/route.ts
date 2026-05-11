@@ -88,9 +88,19 @@ export async function GET(req: NextRequest) {
 
     const productIds = products.map((p: any) => p._id);
 
+    // Match criteria for "successful" orders
+    const validOrderMatch = {
+      status: { $nin: ['Cancelled', 'Returned'] },
+      $or: [
+        { paymentStatus: { $in: ['paid', 'Paid'] } },
+        { status: { $in: ['Paid', 'Ready for Pickup', 'Assigned', 'Shipped', 'Delivered'] } }
+      ]
+    };
+
     const [orderAgg, totalStats] = await Promise.all([
+      // Stats for products on the current page
       Order.aggregate([
-        { $match: { product: { $in: productIds }, paymentStatus: { $in: ['paid', 'Paid'] } } },
+        { $match: { ...validOrderMatch, product: { $in: productIds } } },
         { $group: {
           _id: '$product',
           sold: { $sum: '$quantity' },
@@ -99,13 +109,29 @@ export async function GET(req: NextRequest) {
           orderCount: { $sum: 1 },
         }}
       ]),
-      Order.aggregate([
-        { $match: { product: { $in: productIds }, paymentStatus: { $in: ['paid', 'Paid'] } } },
+      // Global stats across ALL products matching the current search/filter
+      Product.aggregate([
+        { $match: query },
+        { $project: { _id: 1 } },
+        { $lookup: {
+          from: 'orders',
+          localField: '_id',
+          foreignField: 'product',
+          as: 'orders'
+        }},
+        { $unwind: '$orders' },
+        { $match: { 
+          'orders.status': { $nin: ['Cancelled', 'Returned'] },
+          $or: [
+            { 'orders.paymentStatus': { $in: ['paid', 'Paid'] } },
+            { 'orders.status': { $in: ['Paid', 'Ready for Pickup', 'Assigned', 'Shipped', 'Delivered'] } }
+          ]
+        }},
         { $group: {
           _id: null,
-          totalSold: { $sum: '$quantity' },
-          totalRevenue: { $sum: '$totalPrice' },
-          totalCommission: { $sum: '$adminCommission' },
+          totalSold: { $sum: '$orders.quantity' },
+          totalRevenue: { $sum: '$orders.totalPrice' },
+          totalCommission: { $sum: '$orders.adminCommission' },
         }}
       ]),
     ]);

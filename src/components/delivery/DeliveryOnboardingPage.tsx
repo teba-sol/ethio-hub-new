@@ -5,8 +5,29 @@ import { Button, Input } from '@/components/UI';
 import { useAuth } from '@/context/AuthContext';
 
 export const DeliveryOnboardingPage: React.FC = () => {
-  const { user, updateUser } = useAuth();
   const router = useRouter();
+  const { user, updateUser, loading: authLoading } = useAuth();
+
+  const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+  const [formData, setFormData] = useState({
+    bankName: '',
+    accountNumber: '',
+    telebirrNumber: '',
+  });
+
+  const [profileImage, setProfileImage] = useState<string | null>(user?.profileImage || null);
+  const [idDocument, setIdDocument] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user && !authLoading) {
+      router.replace('/auth/login');
+      return;
+    }
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     if (!user) return;
@@ -16,48 +37,6 @@ export const DeliveryOnboardingPage: React.FC = () => {
       return;
     }
   }, [user, router]);
-
-  if (user?.deliveryStatus !== 'Not Submitted' && user?.deliveryStatus !== 'Rejected' && user?.deliveryStatus !== 'Modification Requested') {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center">
-          <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
-            <AlertCircle className="w-10 h-10" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Application {user?.deliveryStatus}</h2>
-          <p className="text-gray-600 mb-8">
-            Your delivery guy application is currently {user?.deliveryStatus?.toLowerCase()}.
-            You will be notified once the admin reviews your profile.
-          </p>
-          <Button onClick={() => router.push('/')} variant="outline" className="w-full">Return Home</Button>
-        </div>
-      </div>
-    );
-  }
-
-  const [step, setStep] = useState(1);
-  const [submitting, setSubmitting] = useState(false);
-  const [uploading, setUploading] = useState<string | null>(null);
-  const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
-
-  const showNotify = (message: string, type: 'success' | 'error' = 'error') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 5000);
-  };
-
-  const [formData, setFormData] = useState({
-    bankName: '',
-    accountNumber: '',
-    telebirrNumber: '',
-  });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const [profileImage, setProfileImage] = useState<string | null>(user?.profileImage || null);
-  const [idDocument, setIdDocument] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.deliveryProfile) {
@@ -70,6 +49,50 @@ export const DeliveryOnboardingPage: React.FC = () => {
       setIdDocument(user.deliveryProfile.idDocument || null);
     }
   }, [user]);
+
+  const showNotify = (message: string, type: 'success' | 'error' = 'error') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 5000);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    // Restriction for telebirrNumber
+    if (name === 'telebirrNumber') {
+      const sanitized = value.replace(/\D/g, '').slice(0, 10);
+      setFormData(prev => ({ ...prev, [name]: sanitized }));
+      return;
+    }
+
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  if (user && user.deliveryStatus !== 'Not Submitted' && user.deliveryStatus !== 'Rejected' && user.deliveryStatus !== 'Modification Requested') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center">
+          <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="w-10 h-10" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Application {user?.deliveryStatus}</h2>
+          <p className="text-gray-600 mb-8">
+            Your delivery guy application is currently {user?.deliveryStatus?.toLowerCase()}.
+            You will be notified once the admin reviews your profile.
+          </p>
+          <Button onClick={() => router.push('/auth/login')} variant="outline" className="w-full">Return Home</Button>
+        </div>
+      </div>
+    );
+  }
 
   const uploadToCloudinary = async (file: File, folder: string = 'delivery') => {
     const formDataUpload = new FormData();

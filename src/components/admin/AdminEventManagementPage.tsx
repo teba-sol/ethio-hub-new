@@ -132,8 +132,8 @@ export const AdminEventManagementPage: React.FC<{ initialId?: string }> = ({ ini
   const stats = {
     totalEvents: events.length,
     totalBookings: events.reduce((sum, e) => sum + e.booked, 0),
-    totalRevenue: events.reduce((sum, e) => sum + e.revenue, 0),
-    totalCommission: events.reduce((sum, e) => sum + (e.revenue * e.commissionRate / 100), 0),
+    totalRevenue: events.reduce((sum, e) => sum + (e.revenue - (e.revenue * (e.commissionRate || 10) / 100)), 0),
+    totalCommission: events.reduce((sum, e) => sum + (e.revenue * (e.commissionRate || 10) / 100), 0),
   };
 
   const EventDetailModal = ({ event, onClose }: { event: EventManagementData; onClose: () => void }) => {

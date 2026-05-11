@@ -40,8 +40,11 @@ const formatUserResponse = (user: any) => ({
   isVerified: !!user.isVerified,
   artisanStatus: user.artisanStatus || 'Not Submitted',
   organizerStatus: user.organizerStatus || 'Not Submitted',
+  deliveryStatus: user.deliveryStatus || 'Not Submitted',
   organizerProfile: user.organizerProfile || null,
   touristProfile: user.touristProfile || null,
+  deliveryProfile: user.deliveryProfile || null,
+  rejectionReason: user.rejectionReason || null,
 });
 
 export const login = async (credentials: { email: string; password: string }) => {
@@ -72,8 +75,8 @@ export const login = async (credentials: { email: string; password: string }) =>
   }
   
   // Check if user is suspended or banned
-  if (user.status === 'Suspended') {
-    throw new Error('Your account has been suspended. Please contact support.');
+  if (user.status === 'Suspended' && user.role === 'tourist') {
+    throw new Error('your account is suspended');
   }
   
   if (user.status === 'Banned') {
@@ -207,6 +210,9 @@ export const googleAuth = async (googleData: {
   
   if (user) {
     // Existing Google user - log them in
+    if (user.status === 'Suspended' && user.role === 'tourist') {
+      throw new Error('your account is suspended');
+    }
     const token = await generateToken(user);
     return { ...formatUserResponse(user), token };
   }
@@ -243,6 +249,8 @@ export const googleAuth = async (googleData: {
     newUserData.organizerStatus = 'Not Submitted';
   } else if (role === 'artisan') {
     newUserData.artisanStatus = 'Not Submitted';
+  } else if (role === 'delivery') {
+    newUserData.deliveryStatus = 'Not Submitted';
   }
   
   const newUser = await User.create(newUserData);

@@ -9,9 +9,12 @@ export default function PaymentSuccessContent() {
   const searchParams = useSearchParams()!;
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Get booking info from URL params - passed from checkout
+  // Get booking/order info from URL params - passed from checkout or Chapa
   const bookingId = searchParams.get("bookingId") || "";
+  const orderId = searchParams.get("orderId") || "";
   const status = searchParams.get("status") || "";
+  const paymentStatus = searchParams.get("payment") || "";
+  const type = orderId ? "order" : "booking";
 
   const [bookingData, setBookingData] = useState({
     eventName: searchParams.get("eventName") || "",
@@ -24,17 +27,94 @@ export default function PaymentSuccessContent() {
     guestName: searchParams.get("guestName") || "Guest",
     guestEmail: searchParams.get("guestEmail") || "guest@email.com",
     guestPhone: searchParams.get("guestPhone") || "",
-    txRef: searchParams.get("tx_ref") || ""
+    txRef: searchParams.get("tx_ref") || "",
+    shippingFee: "0"
   });
+
+  const [orderItems, setOrderItems] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [countdown, setCountdown] = useState(12);
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    
+    // Auto redirect timer
+    const timer = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          // Redirect
+          window.location.href = orderId ? "/products" : "/dashboard/tourist/bookings";
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [orderId]);
 
   useEffect(() => {
+    const txRefFromUrl = searchParams.get("tx_ref") || searchParams.get("txRef") || "";
+    const isCart = searchParams.get("cart") === "true" || searchParams.get("amp;cart") === "true" || !!txRefFromUrl;
+
+    // If we only got orderId/txRef and status, fetch order details
+    if ((orderId || txRefFromUrl) && !searchParams.get("totalAmount")) {
+      setLoading(true);
+      const fetchUrl = txRefFromUrl
+        ? `/api/tourist/orders?txRef=${txRefFromUrl}`
+        : `/api/tourist/orders?id=${orderId}`;
+
+      fetch(fetchUrl, { credentials: 'include' })
+        .then(res => res.ok ? res.json() : Promise.reject(res.status))
+        .then(data => {
+          if (data.success) {
+            if (isCart && data.orders && data.orders.length > 0) {
+              setOrderItems(data.orders);
+              const o = data.orders[0];
+              const subtotal = data.orders.reduce((sum: number, ord: any) => sum + ord.totalPrice, 0);
+              const totalShipping = data.orders.reduce((sum: number, ord: any) => sum + ord.shippingFee, 0);
+              
+              setBookingData({
+                eventName: `${data.orders.length} Products in Bag`,
+                ticketType: "Multiple Items",
+                totalAmount: (subtotal + totalShipping).toString(),
+                hotelName: "",
+                roomName: "",
+                transportType: "",
+                transportPrice: "0",
+                guestName: o.contactInfo?.fullName || "Customer",
+                guestEmail: o.contactInfo?.email || "customer@email.com",
+                guestPhone: o.contactInfo?.phone || "",
+                txRef: o.paymentRef || txRefFromUrl,
+                shippingFee: totalShipping.toString(),
+              });
+            } else if (data.order) {
+              const o = data.order;
+              setOrderItems([o]);
+              setBookingData({
+                eventName: o.product?.name || "EthioHub Product",
+                ticketType: `Quantity: ${o.quantity}`,
+                totalAmount: (o.totalPrice + (o.shippingFee || 0)).toString(),
+                hotelName: "",
+                roomName: "",
+                transportType: "",
+                transportPrice: "0",
+                guestName: o.contactInfo?.fullName || "Customer",
+                guestEmail: o.contactInfo?.email || "customer@email.com",
+                guestPhone: o.contactInfo?.phone || "",
+                txRef: o.paymentRef || txRefFromUrl,
+                shippingFee: (o.shippingFee || 0).toString()
+              });
+            }
+          }
+        })
+        .catch(err => console.error("Error fetching order:", err))
+        .finally(() => setLoading(false));
+    }
+
     // If we only got bookingId and status (e.g. from Chapa return_url), fetch the rest
     if (bookingId && !searchParams.get("totalAmount")) {
       setLoading(true);
@@ -54,7 +134,8 @@ export default function PaymentSuccessContent() {
               guestName: b.contactInfo?.fullName || b.receipt?.userInfo?.fullName || "Guest",
               guestEmail: b.contactInfo?.email || b.receipt?.userInfo?.email || "guest@email.com",
               guestPhone: b.contactInfo?.phone || b.receipt?.userInfo?.phone || "",
-              txRef: b.paymentRef || searchParams.get("tx_ref") || ""
+              txRef: b.paymentRef || searchParams.get("tx_ref") || "",
+              shippingFee: "0"
             });
           }
         })
@@ -77,7 +158,8 @@ export default function PaymentSuccessContent() {
                     guestName: b.contactInfo?.fullName || "Guest",
                     guestEmail: b.contactInfo?.email || "guest@email.com",
                     guestPhone: b.contactInfo?.phone || "",
-                    txRef: b.paymentRef || searchParams.get("tx_ref") || ""
+                    txRef: b.paymentRef || searchParams.get("tx_ref") || "",
+                    shippingFee: "0"
                   });
                 }
               }
@@ -87,16 +169,16 @@ export default function PaymentSuccessContent() {
         })
         .finally(() => setLoading(false));
     }
-  }, [bookingId, searchParams]);
+  }, [bookingId, orderId, searchParams]);
 
-  // Show success if bookingId exists
-  const isSuccess = !!bookingId || status === "success";
+  // Show success if bookingId/orderId exists or status is success
+  const isSuccess = !!bookingId || !!orderId || status === "success" || paymentStatus === "success";
 
   const handlePrint = () => {
     window.print();
   };
 
-  const formatCurrency = (amount?: string) => `ETB ${(parseFloat(amount || "0") || 0).toLocaleString()}`;
+  const formatCurrency = (amount?: string) => `ETB ${(parseFloat(amount || "0") || 0).toLocaleString('en-US')}`;
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -108,15 +190,22 @@ export default function PaymentSuccessContent() {
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2 text-center">Payment Successful!</h1>
             <p className="text-gray-600 mb-6 text-center">
-              Your booking is confirmed.
+              Your {type} is confirmed.
               {bookingId && <span className="block text-sm mt-1">Reference: {bookingId.slice(-8).toUpperCase()}</span>}
+              {orderId && <span className="block text-sm mt-1">Order Ref: {orderId.slice(-8).toUpperCase()}</span>}
             </p>
+
+            <div className="mb-6 text-center">
+              <span className="px-4 py-2 bg-amber-50 text-amber-600 rounded-full text-xs font-bold border border-amber-100">
+                Redirecting in {countdown} seconds...
+              </span>
+            </div>
 
             {/* Printable Receipt */}
             <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left print:border print:border-gray-300 print:shadow-none">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                  <Ticket className="w-4 h-4" /> BOOKING RECEIPT
+                  <Ticket className="w-4 h-4" /> {type.toUpperCase()} RECEIPT
                 </h3>
                 <button
                   onClick={handlePrint}
@@ -132,16 +221,33 @@ export default function PaymentSuccessContent() {
                 <p className="text-xs text-gray-500">Your Ethiopian Experience Partner</p>
               </div>
 
-              {/* Event Info */}
+              {/* Product/Event Info */}
               <div className="mb-3 pb-3 border-b border-gray-200">
-                <p className="text-xs text-gray-500 uppercase">Event</p>
-                <p className="font-medium text-primary">{bookingData.eventName || 'EthioHub Event'}</p>
+                <p className="text-xs text-gray-500 uppercase">{type === 'order' ? 'Product' : 'Event'}</p>
+                <p className="font-medium text-primary">{bookingData.eventName || (type === 'order' ? 'EthioHub Product' : 'EthioHub Event')}</p>
               </div>
 
-              {/* Ticket Type */}
+              {/* Details / Items List */}
               <div className="mb-3 pb-3 border-b border-gray-200">
-                <p className="text-xs text-gray-500 uppercase">Ticket Type</p>
-                <p className="font-medium text-amber-600 text-lg">{(bookingData.ticketType || 'Standard').toUpperCase()} TICKET</p>
+                <p className="text-xs text-gray-500 uppercase mb-2">{type === 'order' ? 'Items Purchased' : 'Ticket Type'}</p>
+                
+                {type === 'order' && orderItems.length > 0 ? (
+                  <div className="space-y-3">
+                    {orderItems.map((item, idx) => (
+                      <div key={idx} className="flex justify-between items-start gap-4 bg-white p-2 rounded-lg border border-gray-100">
+                        <div>
+                          <p className="font-bold text-sm text-primary line-clamp-1">{item.product?.name || 'Product'}</p>
+                          <p className="text-[10px] text-gray-500 uppercase">Qty: {item.quantity} × {formatCurrency(item.unitPrice?.toString())}</p>
+                        </div>
+                        <p className="font-black text-xs text-secondary whitespace-nowrap">{formatCurrency(item.totalPrice?.toString())}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="font-medium text-amber-600 text-lg">
+                    {(bookingData.ticketType || 'Standard').toUpperCase() + (type === 'booking' ? ' TICKET' : '')}
+                  </p>
+                )}
               </div>
 
               {/* Hotel Info */}
@@ -164,14 +270,30 @@ export default function PaymentSuccessContent() {
 
               {/* User Info */}
               <div className="mb-3 pb-3 border-b border-gray-200">
-                <p className="text-xs text-gray-500 uppercase flex items-center gap-1"><User className="w-3 h-3" /> Guest Information</p>
+                <p className="text-xs text-gray-500 uppercase flex items-center gap-1"><User className="w-3 h-3" /> {type === 'order' ? 'Customer' : 'Guest'} Information</p>
                 <p className="font-medium">{bookingData.guestName}</p>
                 <p className="text-sm text-gray-600">{bookingData.guestEmail}</p>
                 {bookingData.guestPhone && <p className="text-sm text-gray-600">{bookingData.guestPhone}</p>}
               </div>
 
+              {/* Pricing Details for Products */}
+              {type === 'order' && parseFloat(bookingData.shippingFee) > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
+                  <div className="flex justify-between items-center text-sm">
+                    <p className="text-gray-500">Items Subtotal</p>
+                    <p className="font-medium text-gray-700">
+                      {formatCurrency((parseFloat(bookingData.totalAmount) - parseFloat(bookingData.shippingFee)).toString())}
+                    </p>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <p className="text-gray-500">Shipping Fee</p>
+                    <p className="font-medium text-gray-700">{formatCurrency(bookingData.shippingFee)}</p>
+                  </div>
+                </div>
+              )}
+
               {/* Total */}
-              <div className="flex justify-between items-center pt-2">
+              <div className="flex justify-between items-center pt-4 mt-4 border-t border-gray-200">
                 <p className="font-bold text-gray-800">TOTAL PAID</p>
                 <p className="font-bold text-xl text-primary">{formatCurrency(bookingData.totalAmount)}</p>
               </div>
@@ -179,14 +301,17 @@ export default function PaymentSuccessContent() {
               {/* Payment Reference */}
               <div className="text-center pt-4 mt-4 border-t border-gray-200">
                 <p className="text-xs text-gray-400">Payment Reference: {bookingData.txRef || (isMounted ? 'Confirmed' : '...')}</p>
-                <p className="text-xs text-gray-400">Date: {isMounted ? new Date().toLocaleDateString() : '...'}</p>
+                <p className="text-xs text-gray-400">Date: {isMounted ? new Date().toLocaleDateString('en-US') : '...'}</p>
               </div>
             </div>
 
             {/* Action Buttons */}
             <div className="flex flex-col gap-3 print:hidden">
-              <Link href="/dashboard/tourist/bookings" className="bg-primary text-white px-6 py-3 rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
-                View My Bookings
+              <Link 
+                href={type === 'order' ? "/products" : "/dashboard/tourist/bookings"} 
+                className="bg-primary text-white px-6 py-3 rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+              >
+                {type === 'order' ? "Continue Shopping" : "View My Bookings"}
               </Link>
               <Link href="/" className="border border-primary text-primary px-6 py-3 rounded-xl hover:bg-primary/5 transition-colors flex items-center justify-center gap-2">
                 <Home className="w-4 h-4" /> Return Home
@@ -200,10 +325,13 @@ export default function PaymentSuccessContent() {
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Payment Issue</h1>
             <p className="text-gray-600 mb-6">
-              There was an issue. Please check your booking status.
+              There was an issue. Please check your {type} status.
             </p>
-            <Link href="/dashboard/tourist/bookings" className="bg-primary text-white px-6 py-3 rounded-xl hover:bg-primary/90 transition-colors">
-              View My Bookings
+            <Link 
+              href={type === 'order' ? "/products" : "/dashboard/tourist/bookings"} 
+              className="bg-primary text-white px-6 py-3 rounded-xl hover:bg-primary/90 transition-colors"
+            >
+              {type === 'order' ? "Return to Products" : "View My Bookings"}
             </Link>
           </>
         )}

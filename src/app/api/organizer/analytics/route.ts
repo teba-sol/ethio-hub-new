@@ -80,10 +80,14 @@ export async function GET(request: NextRequest) {
     const confirmedBookings = bookings.filter(b => b.status === 'confirmed').length;
     
     // Calculate revenue with split payment breakdown
-    const paidBookings = bookings.filter(b => b.paymentStatus === 'paid');
-    const grossRevenue = paidBookings.reduce((sum, b) => sum + b.totalPrice, 0);
+    const paidBookings = bookings.filter(b => 
+      b.paymentStatus === 'paid' || 
+      b.status === 'confirmed' || 
+      b.status === 'completed'
+    );
+    const grossRevenue = paidBookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
     const platformFeeTotal = paidBookings.reduce((sum, b) => sum + (b.platformFee || 0), 0);
-    const organizerEarnings = paidBookings.reduce((sum, b) => sum + (b.organizerAmount || b.totalPrice), 0);
+    const organizerEarnings = paidBookings.reduce((sum, b) => sum + (b.organizerAmount || (b.totalPrice ? b.totalPrice * 0.9 : 0)), 0);
 
     const avgRating = reviews.length > 0 
       ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length 
@@ -92,7 +96,11 @@ export async function GET(request: NextRequest) {
     // Detailed Event Performance
     const eventPerformance = festivals.map(f => {
       const festivalBookings = bookings.filter(b => b.festival?.toString() === f._id.toString());
-      const festivalPaidBookings = festivalBookings.filter(b => b.paymentStatus === 'paid');
+      const festivalPaidBookings = festivalBookings.filter(b => 
+        b.paymentStatus === 'paid' || 
+        b.status === 'confirmed' || 
+        b.status === 'completed'
+      );
       const festivalNetIncome = festivalPaidBookings.reduce((sum, b) => {
         // Use organizerAmount if available, else calculate 90% of totalPrice (like booking page)
         return sum + (b.organizerAmount || (b.totalPrice ? b.totalPrice * 0.9 : 0));

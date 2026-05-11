@@ -385,7 +385,7 @@ export default function OrganizerSettlementsPage() {
                     required
                     placeholder="e.g. 0912345678"
                     value={payoutPhone}
-                    onChange={(e) => setPayoutPhone(e.target.value)}
+                    onChange={(e) => setPayoutPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                     className="w-full px-4 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary/20 font-bold"
                   />
                 </div>

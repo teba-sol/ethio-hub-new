@@ -28,7 +28,6 @@ export const ArtisanLayout: React.FC<{ children?: React.ReactNode }> = ({ childr
     { path: '/dashboard/artisan/products', nameKey: 'dashboard.products', icon: Package },
     { path: '/dashboard/artisan/orders', nameKey: 'dashboard.orders', icon: ShoppingCart },
     { path: '/dashboard/artisan/wallet', label: 'Wallet', icon: DollarSign },
-    { path: '/dashboard/artisan/revenue', nameKey: 'dashboard.revenue', icon: TrendingUp },
     { path: '/dashboard/artisan/reviews', nameKey: 'dashboard.reviews', icon: MessageSquare },
     { path: '/dashboard/artisan/analytics', nameKey: 'dashboard.analytics', icon: PieChart },
     { path: '/dashboard/artisan/settings', nameKey: 'dashboard.settings', icon: Settings },

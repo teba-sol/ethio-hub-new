@@ -20,7 +20,7 @@ const PendingRegistrationSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["tourist", "organizer", "artisan"],
+      enum: ["tourist", "organizer", "artisan", "delivery"],
       default: "tourist",
     },
     otpHash: {

@@ -76,6 +76,7 @@ export async function GET(request: NextRequest) {
           underReview: statsMap['Under Review'],
           approved: statsMap['Approved'],
           rejected: statsMap['Rejected'],
+          modificationRequested: statsMap['Modification Requested'],
         },
       }),
       { status: 200, headers: { 'content-type': 'application/json' } }

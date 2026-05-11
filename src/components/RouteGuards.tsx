@@ -48,7 +48,9 @@ export function DashboardRedirect() {
       return;
     }
 
-    switch (user.role) {
+    const role = user.role?.toLowerCase();
+
+    switch (role) {
       case UserRole.ADMIN: {
         router.replace("/dashboard/admin/overview");
         return;

@@ -90,6 +90,7 @@ interface VerificationStats {
   underReview: number;
   approved: number;
   rejected: number;
+  modificationRequested: number;
 }
 
 export const AdminUserVerificationPage: React.FC = () => {
@@ -104,7 +105,7 @@ export const AdminUserVerificationPage: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<VerificationRequest | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectionModal, setShowRejectionModal] = useState(false);
-  const [stats, setStats] = useState<VerificationStats>({ pending: 0, underReview: 0, approved: 0, rejected: 0, notSubmitted: 0 });
+  const [stats, setStats] = useState<VerificationStats>({ pending: 0, underReview: 0, approved: 0, rejected: 0, notSubmitted: 0, modificationRequested: 0 });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
@@ -280,7 +281,7 @@ export const AdminUserVerificationPage: React.FC = () => {
             </div>
             <Badge variant="warning">Pending</Badge>
           </div>
-          <h3 className="text-2xl font-bold text-gray-800">{stats.pending}</h3>
+          <h3 className="text-2xl font-bold text-gray-800">{(stats.pending || 0) + (stats.underReview || 0) + (stats.modificationRequested || 0)}</h3>
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t("admin.pendingRequests")}</p>
         </div>
         <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm">
@@ -629,18 +630,20 @@ export const AdminUserVerificationPage: React.FC = () => {
                           <p className="text-xs font-bold text-gray-400 uppercase">Bio</p>
                           <p className="text-sm font-medium text-gray-700">{selectedRequest.organizerProfile?.bio || selectedRequest.bio || 'N/A'}</p>
                         </div>
-                        {selectedRequest.organizerProfile?.payoutMethod === 'bank' && (
+                        {(selectedRequest.organizerProfile?.payoutMethod === 'bank' || selectedRequest.organizerProfile?.payoutMethod === 'Bank Account') && (
                           <div className="space-y-1">
                             <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.paymentInfo')}</p>
                             <p className="text-sm font-medium text-gray-700">
-                              {selectedRequest.organizerProfile?.bankName || selectedRequest.bankName || 'N/A'} - {selectedRequest.organizerProfile?.accountHolderName || selectedRequest.accountHolderName || 'N/A'} ({selectedRequest.organizerProfile?.accountNumber || selectedRequest.accountNumber || 'N/A'})
+                              {selectedRequest.organizerProfile?.bankName || selectedRequest.bankName || 'N/A'} - {selectedRequest.organizerProfile?.accountHolderName || selectedRequest.accountName || 'N/A'} ({selectedRequest.organizerProfile?.accountNumber || selectedRequest.accountNumber || 'N/A'})
                             </p>
                           </div>
                         )}
-                        {selectedRequest.organizerProfile?.payoutMethod === 'telebirr' && (
+                        {(selectedRequest.organizerProfile?.payoutMethod === 'telebirr' || selectedRequest.organizerProfile?.payoutMethod === 'Mobile Wallet') && (
                           <div className="space-y-1">
                             <p className="text-xs font-bold text-gray-400 uppercase">{t('admin.paymentInfo')}</p>
-                            <p className="text-sm font-medium text-gray-700">Telebirr: {selectedRequest.organizerProfile?.telebirrNumber || selectedRequest.telebirrNumber || 'N/A'}</p>
+                            <p className="text-sm font-medium text-gray-700">
+                              {selectedRequest.organizerProfile?.bankName || 'Wallet'}: {selectedRequest.organizerProfile?.telebirrNumber || selectedRequest.telebirrNumber || 'N/A'}
+                            </p>
                           </div>
                         )}
                       </>
@@ -720,6 +723,8 @@ export const AdminUserVerificationPage: React.FC = () => {
                               <img src={doc.url} alt={doc.name} className="w-full h-full object-cover" />
                             ) : doc.type.includes('image') ? (
                               <img src={doc.url} alt={doc.name} className="w-full h-full object-cover" />
+                            ) : doc.type === 'video' ? (
+                              <video src={doc.url} className="w-full h-full object-cover" controls />
                             ) : (
                               <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
                                 <FileText className="w-12 h-12 mb-2" />

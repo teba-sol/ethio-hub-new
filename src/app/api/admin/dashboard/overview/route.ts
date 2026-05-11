@@ -5,7 +5,9 @@ import Festival from '@/models/festival.model';
 import Order from '@/models/order.model';
 import Booking from '@/models/booking.model';
 import Report from '@/models/report.model';
-import Product from '@/models/product.model';
+import Product from '@/models/artisan/product.model';
+import Transaction from '@/models/transaction.model';
+import Wallet from '@/models/wallet.model';
 import { jwtVerify } from 'jose';
 
 export const dynamic = 'force-dynamic';
@@ -99,44 +101,68 @@ export async function GET(request: NextRequest) {
       // Revenue and Transaction data (Combined Orders and Bookings)
       Promise.all([
         Order.aggregate([
-          { $match: { paymentStatus: { $in: ['paid', 'refunded'] } } },
+          { 
+            $match: { 
+              status: { $nin: ['Cancelled', 'Returned'] },
+              $or: [
+                { paymentStatus: { $in: ['paid', 'Paid'] } },
+                { status: { $in: ['Paid', 'Ready for Pickup', 'Assigned', 'Shipped', 'Delivered'] } }
+              ]
+            } 
+          },
           {
             $group: {
               _id: '$paymentStatus',
               grossTotal: { $sum: '$totalPrice' },
+              commissionTotal: { $sum: '$adminCommission' },
               count: { $sum: 1 },
             },
           },
         ]),
         Booking.aggregate([
-          { $match: { paymentStatus: 'paid' } },
+          { 
+            $match: { 
+              status: { $in: ['confirmed', 'completed'] },
+              paymentStatus: { $ne: 'refunded' }
+            } 
+          },
           {
             $group: {
               _id: null,
               grossTotal: { $sum: '$totalPrice' },
+              commissionTotal: { $sum: '$adminCommission' },
               count: { $sum: 1 },
             },
           },
         ]),
-        Order.countDocuments({ status: 'Cancelled' })
-      ]).then(([orderRes, bookingRes, cancelledCount]) => {
-        const paidOrders = orderRes.find(r => r._id === 'paid');
-        const refundedOrders = orderRes.find(r => r._id === 'refunded');
+        Order.countDocuments({ status: 'Cancelled' }),
+        Transaction.aggregate([
+          { $match: { type: 'WITHDRAWAL', status: 'PENDING' } },
+          { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+        ]),
+        Transaction.aggregate([
+          { $match: { type: 'REFUND', status: 'COMPLETED' } },
+          { $group: { _id: null, total: { $sum: '$amount' } } }
+        ])
+      ]).then(([orderRes, bookingRes, cancelledCount, pendingPayoutRes, refundRes]) => {
+        const orderGross = orderRes.reduce((acc, curr) => acc + curr.grossTotal, 0);
+        const orderCommission = orderRes.reduce((acc, curr) => acc + curr.commissionTotal, 0);
+        const orderCount = orderRes.reduce((acc, curr) => acc + curr.count, 0);
         
-        const orderGross = paidOrders?.grossTotal || 0;
-        const refundGross = refundedOrders?.grossTotal || 0;
         const bookingGross = bookingRes[0]?.grossTotal || 0;
-        
-        const totalOrders = (paidOrders?.count || 0) + (refundedOrders?.count || 0);
-        const totalBookings = bookingRes[0]?.count || 0;
+        const bookingCommission = bookingRes[0]?.commissionTotal || 0;
+        const bookingCount = bookingRes[0]?.count || 0;
         
         return {
           grossTotal: orderGross + bookingGross,
-          refundTotal: refundGross,
-          totalTransactions: totalOrders + totalBookings,
-          totalOrders,
-          totalBookings,
-          cancellationRate: totalOrders > 0 ? (cancelledCount / totalOrders) * 100 : 0
+          commissionTotal: orderCommission + bookingCommission,
+          refundTotal: refundRes[0]?.total || 0,
+          pendingPayouts: pendingPayoutRes[0]?.total || 0,
+          pendingPayoutCount: pendingPayoutRes[0]?.count || 0,
+          totalTransactions: orderCount + bookingCount,
+          totalOrders: orderCount,
+          totalBookings: bookingCount,
+          cancellationRate: (orderCount + bookingCount) > 0 ? (cancelledCount / (orderCount + bookingCount)) * 100 : 0
         };
       }),
 
@@ -172,9 +198,9 @@ export async function GET(request: NextRequest) {
           date: e.submittedAt || e.createdAt,
         }))),
 
-      // Pending products (products added in last 7 days as placeholder for 'new')
+      // Pending products (Actual products awaiting approval)
       Product.countDocuments({
-        createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+        verificationStatus: 'Pending'
       }).then(count => ({ count })),
 
       // Pending verifications
@@ -241,21 +267,38 @@ export async function GET(request: NextRequest) {
       // Chart Data: Monthly Revenue (Last 6 months)
       Promise.all([
         Order.aggregate([
-          { $match: { paymentStatus: 'paid', createdAt: { $gte: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000) } } },
+          { 
+            $match: { 
+              status: { $nin: ['Cancelled', 'Returned'] },
+              $or: [
+                { paymentStatus: { $in: ['paid', 'Paid'] } },
+                { status: { $in: ['Paid', 'Ready for Pickup', 'Assigned', 'Shipped', 'Delivered'] } }
+              ],
+              createdAt: { $gte: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000) } 
+            } 
+          },
           {
             $group: {
               _id: { month: { $month: "$createdAt" }, year: { $year: "$createdAt" } },
-              revenue: { $sum: "$totalPrice" }
+              revenue: { $sum: "$totalPrice" },
+              commission: { $sum: "$adminCommission" }
             }
           },
           { $sort: { "_id.year": 1, "_id.month": 1 } }
         ]),
         Booking.aggregate([
-          { $match: { paymentStatus: 'paid', createdAt: { $gte: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000) } } },
+          { 
+            $match: { 
+              status: { $in: ['confirmed', 'completed'] },
+              paymentStatus: { $ne: 'refunded' },
+              createdAt: { $gte: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000) } 
+            } 
+          },
           {
             $group: {
               _id: { month: { $month: "$createdAt" }, year: { $year: "$createdAt" } },
-              revenue: { $sum: "$totalPrice" }
+              revenue: { $sum: "$totalPrice" },
+              commission: { $sum: "$adminCommission" }
             }
           },
           { $sort: { "_id.year": 1, "_id.month": 1 } }
@@ -266,7 +309,7 @@ export async function GET(request: NextRequest) {
         
         orderChart.forEach(item => {
           const key = `${months[item._id.month - 1]} ${item._id.year}`;
-          combined.set(key, { name: months[item._id.month - 1], revenue: item.revenue, commission: item.revenue * 0.1 });
+          combined.set(key, { name: months[item._id.month - 1], revenue: item.revenue, commission: item.commission });
         });
         
         bookingChart.forEach(item => {
@@ -275,7 +318,7 @@ export async function GET(request: NextRequest) {
           combined.set(key, { 
             name: existing.name, 
             revenue: existing.revenue + item.revenue, 
-            commission: existing.commission + (item.revenue * 0.1) 
+            commission: existing.commission + item.commission
           });
         });
         

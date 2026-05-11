@@ -58,6 +58,9 @@ export async function GET(request: NextRequest) {
       if (statusMap[status]) {
         statusFilter = [statusMap[status]];
       }
+    } else {
+      // By default, exclude "Not Submitted" to show only actionable requests
+      statusFilter = ['Pending', 'Under Review', 'Approved', 'Rejected', 'Modification Requested'];
     }
 
     const [artisanData, organizerData, deliveryData] = await Promise.all([
@@ -276,9 +279,9 @@ function calculateArtisanProfileCompletion(profile: any): number {
 
 function calculateOrganizerProfileCompletion(profile: any): number {
   const fields = [
-    'companyName', 'phone', 'bio', 'country', 'region', 'city', 'address',
-    'payoutMethod', 'bankName', 'accountHolderName', 'accountNumber',
-    'logo', 'businessLicense',
+    'companyName', 'contactPersonName', 'phone', 'organizerType', 'bio', 'experienceYears',
+    'country', 'region', 'city', 'address', 'payoutMethod',
+    'logo', 'businessLicense', 'tourismLicense', 'eventPhotos'
   ];
   const filled = fields.filter((f) => profile?.[f] && profile[f] !== '').length;
   return Math.round((filled / fields.length) * 100);
@@ -363,13 +366,33 @@ function buildArtisanDocuments(profile: any): any[] {
 
 function buildOrganizerDocuments(profile: any): any[] {
   const docs: any[] = [];
+  const uploadedAt = formatDate(profile.createdAt);
+
   if (profile?.businessLicense) {
     docs.push({
       id: 'business_license',
       name: 'Business License',
       type: 'image',
       url: profile.businessLicense,
-      uploadedAt: formatDate(profile.createdAt),
+      uploadedAt,
+    });
+  }
+  if (profile?.tourismLicense) {
+    docs.push({
+      id: 'tourism_license',
+      name: 'Tourism License',
+      type: 'image',
+      url: profile.tourismLicense,
+      uploadedAt,
+    });
+  }
+  if (profile?.taxCert) {
+    docs.push({
+      id: 'tax_cert',
+      name: 'Tax Certificate',
+      type: 'image',
+      url: profile.taxCert,
+      uploadedAt,
     });
   }
   if (profile?.logo) {
@@ -378,7 +401,34 @@ function buildOrganizerDocuments(profile: any): any[] {
       name: 'Company Logo',
       type: 'image',
       url: profile.logo,
-      uploadedAt: formatDate(profile.createdAt),
+      uploadedAt,
+    });
+  }
+  if (profile?.eventPhotos) {
+    docs.push({
+      id: 'event_photos',
+      name: 'Past Event Photos',
+      type: 'image',
+      url: profile.eventPhotos,
+      uploadedAt,
+    });
+  }
+  if (profile?.eventPoster) {
+    docs.push({
+      id: 'event_poster',
+      name: 'Past Event Poster',
+      type: 'image',
+      url: profile.eventPoster,
+      uploadedAt,
+    });
+  }
+  if (profile?.eventVideos) {
+    docs.push({
+      id: 'event_videos',
+      name: 'Past Event Video',
+      type: 'video',
+      url: profile.eventVideos,
+      uploadedAt,
     });
   }
   return docs;
@@ -393,6 +443,15 @@ function buildDeliveryDocuments(user: any): any[] {
       name: 'National ID / Passport',
       type: 'image',
       url: profile.idDocument,
+      uploadedAt: formatDate(user.updatedAt),
+    });
+  }
+  if (user?.profileImage) {
+    docs.push({
+      id: 'profile_photo',
+      name: 'Profile Photo',
+      type: 'image',
+      url: user.profileImage,
       uploadedAt: formatDate(user.updatedAt),
     });
   }

@@ -483,7 +483,10 @@ export const AdminRefundRequestsPage: React.FC = () => {
                     <input 
                       type="text"
                       value={payoutPhone}
-                      onChange={(e) => setPayoutPhone(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setPayoutPhone(val);
+                      }}
                       className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none"
                     />
                   </div>

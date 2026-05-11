@@ -207,7 +207,7 @@ export default function CheckoutPage() {
               if (selectedHotel) {
                 router.push(`/event/${eventId}/hotels/${selectedHotel._id || selectedHotel.id}`);
               } else {
-                router.push(`/event/${eventId}`);
+                router.push(`/event/${eventId}/tickets`);
               }
             }}
             className="flex items-center gap-2 text-gray-500 hover:text-primary transition-colors"

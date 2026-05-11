@@ -10,7 +10,6 @@ import { Button, Badge } from '@/components/UI';
 const TABS = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'security', label: 'Security', icon: Shield },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
 ];
 
 interface OrganizerProfile {
@@ -391,23 +390,9 @@ export const OrganizerSettingsPage: React.FC = () => {
         {activeTab === 'profile' && (
           <div className="space-y-10 animate-in fade-in duration-300">
             <div className="flex flex-col md:flex-row gap-8 items-start">
-              <div className="relative group cursor-pointer shrink-0" onClick={() => avatarInputRef.current?.click()}>
-                <input
-                  ref={avatarInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
-                  className="hidden"
-                />
+              <div className="relative group shrink-0">
                 <div className="w-32 h-32 rounded-full bg-gray-100 overflow-hidden border-4 border-white shadow-lg">
                   <img src={profile.avatar || `https://i.pravatar.cc/150?u=${profile.email}`} alt="Profile" className="w-full h-full object-cover" />
-                </div>
-                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  {uploadingAvatar ? (
-                    <Loader2 className="w-8 h-8 text-white animate-spin" />
-                  ) : (
-                    <Camera className="w-8 h-8 text-white" />
-                  )}
                 </div>
               </div>
               <div className="flex-1 space-y-2">
@@ -428,32 +413,27 @@ export const OrganizerSettingsPage: React.FC = () => {
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Organizer / Company Name</label>
                 <input 
                   type="text" 
+                  readOnly
                   value={profile.companyName} 
-                  onChange={(e) => setProfile({ ...profile, companyName: e.target.value })}
-                  className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10" 
+                  className="w-full bg-gray-100 border-none rounded-xl py-3 px-4 text-sm cursor-not-allowed" 
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Contact Email</label>
                 <input 
                   type="email" 
+                  readOnly
                   value={profile.email} 
-                  onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                  className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10" 
+                  className="w-full bg-gray-100 border-none rounded-xl py-3 px-4 text-sm cursor-not-allowed" 
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Contact Phone</label>
                 <input 
                   type="tel" 
+                  readOnly
                   value={profile.phone} 
-                  maxLength={10}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                    setProfile({ ...profile, phone: value });
-                  }}
-                  placeholder="e.g. 0912345678"
-                  className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10" 
+                  className="w-full bg-gray-100 border-none rounded-xl py-3 px-4 text-sm cursor-not-allowed" 
                 />
                 <p className="text-[10px] text-gray-400">Must be exactly 10 digits (e.g., 0912345678)</p>
               </div>
@@ -461,18 +441,18 @@ export const OrganizerSettingsPage: React.FC = () => {
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Website (Optional)</label>
                 <input 
                   type="url" 
+                  readOnly
                   value={profile.website} 
-                  onChange={(e) => setProfile({ ...profile, website: e.target.value })}
-                  className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10" 
+                  className="w-full bg-gray-100 border-none rounded-xl py-3 px-4 text-sm cursor-not-allowed" 
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Business Address</label>
                 <input 
                   type="text" 
+                  readOnly
                   value={profile.address} 
-                  onChange={(e) => setProfile({ ...profile, address: e.target.value })}
-                  className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10" 
+                  className="w-full bg-gray-100 border-none rounded-xl py-3 px-4 text-sm cursor-not-allowed" 
                 />
               </div>
               <div className="grid grid-cols-3 gap-4">
@@ -508,18 +488,15 @@ export const OrganizerSettingsPage: React.FC = () => {
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Bio / About Organizer</label>
                 <textarea 
                   rows={4} 
+                  readOnly
                   value={profile.bio} 
-                  onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                  className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/10 resize-none" 
+                  className="w-full bg-gray-100 border-none rounded-xl py-3 px-4 text-sm cursor-not-allowed resize-none" 
                 />
               </div>
             </div>
 
-            <div className="pt-6 border-t border-gray-100 flex justify-end">
-              <Button onClick={saveProfile} disabled={saving}>
-                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                Save Changes
-              </Button>
+            <div className="pt-6 border-t border-gray-100">
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center">Contact Admin to update profile information</p>
             </div>
           </div>
         )}
@@ -598,95 +575,11 @@ export const OrganizerSettingsPage: React.FC = () => {
               <p className="text-xs text-gray-400 mt-2">Use your current password to update to a new one.</p>
             </div>
 
-            <div className="pt-8 border-t border-gray-100">
-              <div className="p-6 bg-red-50 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div>
-                  <h4 className="font-bold text-red-700">Deactivate Account</h4>
-                  <p className="text-xs text-red-600/80 mt-1">Once you deactivate your account, your events will be unpublished.</p>
-                </div>
-                <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-100">Deactivate Account</Button>
-              </div>
-            </div>
+
           </div>
         )}
 
-        {/* NOTIFICATIONS TAB */}
-        {activeTab === 'notifications' && (
-          <div className="space-y-10 animate-in fade-in duration-300">
-            <div>
-              <h3 className="text-xl font-serif font-bold text-primary mb-6">Notification Preferences</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border border-gray-100 rounded-2xl hover:bg-gray-50 transition-colors">
-                  <div>
-                    <h4 className="font-bold text-primary text-sm">New Booking Received</h4>
-                    <p className="text-xs text-gray-500 mt-1">Get notified when someone buys a ticket.</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer" 
-                      checked={notifications.newBooking}
-                      onChange={(e) => setNotifications({ ...notifications, newBooking: e.target.checked })} 
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
-                </div>
-                <div className="flex items-center justify-between p-4 border border-gray-100 rounded-2xl hover:bg-gray-50 transition-colors">
-                  <div>
-                    <h4 className="font-bold text-primary text-sm">New Review Posted</h4>
-                    <p className="text-xs text-gray-500 mt-1">Get notified when an attendee leaves a review.</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer" 
-                      checked={notifications.newReview}
-                      onChange={(e) => setNotifications({ ...notifications, newReview: e.target.checked })} 
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
-                </div>
-                <div className="flex items-center justify-between p-4 border border-gray-100 rounded-2xl hover:bg-gray-50 transition-colors">
-                  <div>
-                    <h4 className="font-bold text-primary text-sm">Payout Processed</h4>
-                    <p className="text-xs text-gray-500 mt-1">Get notified when funds are transferred to your bank.</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer" 
-                      checked={notifications.payoutProcessed}
-                      onChange={(e) => setNotifications({ ...notifications, payoutProcessed: e.target.checked })} 
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
-                </div>
-                <div className="flex items-center justify-between p-4 border border-gray-100 rounded-2xl hover:bg-gray-50 transition-colors">
-                  <div>
-                    <h4 className="font-bold text-primary text-sm">Event Reminders</h4>
-                    <p className="text-xs text-gray-500 mt-1">Get tips and reminders before your event starts.</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer" 
-                      checked={notifications.eventReminders}
-                      onChange={(e) => setNotifications({ ...notifications, eventReminders: e.target.checked })} 
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
-                </div>
-              </div>
-            </div>
 
-            <div className="pt-6 border-t border-gray-100 flex justify-end">
-              <Button onClick={saveNotifications} disabled={saving}>
-                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                Save Preferences
-              </Button>
-            </div>
-          </div>
-        )}
 
       </div>
     </div>

@@ -32,12 +32,29 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const orderId = searchParams.get('id');
+    const txRef = searchParams.get('txRef');
 
     let touristObjectId;
     try {
       touristObjectId = new mongoose.Types.ObjectId(touristId);
     } catch (e) {
       touristObjectId = touristId;
+    }
+
+    if (txRef) {
+      // Fetch all orders with this payment reference
+      const orders = await Order.find({ 
+        paymentRef: txRef, 
+        tourist: touristObjectId 
+      })
+        .populate('product', 'name price images discountPrice')
+        .populate('artisan', 'name email')
+        .lean();
+
+      return new NextResponse(
+        JSON.stringify({ success: true, orders }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      );
     }
 
     if (orderId) {

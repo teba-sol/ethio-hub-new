@@ -165,34 +165,28 @@ export const ArtisanOnboardingPage: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-    if (name === 'phone') {
-      const cleaned = value.replace(/\D/g, '');
-      const startsWith09 = value.startsWith('09');
-      const startsWithPlus = value.startsWith('+251');
+    
+    if ((name === 'accountNumber' && formData.bankName === BANK_ID_MAP['Telebirr']) || name === 'phone') {
+      const sanitized = value.replace(/\D/g, '').slice(0, 10);
+      setFormData(prev => ({ ...prev, [name]: sanitized }));
       
-      if (value === '') {
-        setPhoneError('');
-      } else if (startsWith09) {
-        if (cleaned.length > 10) {
-          setPhoneError('Phone must be 10 digits starting with 09');
-        } else if (cleaned.length === 10) {
+      if (name === 'phone') {
+        if (sanitized === '') {
           setPhoneError('');
+        } else if (sanitized.startsWith('09')) {
+          if (sanitized.length === 10) {
+            setPhoneError('');
+          } else {
+            setPhoneError('Phone must be exactly 10 digits starting with 09');
+          }
         } else {
-          setPhoneError('Phone must be 10 digits starting with 09');
+          setPhoneError('Phone must start with 09');
         }
-      } else if (startsWithPlus) {
-        if (cleaned.length > 12) {
-          setPhoneError('Phone must be +251 followed by 9 digits');
-        } else if (cleaned.length === 12) {
-          setPhoneError('');
-        } else {
-          setPhoneError('Phone must be +251 followed by 9 digits');
-        }
-      } else {
-        setPhoneError('Phone must start with +251 or 09');
       }
+      return;
     }
+
+    setFormData({ ...formData, [name]: value });
     if (name === 'experience') {
       const num = parseInt(value);
       if (value === '' || num >= 0) {

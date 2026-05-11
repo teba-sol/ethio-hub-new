@@ -31,8 +31,13 @@ interface DashboardData {
   };
   revenueData: {
     grossTotal: number;
+    commissionTotal: number;
     refundTotal: number;
+    pendingPayouts: number;
+    pendingPayoutCount: number;
     totalTransactions: number;
+    totalOrders: number;
+    totalBookings: number;
     cancellationRate: number;
   };
   verificationStats: {
@@ -303,14 +308,14 @@ export const AdminOverviewPage: React.FC = () => {
                 <div>
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Total Transactions</p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-emerald-400">{(revenueData as any)?.totalTransactions || 0}</span>
+                    <span className="text-2xl font-bold text-emerald-400">{revenueData?.totalTransactions || 0}</span>
                   </div>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Avg Transaction Value</p>
                   <div className="flex items-baseline gap-2">
                     <span className="text-2xl font-bold text-blue-400">
-                      ETB {revenueData?.grossTotal && (revenueData as any)?.totalTransactions ? Math.round(revenueData.grossTotal / (revenueData as any).totalTransactions).toLocaleString() : 0}
+                      ETB {revenueData?.grossTotal && revenueData?.totalTransactions ? Math.round(revenueData.grossTotal / revenueData.totalTransactions).toLocaleString() : 0}
                     </span>
                   </div>
                 </div>
@@ -328,8 +333,8 @@ export const AdminOverviewPage: React.FC = () => {
                 <Badge variant="warning" size="sm">Due Soon</Badge>
               </div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Pending Payouts</p>
-              <h4 className="text-2xl font-bold text-gray-800">ETB 125,000</h4>
-              <p className="text-xs text-gray-500 mt-1 font-medium">12 Requests waiting</p>
+              <h4 className="text-2xl font-bold text-gray-800">ETB {revenueData?.pendingPayouts?.toLocaleString() || '0'}</h4>
+              <p className="text-xs text-gray-500 mt-1 font-medium">{revenueData?.pendingPayoutCount || 0} Requests waiting</p>
             </div>
 
             <div className="bg-white p-6 rounded-[28px] border border-gray-100 shadow-sm hover:shadow-md transition-all group">

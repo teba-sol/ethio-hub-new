@@ -4,8 +4,9 @@ import {
   Eye, CheckCircle2, XCircle, Clock, Truck, Package,
   AlertCircle, DollarSign, Calendar, User, MapPin,
   MessageSquare, FileText, MoreVertical, Printer,
-  ArrowUpRight, RefreshCw, ShieldCheck, Mail, CreditCard
+  ArrowUpRight, RefreshCw, ShieldCheck, Mail, CreditCard, X, Copy
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Button, Badge, Input } from '../UI';
 import { useNotification } from '../../context/NotificationContext';
 import {
@@ -120,6 +121,11 @@ export const ArtisanOrderManager: React.FC = () => {
   const [appliedDateRange, setAppliedDateRange] = useState({ start: '', end: '' });
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [orderToMarkReady, setOrderToMarkReady] = useState<string | null>(null);
+  const [inlineConfirmId, setInlineConfirmId] = useState<string | null>(null);
+  const [lastVerificationCode, setLastVerificationCode] = useState<string | null>(null);
   const itemsPerPage = 8;
 
   useEffect(() => {
@@ -142,10 +148,12 @@ export const ArtisanOrderManager: React.FC = () => {
     }
   };
 
-  const handleMarkAsReady = async (orderId: string) => {
-    const confirmReady = window.confirm("Are you sure you want to mark this order as ready for pickup?");
-    if (!confirmReady) return;
+  const handleMarkAsReady = (orderId: string) => {
+    setInlineConfirmId(orderId);
+    setOrderToMarkReady(orderId);
+  };
 
+  const confirmMarkAsReady = async (orderId: string) => {
     try {
       const response = await fetch(`/api/artisan/orders/${orderId}`, {
         method: 'PUT',
@@ -155,8 +163,10 @@ export const ArtisanOrderManager: React.FC = () => {
       const data = await response.json();
       if (data.success) {
         setOrders(prev => prev.map(o => o._id === orderId ? data.order : o));
+        setInlineConfirmId(null);
         if (data.verificationCode) {
-          showNotification(`Order marked as ready! Verification Code: ${data.verificationCode}`, 'success');
+          setLastVerificationCode(data.verificationCode);
+          setShowSuccessModal(true);
         } else {
           showNotification('Order status updated successfully', 'success');
         }
@@ -165,6 +175,9 @@ export const ArtisanOrderManager: React.FC = () => {
       }
     } catch (error) {
       console.error('Error updating order status:', error);
+      showNotification('An error occurred while updating status', 'error');
+    } finally {
+      setOrderToMarkReady(null);
     }
   };
 
@@ -399,14 +412,40 @@ export const ArtisanOrderManager: React.FC = () => {
             <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-4">
               <h3 className="text-xl font-bold text-primary mb-2">Actions</h3>
               {!['Ready for Pickup', 'Assigned', 'Shipped', 'Delivered'].includes(order.status) ? (
-                <Button
-                  className="w-full justify-start"
-                  variant="primary"
-                  leftIcon={Truck}
-                  onClick={() => handleMarkAsReady(order._id)}
-                >
-                  Mark as Ready
-                </Button>
+                <>
+                  {inlineConfirmId === order._id ? (
+                    <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 animate-in slide-in-from-top-2 space-y-3">
+                      <p className="text-xs font-bold text-amber-800">Mark this order as ready?</p>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1 h-9 text-[10px]" 
+                          onClick={() => setInlineConfirmId(null)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="primary" 
+                          className="flex-1 h-9 text-[10px]" 
+                          onClick={() => confirmMarkAsReady(order._id)}
+                        >
+                          Confirm
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      className="w-full justify-start"
+                      variant="primary"
+                      leftIcon={Truck}
+                      onClick={() => handleMarkAsReady(order._id)}
+                    >
+                      Mark as Ready
+                    </Button>
+                  )}
+                </>
               ) : (
                 <Button
                   className="w-full justify-start"
@@ -636,8 +675,38 @@ export const ArtisanOrderManager: React.FC = () => {
                     {new Date(order.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setSelectedOrderId(order._id)}>View</Button>
+                    <div className="flex justify-end gap-2 items-center">
+                      {inlineConfirmId === order._id ? (
+                        <div className="flex items-center gap-2 bg-amber-50 p-1 pr-2 rounded-xl border border-amber-100 animate-in fade-in slide-in-from-right-2">
+                          <span className="text-[10px] font-bold text-amber-700 px-2">Ready?</span>
+                          <button 
+                            onClick={() => setInlineConfirmId(null)}
+                            className="p-1 hover:bg-white rounded-lg transition-colors text-gray-400"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => confirmMarkAsReady(order._id)}
+                            className="p-1.5 bg-primary text-white rounded-lg hover:bg-ethio-dark transition-colors shadow-sm"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          {!['Ready for Pickup', 'Assigned', 'Shipped', 'Delivered'].includes(order.status) && (
+                            <Button 
+                              size="sm" 
+                              variant="primary" 
+                              className="h-8 text-[10px] px-3" 
+                              onClick={() => handleMarkAsReady(order._id)}
+                            >
+                              Ready
+                            </Button>
+                          )}
+                          <Button size="sm" variant="outline" className="h-8 text-[10px] px-3" onClick={() => setSelectedOrderId(order._id)}>View</Button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -682,6 +751,60 @@ export const ArtisanOrderManager: React.FC = () => {
           </Button>
         </div>
       </div>
+      {/* Success Modal */}
+      <AnimatePresence>
+        {showSuccessModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white rounded-[40px] shadow-3xl w-full max-w-md overflow-hidden relative border border-emerald-100"
+            >
+              <div className="h-2 w-full bg-emerald-500"></div>
+              
+              <div className="p-10 text-center">
+                <div className="mx-auto w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mb-8 border-4 border-white shadow-sm">
+                  <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+                </div>
+                
+                <h3 className="text-3xl font-serif font-bold text-emerald-900 mb-2">Order Ready!</h3>
+                <p className="text-gray-500 mb-8">
+                  The order has been marked as ready for pickup.
+                </p>
+                
+                {lastVerificationCode && (
+                  <div className="bg-emerald-50 p-6 rounded-[24px] border border-emerald-100 mb-8 relative group">
+                    <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-2">Verification Code</p>
+                    <div className="text-4xl font-mono font-bold text-emerald-800 tracking-[0.2em]">
+                      {lastVerificationCode}
+                    </div>
+                    <button 
+                      onClick={() => {
+                        if (lastVerificationCode) {
+                          navigator.clipboard.writeText(lastVerificationCode);
+                          showNotification('Code copied!', 'success');
+                        }
+                      }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-emerald-400 hover:text-emerald-600 transition-colors"
+                    >
+                      <Copy className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+                
+                <Button 
+                  variant="primary" 
+                  onClick={() => setShowSuccessModal(false)}
+                  className="w-full rounded-2xl py-4 h-auto font-bold bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-200"
+                >
+                  Got it
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -4,6 +4,7 @@ import Order from '@/models/order.model';
 import Booking from '@/models/booking.model';
 import Payment from '@/models/payment.model';
 import Wallet from '@/models/wallet.model';
+import Product from '@/models/artisan/product.model';
 
 import Transaction from '@/models/transaction.model';
 import mongoose from 'mongoose';
@@ -125,6 +126,17 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
         cartOrder.paymentDate = new Date();
         cartOrder.adminCommission = adminCommission;
         cartOrder.artisanEarnings = artisanEarnings;
+        
+        // Decrease product stock
+        try {
+          await Product.findByIdAndUpdate(cartOrder.product, {
+            $inc: { stock: -Math.abs(cartOrder.quantity || 1) }
+          });
+          console.log(`[PaymentService] Decreased stock for product ${cartOrder.product} by ${cartOrder.quantity}`);
+        } catch (stockErr) {
+          console.error(`[PaymentService] Failed to decrease stock for product ${cartOrder.product}:`, stockErr);
+        }
+
         await cartOrder.save();
 
         const artisanId = cartOrder.artisan;
@@ -355,6 +367,17 @@ export async function processSuccessfulPayment(txRef: string, metadata?: any) {
       });
       order.adminCommission = adminCommission;
       order.artisanEarnings = artisanEarnings;
+
+      // Decrease product stock
+      try {
+        await Product.findByIdAndUpdate(order.product, {
+          $inc: { stock: -Math.abs(order.quantity || 1) }
+        });
+        console.log(`[PaymentService] Decreased stock for product ${order.product} by ${order.quantity}`);
+      } catch (stockErr) {
+        console.error(`[PaymentService] Failed to decrease stock for product ${order.product}:`, stockErr);
+      }
+
       await order.save();
       console.log(`[PaymentService] Order status updated to paid`);
 

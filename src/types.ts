@@ -20,6 +20,7 @@ export interface User {
   suspendedAt?: string | null;
   isVerified: boolean;
   profileImage: string;
+  phone?: string;
   artisanStatus?: ArtisanStatus;
   organizerStatus?: OrganizerStatus;
   deliveryStatus?: DeliveryStatus;

@@ -127,6 +127,14 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Check stock availability
+      if (product.stock < item.quantity) {
+        return NextResponse.json(
+          { success: false, message: `Insufficient stock for ${product.name}. Only ${product.stock} left.` },
+          { status: 400 }
+        );
+      }
+
       const artisan = await User.findById(product.artisanId);
       if (!artisan) {
         return NextResponse.json(
@@ -229,14 +237,24 @@ export async function POST(request: NextRequest) {
         adminCommission,
         artisanEarnings,
         userLocationData,
+        shippingCost,
+        distanceKm,
+        artisanLocation,
       });
     }
 
     const requestShippingFee = Number(body.shippingFee) || 0;
+    
+    // Determine the single shipping fee for the entire artisan batch
+    let batchShippingCost = 50; // Minimum fallback
+    if (preparedItems.length > 0 && preparedItems[0].shippingCost) {
+      batchShippingCost = preparedItems[0].shippingCost;
+    } else if (requestShippingFee > 0) {
+      batchShippingCost = requestShippingFee;
+    }
 
-    for (const preparedItem of preparedItems) {
+    for (const [index, preparedItem] of preparedItems.entries()) {
       const {
-        index,
         item,
         product,
         artisan,
@@ -249,10 +267,8 @@ export async function POST(request: NextRequest) {
         userLocationData,
       } = preparedItem;
 
-      // Use calculated shipping cost, or fallback to request shipping fee, or minimum 50
-      let finalShippingCost = preparedItem.shippingCost || requestShippingFee || 50;
-      // Ensure it's never 0 if it's an order
-      if (finalShippingCost < 50) finalShippingCost = 50;
+      // Assign the full shipping fee only to the first order entry to avoid duplication in grand total
+      const finalShippingCost = (index === 0) ? batchShippingCost : 0;
       const orderIdempotencyKey = requestItems.length === 1
         ? idempotencyKey || undefined
         : idempotencyKey
@@ -484,8 +500,8 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     const chapaTitle = sanitizeChapaCustomizationText(
       isCartCheckout ? 'Cart purchase' : `Purchase ${productSummaries[0].replace(/^\d+ x /, '')}`
-    );
-    const chapaDescription = sanitizeChapaCustomizationText(productSummaries.join(' '));
+    ).substring(0, 16);
+    const chapaDescription = sanitizeChapaCustomizationText(productSummaries.join(' ')).substring(0, 255);
 
     const chapaPayload: any = {
       amount: grandTotal,
@@ -496,7 +512,7 @@ export async function POST(request: NextRequest) {
       phone: user.phone || '',
       tx_ref: txRef,
       // callback_url removed - Chapa callbacks ignored (localhost blocked)
-      return_url: `${baseUrl}/payment-success?orderId=${createdOrders[0]._id}&status=success&tx_ref=${txRef}${isCartCheckout ? '&cart=true' : ''}`,
+      return_url: `${baseUrl}/products`,
       metadata: {
         orderId: createdOrders[0]._id.toString(),
         orderIds: createdOrders.map((order) => order._id.toString()),

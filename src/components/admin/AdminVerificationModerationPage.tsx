@@ -16,6 +16,7 @@ interface VerificationStats {
   underReview: number;
   approved: number;
   rejected: number;
+  modificationRequested: number;
 }
 
 export const AdminVerificationModerationPage: React.FC = () => {
@@ -38,7 +39,7 @@ export const AdminVerificationModerationPage: React.FC = () => {
       ]);
 
       setStats({
-        pendingUsers: userRes.stats?.pending || 0,
+        pendingUsers: (userRes.stats?.pending || 0) + (userRes.stats?.underReview || 0) + (userRes.stats?.modificationRequested || 0),
         pendingEvents: eventRes.requests?.filter((e: any) => e.verificationStatus === 'pending_approval' || e.verificationStatus === 'Pending Approval').length || 0,
         pendingProducts: productRes.products?.length || 0
       });
@@ -99,7 +100,7 @@ export const AdminVerificationModerationPage: React.FC = () => {
           </div>
           <div className="ml-auto">
             <Badge variant={stats.pendingUsers > 0 ? "warning" : "success"}>
-              {stats.pendingUsers > 0 ? t("messages.actionRequired") : t("common.allClear")}
+              {stats.pendingUsers > 0 ? t("messages.actionRequired") : ""}
             </Badge>
           </div>
         </div>
@@ -115,7 +116,7 @@ export const AdminVerificationModerationPage: React.FC = () => {
           </div>
           <div className="ml-auto">
             <Badge variant={stats.pendingEvents > 0 ? "warning" : "success"}>
-              {stats.pendingEvents > 0 ? t("messages.actionRequired") : t("common.allClear")}
+              {stats.pendingEvents > 0 ? t("messages.actionRequired") : ""}
             </Badge>
           </div>
         </div>
@@ -131,7 +132,7 @@ export const AdminVerificationModerationPage: React.FC = () => {
           </div>
           <div className="ml-auto">
             <Badge variant={stats.pendingProducts > 0 ? "warning" : "success"}>
-              {stats.pendingProducts > 0 ? t("messages.actionRequired") : t("common.allClear")}
+              {stats.pendingProducts > 0 ? t("messages.actionRequired") : ""}
             </Badge>
           </div>
         </div>

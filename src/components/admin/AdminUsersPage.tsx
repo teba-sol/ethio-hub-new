@@ -87,6 +87,8 @@ export const AdminUsersPage: React.FC = () => {
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isSuspensionModalOpen, setIsSuspensionModalOpen] = useState(false);
   const [suspendingUserId, setSuspendingUserId] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -219,17 +221,23 @@ export const AdminUsersPage: React.FC = () => {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    // We'll use a standard alert for now, but in a real app we'd use a custom confirm modal
-    if (!window.confirm('Are you sure you want to soft delete this user?')) return;
+  const handleDeleteUser = (userId: string) => {
+    setDeletingUserId(userId);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingUserId) return;
     try {
-      setActionLoading(userId);
-      const response = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+      setActionLoading(deletingUserId);
+      const response = await fetch(`/api/admin/users/${deletingUserId}`, { method: 'DELETE' });
       const data = await response.json();
       if (response.ok) {
-        setUsers(prev => prev.filter(u => u._id !== userId));
+        setUsers(prev => prev.filter(u => u._id !== deletingUserId));
         fetchStats();
         showNotification('User deleted successfully');
+        setIsDeleteModalOpen(false);
+        setDeletingUserId(null);
       } else {
         showNotification(data.message || 'Failed to delete user', 'error');
       }
@@ -310,29 +318,48 @@ export const AdminUsersPage: React.FC = () => {
         newErrors.name = 'Last name is required (Enter both first and last name)';
       }
 
-      // Email Validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!formData.email.trim()) {
+      // Advanced Email Validation
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      const email = formData.email.trim().toLowerCase();
+      
+      const isLikelyRandom = (str: string) => {
+        // Basic keyboard mash detection: 4+ consecutive consonants
+        const consonants = str.match(/[^aeiou0-9@.]{4,}/gi);
+        if (consonants) return true;
+        
+        // Too short before @
+        const [name, domain] = str.split('@');
+        if (!name || name.length < 3) return true;
+        
+        // Domain too short or suspicious
+        if (!domain || domain.length < 4) return true;
+        
+        return false;
+      };
+
+      if (!email) {
         newErrors.email = 'Email address is required';
-      } else if (!emailRegex.test(formData.email)) {
-        newErrors.email = 'Please enter a valid email address';
+      } else if (!emailRegex.test(email)) {
+        newErrors.email = 'invalid email format';
+      } else if (isLikelyRandom(email)) {
+        newErrors.email = 'Please provide a real email address';
+      } else if (email.endsWith('.test') || email.includes('example.com')) {
+        newErrors.email = 'Please provide a real email';
       }
 
       // Phone Validation for Delivery Guy
       if (formData.role === 'delivery') {
         const phone = formData.deliveryProfile.phone.trim();
+        const phoneRegex = /^(09|07)\d{8}$/;
+        
         if (!phone) {
           newErrors.phone = 'Phone number is required';
-        } else if (phone.startsWith('09')) {
-          if (phone.length !== 10) {
-            newErrors.phone = 'Phone number starting with 09 must be 10 digits';
-          }
-        } else if (phone.startsWith('+251')) {
-          if (phone.length !== 13) {
-            newErrors.phone = 'Phone number starting with +251 must be 13 digits';
-          }
-        } else {
-          newErrors.phone = 'Phone must start with 09 or +251';
+        } else if (!/^\d+$/.test(phone)) {
+          newErrors.phone = 'Phone must contain only numbers';
+        } else if (phone.length > 10) {
+          newErrors.phone = 'Phone cannot be greater than 10 digits';
+        } else if (!phoneRegex.test(phone)) {
+          newErrors.phone = 'Invalid format. Must be 10 digits starting with 09 or 07';
         }
 
         if (!formData.deliveryProfile.vehicleType) {
@@ -353,18 +380,41 @@ export const AdminUsersPage: React.FC = () => {
         ...formData,
         role: formData.role.toLowerCase()
       };
-      const result = await handleAddUser(submitData);
-      if (result && result.tempPassword) {
-        // Close modal immediately and show the special password notification
-        onClose();
-        showNotification(
-          'User Created Successfully!', 
-          'success', 
-          { password: result.tempPassword, email: formData.email }
-        );
-        fetchUsers();
+
+      try {
+        const response = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(submitData),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          onClose();
+          const roleText = formData.role.charAt(0).toUpperCase() + formData.role.slice(1);
+          showNotification(
+            `${roleText} Account Created Successfully!`, 
+            'success', 
+            { 
+              password: data.tempPassword, 
+              email: formData.email,
+              message: `The credentials have been sent to ${formData.email} and the user can now access their ${roleText} dashboard.`
+            }
+          );
+          fetchUsers();
+          fetchStats();
+        } else if (response.status === 409) {
+          setErrors(prev => ({ ...prev, email: 'user already exists' }));
+        } else {
+          showNotification(data.message || 'Failed to add user', 'error');
+        }
+      } catch (error) {
+        console.error('Error adding user:', error);
+        showNotification('An error occurred while adding the user', 'error');
+      } finally {
+        setSubmitting(false);
       }
-      setSubmitting(false);
     };
 
     const getModalWidth = () => {
@@ -438,12 +488,14 @@ export const AdminUsersPage: React.FC = () => {
                   <div>
                     <Input 
                       label="Phone"
-                      placeholder="09... or +251..." 
+                      placeholder="09... or 07..." 
                       value={formData.deliveryProfile.phone}
+                      maxLength={10}
                       onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
                         setFormData({
                           ...formData, 
-                          deliveryProfile: { ...formData.deliveryProfile, phone: e.target.value }
+                          deliveryProfile: { ...formData.deliveryProfile, phone: val }
                         });
                         if (errors.phone) setErrors({...errors, phone: ''});
                       }}
@@ -495,6 +547,40 @@ export const AdminUsersPage: React.FC = () => {
               <Button type="submit" className="w-full" isLoading={submitting}>Add User</Button>
             </div>
           </form>
+        </div>
+      </div>
+    );
+  };
+
+  const DeleteConfirmationModal = ({ onClose, onConfirm }: { onClose: () => void, onConfirm: () => void }) => {
+    const userToDelete = users.find(u => u._id === deletingUserId);
+    
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="bg-white rounded-[32px] w-full max-w-sm shadow-2xl p-8 text-center animate-in zoom-in-95 duration-300">
+          <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Trash2 className="w-10 h-10 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-serif font-bold text-gray-800 mb-2">Are you sure?</h2>
+          <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+            You are about to soft delete <span className="font-bold text-gray-800">{userToDelete?.name}</span>. This action can be reversed by an administrator later.
+          </p>
+          <div className="flex gap-4">
+            <Button 
+              variant="outline" 
+              className="flex-1 py-4 rounded-2xl font-bold border-gray-200 hover:bg-gray-50" 
+              onClick={onClose}
+            >
+              No, Cancel
+            </Button>
+            <Button 
+              className="flex-1 py-4 rounded-2xl font-bold bg-red-600 hover:bg-red-700 text-white border-none shadow-lg shadow-red-200" 
+              onClick={onConfirm}
+              isLoading={!!actionLoading}
+            >
+              Yes, Delete
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -686,6 +772,16 @@ export const AdminUsersPage: React.FC = () => {
             setIsSuspensionModalOpen(false);
             setSuspendingUserId(null);
           }} 
+        />
+      )}
+
+      {isDeleteModalOpen && (
+        <DeleteConfirmationModal 
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setDeletingUserId(null);
+          }} 
+          onConfirm={confirmDelete} 
         />
       )}
 

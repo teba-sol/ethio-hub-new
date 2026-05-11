@@ -158,7 +158,10 @@ export async function POST(request: NextRequest) {
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { artisanStatus: 'Pending' },
+      { 
+        artisanStatus: 'Pending',
+        profileImage: profileImage || undefined
+      },
       { new: true }
     ).select('-password');
 

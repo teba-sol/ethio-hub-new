@@ -36,7 +36,15 @@ export async function GET(request: NextRequest) {
         .limit(3)
     ]);
 
-    const notifications = [];
+    const notifications: {
+      id: string;
+      title: string;
+      message: string;
+      time: any;
+      type: string;
+      color: string;
+      bg: string;
+    }[] = [];
 
     // 1. New Registrations
     recentUsers.forEach(user => {

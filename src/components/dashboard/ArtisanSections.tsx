@@ -70,21 +70,141 @@ const NOTIFICATIONS = [
   { id: 3, type: 'stock', message: 'Low stock alert: Coffee Set (2 left)', time: '3h ago' },
   { id: 4, type: 'payout', message: 'Weekly payout of ETB 12,500 processed', time: '1d ago' },
 ];
+const SupportForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const { user } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subject.trim() || !message.trim()) return;
+    
+    setSending(true);
+    try {
+      const response = await fetch('/api/artisan/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject,
+          message,
+          userId: user?.id || 'anonymous',
+          userName: user?.name || 'Anonymous User',
+          userEmail: user?.email || ''
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSubmitted(true);
+        setSubject('');
+        setMessage('');
+        setTimeout(() => {
+          onSuccess();
+          setSubmitted(false);
+        }, 2000);
+      } else {
+        alert(data.message || 'Failed to submit support ticket');
+      }
+    } catch (error: any) {
+      console.error('Support ticket error:', error);
+      alert(`Error: ${error.message || 'An error occurred while submitting your ticket'}`);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="py-12 text-center space-y-4 animate-in fade-in zoom-in duration-500">
+        <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle2 className="w-10 h-10" />
+        </div>
+        <h4 className="text-2xl font-serif font-bold text-primary">Message Sent!</h4>
+        <p className="text-gray-500">Our support team will get back to you via email shortly.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Subject</label>
+        <Input 
+          placeholder="How can we help?" 
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Message</label>
+        <textarea 
+          className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary h-32 text-sm" 
+          placeholder="Describe your issue..."
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          required
+        ></textarea>
+      </div>
+      <Button className="w-full" type="submit" disabled={sending}>
+        {sending ? 'Sending...' : 'Send Message'}
+      </Button>
+    </form>
+  );
+};
 
 export const ArtisanOverview: React.FC<{ onAddProduct: () => void; disableCreate?: boolean }> = ({ onAddProduct, disableCreate = false }) => {
   const router = useRouter();
   const navigate = (to: string) => router.push(to);
-  const [showSupport, setShowSupport] = React.useState(false);
-  const [showSalesTips, setShowSalesTips] = React.useState(false);
-  const [revenueRange, setRevenueRange] = React.useState<'Daily' | 'Weekly' | 'Monthly'>('Weekly');
+  const [showSupport, setShowSupport] = useState(false);
+  const [showSalesTips, setShowSalesTips] = useState(false);
+  const [revenueRange, setRevenueRange] = useState<'Daily' | 'Weekly' | 'Monthly'>('Weekly');
 
-  const getRevenueData = () => {
-    switch (revenueRange) {
-      case 'Daily': return DAILY_REVENUE;
-      case 'Monthly': return MONTHLY_REVENUE;
-      default: return WEEKLY_REVENUE;
-    }
-  };
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    totalOrders: 0,
+    totalRevenue: 0,
+    pendingOrders: 0,
+    lowStock: 0,
+    avgRating: 0
+  });
+  const [revenueData, setRevenueData] = useState<any[]>(WEEKLY_REVENUE);
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [orderStatus, setOrderStatus] = useState<any[]>([]);
+  const [topProducts, setTopProducts] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [topCustomers, setTopCustomers] = useState<any[]>([]);
+  const [customerInsights, setCustomerInsights] = useState({ returning: 0, new: 0 });
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch('/api/artisan/dashboard/overview');
+        const result = await res.json();
+        if (result.success) {
+          setStats(result.data.stats);
+          if (result.data.chartData?.length > 0) {
+            setRevenueData(result.data.chartData);
+          }
+          setRecentOrders(result.data.recentOrders || []);
+          setOrderStatus(result.data.orderStatus || []);
+          setTopProducts(result.data.topProducts || []);
+          setNotifications(result.data.notifications || []);
+          setTopCustomers(result.data.topCustomers || []);
+          if (result.data.customerInsights) {
+            setCustomerInsights(result.data.customerInsights);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching artisan stats:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
 
   const salesTips = [
     "High-quality photos increase sales by 40%. Use natural light!",
@@ -93,6 +213,14 @@ export const ArtisanOverview: React.FC<{ onAddProduct: () => void; disableCreate
     "Offer limited-time discounts to clear old stock.",
     "Share your artisan story; customers love the human connection."
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
@@ -126,17 +254,17 @@ export const ArtisanOverview: React.FC<{ onAddProduct: () => void; disableCreate
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
-          { label: 'Total Products', val: '24', icon: Package, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Total Orders', val: '156', icon: ShoppingCart, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Total Revenue', val: 'ETB 45k', icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50' },
-          { label: 'Pending Orders', val: '5', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-          { label: 'Low Stock', val: '2', icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
-          { label: 'Avg Rating', val: '4.8', icon: Star, color: 'text-yellow-500', bg: 'bg-yellow-50' },
+          { label: 'Total Products', val: stats.totalProducts.toString(), icon: Package, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Total Orders', val: stats.totalOrders.toString(), icon: ShoppingCart, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Total Earned', val: stats.totalRevenue >= 1000 ? `ETB ${(stats.totalRevenue / 1000).toFixed(1)}k` : `ETB ${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50' },
+          { label: 'Pending Orders', val: stats.pendingOrders.toString(), icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
+          { label: 'Low Stock', val: stats.lowStock.toString(), icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
+          { label: 'Avg Rating', val: stats.avgRating.toString(), icon: Star, color: 'text-yellow-500', bg: 'bg-yellow-50' },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between h-32">
             <div className="flex justify-between items-start">
               <div className={`p-2 ${stat.bg} rounded-xl`}><stat.icon className={`w-4 h-4 ${stat.color}`} /></div>
-              {i === 4 && <span className="flex h-2 w-2 rounded-full bg-red-500"></span>}
+              {i === 4 && stats.lowStock > 0 && <span className="flex h-2 w-2 rounded-full bg-red-500"></span>}
             </div>
             <div>
               <p className="text-2xl font-bold text-primary">{stat.val}</p>
@@ -168,7 +296,7 @@ export const ArtisanOverview: React.FC<{ onAddProduct: () => void; disableCreate
             </div>
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={getRevenueData()}>
+                <AreaChart data={revenueData}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
@@ -191,25 +319,29 @@ export const ArtisanOverview: React.FC<{ onAddProduct: () => void; disableCreate
             <section className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
               <h4 className="font-bold text-primary mb-4">Order Status</h4>
               <div className="flex items-center justify-center h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={ORDER_STATUS_DATA}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={70}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {ORDER_STATUS_DATA.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend iconSize={8} layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{fontSize: '10px'}} />
-                  </PieChart>
-                </ResponsiveContainer>
+                {orderStatus.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={orderStatus}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={70}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {orderStatus.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend iconSize={8} layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{fontSize: '10px'}} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-gray-400 text-xs italic">No order data available</div>
+                )}
               </div>
             </section>
 
@@ -220,8 +352,8 @@ export const ArtisanOverview: React.FC<{ onAddProduct: () => void; disableCreate
                 <button className="text-xs text-emerald-600 font-bold hover:underline" onClick={() => navigate('/dashboard/artisan/orders')}>View All</button>
               </div>
               <div className="space-y-3">
-                {RECENT_ORDERS.map((order, i) => (
-                  <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
+                {recentOrders.length > 0 ? recentOrders.map((order, i) => (
+                  <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer" onClick={() => navigate(`/dashboard/artisan/orders?id=${order.id.replace('#','')}`)}>
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-white rounded-lg border border-gray-100"><Box className="w-4 h-4 text-primary" /></div>
                       <div>
@@ -234,7 +366,9 @@ export const ArtisanOverview: React.FC<{ onAddProduct: () => void; disableCreate
                       <Badge variant={order.status === 'Pending' ? 'warning' : order.status === 'Delivered' ? 'success' : 'info'} size="sm">{order.status}</Badge>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="py-8 text-center text-gray-400 text-xs">No recent orders</div>
+                )}
               </div>
             </section>
           </div>
@@ -253,7 +387,7 @@ export const ArtisanOverview: React.FC<{ onAddProduct: () => void; disableCreate
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {TOP_PRODUCTS.map((prod, i) => (
+                  {topProducts.length > 0 ? topProducts.map((prod, i) => (
                     <tr key={i} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -265,7 +399,9 @@ export const ArtisanOverview: React.FC<{ onAddProduct: () => void; disableCreate
                       <td className="px-6 py-4 font-bold text-primary">ETB {prod.revenue}</td>
                       <td className="px-6 py-4 text-right"><TrendingUp className="w-4 h-4 text-emerald-500 inline" /></td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr><td colSpan={4} className="px-6 py-12 text-center text-gray-400 text-xs italic">No product performance data</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -281,7 +417,7 @@ export const ArtisanOverview: React.FC<{ onAddProduct: () => void; disableCreate
               <button className="text-xs font-bold text-secondary hover:underline">Clear</button>
             </div>
             <div className="space-y-4">
-              {NOTIFICATIONS.map(notif => (
+              {notifications.length > 0 ? notifications.map(notif => (
                 <div 
                   key={notif.id} 
                   onClick={() => {
@@ -289,7 +425,7 @@ export const ArtisanOverview: React.FC<{ onAddProduct: () => void; disableCreate
                       case 'order': navigate('/dashboard/artisan/orders'); break;
                       case 'review': navigate('/dashboard/artisan/reviews'); break;
                       case 'stock': navigate('/dashboard/artisan/products'); break;
-                      case 'payout': navigate('/dashboard/artisan/revenue'); break;
+                      case 'payout': navigate('/dashboard/artisan/wallet'); break;
                     }
                   }}
                   className="flex gap-3 items-start p-3 bg-gray-50 rounded-2xl border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors group"
@@ -300,7 +436,9 @@ export const ArtisanOverview: React.FC<{ onAddProduct: () => void; disableCreate
                     <p className="text-[10px] text-gray-400 mt-1">{notif.time}</p>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="py-8 text-center text-gray-400 text-xs italic">No new alerts</div>
+              )}
             </div>
           </div>
 
@@ -314,29 +452,30 @@ export const ArtisanOverview: React.FC<{ onAddProduct: () => void; disableCreate
                   <span>New</span>
                 </div>
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden flex">
-                  <div className="h-full bg-purple-500 w-[65%]"></div>
-                  <div className="h-full bg-emerald-500 w-[35%]"></div>
+                  <div className="h-full bg-purple-500" style={{ width: `${customerInsights.returning}%` }}></div>
+                  <div className="h-full bg-emerald-500" style={{ width: `${customerInsights.new}%` }}></div>
                 </div>
                 <div className="flex justify-between text-xs font-bold text-primary mt-1">
-                  <span>65%</span>
-                  <span>35%</span>
+                  <span>{customerInsights.returning}%</span>
+                  <span>{customerInsights.new}%</span>
                 </div>
               </div>
               <div className="pt-4 border-t border-gray-100">
                 <h4 className="text-sm font-bold text-primary mb-3">Top Customers</h4>
-                {[
-                  { name: 'Abebe K.', orders: 12, spent: 'ETB 15k' },
-                  { name: 'Sara M.', orders: 8, spent: 'ETB 8.5k' },
-                  { name: 'Dawit T.', orders: 5, spent: 'ETB 5k' },
-                ].map((c, i) => (
+                {topCustomers.length > 0 ? topCustomers.map((c, i) => (
                   <div key={i} className="flex justify-between items-center py-2">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-[10px] font-bold text-gray-500">{c.name.charAt(0)}</div>
-                      <span className="text-xs font-bold text-gray-600">{c.name}</span>
+                      <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-bold text-primary border border-gray-200">{c.avatar}</div>
+                      <div>
+                        <p className="text-xs font-bold text-gray-600">{c.name}</p>
+                        <p className="text-[10px] text-gray-400">{c.orders} orders</p>
+                      </div>
                     </div>
-                    <span className="text-xs font-bold text-primary">{c.spent}</span>
+                    <span className="text-xs font-bold text-primary">ETB {c.spent.toLocaleString()}</span>
                   </div>
-                ))}
+                )) : (
+                  <div className="text-center py-4 text-gray-400 text-[10px] italic">No customer data yet</div>
+                )}
               </div>
             </div>
           </div>
@@ -451,89 +590,7 @@ export const ArtisanMyProductsView: React.FC<{ onAddProduct: () => void; disable
   </div>
 );
 
-const SupportForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
-  const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
-  const [sending, setSending] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const { user } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!subject.trim() || !message.trim()) return;
-    
-    setSending(true);
-    try {
-      const response = await fetch('/api/artisan/support', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject,
-          message,
-          userId: user?.id || 'anonymous',
-          userName: user?.name || 'Anonymous User',
-          userEmail: user?.email || ''
-        })
-      });
-      const data = await response.json();
-      if (data.success) {
-        setSubmitted(true);
-        setSubject('');
-        setMessage('');
-        setTimeout(() => {
-          onSuccess();
-          setSubmitted(false);
-        }, 2000);
-      } else {
-        alert(data.message || 'Failed to submit support ticket');
-      }
-    } catch (error: any) {
-      console.error('Support ticket error:', error);
-      alert(`Error: ${error.message || 'An error occurred while submitting your ticket'}`);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  if (submitted) {
-    return (
-      <div className="py-12 text-center space-y-4 animate-in fade-in zoom-in duration-500">
-        <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-          <CheckCircle2 className="w-10 h-10" />
-        </div>
-        <h4 className="text-2xl font-serif font-bold text-primary">Message Sent!</h4>
-        <p className="text-gray-500">Our support team will get back to you via email shortly.</p>
-      </div>
-    );
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Subject</label>
-        <Input 
-          placeholder="How can we help?" 
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-          required
-        />
-      </div>
-      <div>
-        <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Message</label>
-        <textarea 
-          className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary h-32 text-sm" 
-          placeholder="Describe your issue..."
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          required
-        ></textarea>
-      </div>
-      <Button className="w-full" type="submit" disabled={sending}>
-        {sending ? 'Sending...' : 'Send Message'}
-      </Button>
-    </form>
-  );
-};
 
 export const ArtisanOrdersView: React.FC = () => (
   <div className="space-y-6">

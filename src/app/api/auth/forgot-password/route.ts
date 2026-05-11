@@ -31,11 +31,9 @@ export async function POST(request: NextRequest) {
 
     const user = await User.findOne({ email: email.toLowerCase() });
     
-    // Always return success to prevent email enumeration
-    // But only proceed if user exists
     if (!user) {
       return new NextResponse(
-        JSON.stringify({ success: false, message: 'Email not found or incorrect' }),
+        JSON.stringify({ success: false, message: 'user is not registered' }),
         { status: 404, headers: { 'content-type': 'application/json' } }
       );
     }

@@ -530,7 +530,7 @@ export const FestivalCreationWizard: React.FC<{
     return { primary: en, secondary: '', showBoth: false };
   };
 
-  const handleFileUpload = async (file: File, isCover?: boolean, retryCount = 0): Promise<string> => {
+  const handleFileUpload = async (file: File, retryCount = 0): Promise<string> => {
     if (!file) return '';
     
     setUploadingFile(true);
@@ -560,7 +560,7 @@ export const FestivalCreationWizard: React.FC<{
       if (retryCount < 2) {
         console.log(`Retrying upload... attempt ${retryCount + 1}`);
         await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
-        return handleFileUpload(file, isCover, retryCount + 1);
+        return handleFileUpload(file, retryCount + 1);
       }
       
       return '';
@@ -570,7 +570,7 @@ export const FestivalCreationWizard: React.FC<{
   };
 
   const handleCoverUpload = async (file: File) => {
-    const imageUrl = await handleFileUpload(file, true);
+    const imageUrl = await handleFileUpload(file);
     if (imageUrl) {
       setFormData(prev => ({ ...prev, core: { ...prev.core, coverImage: imageUrl } }));
     }

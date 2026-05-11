@@ -515,7 +515,17 @@ const buildUserWelcomeHtml = (input: UserWelcomeEmailInput) => `
   <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1f2937;">
     <h2 style="margin-bottom: 16px; color: #0f766e;">Welcome to Ethio Craft Hub!</h2>
     <p style="margin-bottom: 16px;">Hello Mr/Ms ${input.name},</p>
-    <p style="margin-bottom: 16px;">An account has been created for you as a <strong>${input.role}</strong> on our platform.</p>
+    <p style="margin-bottom: 8px;">An account has been created for you as a <strong>${input.role}</strong> on our platform.</p>
+    
+    <div style="margin-bottom: 24px; padding: 16px; background: #f0fdf4; border-radius: 12px; border: 1px solid #bbf7d0;">
+      <p style="margin: 0; color: #166534; font-size: 14px;">
+        ${input.role.toLowerCase() === 'admin' ? 'As an administrator, you have full access to manage the platform, monitor users, and oversee all transactions and cultural experiences.' : 
+          input.role.toLowerCase() === 'organizer' ? 'As an event organizer, you can now create and manage cultural festivals, track bookings, and showcase unique Ethiopian experiences to the world.' :
+          input.role.toLowerCase() === 'artisan' ? 'Welcome to our artisan community! You can now list your handmade crafts, manage your store, and connect with global collectors of Ethiopian art.' :
+          input.role.toLowerCase() === 'delivery' ? 'As a delivery partner, you play a vital role in bringing Ethiopian heritage to our customers. You can now manage your delivery assignments and track your earnings.' :
+          'You can now explore the marketplace, book cultural festivals, and discover the best of Ethiopian handmade art.'}
+      </p>
+    </div>
     
     ${input.password ? `
     <div style="margin: 24px 0; padding: 20px 24px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px;">

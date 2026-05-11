@@ -80,8 +80,38 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .lean();
 
+    const festivalIds = festivals.map(f => f._id);
+    const bookingsData = await Booking.aggregate([
+      { 
+        $match: { 
+          festival: { $in: festivalIds }, 
+          $or: [
+            { paymentStatus: 'paid' },
+            { status: { $in: ['confirmed', 'completed'] } }
+          ]
+        } 
+      },
+      { $group: {
+        _id: '$festival',
+        booked: { $sum: '$quantity' },
+        revenue: { $sum: '$totalPrice' }
+      }}
+    ]);
+
+    const bookingsMap = new Map(bookingsData.map(b => [b._id.toString(), b]));
+
+    const allBookings = await Booking.find({ 
+      festival: { $in: festivalIds },
+      $or: [
+        { paymentStatus: 'paid' },
+        { status: { $in: ['confirmed', 'completed'] } }
+      ]
+    }).populate('tourist', 'name email touristProfile').lean();
+
     const requests = festivals.map((festival: any) => {
       const festivalId = festival._id.toString();
+      const bookingStats = bookingsMap.get(festivalId) || { booked: 0, revenue: 0 };
+      const festivalBookings = allBookings.filter((b: any) => b.festival.toString() === festivalId);
 
       // Helper to handle bilingual fields
       const getText = (field: any, fallback: string = ''): string => {
@@ -113,10 +143,25 @@ export async function GET(request: NextRequest) {
         vipTicketPrice: festival.pricing?.vipPrice || 0,
         ticketPrice: festival.pricing?.basePrice || 0,
         capacity: festival.totalCapacity || festival.capacity || 0,
-        // Removed heavy bookings fetch for list view to improve performance
-        booked: 0, 
-        revenue: 0,
-        bookings: [],
+        booked: bookingStats.booked || 0, 
+        revenue: bookingStats.revenue || 0,
+        refundAmount: 0,
+        bookings: festivalBookings.map((b: any) => ({
+          id: b._id.toString(),
+          user: b.contactInfo?.fullName || b.tourist?.name || 'Guest',
+          userImage: b.tourist?.touristProfile?.profileImage,
+          email: b.contactInfo?.email || b.tourist?.email || '',
+          date: new Date(b.createdAt).toLocaleDateString(),
+          quantity: b.quantity,
+          totalPaid: b.totalPrice,
+          paymentMethod: b.paymentMethod || 'Card',
+          paymentStatus: b.paymentStatus === 'paid' ? 'Paid' : 'Pending',
+          transactionId: b.paymentRef || b._id.toString().slice(-8),
+          accommodation: b.bookingDetails?.room ? {
+            hotel: b.bookingDetails.room.hotelName,
+            roomType: b.bookingDetails.room.roomName
+          } : undefined
+        })),
         commissionRate: festival.pricing?.commissionRate || 10,
         submittedAt: festival.submittedAt || festival.createdAt,
         status: festival.status || 'Draft',

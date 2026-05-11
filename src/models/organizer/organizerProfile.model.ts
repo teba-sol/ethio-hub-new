@@ -3,14 +3,20 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export interface IOrganizerProfile extends Document {
   userId: mongoose.Types.ObjectId;
   companyName: string;
+  contactPersonName?: string;
   phone: string;
+  organizerType?: string;
   website?: string;
+  socialMedia?: string;
   bio: string;
+  experienceYears?: string;
   country: string;
   region: string;
   city: string;
   address: string;
-  payoutMethod: 'bank' | 'telebirr' | 'chapa';
+  latitude?: number;
+  longitude?: number;
+  payoutMethod: 'Bank Account' | 'Mobile Wallet' | 'telebirr' | 'chapa' | 'bank';
   bankName?: string;
   accountHolderName?: string;
   accountNumber?: string;
@@ -18,6 +24,11 @@ export interface IOrganizerProfile extends Document {
   chapaAccountId?: string;
   logo?: string;
   businessLicense?: string;
+  tourismLicense?: string;
+  taxCert?: string;
+  eventPhotos?: string;
+  eventPoster?: string;
+  eventVideos?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,16 +47,29 @@ const OrganizerProfileSchema = new Schema<IOrganizerProfile>(
       required: true,
       trim: true,
     },
+    contactPersonName: {
+      type: String,
+      trim: true,
+    },
     phone: {
       type: String,
       required: true,
     },
+    organizerType: {
+      type: String,
+    },
     website: {
+      type: String,
+    },
+    socialMedia: {
       type: String,
     },
     bio: {
       type: String,
       required: true,
+    },
+    experienceYears: {
+      type: String,
     },
     country: {
       type: String,
@@ -64,10 +88,15 @@ const OrganizerProfileSchema = new Schema<IOrganizerProfile>(
       type: String,
       required: true,
     },
+    latitude: {
+      type: Number,
+    },
+    longitude: {
+      type: Number,
+    },
     payoutMethod: {
       type: String,
       required: true,
-      enum: ['bank', 'telebirr', 'chapa'],
     },
     bankName: {
       type: String,
@@ -88,6 +117,21 @@ const OrganizerProfileSchema = new Schema<IOrganizerProfile>(
       type: String,
     },
     businessLicense: {
+      type: String,
+    },
+    tourismLicense: {
+      type: String,
+    },
+    taxCert: {
+      type: String,
+    },
+    eventPhotos: {
+      type: String,
+    },
+    eventPoster: {
+      type: String,
+    },
+    eventVideos: {
       type: String,
     },
   },

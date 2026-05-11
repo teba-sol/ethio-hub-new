@@ -43,8 +43,8 @@ export async function GET(request: NextRequest) {
           redirectPath += `&bookingId=${result.booking._id}&tx_ref=${txRef}`;
         } else if (result.order?._id) {
           redirectPath += `&orderId=${result.order._id}&tx_ref=${txRef}`;
-        } else if (result.payment?.orderId) {
-          redirectPath += `&orderId=${result.payment.orderId}&tx_ref=${txRef}`;
+        } else if ((result as any).payment?.orderId) {
+          redirectPath += `&orderId=${(result as any).payment.orderId}&tx_ref=${txRef}`;
         }
         
         redirectPath += `&payment=success`;

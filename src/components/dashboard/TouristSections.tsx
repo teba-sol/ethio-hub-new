@@ -709,7 +709,10 @@ export const TouristOrdersView: React.FC = () => {
                   <input
                     type="tel"
                     value={telebirrNumber}
-                    onChange={(e) => setTelebirrNumber(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setTelebirrNumber(val);
+                    }}
                     placeholder="09xxxxxxxx"
                     className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/10"
                   />

@@ -73,49 +73,27 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const {
       organizerName,
+      contactPersonName,
       phoneNumber,
+      organizerType,
       description,
+      experienceYears,
       website,
+      socialMedia,
       country,
       region,
       city,
       address,
+      latitude,
+      longitude,
       paymentMethod,
       bankName,
       accountName,
-      accountNumber,
-      telebirrNumber,
-      chapaAccountId,
+      bankAccountNumber,
+      walletPhoneNumber,
       logo,
-      businessLicense,
+      documents
     } = body;
-
-    const errors: string[] = [];
-    if (!organizerName || !organizerName.trim()) errors.push('Organizer name is required');
-    if (!phoneNumber || !phoneNumber.trim()) errors.push('Phone number is required');
-    if (!description || !description.trim()) errors.push('Description is required');
-    if (!country) errors.push('Country is required');
-    if (!region || !region.trim()) errors.push('Region is required');
-    if (!city || !city.trim()) errors.push('City is required');
-    if (!address || !address.trim()) errors.push('Address is required');
-    if (!paymentMethod) errors.push('Payment method is required');
-
-    if (paymentMethod === 'bank') {
-      if (!bankName || !bankName.trim()) errors.push('Bank name is required');
-      if (!accountName || !accountName.trim()) errors.push('Account name is required');
-      if (!accountNumber || !accountNumber.trim()) errors.push('Account number is required');
-    } else if (paymentMethod === 'telebirr') {
-      if (!telebirrNumber || !telebirrNumber.trim()) errors.push('Telebirr number is required');
-    } else if (paymentMethod === 'chapa') {
-      if (!chapaAccountId || !chapaAccountId.trim()) errors.push('Chapa account ID is required');
-    }
-
-    if (errors.length > 0) {
-      return new NextResponse(
-        JSON.stringify({ success: false, message: 'Missing required fields', errors }),
-        { status: 400, headers: { 'content-type': 'application/json' } }
-      );
-    }
 
     const user = await User.findById(userId);
     if (!user || user.role !== 'organizer') {
@@ -127,22 +105,32 @@ export async function PUT(request: NextRequest) {
 
     const organizerProfileData = {
       userId: new (await import('mongoose')).default.Types.ObjectId(userId),
-      companyName: organizerName.trim(),
-      phone: phoneNumber.trim(),
+      companyName: organizerName?.trim(),
+      contactPersonName: contactPersonName?.trim(),
+      phone: phoneNumber?.trim(),
+      organizerType,
       website: website?.trim() || undefined,
-      bio: description.trim(),
+      socialMedia: socialMedia?.trim() || undefined,
+      bio: description?.trim(),
+      experienceYears,
       country: country || 'Ethiopia',
-      region: region.trim(),
-      city: city.trim(),
-      address: address.trim(),
+      region: region?.trim(),
+      city: city?.trim(),
+      address: address?.trim(),
+      latitude,
+      longitude,
       payoutMethod: paymentMethod,
-      bankName: paymentMethod === 'bank' ? bankName?.trim() : undefined,
-      accountHolderName: paymentMethod === 'bank' ? accountName?.trim() : undefined,
-      accountNumber: paymentMethod === 'bank' ? accountNumber?.trim() : undefined,
-      telebirrNumber: paymentMethod === 'telebirr' ? telebirrNumber?.trim() : undefined,
-      chapaAccountId: paymentMethod === 'chapa' ? chapaAccountId?.trim() : undefined,
+      bankName: paymentMethod === 'Bank Account' ? bankName?.trim() : bankName?.trim(), // Sometimes bankName is used for wallet provider
+      accountHolderName: accountName?.trim(),
+      accountNumber: paymentMethod === 'Bank Account' ? bankAccountNumber?.trim() : undefined,
+      telebirrNumber: paymentMethod === 'Mobile Wallet' ? walletPhoneNumber?.trim() : undefined,
       logo: logo || undefined,
-      businessLicense: businessLicense || undefined,
+      businessLicense: documents?.businessLicense || undefined,
+      tourismLicense: documents?.tourismLicense || undefined,
+      taxCert: documents?.taxCert || undefined,
+      eventPhotos: documents?.eventPhotos || undefined,
+      eventPoster: documents?.eventPoster || undefined,
+      eventVideos: documents?.eventVideos || undefined,
     };
 
     const organizerProfile = await OrganizerProfile.findOneAndUpdate(
@@ -153,6 +141,7 @@ export async function PUT(request: NextRequest) {
 
     await User.findByIdAndUpdate(userId, {
       organizerStatus: 'Pending',
+      profileImage: logo || undefined
     });
 
     return new NextResponse(

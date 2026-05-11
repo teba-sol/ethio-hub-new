@@ -6,8 +6,8 @@ export const RegisterRequestSchema = z.object({
     .email("Invalid email address")
     .refine(email => email.endsWith('@gmail.com'), "Please use a valid Gmail address (@gmail.com)"),
   password: z.string().min(8, "Password must be at least 8 characters long"),
-  role: z.enum(['tourist', 'organizer', 'artisan'], {
-    errorMap: () => ({ message: "Invalid registration role" })
+  role: z.enum(['tourist', 'organizer', 'artisan'] as const, {
+    message: "Invalid registration role"
   }).default('tourist'),
 });
 

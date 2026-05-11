@@ -33,7 +33,7 @@ export default function HotelsPage() {
    const [loading, setLoading] = useState(true);
    
    const [showFilters, setShowFilters] = useState(false);
-   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+   const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
    const [selectedStars, setSelectedStars] = useState<number[]>([]);
 const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
     // Always show hotels directly for Standard tickets (no "Add Accommodation?" modal)
@@ -191,10 +191,10 @@ const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
               Please contact them directly for booking assistance.
             </p>
             <button
-              onClick={() => router.push(`/event/${eventId}/transport`)}
+              onClick={() => router.push(`/event/${eventId}/checkout`)}
               className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-primary/90"
             >
-              Continue to Transport & Tickets →
+              Continue to Checkout →
             </button>
           </div>
         </div>
@@ -459,7 +459,7 @@ const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
                 onClick={() => {
                   setSelectedHotel(null);
                   setSelectedRoom(null);
-                  router.push(`/event/${eventId}/transport`);
+                  router.push(`/event/${eventId}/checkout`);
                 }}
                 className="w-full mt-6 py-3 text-center text-gray-500 text-sm hover:text-primary border border-gray-200 rounded-xl"
               >

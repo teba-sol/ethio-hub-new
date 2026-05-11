@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   Menu,
   X,
@@ -37,7 +38,17 @@ import {
   Truck,
   Lock,
   MapPin,
-  Calendar
+  Calendar,
+  RefreshCw,
+  Award,
+  Box,
+  Clock,
+  ArrowLeft,
+  ChevronRight,
+  Star,
+  Flag,
+  Download,
+  Smartphone
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
@@ -45,6 +56,8 @@ import { useLanguage, LanguageProvider } from "../context/LanguageContext";
 import { UserRole } from "../types";
 import { Button } from "./UI";
 import LanguageToggle from "./LanguageToggle";
+
+const LocationPicker = dynamic(() => import('@/components/checkout/LocationPicker').then(mod => mod.LocationPicker), { ssr: false });
 
 const CartDrawer: React.FC = () => {
   const {
@@ -64,6 +77,51 @@ const CartDrawer: React.FC = () => {
     "cart" | "success"
   >("cart");
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [shippingLocation, setShippingLocation] = useState<{
+    street: string;
+    city: string;
+    state: string;
+  } | null>(null);
+  const [locationCoords, setLocationCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [calculatedShippingFee, setCalculatedShippingFee] = useState<number | null>(null);
+  const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
+  const [calculatingFee, setCalculatingFee] = useState(false);
+  const [isBuying, setIsBuying] = useState(false);
+  const [artisanError, setArtisanError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (artisanError) {
+      const timer = setTimeout(() => {
+        setArtisanError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [artisanError]);
+
+  const calculateShippingFee = async (coords: { latitude: number; longitude: number }) => {
+    setCalculatingFee(true);
+    try {
+      const artisanId = cart[0].artisanId;
+      const res = await fetch('/api/routing/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          artisanId,
+          userLocation: coords,
+        }),
+      });
+      const feeData = await res.json();
+      if (feeData.success) {
+        setCalculatedShippingFee(feeData.shippingFee);
+        setCalculatedDistance(feeData.distanceKm);
+      }
+    } catch (err) {
+      console.error('Error calculating shipping fee:', err);
+    } finally {
+      setCalculatingFee(false);
+    }
+  };
 
   const handleProceedToCheckout = async () => {
     if (!isAuthenticated || user?.role !== UserRole.TOURIST) {
@@ -75,6 +133,30 @@ const CartDrawer: React.FC = () => {
       alert("Cart is empty");
       return;
     }
+
+    // Check if all items are from the same artisan
+    const artisanIds = new Set(cart.map(item => item.artisanId));
+    if (artisanIds.size > 1) {
+      setArtisanError("All products in the cart must be from the same artisan to calculate shipment fee. Please order from one artisan at a time.");
+      return;
+    }
+    setArtisanError(null);
+
+    setShowLocationModal(true);
+    setShippingLocation(null);
+    setCalculatedShippingFee(null);
+    setCalculatedDistance(null);
+    setLocationCoords(null);
+  };
+
+  const handleLocationSubmit = async () => {
+    if (!locationCoords || !shippingLocation?.street || !shippingLocation?.city) {
+      alert('Please fill in your address and select a location on the map');
+      return;
+    }
+
+    if (isBuying) return;
+    setIsBuying(true);
 
     try {
       const idempotencyKey = crypto.randomUUID();
@@ -90,12 +172,21 @@ const CartDrawer: React.FC = () => {
             quantity: item.quantity,
           })),
           idempotencyKey,
+          userLocation: locationCoords,
+          shippingFee: calculatedShippingFee,
+          shippingAddress: {
+            street: shippingLocation.street,
+            city: shippingLocation.city,
+            state: shippingLocation.state || 'Addis Ababa',
+            country: 'Ethiopia',
+          },
         }),
       });
 
       const data = await response.json();
 
       if (data.success && data.checkout_url) {
+        setShowLocationModal(false);
         window.location.href = data.checkout_url;
       } else {
         console.error("Payment initialization failed:", data.message);
@@ -106,6 +197,8 @@ const CartDrawer: React.FC = () => {
       console.error("Error in cart checkout:", error);
       alert("An error occurred. Please try again.");
       setCheckoutStep("cart");
+    } finally {
+      setIsBuying(false);
     }
   };
 
@@ -113,11 +206,7 @@ const CartDrawer: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-[60] pointer-events-none flex justify-end p-4 md:p-6 lg:pt-28">
-      {/* Backdrop - Only covers area below header if desired, but inset-0 is safer for focus */}
-      <div 
-        className="absolute inset-0 bg-black/20 backdrop-blur-[2px] pointer-events-auto animate-in fade-in duration-300" 
-        onClick={toggleCart}
-      />
+      {/* Backdrop removed to allow interaction with homepage while cart is open */}
       
       <div className="relative pointer-events-auto w-full max-w-md bg-white h-fit max-h-[calc(100vh-120px)] shadow-[0_20px_80px_rgba(0,0,0,0.3)] flex flex-col animate-in slide-in-from-right-10 duration-500 ease-out border border-gray-100 rounded-[40px] overflow-hidden">
         {/* Header */}
@@ -234,12 +323,6 @@ const CartDrawer: React.FC = () => {
                                 {item.price.toLocaleString()} ETB / unit
                               </span>
                             </div>
-                            {item.estimatedDelivery && (
-                              <p className="text-[9px] text-emerald-600 font-bold mt-2 flex items-center gap-1 bg-emerald-50 w-fit px-2 py-0.5 rounded-md">
-                                <Truck className="w-3 h-3" />
-                                Est. Delivery: {item.estimatedDelivery}
-                              </p>
-                            )}
                           </div>
 
                           <div className="flex justify-between items-end mt-4">
@@ -344,16 +427,28 @@ const CartDrawer: React.FC = () => {
 
             <div className="space-y-4">
               {checkoutStep === "cart" && (
-                <Button
-                  onClick={handleProceedToCheckout}
-                  className="w-full py-8 rounded-[24px] font-black uppercase tracking-[0.25em] text-[13px] shadow-[0_20px_40px_rgba(15,76,58,0.25)] bg-primary hover:bg-secondary hover:shadow-secondary/30 transition-all duration-500 border-none group relative overflow-hidden"
-                >
-                  <span className="relative z-10 flex items-center justify-center gap-3">
-                    Proceed to Checkout
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
-                  </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite]" />
-                </Button>
+                <div className="space-y-4">
+                  <Button
+                    onClick={handleProceedToCheckout}
+                    className="w-full py-8 rounded-[24px] font-black uppercase tracking-[0.25em] text-[13px] shadow-[0_20px_40px_rgba(15,76,58,0.25)] bg-primary hover:bg-secondary hover:shadow-secondary/30 transition-all duration-500 border-none group relative overflow-hidden"
+                  >
+                    <span className="relative z-10 flex items-center justify-center gap-3">
+                      Proceed to Checkout
+                      <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+                    </span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite]" />
+                  </Button>
+                  {artisanError && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-red-50 text-red-600 p-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest border border-red-100 flex items-start gap-2 shadow-sm"
+                    >
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      {artisanError}
+                    </motion.div>
+                  )}
+                </div>
               )}
               
               <div className="flex items-center justify-center gap-6 py-2 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
@@ -410,6 +505,107 @@ const CartDrawer: React.FC = () => {
                 >
                   {t("header.loginNow")}
                 </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Location Selection Modal */}
+        {showLocationModal && (
+          <div className="absolute inset-0 z-[110] flex items-center justify-center p-4 bg-white/95 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 relative max-h-[90vh] flex flex-col border border-gray-100">
+              <button
+                onClick={() => setShowLocationModal(false)}
+                className="absolute top-6 right-6 p-2 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors z-10 shadow-sm"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+
+              <div className="p-8 overflow-y-auto custom-scrollbar">
+                <div className="text-center space-y-2 mb-8">
+                  <h2 className="text-2xl font-serif font-bold text-primary">Delivery Details</h2>
+                  <p className="text-gray-500 text-sm">Provide your address and select your location on the map</p>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Street Address</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Bole Road, House 123"
+                        value={shippingLocation?.street || ''}
+                        onChange={(e) => setShippingLocation(prev => ({ ...prev!, street: e.target.value }))}
+                        className="w-full px-5 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all outline-none text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">City</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Addis Ababa"
+                        value={shippingLocation?.city || ''}
+                        onChange={(e) => setShippingLocation(prev => ({ ...prev!, city: e.target.value }))}
+                        className="w-full px-5 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all outline-none text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Pin Location on Map</label>
+                    <div className="h-[250px] rounded-2xl overflow-hidden border border-gray-100 shadow-inner bg-gray-50">
+                      <LocationPicker
+                        value={locationCoords || undefined}
+                        onChange={(coords: any) => {
+                          setLocationCoords(coords);
+                          calculateShippingFee(coords);
+                        }}
+                        height="250px"
+                      />
+                    </div>
+                  </div>
+
+                  {calculatingFee ? (
+                    <div className="flex items-center justify-center gap-3 py-6 text-primary animate-pulse bg-primary/5 rounded-2xl">
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                      <span className="text-xs font-bold uppercase tracking-widest">Calculating Shipping Distance...</span>
+                    </div>
+                  ) : calculatedShippingFee !== null && (
+                    <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-4 shadow-sm">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-500">Cart Total</span>
+                          <span className="font-bold text-primary">{cartTotal.toLocaleString()} ETB</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm text-emerald-600">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Shipping Fee</span>
+                            {calculatedDistance !== null && (
+                              <span className="text-[10px] bg-emerald-50 px-2 py-0.5 rounded-full">
+                                {calculatedDistance.toFixed(1)} KM
+                              </span>
+                            )}
+                          </div>
+                          <span className="font-bold">{calculatedShippingFee.toLocaleString()} ETB</span>
+                        </div>
+                        <div className="pt-3 border-t border-gray-200 flex justify-between items-center text-lg font-black text-primary">
+                          <span>Total Amount</span>
+                          <span>{(cartTotal + (calculatedShippingFee || 0)).toLocaleString()} ETB</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <Button
+                    fullWidth
+                    size="lg"
+                    className="rounded-2xl py-4 uppercase tracking-widest font-black text-xs h-16 shadow-xl shadow-primary/20"
+                    disabled={!locationCoords || calculatingFee || isBuying}
+                    onClick={handleLocationSubmit}
+                  >
+                    {isBuying ? "Initializing Payment..." : "Complete Order & Pay"}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

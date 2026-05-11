@@ -128,7 +128,7 @@ export const ArtisanSettingsManager: React.FC = () => {
     setUploading(true);
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('upload_preset', 'ethio_hub_presets');
+    formData.append('upload_preset', 'ethio-hub');
 
     try {
       const res = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, {
@@ -256,8 +256,6 @@ export const ArtisanSettingsManager: React.FC = () => {
   const tabs = [
     { id: 'profile', label: 'Shop Profile', icon: Store },
     { id: 'business', label: 'Business Info', icon: Building2 },
-    { id: 'payment', label: 'Payment & Payout', icon: CreditCard },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'policies', label: 'Policies', icon: FileText },
   ];
@@ -307,7 +305,8 @@ export const ArtisanSettingsManager: React.FC = () => {
                   <label className="text-sm font-medium text-gray-700">Shop Name</label>
                   <Input 
                     value={shopProfile.name} 
-                    onChange={(e) => setShopProfile({...shopProfile, name: e.target.value})} 
+                    readOnly
+                    className="bg-gray-50 cursor-not-allowed" 
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -321,14 +320,14 @@ export const ArtisanSettingsManager: React.FC = () => {
                 <div className="md:col-span-2 space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">Shop Description / Bio</label>
                   <textarea 
-                    className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/10 outline-none min-h-[120px]"
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/10 outline-none min-h-[120px] cursor-not-allowed"
                     value={shopProfile.description}
-                    onChange={(e) => setShopProfile({...shopProfile, description: e.target.value})}
+                    readOnly
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">Years of Experience</label>
-                  <Input type="number" value={shopProfile.experience} onChange={(e) => setShopProfile({...shopProfile, experience: e.target.value})} />
+                  <Input type="number" value={shopProfile.experience} readOnly className="bg-gray-50 cursor-not-allowed" />
                 </div>
               </div>
             </div>
@@ -339,24 +338,20 @@ export const ArtisanSettingsManager: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">City</label>
-                  <Input value={shopProfile.city} onChange={(e) => setShopProfile({...shopProfile, city: e.target.value})} />
+                  <Input value={shopProfile.city} readOnly className="bg-gray-50 cursor-not-allowed" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">Region</label>
-                  <Input value={shopProfile.region} onChange={(e) => setShopProfile({...shopProfile, region: e.target.value})} />
+                  <Input value={shopProfile.region} readOnly className="bg-gray-50 cursor-not-allowed" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">Country</label>
-                  <Input value={shopProfile.country} onChange={(e) => setShopProfile({...shopProfile, country: e.target.value})} />
+                  <Input value={shopProfile.country} readOnly className="bg-gray-50 cursor-not-allowed" />
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end pt-4">
-              <Button onClick={handleSaveProfile} disabled={saving} leftIcon={saving ? Loader2 : Save}>
-                {saving ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </div>
+            {/* Save Button Removed since fields are read-only */}
           </div>
         );
 

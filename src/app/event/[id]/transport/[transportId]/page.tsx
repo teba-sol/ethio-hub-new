@@ -126,11 +126,11 @@ export default function TransportDetailPage() {
       <div className="bg-gray-50 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <button
-            onClick={() => router.push(`/event/${eventId}/transport`)}
+            onClick={() => router.push(ticketSelection?.type === 'vip' ? `/event/${eventId}/tickets` : `/event/${eventId}/transport`)}
             className="flex items-center gap-2 text-gray-500 hover:text-primary"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>{t('common.backToTransport')}</span>
+            <span>{ticketSelection?.type === 'vip' ? 'Back to Selection' : t('common.backToTransport')}</span>
           </button>
         </div>
       </div>
@@ -247,83 +247,116 @@ export default function TransportDetailPage() {
 
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sticky top-6">
-              <div className="space-y-4">
-             <div className="text-center mb-6">
-               <p className="text-sm text-gray-500">{t('festival.startingFrom')}</p>
-               <div className="flex items-baseline justify-center gap-1">
-                 <span className="text-4xl font-bold text-primary">
-                   {ticketSelection?.type === 'vip' && transport.vipIncluded 
-                    ? 'Included' 
-                    : `${event?.pricing?.currency || event?.currency || 'ETB'} ${transport.price}`}
-                 </span>
-                 {!(ticketSelection?.type === 'vip' && transport.vipIncluded) && (
-                   <span className="text-gray-500">{t('festival.perDay')}</span>
-                 )}
-               </div>
-             </div>
+              {ticketSelection?.type === 'vip' ? (
+                <div className="space-y-6">
+                  <div className="text-center mb-6">
+                    <p className="text-sm text-gray-500">Starting from</p>
+                    <div className="text-4xl font-bold text-primary">Included</div>
+                  </div>
+                  
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 text-center">
+                    <p className="text-sm text-gray-500">Available Units</p>
+                    <p className="mt-1 text-2xl font-bold text-gray-900">1</p>
+                  </div>
 
-             <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 text-center">
-               <p className="text-sm text-gray-500">{t('festival.availableUnits')}</p>
-                  <p className={`mt-1 text-2xl font-bold ${isSoldOut ? 'text-red-600' : remainingUnits <= 3 ? 'text-amber-600' : 'text-gray-900'}`}>
-                    {remainingUnits}
-                  </p>
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Number of Days
+                    </label>
+                    <div className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-600">
+                      1 day
+                    </div>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('transport.numberOfDays')}
-                  </label>
-                  <select
-                    value={transportDays}
-                    onChange={(e) => setTransportDays(parseInt(e.target.value))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl"
+                  <div className="bg-gray-50 p-4 rounded-xl">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-gray-600">ETB 0 x 1 days</span>
+                      <span className="font-bold text-gray-900">Included</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                      <span className="font-medium text-gray-900">Total</span>
+                      <span className="text-xl font-bold text-primary">Included</span>
+                    </div>
+                  </div>
+
+                  <Button
+                    className="w-full py-4 bg-gray-900 hover:bg-black text-white rounded-xl shadow-xl shadow-gray-200 transition-all font-black uppercase tracking-widest text-xs"
+                    onClick={() => router.push(`/event/${eventId}/tickets`)}
                   >
-                    {[1, 2, 3, 4, 5, 6, 7].map((num) => (
-                      <option key={num} value={num}>
-                        {num} {num === 1 ? 'day' : 'days'}
-                      </option>
-                    ))}
-                  </select>
+                    Back to Selection
+                  </Button>
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="text-center mb-6">
+                    <p className="text-sm text-gray-500">{t('festival.startingFrom')}</p>
+                    <div className="flex items-baseline justify-center gap-1">
+                      <span className="text-4xl font-bold text-primary">
+                        {`${event?.pricing?.currency || event?.currency || 'ETB'} ${transport.price}`}
+                      </span>
+                      <span className="text-gray-500">{t('festival.perDay')}</span>
+                    </div>
+                  </div>
 
-                 <div className="bg-gray-50 p-4 rounded-xl">
-                   <div className="flex justify-between items-center mb-2">
-                     <span className="text-gray-600">
-                       {event?.pricing?.currency || event?.currency || 'ETB'} {transport.price} x {transportDays} {t('transport.days')}
-                     </span>
-                     <span className="font-bold text-gray-900">
-                       {ticketSelection?.type === 'vip' && transport.vipIncluded 
-                        ? 'Included' 
-                        : `${event?.pricing?.currency || event?.currency || 'ETB'} ${transport.price * transportDays}`}
-                     </span>
-                   </div>
-                   <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                     <span className="font-medium text-gray-900">{t('common.total')}</span>
-                     <span className="text-xl font-bold text-primary">
-                       {ticketSelection?.type === 'vip' && transport.vipIncluded 
-                        ? 'Included' 
-                        : `${event?.pricing?.currency || event?.currency || 'ETB'} ${transport.price * transportDays}`}
-                     </span>
-                   </div>
-                 </div>
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 text-center">
+                    <p className="text-sm text-gray-500">{t('festival.availableUnits')}</p>
+                    <p className={`mt-1 text-2xl font-bold ${isSoldOut ? 'text-red-600' : remainingUnits <= 3 ? 'text-amber-600' : 'text-gray-900'}`}>
+                      {remainingUnits}
+                    </p>
+                  </div>
 
-                <Button
-                  className="w-full py-3"
-                  onClick={handleSelect}
-                  disabled={isSoldOut}
-                  variant={isCurrentTransportSelected ? 'outline' : 'primary'}
-                >
-                  {isSoldOut ? t('transport.soldOut') : isCurrentTransportSelected ? t('transport.removeSelection') : t('transport.selectThisCar')}
-                </Button>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('transport.numberOfDays')}
+                    </label>
+                    <select
+                      value={transportDays}
+                      onChange={(e) => setTransportDays(parseInt(e.target.value))}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl"
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                        <option key={num} value={num}>
+                          {num} {num === 1 ? 'day' : 'days'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                 <Button
-                   className="w-full py-3"
-                   onClick={handleContinue}
-                   disabled={!selectedTransport}
+                  <div className="bg-gray-50 p-4 rounded-xl">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-gray-600">
+                        {event?.pricing?.currency || event?.currency || 'ETB'} {transport.price} x {transportDays} {t('transport.days')}
+                      </span>
+                      <span className="font-bold text-gray-900">
+                        {`${event?.pricing?.currency || event?.currency || 'ETB'} ${transport.price * transportDays}`}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                      <span className="font-medium text-gray-900">{t('common.total')}</span>
+                      <span className="text-xl font-bold text-primary">
+                        {`${event?.pricing?.currency || event?.currency || 'ETB'} ${transport.price * transportDays}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  <Button
+                    className="w-full py-3"
+                    onClick={handleSelect}
+                    disabled={isSoldOut}
+                    variant={isCurrentTransportSelected ? 'outline' : 'primary'}
+                  >
+                    {isSoldOut ? t('transport.soldOut') : isCurrentTransportSelected ? t('transport.removeSelection') : t('transport.selectThisCar')}
+                  </Button>
+
+                  <Button
+                    className="w-full py-3"
+                    onClick={handleContinue}
+                    disabled={!selectedTransport}
                   >
                     {t('festival.continueToCheckout')}
                   </Button>
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

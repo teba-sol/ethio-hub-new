@@ -92,9 +92,17 @@ export const OrganizerOnboardingPage: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    
+    let processedValue: string | boolean = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+
+    // Restriction for walletPhoneNumber and phoneNumber
+    if (name === 'walletPhoneNumber' || name === 'phoneNumber') {
+      processedValue = value.replace(/\D/g, '').slice(0, 10);
+    }
+
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+      [name]: processedValue
     }));
   };
 

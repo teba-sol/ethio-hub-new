@@ -78,80 +78,7 @@ const exploreRightRailImages = [
   localProductImages[1],
 ];
 
-const localFallbackFestivals: Festival[] = [
-  {
-    id: 'meskel-2026',
-    name: 'Meskel 2026',
-    name_en: 'Meskel 2026',
-    name_am: 'መስቀል 2019',
-    slug: 'meskel-2026',
-    startDate: '2026-09-27T12:00:00.000Z',
-    endDate: '2026-09-28T18:00:00.000Z',
-    locationName: 'Meskel Square, Addis Ababa',
-    address: 'Meskel Square, Addis Ababa',
-    coordinates: { lat: 9.0105, lng: 38.7612 },
-    shortDescription: 'The Finding of the True Cross celebration with the Demera bonfire, hymns, and public processions.',
-    shortDescription_en: 'The Finding of the True Cross celebration with the Demera bonfire, hymns, and public processions.',
-    shortDescription_am: 'የመስቀል ደመራ በዓል በዝማሬ፣ በሰልፍ እና በባህላዊ ክብር።',
-    fullDescription: '',
-    fullDescription_en: '',
-    fullDescription_am: '',
-    coverImage: '',
-    gallery: [],
-    schedule: [],
-    mainActivities: 'Blessings, music, cultural gathering',
-    performances: [],
-    hotels: [],
-    transportation: [],
-    foodPackages: [],
-    culturalServices: [],
-    baseTicketPrice: 350,
-    currency: 'ETB',
-    cancellationPolicy: '',
-    bookingTerms: '',
-    organizerId: '',
-    isVerified: true,
-    ticketsAvailable: 220,
-    status: 'Published',
-    verificationStatus: 'Approved',
-  },
-  {
-    id: 'timket-2027',
-    name: 'Timket 2027',
-    name_en: 'Timket 2027',
-    name_am: 'ጥምቀት 2019',
-    slug: 'timket-2027',
-    startDate: '2027-01-19T06:00:00.000Z',
-    endDate: '2027-01-20T18:00:00.000Z',
-    locationName: 'Gondar, Ethiopia',
-    address: 'Fasilides Bath, Gondar',
-    coordinates: { lat: 12.6075, lng: 37.4611 },
-    shortDescription: 'Ethiopian Epiphany marked by tabot processions, white ceremonial dress, and water blessings.',
-    shortDescription_en: 'Ethiopian Epiphany marked by tabot processions, white ceremonial dress, and water blessings.',
-    shortDescription_am: 'በታቦት ሰልፍ፣ በነጭ ባህላዊ ልብስ እና በውሃ ቡራኬ የሚታወቅ የጥምቀት በዓል።',
-    fullDescription: '',
-    fullDescription_en: '',
-    fullDescription_am: '',
-    coverImage: localFestivalImages[0],
-    gallery: [],
-    schedule: [],
-    mainActivities: 'Tabot processions, hymns, water blessing',
-    performances: [],
-    hotels: [],
-    transportation: [],
-    foodPackages: [],
-    culturalServices: [],
-    baseTicketPrice: 650,
-    currency: 'ETB',
-    cancellationPolicy: '',
-    bookingTerms: '',
-    organizerId: '',
-    isVerified: true,
-    ticketsAvailable: 180,
-    status: 'Published',
-    verificationStatus: 'Approved',
-  },
-];
+
 
 const normalizeFestival = (festival: any, index = 0): Festival => ({
   id: festival.id || festival._id || festival.slug || `festival-${index}`,
@@ -298,10 +225,10 @@ export const Homepage: React.FC = () => {
           .filter((festival: Festival) => new Date(festival.startDate).getTime() >= Date.now())
           .sort((a: Festival, b: Festival) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
 
-        setFestivals(normalized.length > 0 ? normalized : localFallbackFestivals);
+        setFestivals(normalized);
       } catch (error) {
         console.error('Error fetching festivals:', error);
-        setFestivals(localFallbackFestivals);
+        setFestivals([]);
       } finally {
         setFestivalLoading(false);
       }
@@ -414,7 +341,7 @@ export const Homepage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
+            {(festivals.length > 0 ? festivals.slice(0, 4) : [
               {
                 name: 'Timket',
                 type: 'Sacred Festival',
@@ -451,9 +378,20 @@ export const Homepage: React.FC = () => {
                 link: '/festivals',
                 color: 'green'
               }
-            ].map((item, i) => (
+            ]).map((festival: any, i) => {
+              const colors = ['amber', 'red', 'blue', 'green'];
+              const item = festival.id ? {
+                name: getLocalizedField(festival, 'name'),
+                type: festival.type || 'Cultural Festival',
+                date: formatDate(festival.startDate),
+                description: getLocalizedField(festival, 'shortDescription'),
+                image: festival.coverImage || localFestivalImages[i % localFestivalImages.length],
+                link: `/event/${festival.id}`,
+                color: colors[i % colors.length]
+              } : festival;
+              return (
               <div
-                key={item.name}
+                key={item.name + i}
                 className="group relative h-[500px] rounded-[32px] overflow-hidden shadow-2xl hover:shadow-secondary/20 transition-all duration-700"
                 style={{ transitionDelay: `${i * 100}ms` }}
               >
@@ -501,10 +439,11 @@ export const Homepage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      </section>
+      </div>
+    </section>
 
       {/* Cultural Treasures - Detailed Gallery */}
       <section className="py-24 md:py-32 bg-white overflow-hidden">
@@ -1189,7 +1128,7 @@ export const ProductListingPage: React.FC = () => {
                   <span className="w-8 h-1 bg-secondary rounded-full"></span>
                   Featured Artifacts
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {marketplaceProducts.map((p, i) => (
                     <div
                       key={p.id}
@@ -1225,7 +1164,7 @@ export const ProductListingPage: React.FC = () => {
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                       {heritageProducts.map((p, i) => (
                         <div
                           key={p.id}
@@ -1296,7 +1235,9 @@ export const FestivalListingPage: React.FC = () => {
 
   const festivalTypes = ["All", "Religious", "Historical", "Harvest", "New Year", "National/Public Holidays"];
 
+  const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
+    setIsMounted(true);
     const fetchFestivals = async () => {
       try {
         const res = await fetch('/api/festivals');
@@ -1505,7 +1446,7 @@ export const FestivalListingPage: React.FC = () => {
                       <MapPin className="w-3 h-3 mr-2 inline" /> {getLocalizedField(filteredFestivals[0], 'locationName')}
                     </Badge>
                     <Badge className="bg-primary/80 backdrop-blur-md border border-white/10 text-white px-6 py-2 rounded-full font-bold text-[10px] uppercase tracking-widest">
-                      <Calendar className="w-3 h-3 mr-2 inline" /> {new Date(filteredFestivals[0].startDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                      <Calendar className="w-3 h-3 mr-2 inline" /> {isMounted ? new Date(filteredFestivals[0].startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '...'}
                     </Badge>
                   </div>
 
@@ -1786,6 +1727,11 @@ export const ProductDetailPage: React.FC = () => {
   const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
   const [calculatingFee, setCalculatingFee] = useState(false);
   const [locationCoords, setLocationCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -2460,7 +2406,7 @@ export const ProductDetailPage: React.FC = () => {
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Date</span>
-                        <span className="font-bold text-primary">{new Date().toLocaleDateString()}</span>
+                        <span className="font-bold text-primary">{isMounted ? new Date().toLocaleDateString('en-US') : '...'}</span>
                       </div>
                     </div>
                   </div>
@@ -2696,6 +2642,11 @@ export const FestivalDetailPage: React.FC = () => {
     }
     return path;
   };
+
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const fetchFestival = async () => {
@@ -3973,7 +3924,7 @@ export const FestivalDetailPage: React.FC = () => {
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Date</span>
-                        <span className="font-bold text-primary">{new Date().toLocaleDateString()}</span>
+                        <span className="font-bold text-primary">{isMounted ? new Date().toLocaleDateString('en-US') : '...'}</span>
                       </div>
                     </div>
                   </div>

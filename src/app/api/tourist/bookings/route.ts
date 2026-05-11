@@ -812,8 +812,8 @@ export async function POST(request: NextRequest) {
       callback_url: `${FRONTEND_URL}/api/payment/chapa/callback`,
       return_url: `${FRONTEND_URL}/payment-success?bookingId=${booking._id}&status=success&tx_ref=${txRef}`,
       customization: {
-        title: "EthioHub Booking",
-        description: `Booking for ${festival.name}`
+        title: "EthioHub Pay",
+        description: `Booking for ${festival.name}`.substring(0, 255)
       },
       meta: {
         bookingId: booking._id.toString(),

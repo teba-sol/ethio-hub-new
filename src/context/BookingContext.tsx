@@ -93,6 +93,48 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
   // Booking ID
   const [bookingId, setBookingId] = useState<string | null>(null);
   
+  // Persistence: Load from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('ethio_hub_booking');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        if (data.event) setEvent(data.event);
+        if (data.selectedHotel) setSelectedHotel(data.selectedHotel);
+        if (data.selectedRoom) setSelectedRoom(data.selectedRoom);
+        if (data.checkIn) setCheckIn(new Date(data.checkIn));
+        if (data.checkOut) setCheckOut(new Date(data.checkOut));
+        if (data.guests) setGuests(data.guests);
+        if (data.selectedFoodPackages) setSelectedFoodPackages(data.selectedFoodPackages);
+        if (data.selectedTransport) setSelectedTransport(data.selectedTransport);
+        if (data.transportDays) setTransportDays(data.transportDays);
+        if (data.ticketSelection) setTicketSelection(data.ticketSelection);
+      } catch (e) {
+        console.error('Failed to load booking state:', e);
+      }
+    }
+  }, []);
+
+  // Persistence: Save to localStorage on change
+  useEffect(() => {
+    const state = {
+      event,
+      selectedHotel,
+      selectedRoom,
+      checkIn,
+      checkOut,
+      guests,
+      selectedFoodPackages,
+      selectedTransport,
+      transportDays,
+      ticketSelection
+    };
+    localStorage.setItem('ethio_hub_booking', JSON.stringify(state));
+  }, [
+    event, selectedHotel, selectedRoom, checkIn, checkOut, 
+    guests, selectedFoodPackages, selectedTransport, 
+    transportDays, ticketSelection
+  ]);
   // Calculate nights for hotel
   const hotelNights = checkIn && checkOut 
     ? Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)))
@@ -197,6 +239,7 @@ const getTransportTotal = () => {
     setTransportDays(1);
     setTicketSelection(null);
     setBookingId(null);
+    localStorage.removeItem('ethio_hub_booking');
   };
   
   return (

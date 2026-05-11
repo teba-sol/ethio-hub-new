@@ -136,18 +136,19 @@ function TicketsContent() {
 
   const handleViewHotels = () => {
     if (ticketSelection?.type === 'vip') {
-      router.push(`/event/${eventId}/package`);
+      const hotelId = festival?.hotels?.[0]?._id || festival?.hotels?.[0]?.id;
+      if (hotelId) {
+        router.push(`/event/${eventId}/hotels/${hotelId}`);
+      } else {
+        router.push(`/event/${eventId}/hotels`);
+      }
     } else {
       router.push(`/event/${eventId}/hotels`);
     }
   };
 
   const handleViewTransport = () => {
-    if (ticketSelection?.type === 'vip') {
-      router.push(`/event/${eventId}/package`);
-    } else {
-      router.push(`/event/${eventId}/transport`);
-    }
+    router.push(`/event/${eventId}/transport`);
   };
 
   const TICKET_TYPES = useMemo(() => [
@@ -332,7 +333,7 @@ function TicketsContent() {
                             <h4 className="text-xs font-black uppercase tracking-[0.3em] text-secondary">VIP Package Details</h4>
                             <div className="space-y-4">
                               {festival?.hotels?.[0] && (
-                                <Link href={`/event/${festival._id}/hotels`} className="block group">
+                                <Link href={`/event/${festival._id}/hotels/${festival.hotels[0]._id || festival.hotels[0].id}`} className="block group">
                                   <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-[32px] border border-gray-100 dark:border-white/10 space-y-4 hover:border-secondary transition-all">
                                     <div className="h-32 w-full rounded-[24px] overflow-hidden">
                                       <img src={festival.hotels[0].image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Hotel" />
@@ -352,7 +353,7 @@ function TicketsContent() {
                                 </Link>
                               )}
                               {festival?.transportation?.[0] && (
-                                <Link href={`/event/${festival._id}/transport`} className="block group">
+                                <Link href={`/event/${festival._id}/transport/${festival.transportation[0]._id || festival.transportation[0].id}`} className="block group">
                                   <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-[32px] border border-gray-100 dark:border-white/10 space-y-4 hover:border-secondary transition-all">
                                     <div className="h-32 w-full rounded-[24px] overflow-hidden">
                                       <img src={festival.transportation[0].image || 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=2069&auto=format&fit=crop'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Transport" />

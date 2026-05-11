@@ -12,13 +12,18 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [emailSent, setEmailSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email) {
-      setMessage({ type: "error", text: t("auth.loginRequired") || "Email is required" });
+      setMessage({ type: "error", text: "Email is required" });
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setMessage({ type: "error", text: "this email is invalid" });
       return;
     }
 
@@ -35,21 +40,8 @@ export default function ForgotPasswordPage() {
       const data = await res.json();
 
       if (data.success) {
-        setEmailSent(true);
-        setMessage({ 
-          type: "success", 
-          text: t("auth.resetSuccessMessage") || "If an account exists with this email, a password reset code has been sent." 
-        });
-        
-        // In development, show the OTP
-        if (data.devOtp) {
-          console.log("Dev OTP:", data.devOtp);
-        }
-        
-        // Redirect to reset password page after a delay
-        setTimeout(() => {
-          router.push(`/auth/reset-password?email=${encodeURIComponent(email)}`);
-        }, 3000);
+        // Redirect to reset password page immediately
+        router.push(`/auth/reset-password?email=${encodeURIComponent(email)}`);
       } else {
         setMessage({ type: "error", text: data.message || t("auth.unexpectedError") });
       }
@@ -59,27 +51,6 @@ export default function ForgotPasswordPage() {
       setLoading(false);
     }
   };
-
-  if (emailSent) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="bg-white rounded-[32px] p-8 max-w-md w-full shadow-2xl text-center">
-          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-          </div>
-          <h2 className="text-2xl font-serif font-bold text-primary mb-2">
-            {t("auth.resetSuccessMessage") || "Check Your Email"}
-          </h2>
-          <p className="text-gray-500 mb-4">
-            {t("auth.passwordResetConfirmation") || "If an account exists with this email, a password reset code has been sent."}
-          </p>
-          <p className="text-sm text-gray-400">
-            {t("auth.redirectingToLogin") || "Redirecting to reset password page..."}
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50/50 p-4">
@@ -97,15 +68,6 @@ export default function ForgotPasswordPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {message && (
-            <div className={`p-4 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top-2 duration-300 ${
-              message.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-red-50 text-red-700 border border-red-100"
-            }`}>
-              {message.type === "success" ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
-              <span className="text-xs font-bold uppercase tracking-wider">{message.text}</span>
-            </div>
-          )}
-
           <div className="space-y-2">
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">
               {t("auth.email") || "Email Address"}
@@ -119,6 +81,15 @@ export default function ForgotPasswordPage() {
               className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl focus:border-primary/20 focus:bg-white focus:ring-0 outline-none transition-all text-sm font-medium placeholder:text-gray-300"
             />
           </div>
+
+          {message && (
+            <div className={`p-4 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top-2 duration-300 ${
+              message.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-red-50 text-red-700 border border-red-100"
+            }`}>
+              {message.type === "success" ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
+              <span className="text-xs font-bold uppercase tracking-wider">{message.text}</span>
+            </div>
+          )}
 
           <Button 
             type="submit" 

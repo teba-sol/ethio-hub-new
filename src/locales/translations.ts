@@ -461,7 +461,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       fee: "Fee",
       financials: "Financials",
       listingPrice: "Listing Price",
-      commission15: "Commission (15%)",
+      commission10: "Commission (10%)",
       selectedCount: "Selected",
       approveAll: "Approve All",
       sku: "SKU"
@@ -1500,7 +1500,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     fee: "ክፍያ",
     financials: "የፋይናንስ ሁኔታ",
     listingPrice: "የዋጋ አሰጣጥ",
-    commission15: "ኮሚሽን (15%)",
+    commission10: "ኮሚሽን (10%)",
     selectedCount: "ተመርጧል",
     approveAll: "ሁሉንም አጽድቅ",
     sku: "SKU"

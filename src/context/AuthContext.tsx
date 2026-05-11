@@ -19,6 +19,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastActivity, setLastActivity] = useState<number>(Date.now());
+
+  const TIMEOUT_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
    useEffect(() => {
      const checkUserSession = async () => {
@@ -42,7 +45,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
          if (data && data.user) {
            const userData = {
              ...data.user,
-             role: data.user.role // Keep original case stored in DB
+             role: data.user.role?.toLowerCase()
            };
            setUser(userData);
          } else {
@@ -58,6 +61,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
      checkUserSession();
    }, []);
+
+   // Session Timeout Logic
+   useEffect(() => {
+     if (!user) return;
+
+     const updateActivity = () => {
+       setLastActivity(Date.now());
+     };
+
+     // Throttled version to avoid excessive state updates
+     let throttleTimeout: NodeJS.Timeout | null = null;
+     const handleActivity = () => {
+       if (!throttleTimeout) {
+         updateActivity();
+         throttleTimeout = setTimeout(() => {
+           throttleTimeout = null;
+         }, 1000); // Only update once per second
+       }
+     };
+
+     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+     events.forEach(event => window.addEventListener(event, handleActivity));
+
+     const checkInterval = setInterval(() => {
+       const now = Date.now();
+       if (now - lastActivity > TIMEOUT_DURATION) {
+         console.log('Session timed out due to inactivity');
+         logout();
+       }
+     }, 10000); // Check every 10 seconds
+
+     return () => {
+       events.forEach(event => window.removeEventListener(event, handleActivity));
+       clearInterval(checkInterval);
+       if (throttleTimeout) clearTimeout(throttleTimeout);
+     };
+   }, [user, lastActivity]);
 
   const login = async (credentials: any) => {
     setLoading(true);
@@ -83,7 +123,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const data = await response.json();
       if (data.success) {
+        if (data.user) {
+          data.user.role = data.user.role?.toLowerCase();
+        }
         setUser(data.user);
+        setLastActivity(Date.now());
       } else {
         return { success: false, message: data.message || 'Login failed' };
       }
@@ -106,7 +150,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateUser = (data: Partial<User>) => {
-    setUser(prev => prev ? { ...prev, ...data } : null);
+    const sanitizedData = { ...data };
+    if (sanitizedData.role) {
+      sanitizedData.role = sanitizedData.role.toLowerCase() as UserRole;
+    }
+    setUser(prev => prev ? { ...prev, ...sanitizedData } : null);
   };
 
   const setAuthenticatedUser = (data: User) => {

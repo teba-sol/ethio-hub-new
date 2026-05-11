@@ -83,6 +83,8 @@ export const AdminProductsPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const ITEMS_PER_PAGE = 15;
 
   const fetchProducts = useCallback(async () => {
@@ -129,7 +131,8 @@ export const AdminProductsPage: React.FC = () => {
           rejectionReason: undefined 
         } : p));
         setViewProduct(null);
-        alert(t('admin.productApproved'));
+        setSuccessMessage('Product approved successfully!');
+        setIsSuccessModalOpen(true);
       } else {
         const data = await response.json();
         alert(data.message || t('admin.errorApproving'));
@@ -206,7 +209,7 @@ export const AdminProductsPage: React.FC = () => {
   };
 
   const calculateCommission = (price: number) => {
-    const rate = 15;
+    const rate = 10;
     return (price * rate) / 100;
   };
 
@@ -438,7 +441,7 @@ export const AdminProductsPage: React.FC = () => {
                     </div>
                     <div className="pt-3 border-t border-emerald-200">
                       <div className="flex justify-between mb-1">
-                        <span className="text-emerald-700">{t('admin.commission15')}</span>
+                        <span className="text-emerald-700">{t('admin.commission10')}</span>
                         <span className="font-bold text-emerald-900">ETB {calculateCommission(product.price).toLocaleString()}</span>
                       </div>
                     </div>
@@ -452,8 +455,29 @@ export const AdminProductsPage: React.FC = () => {
     );
   };
 
+  const SuccessModal = ({ message, onClose }: { message: string; onClose: () => void }) => (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-[32px] w-full max-w-sm shadow-2xl p-8 text-center animate-in zoom-in-95 duration-300">
+        <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
+          <CheckCircle2 className="w-10 h-10 text-emerald-500" />
+        </div>
+        <h2 className="text-2xl font-serif font-bold text-gray-800 mb-2">Success!</h2>
+        <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+          {message}
+        </p>
+        <Button 
+          className="w-full py-4 rounded-2xl font-bold bg-emerald-600 hover:bg-emerald-700 text-white border-none shadow-lg shadow-emerald-200" 
+          onClick={onClose}
+        >
+          {t('common.close')}
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+      {isSuccessModalOpen && <SuccessModal message={successMessage} onClose={() => setIsSuccessModalOpen(false)} />}
       {viewProduct && <ProductReviewPage product={viewProduct} onClose={() => setViewProduct(null)} />}
       {rejectProduct && <RejectionModal product={rejectProduct} onClose={() => setRejectProduct(null)} />}
 

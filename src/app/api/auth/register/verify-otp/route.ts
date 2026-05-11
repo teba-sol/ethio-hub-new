@@ -142,8 +142,11 @@ export async function POST(request: Request) {
           name: user.name,
           artisanStatus: user.artisanStatus || "Not Submitted",
           organizerStatus: user.organizerStatus || "Not Submitted",
+          deliveryStatus: user.deliveryStatus || "Not Submitted",
           organizerProfile: user.organizerProfile || null,
           touristProfile: user.touristProfile || null,
+          deliveryProfile: user.deliveryProfile || null,
+          rejectionReason: user.rejectionReason || null,
         },
       },
       { status: 200 }
